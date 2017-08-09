@@ -11,28 +11,26 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Akka.Actor;
 using Akka.Cluster;
 using Akka.Pattern;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
     [Serializable]
-    public sealed class ORDictionaryKey<TKey, TValue> : Key<ORDictionary<TKey, TValue>> where TValue : IReplicatedData
+    public sealed class ORDictionaryKey<TKey, TValue> : Key<ORDictionary<TKey, TValue>> where TValue : IReplicatedData<TValue>
     {
         public ORDictionaryKey(string id) : base(id) { }
     }
-    
+
     public static class ORDictionary
     {
-        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData =>
+        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData<TValue> =>
             ORDictionary<TKey, TValue>.Empty.SetItem(node, key, value);
 
-        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(params Tuple<UniqueAddress, TKey, TValue>[] elements) where TValue : IReplicatedData =>
+        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(params Tuple<UniqueAddress, TKey, TValue>[] elements) where TValue : IReplicatedData<TValue> =>
             elements.Aggregate(ORDictionary<TKey, TValue>.Empty, (acc, t) => acc.SetItem(t.Item1, t.Item2, t.Item3));
 
-        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<Tuple<UniqueAddress, TKey, TValue>> elements) where TValue : IReplicatedData =>
+        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<Tuple<UniqueAddress, TKey, TValue>> elements) where TValue : IReplicatedData<TValue> =>
             elements.Aggregate(ORDictionary<TKey, TValue>.Empty, (acc, t) => acc.SetItem(t.Item1, t.Item2, t.Item3));
     }
 
@@ -45,9 +43,13 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class ORDictionary<TKey, TValue> : IReplicatedData<ORDictionary<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>,
-        IRemovedNodePruning<ORDictionary<TKey, TValue>>, IEquatable<ORDictionary<TKey, TValue>>, IReplicatedDataSerialization
-        where TValue : IReplicatedData
+    public sealed class ORDictionary<TKey, TValue> :
+        IEnumerable<KeyValuePair<TKey, TValue>>,
+        IRemovedNodePruning<ORDictionary<TKey, TValue>>,
+        IEquatable<ORDictionary<TKey, TValue>>,
+        IReplicatedDataSerialization,
+        IDeltaReplicatedData<ORDictionary<TKey, TValue>, ORDictionary<TKey, TValue>.IDeltaOperation>
+        where TValue : IReplicatedData<TValue>
     {
         /// <summary>
         /// An empty instance of the <see cref="ORDictionary{TKey,TValue}"/>
@@ -63,9 +65,15 @@ namespace Akka.DistributedData
         /// <param name="keySet"></param>
         /// <param name="valueMap"></param>
         public ORDictionary(ORSet<TKey> keySet, IImmutableDictionary<TKey, TValue> valueMap)
+            : this(keySet, valueMap, null)
+        {
+        }
+
+        internal ORDictionary(ORSet<TKey> keySet, IImmutableDictionary<TKey, TValue> valueMap, IDeltaOperation delta)
         {
             KeySet = keySet;
             ValueMap = valueMap;
+            _syncRoot = delta;
         }
 
         /// <summary>
@@ -120,7 +128,7 @@ namespace Akka.DistributedData
         /// 
         /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
         /// value, because important history can be lost when replacing the `ORSet` and
-        /// undesired effects of merging will occur. Use <see cref="ORMultiDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
+        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
         /// </summary>
         public ORDictionary<TKey, TValue> SetItem(Cluster.Cluster node, TKey key, TValue value) =>
             SetItem(node.SelfUniqueAddress, key, value);
@@ -136,14 +144,17 @@ namespace Akka.DistributedData
         /// 
         /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
         /// value, because important history can be lost when replacing the `ORSet` and
-        /// undesired effects of merging will occur. Use <see cref="ORMultiDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
+        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
         /// </summary>
         public ORDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value)
         {
             if (value is IORSet && ValueMap.ContainsKey(key))
                 throw new ArgumentException("ORDictionary.SetItems may not be used to replace an existing ORSet", nameof(value));
 
-            return new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, value));
+            var newKeys = KeySet.ResetDelta().Add(node, key);
+            var delta = new PutDeltaOperation(newKeys.Delta, key, value);
+            // put forcibly damages history, so we propagate full value that will overwrite previous values
+            return new ORDictionary<TKey, TValue>(newKeys, ValueMap.SetItem(key, value), NewDelta(delta));
         }
 
         /// <summary>
@@ -164,10 +175,49 @@ namespace Akka.DistributedData
         public ORDictionary<TKey, TValue> AddOrUpdate(UniqueAddress node, TKey key, TValue initial,
             Func<TValue, TValue> modify)
         {
-            TValue value;
-            return ValueMap.TryGetValue(key, out value)
-                ? new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(value)))
-                : new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(initial)));
+            return AddOrUpdate(node, key, initial, false, modify);
+        }
+
+        internal ORDictionary<TKey, TValue> AddOrUpdate(UniqueAddress node, TKey key, TValue initial, bool valueDeltas,
+            Func<TValue, TValue> modify)
+        {
+            TValue oldValue;
+            bool hasOldValue;
+            if (!ValueMap.TryGetValue(key, out oldValue))
+            {
+                oldValue = initial;
+                hasOldValue = false;
+            }
+            else hasOldValue = true;
+
+            // Optimization: for some types - like GSet, GCounter, PNCounter and ORSet  - that are delta based
+            // we can emit (and later merge) their deltas instead of full updates.
+            // However to avoid necessity of tombstones, the derived map type needs to support this
+            // with clearing the value (e.g. removing all elements if value is a set)
+            // before removing the key - like e.g. ORMultiMap does
+            var newKeys = KeySet.ResetDelta().Add(node, key);
+            if (valueDeltas && oldValue is IDeltaReplicatedData)
+            {
+                var deltaOldValue = (IDeltaReplicatedData)oldValue;
+                var newValue = modify((TValue)deltaOldValue.ResetDelta());
+                var newValueDelta = ((IDeltaReplicatedData)newValue).Delta;
+                if (newValueDelta != null && hasOldValue)
+                {
+                    var op = new UpdateDeltaOperation(newKeys.Delta, ImmutableDictionary.CreateRange(new[] { new KeyValuePair<TKey, IReplicatedData>(key, newValueDelta) }));
+                    return new ORDictionary<TKey, TValue>(newKeys, ValueMap.SetItem(key, newValue), NewDelta(op));
+                }
+                else
+                {
+                    var op = new PutDeltaOperation(newKeys.Delta, key, newValue);
+                    return new ORDictionary<TKey, TValue>(newKeys, ValueMap.SetItem(key, newValue), NewDelta(op));
+                }
+            }
+            else
+            {
+                var newValue = modify(oldValue);
+                var delta = new PutDeltaOperation(newKeys.Delta, key, newValue);
+                return new ORDictionary<TKey, TValue>(newKeys, ValueMap.SetItem(key, newValue), NewDelta(delta));
+            }
         }
 
         /// <summary>
@@ -183,32 +233,62 @@ namespace Akka.DistributedData
         /// Note that if there is a conflicting update on another node the entry will
         /// not be removed after merge.
         /// </summary>
-        public ORDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) =>
-            new ORDictionary<TKey, TValue>(KeySet.Remove(node, key), ValueMap.Remove(key));
+        public ORDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key)
+        {
+            // for removals the delta values map emitted will be empty
+            var newKeys = KeySet.ResetDelta().Remove(node, key);
+            var removeOp = new RemoveDeltaOperation(newKeys.Delta);
+            return new ORDictionary<TKey, TValue>(newKeys, ValueMap.Remove(key), NewDelta(removeOp));
+        }
 
         public ORDictionary<TKey, TValue> Merge(ORDictionary<TKey, TValue> other)
         {
             var mergedKeys = KeySet.Merge(other.KeySet);
+            return DryMerge(other, mergedKeys, mergedKeys.GetEnumerator());
+        }
+
+        private ORDictionary<TKey, TValue> DryMerge(ORDictionary<TKey, TValue> other, ORSet<TKey> mergedKeys, IEnumerator<TKey> valueKeysEnumerator)
+        {
             var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
-            foreach (var key in mergedKeys.Elements)
+            while (valueKeysEnumerator.MoveNext())
             {
-                TValue left, right;
-                var leftFound = ValueMap.TryGetValue(key, out left);
-                var rightFound = other.ValueMap.TryGetValue(key, out right);
-                if (leftFound && rightFound)
-                    mergedValues.Add(key, (TValue) left.Merge(right));
-                else if (leftFound)
-                    mergedValues.Add(key, left);
-                else if (rightFound)
-                    mergedValues.Add(key, right);
+                var key = valueKeysEnumerator.Current;
+                TValue value1, value2;
+                if (this.ValueMap.TryGetValue(key, out value1))
+                {
+                    if (other.ValueMap.TryGetValue(key, out value2))
+                    {
+                        var merged = value1.Merge(value2);
+                        mergedValues[key] = merged;
+                    }
+                    else
+                        mergedValues[key] = value1;
+                }
                 else
-                    throw new IllegalStateException($"Missing value for '{key}'");
+                {
+                    if (other.ValueMap.TryGetValue(key, out value2))
+                        mergedValues[key] = value2;
+                    else
+                        throw new IllegalStateException($"Missing value for {key}");
+                }
             }
 
             return new ORDictionary<TKey, TValue>(mergedKeys, mergedValues.ToImmutable());
         }
 
         public IReplicatedData Merge(IReplicatedData other) => Merge((ORDictionary<TKey, TValue>)other);
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((IDeltaOperation)delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes =>
+            KeySet.ModifiedByNodes.Union(ValueMap.Aggregate(ImmutableHashSet<UniqueAddress>.Empty, (acc, pair) =>
+            {
+                var pruning = pair.Value as IRemovedNodePruning;
+                return pruning != null ? acc.Union(pruning.ModifiedByNodes) : acc;
+            }));
 
         public bool NeedPruningFrom(UniqueAddress removedNode)
         {
@@ -219,14 +299,18 @@ namespace Akka.DistributedData
             });
         }
 
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         public ORDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
             var prunedKeys = KeySet.Prune(removedNode, collapseInto);
             var prunedValues = ValueMap.Aggregate(ValueMap, (acc, kv) =>
             {
-                var data = kv.Value as IRemovedNodePruning;
+                var data = kv.Value as IRemovedNodePruning<TValue>;
                 return data != null && data.NeedPruningFrom(removedNode)
-                    ? acc.SetItem(kv.Key, (TValue) data.Prune(removedNode, collapseInto))
+                    ? acc.SetItem(kv.Key, data.Prune(removedNode, collapseInto))
                     : acc;
             });
 
@@ -238,9 +322,9 @@ namespace Akka.DistributedData
             var pruningCleanupKeys = KeySet.PruningCleanup(removedNode);
             var pruningCleanupValues = ValueMap.Aggregate(ValueMap, (acc, kv) =>
             {
-                var data = kv.Value as IRemovedNodePruning;
+                var data = kv.Value as IRemovedNodePruning<TValue>;
                 return data != null && data.NeedPruningFrom(removedNode)
-                    ? acc.SetItem(kv.Key, (TValue)data.PruningCleanup(removedNode))
+                    ? acc.SetItem(kv.Key, data.PruningCleanup(removedNode))
                     : acc;
             });
 
@@ -259,7 +343,7 @@ namespace Akka.DistributedData
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            return obj is ORDictionary<TKey, TValue> && Equals((ORDictionary<TKey, TValue>) obj);
+            return obj is ORDictionary<TKey, TValue> && Equals((ORDictionary<TKey, TValue>)obj);
         }
 
         /// <inheritdoc/>
@@ -267,7 +351,7 @@ namespace Akka.DistributedData
         {
             unchecked
             {
-                return ((KeySet.GetHashCode() *397) ^ ValueMap.GetHashCode());
+                return ((KeySet.GetHashCode() * 397) ^ ValueMap.GetHashCode());
             }
         }
 
@@ -285,6 +369,479 @@ namespace Akka.DistributedData
             }
             sb.Append(')');
             return sb.ToString();
+        }
+
+        #region delta operations
+
+        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas, IReplicatedDataSerialization, IEquatable<IDeltaOperation>
+        {
+        }
+
+        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize
+        {
+            public abstract ORSet<TKey>.IDeltaOperation Underlying { get; }
+            public virtual IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is AtomicDeltaOperation)
+                    return new DeltaGroup(ImmutableArray.Create(this, (IDeltaOperation)other));
+                else
+                {
+                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    builder.Add(this);
+                    builder.AddRange(((DeltaGroup)other).Operations);
+                    return new DeltaGroup(builder.ToImmutable());
+                }
+            }
+
+            public IDeltaReplicatedData Zero => ORDictionary<TKey, TValue>.Empty;
+            public int DeltaSize => 1;
+
+            public abstract bool Equals(IDeltaOperation op);
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((IDeltaOperation)obj);
+            }
+        }
+
+        internal sealed class PutDeltaOperation : AtomicDeltaOperation
+        {
+            public override ORSet<TKey>.IDeltaOperation Underlying { get; }
+            public TKey Key { get; }
+            public TValue Value { get; }
+
+            public PutDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key, TValue value)
+            {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
+                Underlying = underlying;
+                Key = key;
+                Value = value;
+            }
+
+            public override IReplicatedData Merge(IReplicatedData other)
+            {
+                UpdateDeltaOperation update;
+                var put = other as PutDeltaOperation;
+                if (put != null && Equals(Key, put.Key))
+                {
+                    return new PutDeltaOperation((ORSet<TKey>.IDeltaOperation)Underlying.Merge(put.Underlying), put.Key, put.Value);
+                }
+                else if ((update = other as UpdateDeltaOperation) != null && update.Values.Count == 1 && update.Values.ContainsKey(Key))
+                {
+                    var merged = (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying);
+                    var e2 = update.Values.First().Value;
+                    if (Value is IDeltaReplicatedData)
+                    {
+                        var mergedDelta = ((IDeltaReplicatedData)Value).MergeDelta((IReplicatedDelta)e2);
+                        return new PutDeltaOperation(merged, Key, (TValue)mergedDelta);
+                    }
+                    else
+                    {
+                        var mergedDelta = Value.Merge(e2);
+                        return new PutDeltaOperation(merged, Key, (TValue)mergedDelta);
+                    }
+                }
+                else if (other is AtomicDeltaOperation)
+                {
+                    return new DeltaGroup(ImmutableArray.Create(this, (IDeltaOperation)other));
+                }
+                else
+                {
+                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    builder.Add(this);
+                    builder.AddRange(((DeltaGroup)other).Operations);
+                    return new DeltaGroup(builder.ToImmutable());
+                }
+            }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is PutDeltaOperation put)
+                {
+                    return Equals(Key, put.Key) && Equals(Value, put.Value) && Underlying.Equals(put.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    hash = (hash * 397) ^ Key.GetHashCode();
+                    hash = (hash * 397) ^ Value.GetHashCode();
+                    return hash;
+                }
+            }
+        }
+
+        internal sealed class UpdateDeltaOperation : AtomicDeltaOperation
+        {
+            public override ORSet<TKey>.IDeltaOperation Underlying { get; }
+            public ImmutableDictionary<TKey, IReplicatedData> Values { get; }
+
+            public UpdateDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, ImmutableDictionary<TKey, IReplicatedData> values)
+            {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
+                Underlying = underlying;
+                Values = values;
+            }
+
+            public override IReplicatedData Merge(IReplicatedData other)
+            {
+                PutDeltaOperation put;
+                if (other is UpdateDeltaOperation)
+                {
+                    var update = (UpdateDeltaOperation)other;
+                    var builder = this.Values.ToBuilder();
+                    foreach (var entry in update.Values)
+                    {
+                        IReplicatedData value;
+                        if (this.Values.TryGetValue(entry.Key, out value))
+                        {
+                            builder[entry.Key] = value.Merge(entry.Value);
+                        }
+                        else
+                        {
+                            builder.Add(entry);
+                        }
+                    }
+                    return new UpdateDeltaOperation(
+                        underlying: (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying),
+                        values: builder.ToImmutable());
+                }
+                else if ((put = other as PutDeltaOperation) != null && this.Values.Count == 1 && this.Values.ContainsKey(put.Key))
+                {
+                    return new PutDeltaOperation((ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(put.Underlying), put.Key, put.Value);
+                }
+                else if (other is AtomicDeltaOperation)
+                {
+                    return new DeltaGroup(ImmutableArray.Create(this, (IDeltaOperation)other));
+                }
+                else
+                {
+                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    builder.Add(this);
+                    builder.AddRange(((DeltaGroup)other).Operations);
+                    return new DeltaGroup(builder.ToImmutable());
+                }
+            }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is UpdateDeltaOperation update)
+                {
+                    return Underlying.Equals(update.Underlying) && Values.SequenceEqual(update.Values);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    foreach (var data in Values)
+                    {
+                        hash = (hash * 397) ^ data.Key.GetHashCode();
+                        hash = (hash * 397) ^ data.Value.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
+        }
+
+        internal sealed class RemoveDeltaOperation : AtomicDeltaOperation
+        {
+            public RemoveDeltaOperation(ORSet<TKey>.IDeltaOperation underlying)
+            {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
+                Underlying = underlying;
+            }
+
+            public override ORSet<TKey>.IDeltaOperation Underlying { get; }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is RemoveDeltaOperation remove)
+                {
+                    return Underlying.Equals(remove.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode() => Underlying.GetHashCode();
+        }
+
+        internal sealed class RemoveKeyDeltaOperation : AtomicDeltaOperation
+        {
+            public override ORSet<TKey>.IDeltaOperation Underlying { get; }
+            public TKey Key { get; }
+
+            public RemoveKeyDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key)
+            {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
+                Underlying = underlying;
+                Key = key;
+            }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is RemoveKeyDeltaOperation remove)
+                {
+                    return Equals(Key, remove.Key) && Underlying.Equals(remove.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    hash = (hash * 397) ^ Key.GetHashCode();
+                    return hash;
+                }
+            }
+        }
+
+        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize
+        {
+            public readonly IDeltaOperation[] Operations;
+
+            public DeltaGroup(IEnumerable<IDeltaOperation> operations)
+            {
+                this.Operations = operations.ToArray();
+            }
+
+            public IReplicatedData Merge(IReplicatedData other)
+            {
+                var atomic = other as AtomicDeltaOperation;
+                if (atomic != null)
+                {
+                    var lastIndex = Operations.Length - 1;
+                    var last = Operations[lastIndex];
+                    if (last is PutDeltaOperation || last is UpdateDeltaOperation)
+                    {
+                        var builder = this.Operations.ToList();
+                        var merged = (IDeltaOperation)last.Merge(atomic);
+                        if (merged is AtomicDeltaOperation)
+                        {
+                            builder[lastIndex] = merged;
+                            return new DeltaGroup(builder);
+                        }
+                        else
+                        {
+                            builder.RemoveAt(lastIndex);
+                            builder.AddRange(((DeltaGroup)merged).Operations);
+                            return new DeltaGroup(builder);
+                        }
+                    }
+                    else
+                    {
+                        return new DeltaGroup(Operations.Union(new[]{atomic}));
+                    }
+                }
+                else
+                {
+                    var group = (DeltaGroup)other;
+                    return new DeltaGroup(this.Operations.Union(group.Operations));
+                }
+            }
+
+            public IDeltaReplicatedData Zero => ((IReplicatedDelta)Operations.FirstOrDefault())?.Zero;
+            public int DeltaSize => Operations.Length;
+
+            public override bool Equals(object obj) => obj is IDeltaOperation && Equals((IDeltaOperation)obj);
+
+            public bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is DeltaGroup group)
+                {
+                    return Operations.SequenceEqual(group.Operations);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = 0;
+                    foreach (var op in Operations)
+                    {
+                        hash = (hash * 397) ^ op.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
+        }
+
+        [NonSerialized]
+        private readonly IDeltaOperation _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
+        public IDeltaOperation Delta => _syncRoot;
+
+        public ORDictionary<TKey, TValue> ResetDelta()
+        {
+            return _syncRoot == null ? this : new ORDictionary<TKey, TValue>(KeySet.ResetDelta(), ValueMap);
+        }
+
+        public ORDictionary<TKey, TValue> MergeDelta(IDeltaOperation delta)
+        {
+            if (delta == null) throw new ArgumentNullException();
+
+            var withDeltas = DryMergeDeltas(delta);
+            return this.Merge(withDeltas);
+        }
+
+        private ORDictionary<TKey, TValue> DryMergeDeltas(IDeltaOperation delta, bool withValueDelta = false)
+        {
+            var mergedKeys = this.KeySet;
+            var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            var tombstonedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            foreach (var entry in this.ValueMap)
+            {
+                if (this.KeySet.Contains(entry.Key))
+                    mergedValues.Add(entry);
+                else
+                    tombstonedValues.Add(entry);
+            }
+
+            if(!ProcessDelta(delta, mergedValues, tombstonedValues, ref mergedKeys))
+                ProcessNestedDelta(delta, mergedValues, tombstonedValues, ref mergedKeys);
+
+            if (withValueDelta)
+            {
+                foreach (var entry in mergedValues)
+                {
+                    // AddRange won't work in the face of repeated entries
+                    tombstonedValues[entry.Key] = entry.Value;
+                }
+                return new ORDictionary<TKey, TValue>(mergedKeys, tombstonedValues.ToImmutable());
+            }
+            else
+            {
+                return new ORDictionary<TKey, TValue>(mergedKeys, mergedValues.ToImmutable());
+            }
+        }
+
+        private bool ProcessDelta(IDeltaOperation delta, ImmutableDictionary<TKey, TValue>.Builder mergedValues, ImmutableDictionary<TKey, TValue>.Builder tombstonedValues, ref ORSet<TKey> mergedKeys)
+        {
+            switch (delta)
+            {
+                case PutDeltaOperation putOp:
+                    mergedKeys = mergedKeys.MergeDelta(putOp.Underlying);
+                    mergedValues[putOp.Key] = putOp.Value; // put is destructive and propagates only full values of B!
+                    return true;
+                case RemoveDeltaOperation removeOp:
+                    if (removeOp.Underlying is ORSet<TKey>.RemoveDeltaOperation op)
+                    {
+                        // if op is RemoveDeltaOp then it must have exactly one element in the elements
+                        var removedKey = op.Underlying.Elements.First();
+                        mergedValues.Remove(removedKey);
+                        mergedKeys = mergedKeys.MergeDelta(removeOp.Underlying);
+                        // please note that if RemoveDeltaOp is not preceded by update clearing the value
+                        // anomalies may result
+                    }
+                    else throw new ArgumentException("ORDictionary.RemoveDeltaOp must contain ORSet.RemoveDeltaOp inside");
+                    return true; 
+                case RemoveKeyDeltaOperation removeKeyOp:
+                    // removeKeyOp tombstones values for later use
+                    if (mergedValues.ContainsKey(removeKeyOp.Key))
+                        tombstonedValues[removeKeyOp.Key] = mergedValues[removeKeyOp.Key];
+                    mergedValues.Remove(removeKeyOp.Key);
+                    mergedKeys = mergedKeys.MergeDelta(removeKeyOp.Underlying);
+                    return true;
+                case UpdateDeltaOperation updateOp:
+                    mergedKeys = mergedKeys.MergeDelta(updateOp.Underlying);
+                    foreach (var entry in updateOp.Values)
+                    {
+                        var key = entry.Key;
+                        if (mergedKeys.Contains(key))
+                        {
+                            if (mergedValues.TryGetValue(key, out var value))
+                                mergedValues[key] = MergeValue(value, entry.Value);
+                            else if (tombstonedValues.TryGetValue(key, out value))
+                                mergedValues[key] = MergeValue(value, entry.Value);
+                            else
+                            {
+                                if (entry.Value is IReplicatedDelta v) mergedValues[key] = MergeValue((TValue)v.Zero, entry.Value);
+                                else mergedValues[key] = (TValue)entry.Value;
+                            }
+                        }
+                    }
+                    return true;
+                default: return false;
+            }
+        }
+
+        private bool ProcessNestedDelta(IDeltaOperation delta, ImmutableDictionary<TKey, TValue>.Builder mergedValues, ImmutableDictionary<TKey, TValue>.Builder tombstonedValues, ref ORSet<TKey> mergedKeys)
+        {
+            if (delta is DeltaGroup ops)
+            {
+                foreach (var op in ops.Operations)
+                {
+                    if(!ProcessDelta(op, mergedValues, tombstonedValues, ref mergedKeys))
+                        throw new IllegalStateException("Cannot nest DeltaGroup");
+                }
+                return true;
+            }
+            else return false;
+        }
+
+        private TValue MergeValue(TValue value, IReplicatedData delta)
+        {
+            var v = value as IDeltaReplicatedData;
+            var d = delta as IReplicatedDelta;
+            if (v != null && d != null)
+            {
+                return (TValue)v.MergeDelta(d);
+            }
+            else
+            {
+                return (TValue)value.Merge(delta);
+            }
+        }
+
+        private IDeltaOperation NewDelta(IDeltaOperation delta) =>
+            Delta == null ? delta : (IDeltaOperation)Delta.Merge(delta);
+
+        #endregion
+
+        internal ORDictionary<TKey, TValue> MergeRetainingDeletedValues(ORDictionary<TKey, TValue> other)
+        {
+            var mergedKeys = KeySet.Merge(other.KeySet);
+            return DryMerge(other, mergedKeys, this.ValueMap.Keys.Union(other.ValueMap.Keys).GetEnumerator());
+        }
+
+        internal ORDictionary<TKey, TValue> RemoveKey(UniqueAddress node, TKey key)
+        {
+            var newKeys = KeySet.ResetDelta().Remove(node, key);
+            var removeKeyDeltaOp = new RemoveKeyDeltaOperation(newKeys.Delta, key);
+            return new ORDictionary<TKey, TValue>(newKeys, ValueMap, NewDelta(removeKeyDeltaOp));
+        }
+
+        internal ORDictionary<TKey, TValue> MergeDeltaRetainingDeletedValues(IDeltaOperation delta)
+        {
+            var withDeltas = DryMergeDeltas(delta, true);
+            return MergeRetainingDeletedValues(withDeltas);
         }
     }
 }

@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -57,7 +58,7 @@ namespace Akka.DistributedData
 
         public abstract int Count { get; }
 
-        protected abstract IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator { get; }
+        public abstract IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator { get; }
         public static readonly VersionVector Empty = new MultiVersionVector(ImmutableDictionary<UniqueAddress, long>.Empty);
 
         /// <summary>
@@ -74,9 +75,14 @@ namespace Akka.DistributedData
         /// </summary>
         public abstract VersionVector Merge(VersionVector other);
 
-        public IReplicatedData Merge(IReplicatedData other) => Merge((VersionVector) other);
+        public IReplicatedData Merge(IReplicatedData other) => Merge((VersionVector)other);
 
+        public abstract ImmutableHashSet<UniqueAddress> ModifiedByNodes { get; }
         public abstract bool NeedPruningFrom(UniqueAddress removedNode);
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         public abstract VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto);
 
         public abstract VersionVector PruningCleanup(UniqueAddress removedNode);
@@ -91,7 +97,7 @@ namespace Akka.DistributedData
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is VersionVector && Equals((VersionVector) obj);
+        public override bool Equals(object obj) => obj is VersionVector && Equals((VersionVector)obj);
 
         /// <summary>
         /// Returns true if <paramref name="x"/> VersionVector has the same 
@@ -105,7 +111,7 @@ namespace Akka.DistributedData
 
         public bool IsAfter(VersionVector y) => CompareOnlyTo(y, Ordering.After) == Ordering.After;
 
-        public static bool operator ==(VersionVector x, VersionVector y) => !ReferenceEquals(x, null) && x.Equals(y);
+        public static bool operator ==(VersionVector x, VersionVector y) => x?.Equals(y) ?? ReferenceEquals(x, y);
 
         /// <summary>
         /// Returns true if <paramref name="x"/> VersionVector has other 
@@ -205,7 +211,7 @@ namespace Akka.DistributedData
         }
     }
 
-    [Serializable]
+    [DebuggerDisplay("VersionVector({Node}->{Version})")]
     public sealed class SingleVersionVector : VersionVector
     {
         private sealed class Enumerator : IEnumerator<KeyValuePair<UniqueAddress, long>>
@@ -251,14 +257,14 @@ namespace Akka.DistributedData
 
         public override bool IsEmpty => false;
         public override int Count => 1;
-        protected override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => new Enumerator(Node, Version);
+        public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => new Enumerator(Node, Version);
         public override VersionVector Increment(UniqueAddress node)
         {
             var v = Counter.GetAndIncrement();
             return node == Node
-                ? (VersionVector) new SingleVersionVector(Node, v)
+                ? (VersionVector)new SingleVersionVector(Node, v)
                 : new MultiVersionVector(
-                    new KeyValuePair<UniqueAddress, long>(Node, Version), 
+                    new KeyValuePair<UniqueAddress, long>(Node, Version),
                     new KeyValuePair<UniqueAddress, long>(node, v));
         }
 
@@ -270,7 +276,7 @@ namespace Akka.DistributedData
         {
             if (other is MultiVersionVector)
             {
-                var vector = (MultiVersionVector) other;
+                var vector = (MultiVersionVector)other;
                 var v2 = vector.Versions.GetValueOrDefault(Node, 0L);
                 var mergedVersions = v2 >= Version ? vector.Versions : vector.Versions.SetItem(Node, Version);
                 return new MultiVersionVector(mergedVersions);
@@ -289,12 +295,14 @@ namespace Akka.DistributedData
             else throw new NotSupportedException("SingleVersionVector doesn't support merge with provided version vector");
         }
 
+        public override ImmutableHashSet<UniqueAddress> ModifiedByNodes => ImmutableHashSet.Create(Node);
+
         public override bool NeedPruningFrom(UniqueAddress removedNode) => Node == removedNode;
 
-        public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
+        public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
             (Node == removedNode ? Empty : this).Increment(collapseInto);
 
-        public override VersionVector PruningCleanup(UniqueAddress removedNode) => 
+        public override VersionVector PruningCleanup(UniqueAddress removedNode) =>
             Node == removedNode ? Empty : this;
 
         public override string ToString() => $"VersionVector({Node}->{Version})";
@@ -324,8 +332,8 @@ namespace Akka.DistributedData
 
         public override bool IsEmpty => Versions.IsEmpty;
         public override int Count => Versions.Count;
-        protected override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => Versions.GetEnumerator();
-        public override VersionVector Increment(UniqueAddress node) => 
+        public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => Versions.GetEnumerator();
+        public override VersionVector Increment(UniqueAddress node) =>
             new MultiVersionVector(Versions.SetItem(node, Counter.GetAndIncrement()));
 
         public override long VersionAt(UniqueAddress node) => Versions.GetValueOrDefault(node, 0L);
@@ -336,7 +344,7 @@ namespace Akka.DistributedData
         {
             if (other is MultiVersionVector)
             {
-                var vector = (MultiVersionVector) other;
+                var vector = (MultiVersionVector)other;
                 var merged = vector.Versions.ToBuilder();
                 foreach (var pair in Versions)
                 {
@@ -349,7 +357,7 @@ namespace Akka.DistributedData
             }
             else if (other is SingleVersionVector)
             {
-                var vector = (SingleVersionVector) other;
+                var vector = (SingleVersionVector)other;
                 var v1 = Versions.GetValueOrDefault(vector.Node, 0L);
                 var merged = v1 >= vector.Version ? Versions : Versions.SetItem(vector.Node, vector.Version);
                 return new MultiVersionVector(merged);
@@ -357,12 +365,14 @@ namespace Akka.DistributedData
             else throw new NotSupportedException("MultiVersionVector doesn't support merge with provided version vector");
         }
 
+        public override ImmutableHashSet<UniqueAddress> ModifiedByNodes => Versions.Keys.ToImmutableHashSet();
+
         public override bool NeedPruningFrom(UniqueAddress removedNode) => Versions.ContainsKey(removedNode);
 
-        public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
+        public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
             new MultiVersionVector(Versions.Remove(removedNode)).Increment(collapseInto);
 
-        public override VersionVector PruningCleanup(UniqueAddress removedNode) => 
+        public override VersionVector PruningCleanup(UniqueAddress removedNode) =>
             new MultiVersionVector(Versions.Remove(removedNode));
 
         /// <inheritdoc/>

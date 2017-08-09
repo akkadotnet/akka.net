@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Reflection;
@@ -81,11 +82,11 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
         public bool HasRequiredType(Type actorType)
         {
-            var interfaces = actorType.GetInterfaces();
+            var interfaces = actorType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
                 {
                     return true;
                 }
@@ -101,11 +102,11 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
         public bool ProducesMessageQueue(Type mailboxType)
         {
-            var interfaces = mailboxType.GetInterfaces();
+            var interfaces = mailboxType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
                 {
                     return true;
                 }
@@ -116,11 +117,8 @@ namespace Akka.Dispatch
 
         private string LookupId(Type queueType)
         {
-            string id;
-            if (!_mailboxBindings.TryGetValue(queueType, out id))
-            {
+            if (!_mailboxBindings.TryGetValue(queueType, out string id))
                 throw new ConfigurationException($"Mailbox Mapping for [{queueType}] not configured");
-            }
             return id;
         }
 
@@ -154,21 +152,24 @@ namespace Akka.Dispatch
 
         private MailboxType LookupConfigurator(string id)
         {
-            MailboxType configurator;
-            if (!_mailboxTypeConfigurators.TryGetValue(id, out configurator))
+            if (!_mailboxTypeConfigurators.TryGetValue(id, out var configurator))
             {
                 // It doesn't matter if we create a mailbox type configurator that isn't used due to concurrent lookup.
-                if (id.Equals("unbounded")) configurator = new UnboundedMailbox();
-                else if (id.Equals("bounded")) configurator = new BoundedMailbox(Settings, Config(id));
+                if (id.Equals("unbounded"))
+                    configurator = new UnboundedMailbox();
+                else if (id.Equals("bounded"))
+                    configurator = new BoundedMailbox(Settings, Config(id));
                 else
                 {
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
                     var mailboxTypeName = conf.GetString("mailbox-type");
-                    if (string.IsNullOrEmpty(mailboxTypeName)) throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
+                    if (string.IsNullOrEmpty(mailboxTypeName))
+                        throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
                     var type = Type.GetType(mailboxTypeName);
-                    if (type == null) throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
+                    if (type == null)
+                        throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
                     var args = new object[] {Settings, conf};
                     try
                     {
@@ -211,11 +212,11 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public Type GetRequiredType(Type actorType)
         {
-            var interfaces = actorType.GetInterfaces();
+            var interfaces = actorType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
                 {
                     return element.GetGenericArguments()[0];
                 }
@@ -227,11 +228,11 @@ namespace Akka.Dispatch
         private static readonly Type ProducesMessageQueueGenericType = typeof (IProducesMessageQueue<>);
         private Type GetProducedMessageQueueType(MailboxType mailboxType)
         {
-            var interfaces = mailboxType.GetType().GetInterfaces();
+            var interfaces = mailboxType.GetType().GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
                 {
                     return element.GetGenericArguments()[0];
                 }
@@ -276,38 +277,36 @@ namespace Akka.Dispatch
                 _mailboxSizeWarningIssued = true;
             }
 
-            Func<MailboxType, MailboxType> verifyRequirements = mailboxType =>
+            MailboxType VerifyRequirements(MailboxType mailboxType)
             {
-                Lazy<Type> mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
+                var mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
                 if (hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." +
-                                                $"Must be a subclass of [{mailboxRequirement}]");
+                    throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 if (HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." +
-                                                $"Must be a subclass of [{mailboxRequirement}]");
+                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 return mailboxType;
-            };
+            }
 
             if (!deploy.Mailbox.Equals(Deploy.NoMailboxGiven))
-                return verifyRequirements(Lookup(deploy.Mailbox));
+                return VerifyRequirements(Lookup(deploy.Mailbox));
             if (!deploy.Dispatcher.Equals(Deploy.NoDispatcherGiven) && hasMailboxType)
-                return verifyRequirements(Lookup(dispatcherConfig.GetString("id")));
+                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id")));
             if (actorRequirement.Value != null)
             {
                 try
                 {
-                    return verifyRequirements(LookupByQueueType(actorRequirement.Value));
+                    return VerifyRequirements(LookupByQueueType(actorRequirement.Value));
                 }
                 catch (Exception e)
                 {
                     if (hasMailboxRequirement)
-                        return verifyRequirements(LookupByQueueType(mailboxRequirement));
+                        return VerifyRequirements(LookupByQueueType(mailboxRequirement));
                     throw;
                 }
             }
             if (hasMailboxRequirement)
-                return verifyRequirements(LookupByQueueType(mailboxRequirement));
-            return verifyRequirements(Lookup(DefaultMailboxId));
+                return VerifyRequirements(LookupByQueueType(mailboxRequirement));
+            return VerifyRequirements(Lookup(DefaultMailboxId));
         }
 
         /// <summary>

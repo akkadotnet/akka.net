@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -161,11 +162,7 @@ namespace Akka.Persistence.Tests
                 {
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
                     var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
-                    var newTempFileName = GetSnapshotFileForWrite(metadata, ".tmp");
-                    if (tempFile != newTempFileName)
-                    {
-                        tempFile.MoveTo(newTempFileName.FullName);
-                    }
+					tempFile.MoveTo(GetSnapshotFileForWrite(metadata, "").FullName);
                 }
                 else base.Save(metadata, payload);
             }

@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
         }
 
-        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config)
+        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config, typeof(DistributedPubSubMediatorSpec))
         {
             _first = config.First;
             _second = config.Second;
@@ -259,8 +259,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private IActorRef ChatUser(string name)
         {
-            IActorRef a;
-            return _chatUsers.TryGetValue(name, out a) ? a : ActorRefs.Nobody;
+            return _chatUsers.TryGetValue(name, out var a) ? a : ActorRefs.Nobody;
         }
 
         private void Join(RoleName from, RoleName to)

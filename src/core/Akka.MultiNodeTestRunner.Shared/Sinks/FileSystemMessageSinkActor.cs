@@ -18,11 +18,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class FileSystemMessageSink : MessageSink
     {
-        public FileSystemMessageSink(string assemblyName)
+        public FileSystemMessageSink(string assemblyName, string platform)
             : this(
                 Props.Create(
                     () =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), FileNameGenerator.GenerateFileName(assemblyName, ".json"),
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), 
+                            FileNameGenerator.GenerateFileName(assemblyName, platform, ".json"),
+                            true,
                             true)))
         {
             
@@ -45,12 +47,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     {
         protected IPersistentTestRunStore FileStore;
         protected string FileName;
+        private readonly bool _reportStatus;
 
-        public FileSystemMessageSinkActor(IPersistentTestRunStore store, string fileName, bool useTestCoordinator)
+        public FileSystemMessageSinkActor(IPersistentTestRunStore store, string fileName, bool reportStatus, bool useTestCoordinator)
             : base(useTestCoordinator)
         {
             FileStore = store;
             FileName = fileName;
+            _reportStatus = reportStatus;
         }
 
         protected override void AdditionalReceives()
@@ -60,16 +64,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleTestRunTree(TestRunTree tree)
         {
-            Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
+            if (_reportStatus)
+                Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
             try
             {
                 FileStore.SaveTestRun(FileName, tree);
             }
             catch (Exception ex) //avoid throwing exception back to parent - just continue
             {
-                Console.WriteLine("Failed to write test state to {0}. Cause: {1}", Path.GetFullPath(FileName), ex);
+                if (_reportStatus)
+                    Console.WriteLine("Failed to write test state to {0}. Cause: {1}", Path.GetFullPath(FileName), ex);                
             }
-            Console.WriteLine("Finished.");
+            if (_reportStatus)
+                Console.WriteLine("Finished.");           
         }
 
         protected override void ReceiveFactData(FactData data)

@@ -19,6 +19,5 @@ namespace Akka.Streams.TestKit
         {
             return new Source<T, TestPublisher.Probe<T>>(new StreamTestKit.ProbeSource<T>(testKit, Attributes.None, new SourceShape<T>(new Outlet<T>("ProbeSource.out"))));
         }
-
     }
 }

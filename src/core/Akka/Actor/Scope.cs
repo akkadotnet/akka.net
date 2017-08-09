@@ -37,13 +37,7 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Scope"/></returns>
         public abstract Scope Copy();
 
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>
-        /// <c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public virtual bool Equals(Scope other)
         {
             if (other == null) return false;

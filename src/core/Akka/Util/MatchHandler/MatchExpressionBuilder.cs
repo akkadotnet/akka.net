@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Akka.Tools.MatchHandler
 {
@@ -71,7 +72,7 @@ namespace Akka.Tools.MatchHandler
                 }
                 else
                 {
-                    if(handlesType.IsValueType)
+                    if(handlesType.GetTypeInfo().IsValueType)
                     {
                         //For value types we cannot use as-operator and check for nu, s0 we create the following code:
                         //  if(inputVariable is HandlesType)
@@ -105,8 +106,7 @@ namespace Akka.Tools.MatchHandler
                         //  }
 
                         //We might have a variable of the correct type already, so use it in that case
-                        ParameterExpression castedVariable;
-                        if(!castedInputVariables.TryGetValue(handlesType, out castedVariable))
+                        if(!castedInputVariables.TryGetValue(handlesType, out var castedVariable))
                         {
                             //The variable did not exist, create and store it:
                             //  var castedVariable = inputParameter as HandlesType;

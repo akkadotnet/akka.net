@@ -98,6 +98,7 @@ namespace Akka.Remote.TestKit
             /// <param name="message">The message that describes the error.</param>
             public ClientDisconnectedException(string message) : base(message){}
 
+#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
             /// </summary>
@@ -106,6 +107,7 @@ namespace Akka.Remote.TestKit
             protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#endif
         }
 
         public class GetNodes
@@ -331,9 +333,11 @@ namespace Akka.Remote.TestKit
                         foreach (var ni in _nodes.Values) ni.FSM.Tell(new ToClient<Done>(Done.Instance));
                         _initialParticipants = 0;
                     }
-                    if (_addrInterest.ContainsKey(nodeInfo.Name))
+
+                    if (_addrInterest.TryGetValue(nodeInfo.Name, out var addr))
                     {
-                        foreach(var a in _addrInterest[nodeInfo.Name]) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
+                        foreach(var a in addr)
+                            a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
                         _addrInterest = _addrInterest.Remove(nodeInfo.Name);
                     }
                 }
@@ -361,13 +365,12 @@ namespace Akka.Remote.TestKit
                 if (getAddress != null)
                 {
                     var node = getAddress.Node;
-                    if (_nodes.ContainsKey(node))
-                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, _nodes[node].Addr)));
+                    if (_nodes.TryGetValue(node, out var replyNodeInfo))
+                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
                     else
                     {
-                        ImmutableHashSet<IActorRef> existing;
                         _addrInterest = _addrInterest.SetItem(node,
-                            (_addrInterest.TryGetValue(node, out existing)
+                            (_addrInterest.TryGetValue(node, out var existing)
                                 ? existing
                                 : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));

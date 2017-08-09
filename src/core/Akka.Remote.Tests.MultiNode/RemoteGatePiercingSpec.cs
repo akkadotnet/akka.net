@@ -59,7 +59,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected RemoteGatePiercingSpec(RemoteGatePiercingMultiNetSpec config) : base(config)
+        protected RemoteGatePiercingSpec(RemoteGatePiercingMultiNetSpec config) : base(config, typeof(RemoteGatePiercingSpec))
         {
             _config = config;
 

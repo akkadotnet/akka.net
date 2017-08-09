@@ -62,7 +62,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected RemoteDeliverySpec(RemoteDeliveryMultiNetSpec config) : base(config)
+        protected RemoteDeliverySpec(RemoteDeliveryMultiNetSpec config) : base(config, typeof(RemoteDeliverySpec))
         {
             _config = config;
 

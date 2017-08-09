@@ -201,9 +201,13 @@ namespace Akka.Persistence.Snapshot
             {
                 Serialize(stream, new Serialization.Snapshot(snapshot));
             });
-            tempFile.MoveTo(GetSnapshotFileForWrite(metadata).FullName);
+		    var newName = GetSnapshotFileForWrite(metadata);
+			if (File.Exists(newName.FullName))
+			{
+				File.Delete(newName.FullName);
+			}
+			tempFile.MoveTo(newName.FullName);
         }
-
 
         private Serialization.Snapshot Deserialize(Stream stream)
         {
@@ -278,6 +282,8 @@ namespace Akka.Persistence.Snapshot
                 .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
+
+            snapshots.Sort(SnapshotMetadata.Comparer);
 
             return snapshots;
         }

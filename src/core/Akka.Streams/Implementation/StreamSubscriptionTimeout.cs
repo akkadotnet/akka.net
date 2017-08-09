@@ -35,6 +35,7 @@ namespace Akka.Streams.Implementation
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="SubscriptionTimeoutException"/> class.
         /// </summary>
@@ -43,6 +44,7 @@ namespace Akka.Streams.Implementation
         protected SubscriptionTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>

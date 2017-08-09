@@ -67,7 +67,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 _testActorRef.Tell("postStop");
             }
 
-            public static Props Props(IActorRef testActorRef) 
+            public static Props Props(IActorRef testActorRef)
                 => Actor.Props.Create(() => new Echo(testActorRef));
         }
     }
@@ -83,14 +83,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config)
+        protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config, typeof(ClusterSingletonManagerLeaveSpec))
         {
             _config = config;
 
-            _echoProxy = new Lazy<IActorRef>(() => Sys.ActorOf(ClusterSingletonProxy.Props(
+            _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/echo",
                 settings: ClusterSingletonProxySettings.Create(Sys)),
-                name: "echoProxy"));
+                name: "echoProxy")));
         }
 
         private void Join(RoleName from, RoleName to)
@@ -189,17 +189,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                Cluster.Leave(Node(_config.Second).Address);
-            }, _config.Third);
-
-            RunOn(() =>
-            {
                 var t = TestActor;
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 Cluster.Leave(Node(_config.Second).Address);
                 ExpectMsg("stop", 15.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
+                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
             }, _config.Second);
             EnterBarrier("second-stopped");
 
@@ -211,16 +207,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                Cluster.Leave(Node(_config.Third).Address);
-            }, _config.Third);
-
-            RunOn(() =>
-            {
                 var t = TestActor;
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
+                Cluster.Leave(Node(_config.Third).Address);
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
+                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
             }, _config.Third);
             EnterBarrier("third-stopped");
         }

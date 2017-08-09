@@ -7,16 +7,17 @@
 
 using System;
 using Akka.Actor;
-using Akka.Remote.Proto;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
+using Akka.Util;
+using Google.Protobuf;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote
 {
     /// <summary>
     /// Class MessageSerializer.
     /// </summary>
-    public static class MessageSerializer
+    internal static class MessageSerializer
     {
         /// <summary>
         /// Deserializes the specified message.
@@ -29,7 +30,7 @@ namespace Akka.Remote
             return system.Serialization.Deserialize(
                 messageProtocol.Message.ToByteArray(),
                 messageProtocol.SerializerId,
-                messageProtocol.HasMessageManifest ? messageProtocol.MessageManifest.ToStringUtf8() : null);
+                !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null);
         }
 
         /// <summary>
@@ -41,28 +42,30 @@ namespace Akka.Remote
         /// <returns>SerializedMessage.</returns>
         public static SerializedMessage Serialize(ActorSystem system, Address address, object message)
         {
-            Serializer serializer = system.Serialization.FindSerializerFor(message);
+            var objectType = message.GetType();
+            Serializer serializer = system.Serialization.FindSerializerForType(objectType);
 
-            SerializedMessage.Builder messageBuilder = new SerializedMessage.Builder()
-                .SetMessage(ByteString.Unsafe.FromBytes(serializer.ToBinaryWithAddress(address, message)))
-                .SetSerializerId(serializer.Identifier);
+            var serializedMsg = new SerializedMessage
+            {
+                Message = ByteString.CopyFrom(serializer.ToBinaryWithAddress(address, message)),
+                SerializerId = serializer.Identifier
+            };
 
-            var serializer2 = serializer as SerializerWithStringManifest;
-            if (serializer2 != null)
+            if (serializer is SerializerWithStringManifest serializer2)
             {
                 var manifest = serializer2.Manifest(message);
                 if (!string.IsNullOrEmpty(manifest))
                 {
-                    messageBuilder.SetMessageManifest(ByteString.CopyFromUtf8(manifest));
+                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
                 }
             }
             else
             {
                 if (serializer.IncludeManifest)
-                    messageBuilder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(objectType.TypeQualifiedName());
             }
 
-            return messageBuilder.Build();
+            return serializedMsg;
         }
     }
 }

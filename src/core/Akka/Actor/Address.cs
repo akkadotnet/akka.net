@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Akka.Util;
@@ -14,15 +15,18 @@ using Akka.Util;
 namespace Akka.Actor
 {
     /// <summary>
-    ///  The address specifies the physical location under which an Actor can be
-    ///  reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
+    /// The address specifies the physical location under which an Actor can be
+    /// reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
     /// name, and remote addresses, identified by protocol, host and port.
     ///  
     /// This class is sealed to allow use as a case class (copy method etc.); if
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : ICloneable, IEquatable<Address>, ISurrogated
+    public sealed class Address : IEquatable<Address>, ISurrogated
+#if CLONEABLE
+        , ICloneable
+#endif
     {
         /// <summary>
         /// Pseudo address for all systems
@@ -54,34 +58,22 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public string Host
-        {
-            get { return _host; }
-        }
+        public string Host => _host;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int? Port
-        {
-            get { return _port; }
-        }
+        public int? Port => _port;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string System
-        {
-            get { return _system; }
-        }
+        public string System => _system;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Protocol
-        {
-            get { return _protocol; }
-        }
+        public string Protocol => _protocol;
 
         /// <summary>
         /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
@@ -97,10 +89,7 @@ namespace Akka.Actor
         /// addresses of global scope are safe to sent to other hosts, as they globally and uniquely identify an addressable
         /// entity.
         /// </summary>
-        public bool HasGlobalScope
-        {
-            get { return !string.IsNullOrEmpty(Host); }
-        }
+        public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
         private Lazy<string> CreateLazyToString()
         {
@@ -118,17 +107,14 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return _toString.Value;
-        }
+        public override string ToString() => _toString.Value;
 
         /// <inheritdoc/>
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
+            return Port == other.Port && string.Equals(Host, other.Host) && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
         /// <inheritdoc/>
@@ -270,7 +256,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of an <see cref="Address"/>.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class AddressSurrogate : ISurrogate
         {
@@ -291,10 +278,10 @@ namespace Akka.Actor
             /// </summary>
             public int? Port { get; set; }
             /// <summary>
-            /// TBD
+            /// Creates a <see cref="Address"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="Address"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new Address(Protocol, System, Host, Port);
@@ -302,10 +289,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="Address"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="Address"/>.</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new AddressSurrogate()

@@ -841,15 +841,12 @@ namespace Akka.Actor
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             if (DebugEvent)
-            {
                 _log.Debug($"setting {(repeat ? "repeating" : "")} timer {name}/{timeout}: {msg}");
-            }
-            if (_timers.ContainsKey(name))
-            { 
-                _timers[name].Cancel();
-            }
 
-            var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
+            if (_timers.TryGetValue(name, out var timer))
+                timer.Cancel();
+
+            timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -861,13 +858,11 @@ namespace Akka.Actor
         public void CancelTimer(string name)
         {
             if (DebugEvent)
-            {
                 _log.Debug($"Cancelling timer {name}");
-            }
 
-            if (_timers.ContainsKey(name))
+            if (_timers.TryGetValue(name, out var timer))
             {
-                _timers[name].Cancel();
+                timer.Cancel();
                 _timers.Remove(name);
             }
         }
@@ -1028,9 +1023,9 @@ namespace Akka.Actor
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
-            if (_stateFunctions.ContainsKey(name))
+            if (_stateFunctions.TryGetValue(name, out var stateFunction))
             {
-                _stateFunctions[name] = OrElse(_stateFunctions[name], function);
+                _stateFunctions[name] = OrElse(stateFunction, function);
                 _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
             }
             else
@@ -1122,7 +1117,7 @@ namespace Akka.Actor
             var timer = message as Timer;
             if (timer != null)
             {
-                if (_timers.ContainsKey(timer.Name) && _timers[timer.Name].Generation == timer.Generation)
+                if (_timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
                 {
                     if (_timeoutFuture != null)
                     {

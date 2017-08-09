@@ -29,7 +29,7 @@ namespace Akka.Streams
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
     /// </summary>
-    public abstract class ActorMaterializer : IMaterializer, IDisposable
+    public abstract class ActorMaterializer : IMaterializer, IMaterializerLoggingProvider, IDisposable
     {
         /// <summary>
         /// TBD
@@ -134,13 +134,11 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract IMaterializer WithNamePrefix(string namePrefix);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
+
+        /// <inheritdoc />
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
 
         /// <summary>
         /// TBD
@@ -180,6 +178,13 @@ namespace Akka.Streams
         /// <param name="props">TBD</param>
         /// <returns>TBD</returns>
         public abstract IActorRef ActorOf(MaterializationContext context, Props props);
+
+        /// <summary>
+        /// Creates a new logging adapter.
+        /// </summary>
+        /// <param name="logSource">The source that produces the log events.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        public abstract ILoggingAdapter MakeLogger(object logSource);
 
         /// <inheritdoc/>
         public void Dispose() => Shutdown();
@@ -232,6 +237,7 @@ namespace Akka.Streams
             Actor = actor;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AbruptTerminationException" /> class.
         /// </summary>
@@ -241,6 +247,7 @@ namespace Akka.Streams
         {
             Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
         }
+#endif
     }
 
     /// <summary>
@@ -255,12 +262,14 @@ namespace Akka.Streams
         /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="MaterializationException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>

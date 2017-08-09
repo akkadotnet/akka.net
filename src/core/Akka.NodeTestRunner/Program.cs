@@ -8,13 +8,18 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
+using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;
+#if CORECLR
+using System.Runtime.Loader;
+#endif
 
 namespace Akka.NodeTestRunner
 {
@@ -43,6 +48,33 @@ namespace Akka.NodeTestRunner
             var system = ActorSystem.Create("NoteTestRunner-" + nodeIndex);
             var tcpClient = _logger = system.ActorOf<RunnerTcpClient>();
             system.Tcp().Tell(new Tcp.Connect(listenEndpoint), tcpClient);
+
+#if CORECLR
+            // In NetCore, if the assembly file hasn't been touched, 
+            // XunitFrontController would fail loading external assemblies and its dependencies.
+            var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyFileName);
+            var asms = assembly.GetReferencedAssemblies();
+            var basePath = Path.GetDirectoryName(assemblyFileName);
+            foreach (var asm in asms)
+            {
+                try
+                {
+                    Assembly.Load(new AssemblyName(asm.FullName));
+                }
+                catch (Exception)
+                {
+                    var path = Path.Combine(basePath, asm.Name + ".dll");
+                    try
+                    {
+                        AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Out.WriteLine($"Failed to load dll: {path}");
+                    }
+                }
+            }
+#endif
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))

@@ -96,7 +96,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         {
         }
 
-        protected ClusterBroadcastGroupSpec(ClusterBroadcastGroupSpecConfig config) : base(config)
+        protected ClusterBroadcastGroupSpec(ClusterBroadcastGroupSpecConfig config) : base(config, typeof(ClusterBroadcastGroupSpec))
         {
             _config = config;
 

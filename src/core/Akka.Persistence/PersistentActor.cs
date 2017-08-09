@@ -55,7 +55,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
         /// </summary>
-        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.Latest, 0);
+        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.None, 0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Recovery"/> class.
@@ -131,6 +131,7 @@ namespace Akka.Persistence
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
@@ -139,6 +140,7 @@ namespace Akka.Persistence
         public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>

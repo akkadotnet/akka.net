@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Akka.Dispatch;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
@@ -770,7 +771,12 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
+#if CLONEABLE
             var invokerCopy = (Func<TActor>)invoker.Clone();
+#else
+            // TODO: CORECLR FIX IT
+            var invokerCopy = (Func<TActor>)invoker;
+#endif
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 

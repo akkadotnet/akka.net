@@ -29,8 +29,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="action">TBD</param>
         public void BufferOr(string grouping, object message, IActorRef originalSender, Action action)
         {
-            BufferedMessages messages = null;
-            if (_buffers.TryGetValue(grouping, out messages))
+            if (_buffers.TryGetValue(grouping, out var messages))
             {
                 _buffers[grouping].Add(new KeyValuePair<object, IActorRef>(message, originalSender));
                 _totalBufferSize += 1;
@@ -46,8 +45,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="recipient">TBD</param>
         public void RecreateAndForwardMessagesIfNeeded(string grouping, Func<IActorRef> recipient)
         {
-            BufferedMessages messages;
-            if (_buffers.TryGetValue(grouping, out messages) && messages.Count > 0)
+            if (_buffers.TryGetValue(grouping, out var messages) && messages.Count > 0)
             {
                 ForwardMessages(messages, recipient());
                 _totalBufferSize -= messages.Count;
@@ -62,8 +60,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="recipient">TBD</param>
         public void ForwardMessages(string grouping, IActorRef recipient)
         {
-            BufferedMessages messages;
-            if (_buffers.TryGetValue(grouping, out messages))
+            if (_buffers.TryGetValue(grouping, out var messages))
             {
                 ForwardMessages(messages, recipient);
                 _totalBufferSize -= messages.Count;

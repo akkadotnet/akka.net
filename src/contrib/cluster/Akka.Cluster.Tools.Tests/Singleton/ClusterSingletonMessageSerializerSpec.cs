@@ -5,9 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Cluster.Tools.Singleton.Serialization;
+using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
@@ -16,27 +15,50 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 {
     public class ClusterSingletonMessageSerializerSpec : AkkaSpec
     {
-        private SerializerWithStringManifest serializer;
-
-        public ClusterSingletonMessageSerializerSpec() : base(ClusterSingletonManager.DefaultConfig())
+        public ClusterSingletonMessageSerializerSpec()
+            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster").WithFallback(ClusterSingletonManager.DefaultConfig()))
         {
-            serializer = new ClusterSingletonMessageSerializer((ExtendedActorSystem)Sys);
-        }
-
-        private void CheckSerialization(object obj)
-        {
-            var blob = serializer.ToBinary(obj);
-            var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
-            reference.ShouldBe(obj);
         }
 
         [Fact]
-        public void ClusterSingletonMessages_must_be_serializable()
+        public void Can_serialize_HandOverDone()
         {
-            CheckSerialization(HandOverDone.Instance);
-            CheckSerialization(HandOverInProgress.Instance);
-            CheckSerialization(HandOverToMe.Instance);
-            CheckSerialization(TakeOverFromMe.Instance);
+            var message = HandOverDone.Instance;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_HandOverInProgress()
+        {
+            var message = HandOverInProgress.Instance;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_HandOverToMe()
+        {
+            var message = HandOverToMe.Instance;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_TakeOverFromMe()
+        {
+            var message = TakeOverFromMe.Instance;
+            AssertEqual(message);
+        }
+
+        private T AssertAndReturn<T>(T message)
+        {
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+            var serialized = serializer.ToBinary(message);
+            return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
+        }
+
+        private void AssertEqual<T>(T message)
+        {
+            var deserialized = AssertAndReturn(message);
+            Assert.Equal(message, deserialized);
         }
     }
 }

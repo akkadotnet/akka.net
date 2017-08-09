@@ -67,7 +67,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public RestartNode2Spec() : this(new RestartNode2SpecConfig()) { }
 
-        protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config)
+        protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(RestartNode2Spec))
         {
             _config = config;
             seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));

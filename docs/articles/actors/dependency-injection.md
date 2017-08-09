@@ -48,7 +48,7 @@ protected override void PreStart()
 > [!INFO]
 > There is currently still an extension method available for the actor Context. `Context.DI().ActorOf<>`. However this has been officially **deprecated** and will be removed in future versions.
 
-##Notes
+## Notes
 
 > [!WARNING]
 > You might be tempted at times to use an `IndirectActorProducer`

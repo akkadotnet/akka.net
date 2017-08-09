@@ -7,9 +7,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -77,7 +77,7 @@ namespace Akka.Actor
             Anchor = anchor;
             
             Path = elements
-                .Where(s=>!string.IsNullOrWhiteSpace(s))
+                .Where(s => !string.IsNullOrWhiteSpace(s))
                 .Select<string, SelectionPathElement>(e =>
                 {
                     if (e.Contains("?") || e.Contains("*"))
@@ -117,14 +117,34 @@ namespace Akka.Actor
         /// <exception cref="ActorNotFoundException">
         /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
         /// </exception>
-        /// <returns>TBD</returns>
-        public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout);
+        /// <returns>A Task that will be completed with the <see cref="IActorRef"/>, if the actor was found. Otherwise it will be failed with an <see cref="ActorNotFoundException"/>.</returns>
+        public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout, CancellationToken.None);
 
-        private async Task<IActorRef> InnerResolveOne(TimeSpan timeout)
+        /// <summary>
+        /// Resolves the <see cref="IActorRef"/> matching this selection.
+        /// The result is returned as a Task that is completed with the <see cref="IActorRef"/>
+        /// if such an actor exists. It is completed with failure <see cref="ActorNotFoundException"/> if
+        /// no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
+        /// 
+        /// Under the hood it talks to the actor to verify its existence and acquire its <see cref="IActorRef"/>
+        /// </summary>
+        /// <param name="timeout">
+        /// The amount of time to wait while resolving the selection before terminating the operation and generating an error.
+        /// </param>
+        /// <param name="ct">
+        /// The cancellation token that can be used to cancel the operation.
+        /// </param>
+        /// <exception cref="ActorNotFoundException">
+        /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
+        /// </exception>
+        /// <returns>A Task that will be completed with the <see cref="IActorRef"/>, if the actor was found. Otherwise it will be failed with an <see cref="ActorNotFoundException"/>.</returns>
+        public Task<IActorRef> ResolveOne(TimeSpan timeout, CancellationToken ct) => InnerResolveOne(timeout, ct);
+
+        private async Task<IActorRef> InnerResolveOne(TimeSpan timeout, CancellationToken ct)
         {
             try
             {
-                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout).ConfigureAwait(false);
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout, ct).ConfigureAwait(false);
                 if(identity.Subject == null)
                     throw new ActorNotFoundException("subject was null");
 
@@ -154,29 +174,33 @@ namespace Akka.Actor
             {
                 var iter = sel.Elements.Iterator();
 
-                Action<IInternalActorRef> rec = null;
-                rec = @ref => @ref.Match()
-                    .With<ActorRefWithCell>(refWithCell =>
+                void Rec(IInternalActorRef actorRef)
+                {
+                    if (actorRef is ActorRefWithCell refWithCell)
                     {
-                        var emptyRef = new EmptyLocalActorRef(refWithCell.Provider, anchor.Path/sel.Elements.Select(el => el.ToString()), refWithCell.Underlying.System.EventStream);
+                        var emptyRef = new EmptyLocalActorRef(
+                            provider: refWithCell.Provider,
+                            path: anchor.Path / sel.Elements.Select(el => el.ToString()),
+                            eventStream: refWithCell.Underlying.System.EventStream);
 
-                        iter.Next()
-                            .Match()
-                            .With<SelectParent>(_ =>
-                            {
-                                var parent = @ref.Parent;
+                        switch(iter.Next())
+                        {
+                            case SelectParent _:
+                                var parent = actorRef.Parent;
+
                                 if (iter.IsEmpty())
                                     parent.Tell(sel.Message, sender);
                                 else
-                                    rec(parent);
-                            })
-                            .With<SelectChildName>(name =>
-                            {
+                                    Rec(parent);
+
+                                break;
+                            case SelectChildName name:
                                 var child = refWithCell.GetSingleChild(name.Name);
+
                                 if (child is Nobody)
                                 {
                                     // don't send to emptyRef after wildcard fan-out
-                                    if (!sel.WildCardFanOut) 
+                                    if (!sel.WildCardFanOut)
                                         emptyRef.Tell(sel, sender);
                                 }
                                 else if (iter.IsEmpty())
@@ -185,24 +209,25 @@ namespace Akka.Actor
                                 }
                                 else
                                 {
-                                    rec(child);
+                                    Rec(child);
                                 }
 
-                            })
-                            .With<SelectChildPattern>(p =>
-                            {
+                                break;
+                            case SelectChildPattern pattern:
                                 // fan-out when there is a wildcard
-                                var children = refWithCell.Children;
-                                var matchingChildren = children
-                                    .Where(c => c.Path.Name.Like(p.PatternStr))
+                                var matchingChildren = refWithCell.Children
+                                    .Where(c => c.Path.Name.Like(pattern.PatternStr))
                                     .ToList();
 
                                 if (iter.IsEmpty())
                                 {
-                                    if(matchingChildren.Count == 0 && !sel.WildCardFanOut)
+                                    if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
                                         emptyRef.Tell(sel, sender);
                                     else
-                                        matchingChildren.ForEach(child => child.Tell(sel.Message, sender));
+                                    {
+                                        for (var i = 0; i < matchingChildren.Count; i++)
+                                            matchingChildren[i].Tell(sel.Message, sender);
+                                    }
                                 }
                                 else
                                 {
@@ -211,17 +236,26 @@ namespace Akka.Actor
                                         emptyRef.Tell(sel, sender);
                                     else
                                     {
-                                        var m = new ActorSelectionMessage(sel.Message, iter.ToVector().ToArray(), 
-                                            sel.WildCardFanOut || matchingChildren.Count > 1);
-                                        matchingChildren.ForEach(child => DeliverSelection(child as IInternalActorRef, sender, m));
+                                        var message = new ActorSelectionMessage(
+                                            message: sel.Message,
+                                            elements: iter.ToVector().ToArray(),
+                                            wildCardFanOut: sel.WildCardFanOut || matchingChildren.Count > 1);
+
+                                        for(var i = 0; i < matchingChildren.Count; i++)
+                                            DeliverSelection(matchingChildren[i] as IInternalActorRef, sender, message);
                                     }
                                 }
-                            });
-                    })
-                    // foreign ref, continue by sending ActorSelectionMessage to it with remaining elements
-                    .Default(_ => @ref.Tell(new ActorSelectionMessage(sel.Message, iter.ToVector().ToArray()), sender));
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // foreign ref, continue by sending ActorSelectionMessage to it with remaining elements
+                        actorRef.Tell(new ActorSelectionMessage(sel.Message, iter.ToVector().ToArray()), sender);
+                    }
+                }
 
-                rec(anchor);
+                Rec(anchor);
             }
         }
 
@@ -329,6 +363,24 @@ namespace Akka.Actor
         public string Name { get; }
 
         /// <inheritdoc/>
+        protected bool Equals(SelectChildName other)
+        {
+            return string.Equals(Name, other.Name);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildName)obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => Name?.GetHashCode() ?? 0;
+
+        /// <inheritdoc/>
         public override string ToString() => Name;
     }
 
@@ -352,6 +404,21 @@ namespace Akka.Actor
         public string PatternStr { get; }
 
         /// <inheritdoc/>
+        protected bool Equals(SelectChildPattern other) => string.Equals(PatternStr, other.PatternStr);
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildPattern)obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => PatternStr?.GetHashCode() ?? 0;
+
+        /// <inheritdoc/>
         public override string ToString() => PatternStr;
     }
 
@@ -361,6 +428,12 @@ namespace Akka.Actor
     /// </summary>
     public class SelectParent : SelectionPathElement
     {
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => nameof(SelectParent).GetHashCode();
+
         /// <inheritdoc/>
         public override string ToString() => "..";
     }

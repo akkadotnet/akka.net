@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport
 {
@@ -725,11 +725,8 @@ namespace Akka.Remote.Transport
         /// <returns>The option that contains the listener if it exists.</returns>
         public IHandleEventListener GetRemoteReadHandlerFor(TestAssociationHandle localHandle)
         {
-            Tuple<IHandleEventListener, IHandleEventListener> listeners;
-            if (_listenersTable.TryGetValue(localHandle.Key, out listeners))
-            {
+            if (_listenersTable.TryGetValue(localHandle.Key, out var listeners))
                 return RemoteListenerRelativeTo(localHandle, listeners);
-            }
 
             return null;
         }
@@ -741,8 +738,7 @@ namespace Akka.Remote.Transport
         /// <returns>The transport, if it exists.</returns>
         public Tuple<TestTransport, Task<IAssociationEventListener>> TransportFor(Address address)
         {
-            Tuple<TestTransport, Task<IAssociationEventListener>> transport;
-            _transportTable.TryGetValue(address, out transport);
+            _transportTable.TryGetValue(address, out var transport);
             return transport;
         }
 
