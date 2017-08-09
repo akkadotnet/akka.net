@@ -21,6 +21,7 @@
     <PackageReference Include="FsPickler" Version="3.2.0" />
     <PackageReference Include="FSPowerPack.Core.Community" Version="3.0.0.0" />
     <PackageReference Include="FSPowerPack.Linq.Community" Version="3.0.0.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System" />
