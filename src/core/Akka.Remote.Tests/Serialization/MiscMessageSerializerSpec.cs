@@ -26,6 +26,23 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class MiscMessageSerializerSpec : AkkaSpec
     {
+        private Config TestConfiguration { get; } = @"
+            akka {
+                string-config = ""1.3.0""
+                boolean-config = on
+                int-config = 1244
+                long-config = 4353454
+                float-config = 46.5
+                timespan-config = 10s
+                string-list-config = [""Akka.Event.DefaultLogger"", ""Akka.Event.TraceLogger""]
+                actor {
+                    provider = ""Akka.Actor.LocalActorRefProvider""
+                    creation-timeout = 20s
+                }
+                substitution-config = ${akka.string-config}
+                substitution-concat-config = Hello ${akka.string-config}
+            }";
+
         public MiscMessageSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
         {
         }
@@ -131,18 +148,20 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(localScope);
         }
 
-        [Fact(Skip = "Not implemented yet")]
+        [Fact]
         public void Can_serialize_Config()
         {
-            var message = ConfigurationFactory.Default();
-            AssertEqual(message);
+            var message = TestConfiguration;
+            var actual = AssertAndReturn(message);
+            actual.ToString(true).Should().BeEquivalentTo(message.ToString(true));
         }
 
-        [Fact(Skip = "Not implemented yet")]
+        [Fact]
         public void Can_serialize_EmptyConfig()
         {
             var message = ConfigurationFactory.Empty;
-            AssertEqual(message);
+            var actual = AssertAndReturn(message);
+            actual.ToString(true).Should().BeEquivalentTo(message.ToString(true));
         }
 
         //
