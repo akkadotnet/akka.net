@@ -16,9 +16,9 @@
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.2.2" />
+    <PackageReference Include="FSharp.Core" Version="4.1.17" />
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.5" PrivateAssets="All" />
-    <PackageReference Include="FsPickler" Version="3.3.0" />
+    <PackageReference Include="FsPickler" Version="3.2.0" />
     <PackageReference Include="FSPowerPack.Core.Community" Version="3.0.0.0" />
     <PackageReference Include="FSPowerPack.Linq.Community" Version="3.0.0.0" />
   </ItemGroup>
