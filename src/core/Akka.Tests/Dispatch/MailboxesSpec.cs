@@ -18,6 +18,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.Actor;
 using Akka.Util.Internal;
+using FluentAssertions;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
@@ -248,7 +249,7 @@ int-prio-mailbox {
         {
             var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 
-            var values = new int[50];
+            var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
 
             for (var i = 0; i < values.Length; i++)
@@ -264,13 +265,16 @@ int-prio-mailbox {
 
             actor.Tell(new StashingActor.Start());
 
-            // expect the messages in the correct order
-            foreach (var value in values)
+            this.Within(5.Seconds(), () =>
             {
-                ExpectMsg(value);
-                ExpectMsg(value);
-                ExpectMsg(value);
-            }
+                // expect the messages in the correct order
+                foreach (var value in values)
+                {
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                }
+            }); 
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }
