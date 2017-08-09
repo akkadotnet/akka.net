@@ -125,9 +125,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 Within(5.Seconds(), () =>
                 {
-                    ExpectMsg("preStart");
+                    ExpectMsg("preStart", 3.Seconds());
                     _echoProxy.Value.Tell("hello");
-                    ExpectMsg<IActorRef>();
+                    ExpectMsg<IActorRef>(3.Seconds());
                 });
             }, _config.First);
             EnterBarrier("first-active");
@@ -159,16 +159,16 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 var t = TestActor;
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 ExpectMsg("stop", 10.Seconds());
-                ExpectMsg("postStop");
+                ExpectMsg("postStop", 3.Seconds());
                 // CoordinatedShutdown makes sure that singleton actors are
                 // stopped before Cluster shutdown
-                ExpectMsg("MemberRemoved");
+                ExpectMsg("MemberRemoved", 3.Seconds());
             }, _config.First);
             EnterBarrier("first-stopped");
 
             RunOn(() =>
             {
-                ExpectMsg("preStart");
+                ExpectMsg("preStart", 3.Seconds());
             }, _config.Second);
             EnterBarrier("second-started");
 
@@ -181,7 +181,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     p.AwaitAssert(() =>
                     {
                         _echoProxy.Value.Tell("hello2", p.Ref);
-                        p.ExpectMsg<IActorRef>(1.Seconds()).Path.Address.Should().NotBe(firstAddress);
+                        p.ExpectMsg<IActorRef>(3.Seconds()).Path.Address.Should().NotBe(firstAddress);
                     });
                 });
             }, _config.Second, _config.Third);
@@ -193,15 +193,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 Cluster.Leave(Node(_config.Second).Address);
                 ExpectMsg("stop", 15.Seconds());
-                ExpectMsg("postStop");
-                ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+                ExpectMsg("postStop", 3.Seconds());
+                ExpectMsg("MemberRemoved", 3.Seconds());
+                ExpectTerminated(_echoProxy.Value, 10.Seconds());
             }, _config.Second);
             EnterBarrier("second-stopped");
 
             RunOn(() =>
             {
-                ExpectMsg("preStart");
+                ExpectMsg("preStart", 3.Seconds());
             }, _config.Third);
             EnterBarrier("third-started");
 
@@ -211,9 +211,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 Cluster.Leave(Node(_config.Third).Address);
                 ExpectMsg("stop", 10.Seconds());
-                ExpectMsg("postStop");
-                ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+                ExpectMsg("postStop", 3.Seconds());
+                ExpectMsg("MemberRemoved", 3.Seconds());
+                ExpectTerminated(_echoProxy.Value, 10.Seconds());
             }, _config.Third);
             EnterBarrier("third-stopped");
         }
