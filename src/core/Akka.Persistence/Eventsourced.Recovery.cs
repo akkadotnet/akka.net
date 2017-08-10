@@ -282,7 +282,11 @@ namespace Akka.Persistence
         {
             if (_eventBatch.Count > 0) FlushBatch();
 
-            if (_pendingStashingPersistInvocations > 0)
+            if (_asyncTaskRunning)
+            {
+                //do nothing, wait for the task to finish
+            }
+            else if (_pendingStashingPersistInvocations > 0)
                 ChangeState(PersistingEvents());
             else
                 UnstashInternally(err);
