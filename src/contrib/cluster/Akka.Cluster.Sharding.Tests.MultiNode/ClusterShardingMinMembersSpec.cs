@@ -65,6 +65,8 @@ namespace Akka.Cluster.Sharding.Tests
                         timeout = 5s
                     }
                 "))
+                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
