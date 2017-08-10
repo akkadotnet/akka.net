@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Util;
 
@@ -14,9 +15,11 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary> 
     /// Base class for a message queue that uses a priority generator for messages 
     /// </summary>
-    public class UnboundedPriorityMessageQueue : BlockingMessageQueue
+    public class UnboundedPriorityMessageQueue : BlockingMessageQueue, IUnboundedDequeBasedMessageQueueSemantics
     {
         private readonly ListPriorityQueue _prioQueue;
+        // doesn't need to be threadsafe - only called from within actor
+        private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
 
         /// <summary>
         /// DEPRECATED. Use <see cref="UnboundedPriorityMessageQueue(Func{object,int}, int)"/> instead.
@@ -71,6 +74,12 @@ namespace Akka.Dispatch.MessageQueues
         /// </remarks>
         protected override bool LockedTryDequeue(out Envelope envelope)
         {
+            if (_prependBuffer.Count > 0)
+            {
+                envelope = _prependBuffer.Pop();
+                return true;
+            }
+
             if (_prioQueue.Count() > 0)
             {
                 envelope = _prioQueue.Dequeue();
@@ -78,6 +87,11 @@ namespace Akka.Dispatch.MessageQueues
             }
             envelope = default (Envelope);
             return false;
+        }
+
+        public void EnqueueFirst(Envelope envelope)
+        {
+            _prependBuffer.Push(envelope);
         }
     }
 }

@@ -1047,14 +1047,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                         var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
                         foreach (var unadapted in writes)
                         {
-                            var e = AdaptToJournal(unadapted);
-
                             try
                             {
                                 command.Parameters.Clear();
                                 tagBuilder.Clear();
 
-                                var persistent = e;
+                                var persistent = AdaptToJournal(unadapted);
                                 if (persistent.Payload is Tagged)
                                 {
                                     var tagged = (Tagged) persistent.Payload;
@@ -1074,7 +1072,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                                 await command.ExecuteNonQueryAsync();
 
-                                var response = new WriteMessageSuccess(persistent, actorInstanceId);
+                                var response = new WriteMessageSuccess(unadapted, actorInstanceId);
                                 responses.Add(response);
                                 persistenceIds.Add(persistent.PersistenceId);
 
@@ -1084,7 +1082,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                             {
                                 // database-related exceptions should result in failure
                                 summary = new WriteMessagesFailed(cause);
-                                var response = new WriteMessageFailure(e, cause, actorInstanceId);
+                                var response = new WriteMessageFailure(unadapted, cause, actorInstanceId);
                                 responses.Add(response);
                             }
                             catch (Exception cause)
@@ -1092,7 +1090,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = new WriteMessageRejected(e, cause, actorInstanceId);
+                                var response = new WriteMessageRejected(unadapted, cause, actorInstanceId);
                                 responses.Add(response);
                             }
                         }
