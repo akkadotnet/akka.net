@@ -413,7 +413,7 @@ namespace Akka.Remote.Serialization
         {
             var message = new Proto.Msg.ScatterGatherPool();
             message.Generic = GenericRoutingPoolBuilder(scatterGatherFirstCompletedPool);
-            message.Within = new Proto.Msg.Timespan { Ticks = (ulong) scatterGatherFirstCompletedPool.Within.Ticks };
+            message.Within = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(scatterGatherFirstCompletedPool.Within);
             return message.ToByteArray();
         }
 
@@ -432,7 +432,7 @@ namespace Akka.Remote.Serialization
             return new ScatterGatherFirstCompletedPool(
                 (int)scatterGatherFirstCompletedPool.Generic.NrOfInstances,
                 resizer,
-                TimeSpan.FromTicks((long)scatterGatherFirstCompletedPool.Within.Ticks),
+                scatterGatherFirstCompletedPool.Within.ToTimeSpan(),
                 Pool.DefaultSupervisorStrategy,
                 routerDispatcher,
                 scatterGatherFirstCompletedPool.Generic.UsePoolDispatcher);
@@ -445,8 +445,8 @@ namespace Akka.Remote.Serialization
         {
             var message = new Proto.Msg.TailChoppingPool();
             message.Generic = GenericRoutingPoolBuilder(tailChoppingPool);
-            message.Within = new Proto.Msg.Timespan { Ticks = (ulong)tailChoppingPool.Within.Ticks };
-            message.Interval = new Proto.Msg.Timespan { Ticks = (ulong)tailChoppingPool.Interval.Ticks };
+            message.Within = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(tailChoppingPool.Within);
+            message.Interval = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(tailChoppingPool.Interval);
             return message.ToByteArray();
         }
 
@@ -467,8 +467,8 @@ namespace Akka.Remote.Serialization
                 resizer,
                 Pool.DefaultSupervisorStrategy,
                 routerDispatcher,
-                TimeSpan.FromTicks((long)tailChoppingPool.Within.Ticks),
-                TimeSpan.FromTicks((long)tailChoppingPool.Interval.Ticks),
+                tailChoppingPool.Within.ToTimeSpan(),
+                tailChoppingPool.Interval.ToTimeSpan(),
                 tailChoppingPool.Generic.UsePoolDispatcher);
         }
 
