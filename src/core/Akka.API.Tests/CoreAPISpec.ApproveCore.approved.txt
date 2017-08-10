@@ -2608,13 +2608,14 @@ namespace Akka.Dispatch.MessageQueues
         public void Enqueue(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
         public bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
-    public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue
+    public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
     {
         [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
             "lCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
+        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
         protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
     }

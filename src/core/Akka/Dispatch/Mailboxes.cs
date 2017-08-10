@@ -283,7 +283,7 @@ namespace Akka.Dispatch
                 if (hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 if (HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{mailboxRequirement}]");
+                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{mqType.Value}]");
                 return mailboxType;
             }
 
