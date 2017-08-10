@@ -30,7 +30,7 @@ let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
-    | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
+    | "dev" -> (if (not (buildNumber = "0")) then (buildNumber) else "") + "-beta"
     | _ -> ""
 let releaseNotes =
     File.ReadLines "./RELEASE_NOTES.md"
