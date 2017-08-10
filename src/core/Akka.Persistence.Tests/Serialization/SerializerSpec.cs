@@ -209,5 +209,14 @@ akka {
 
             back.Manifest.ShouldBe(p1.Manifest);
         }
+
+        [Fact]
+        public void Serialization_respects_default_serializer_parameter()
+        {
+            var message = "this is my test message";
+            var serializer = _serialization.FindSerializerFor(message, "json");
+            Assert.True(serializer.Identifier == 1); //by default configuration the serializer id for json == newtonsoft == 1
+
+        }
     }
 }
