@@ -244,6 +244,7 @@ namespace Akka.Persistence
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
+        protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
         public void SaveSnapshot(object snapshot) { }
         protected override void Unhandled(object message) { }
     }
@@ -480,6 +481,11 @@ namespace Akka.Persistence
         protected void Command(System.Type messageType, System.Func<object, bool> handler) { }
         protected void Command(System.Action<object> handler) { }
         protected void CommandAny(System.Action<object> handler) { }
+        protected void CommandAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
+        protected void CommandAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void CommandAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void CommandAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void CommandAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
         protected virtual void OnCommand(object message) { }
         protected virtual void OnRecover(object message) { }
         protected void Recover<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
