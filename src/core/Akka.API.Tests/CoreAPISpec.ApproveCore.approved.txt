@@ -4446,8 +4446,8 @@ namespace Akka.Serialization
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
-        public Akka.Serialization.Serializer FindSerializerFor(object obj) { }
-        public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType) { }
+        public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
+        public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
         public static T SerializeWithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
     }
