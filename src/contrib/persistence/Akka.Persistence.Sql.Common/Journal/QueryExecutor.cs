@@ -165,7 +165,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
-        public readonly string DefaultSerializer;
+        public string DefaultSerializer { get; }
 
         /// <summary>
         /// TBD
