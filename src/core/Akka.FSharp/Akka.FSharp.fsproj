@@ -1,6 +1,5 @@
 ﻿<Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
-
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp</AssemblyTitle>
     <Description>F# API support for Akka.NET</Description>
@@ -9,46 +8,26 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="FsApi.fs" />
     <Compile Include="Schedulers.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <Reference Include="FSharp.Core">
-      <HintPath>..\..\packages\FSharp.Core.4.1.17\lib\net45\FSharp.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FSharp.PowerPack">
-      <HintPath>..\..\packages\FSPowerPack.Core.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.dll</HintPath>
-    </Reference>
-    <Reference Include="FSharp.PowerPack.Linq">
-      <HintPath>..\..\packages\FSPowerPack.Linq.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.Linq.dll</HintPath>
-    </Reference>
-    <Reference Include="FsPickler">
-      <HintPath>..\..\packages\FsPickler.3.2.0\lib\net45\FsPickler.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="mscorlib" />
-    <PackageReference Include="FSharp.Core" Version="4.1.0" />
-    <PackageReference Include="FSharp.NET.Sdk" Version="1.0.1" PrivateAssets="All" />
-    <PackageReference Include="FsPickler" Version="1.2.21" />
+    <PackageReference Include="FSharp.Core" Version="4.1.17" />
+    <PackageReference Include="FSharp.NET.Sdk" Version="1.0.5" PrivateAssets="All" />
+    <PackageReference Include="FsPickler" Version="3.2.0" />
     <PackageReference Include="FSPowerPack.Core.Community" Version="3.0.0.0" />
     <PackageReference Include="FSPowerPack.Linq.Community" Version="3.0.0.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.3.0" />
   </ItemGroup>
-
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System" />
     <Reference Include="System.Numerics" />
   </ItemGroup>
-
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-
 </Project>

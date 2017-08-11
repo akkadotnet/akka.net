@@ -69,6 +69,16 @@ Target "RestorePackages" (fun _ ->
                 Project = solution
                 NoCache = false
                 AdditionalArgs = additionalArgs })
+
+    !! "./src/**/*.fsproj" 
+    -- "./src/**/Akka.Persistence.FSharp.fsproj" 
+    -- "./src/examples/**/*.fsproj" |> Seq.iter (fun project -> 
+        DotNetCli.Restore
+            (fun p -> 
+                { p with
+                    Project = project
+                    NoCache = false
+                    AdditionalArgs = additionalArgs }))
 )
 
 Target "Build" (fun _ ->   
@@ -80,6 +90,16 @@ Target "Build" (fun _ ->
                 Project = solution
                 Configuration = configuration
                 AdditionalArgs = additionalArgs })
+
+    !! "./src/**/*.fsproj" 
+    -- "./src/**/Akka.Persistence.FSharp.fsproj" 
+    -- "./src/examples/**/*.fsproj" |> Seq.iter (fun project -> 
+        DotNetCli.Build
+            (fun p -> 
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    AdditionalArgs = additionalArgs }))
 )
 
 //--------------------------------------------------------------------------------
