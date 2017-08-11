@@ -21,7 +21,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Hyperion" Version="0.9.5-beta" />
+    <PackageReference Include="Hyperion" Version="0.9.5" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>

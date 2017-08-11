@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Tests.Serialization
@@ -22,12 +23,12 @@ namespace Akka.Persistence.Tests.Serialization
 akka.actor {
   serializers {
     my-payload = ""Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests""
-    my-payload2 = ""Akka.Persistence.Tests.Serialization.MyPayload2Serializer, Akka.Persistence.Tests""
     old-payload = ""Akka.Persistence.Tests.Serialization.OldPayloadSerializer, Akka.Persistence.Tests""
+    testserializer = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
   }
   serialization-bindings {
     ""Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests"" = my-payload
-    ""Akka.Persistence.Tests.Serialization.MyPayload2, Akka.Persistence.Tests"" = my-payload2
+    ""System.Object"" = testserializer
     # this entry was used when creating the data for the test
     # ""deserialize data when class is removed""
     #""Akka.Persistence.Tests.Serialization.OldPayload, Akka.Persistence.Tests"" = old-payload
@@ -94,7 +95,7 @@ akka {
     }
 
 	// TODO: temporary disabled
-    public abstract class MessageSerializerRemotingSpec : AkkaSpec
+    public class MessageSerializerRemotingSpec : AkkaSpec
     {
         internal class LocalActor : ActorBase
         {
@@ -186,7 +187,7 @@ akka {
             // this also verifies serialization of Persistent.Sender,
             // because the RemoteActor will reply to the Persistent.Sender
             _localActor.Tell(new Persistent(new MyPayload("a"), sender: TestActor));
-            ExpectMsg("p.a.");
+            ExpectMsg("pa");
         }
 
         [Fact]
@@ -195,8 +196,10 @@ akka {
             var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
             var p2 = new Persistent(new MyPayload("b"), sender: TestActor);
             _localActor.Tell(new AtomicWrite(ImmutableList.Create(new IPersistentRepresentation[] {p1, p2})));
-            ExpectMsg("p.a.");
-            ExpectMsg("p.b.");
+            Within(5.Seconds(), () => { 
+                ExpectMsg("pa");
+                ExpectMsg("pb");
+            });
         }
 
         [Fact]

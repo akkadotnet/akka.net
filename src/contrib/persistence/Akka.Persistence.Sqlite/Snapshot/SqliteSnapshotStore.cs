@@ -115,7 +115,8 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 payloadColumnName: "payload",
                 manifestColumnName: "manifest",
                 timestampColumnName: "created_at",
-                timeout: config.GetTimeSpan("connection-timeout")), 
+                timeout: config.GetTimeSpan("connection-timeout"),
+                defaultSerializer: config.GetString("serializer")), 
                 Context.System.Serialization);
         }
 

@@ -103,6 +103,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public readonly TimeSpan Timeout;
 
         /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public readonly string DefaultSerializer;
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -113,6 +118,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="manifestColumnName">TBD</param>
         /// <param name="timestampColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
         public QueryConfiguration(
             string schemaName,
             string snapshotTableName,
@@ -121,7 +127,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             string payloadColumnName,
             string manifestColumnName,
             string timestampColumnName,
-            TimeSpan timeout)
+            TimeSpan timeout, 
+            string defaultSerializer)
         {
             SchemaName = schemaName;
             SnapshotTableName = snapshotTableName;
@@ -131,6 +138,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             ManifestColumnName = manifestColumnName;
             TimestampColumnName = timestampColumnName;
             Timeout = timeout;
+            DefaultSerializer = defaultSerializer;
         }
 
         /// <summary>
@@ -309,7 +317,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType);
+            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
 
             var binary = serializer.ToBinary(snapshot);
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -521,7 +529,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected object GetSnapshot(DbDataReader reader)
         {
             var type = Type.GetType(reader.GetString(3), true);
-            var serializer = Serialization.FindSerializerForType(type);
+            var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
             var binary = (byte[])reader[4];
 
             var obj = serializer.FromBinary(binary, type);
