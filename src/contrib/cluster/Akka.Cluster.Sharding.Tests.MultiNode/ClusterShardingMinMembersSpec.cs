@@ -93,9 +93,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
-        internal ShardResolver extractShardId = message => message is int ? message.ToString() : null;
+        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 
         private Lazy<IActorRef> _region;
 
@@ -133,8 +133,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create<EchoActor>(),
                 settings: ClusterShardingSettings.Create(Sys),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId,
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId,
                 allocationStrategy: allocationStrategy,
                 handOffStopMessage: StopEntity.Instance);
         }

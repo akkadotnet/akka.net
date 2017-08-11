@@ -124,8 +124,8 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message => message is Ping ? Tuple.Create((message as Ping).Id, message) : null;
-        internal ShardResolver extractShardId = message => message is Ping ? (message as Ping).Id[0].ToString() : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping ? Tuple.Create((message as Ping).Id, message) : null;
+        internal ExtractShardId extractShardId = message => message is Ping ? (message as Ping).Id[0].ToString() : null;
 
         private readonly Lazy<IActorRef> _region;
 
@@ -171,8 +171,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
         [MultiNodeFact]
