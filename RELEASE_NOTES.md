@@ -1,5 +1,17 @@
 #### 1.3.0 June 28 2017 ####
-Placeholder
+**Feature Release for Akka.NET**
+Akka.NET 1.3 is a major feature release that introduces the following major changes:
+
+**.NET Core Support**
+
+**Akka.Persistence RTMd**
+
+**DocFx-based Documentation Site**
+
+**API Changes**
+This release does **not** maintain wire format compatibility with the previous release (v1.2.3).
+
+[See the full set of Akka.NET 1.3.0 fixes here](https://github.com/akkadotnet/akka.net/milestone/14).
 
 #### 1.2.3 July 07 2017 ####
 **Maintenance Release for Akka.NET 1.2**
