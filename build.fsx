@@ -398,7 +398,7 @@ Target "CreateMntrNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let nugetExe = FullName @"src\.nuget\nuget.exe"
+    let nugetExe = FullName @"./tools/nuget.exe"
     let rec publishPackage url accessKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
