@@ -33,14 +33,6 @@ let versionSuffix =
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
     | _ -> ""
-let overrideVersionSuffix (project:string) =
-    match project with
-    | p when p.Contains("Akka.Serialization.Wire") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Serialization.Hyperion") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Cluster.Sharding") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData.LightningDB") -> preReleaseVersionSuffix
-    | _ -> versionSuffix
 
 let releaseNotes =
     File.ReadLines "./RELEASE_NOTES.md"
@@ -267,8 +259,8 @@ Target "NBench" <| fun _ ->
         | _ -> getAllPerfTestAssemblies()
 
     let runNBench assembly =
-        let include = getBuildParam "include"
-        let exclude = getBuildParam "exclude"
+        let includes = getBuildParam "include"
+        let excludes = getBuildParam "exclude"
         let teamcityStr = (getBuildParam "teamcity")
         let enableTeamCity = 
             match teamcityStr with
@@ -282,8 +274,8 @@ Target "NBench" <| fun _ ->
                 |> append (sprintf "concurrent=\"%b\"" true)
                 |> append (sprintf "trace=\"%b\"" true)
                 |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
-                |> appendIfNotNullOrEmpty include "include="
-                |> appendIfNotNullOrEmpty exclude "include="
+                |> appendIfNotNullOrEmpty includes "include="
+                |> appendIfNotNullOrEmpty excludes "include="
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -298,7 +290,16 @@ Target "NBench" <| fun _ ->
 // Nuget targets 
 //--------------------------------------------------------------------------------
 
-Target "CreateNuget" (fun _ ->
+let overrideVersionSuffix (project:string) =
+    match project with
+    | p when p.Contains("Akka.Serialization.Wire") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.Serialization.Hyperion") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.Cluster.Sharding") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.DistributedData") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.DistributedData.LightningDB") -> preReleaseVersionSuffix
+    | _ -> versionSuffix
+
+Target "CreateNuget" (fun _ ->    
     let projects = !! "src/**/Akka.csproj"
                    ++ "src/**/Akka.Cluster.csproj"
                    ++ "src/**/Akka.Cluster.TestKit.csproj"
@@ -347,7 +348,7 @@ Target "PublishMntr" (fun _ ->
             (fun p -> 
                 { p with
                     Project = project                  
-                    AdditionalArgs = ["-r win7-x64"; overrideVersionSuffix project] })
+                    AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
     )
 
     // Windows .NET 4.5.2
@@ -359,7 +360,7 @@ Target "PublishMntr" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "net452"
-                    VersionSuffix = overrideVersionSuffix project }))
+                    VersionSuffix = versionSuffix }))
 
     // Windows .NET Core
     executableProjects |> Seq.iter (fun project ->  
@@ -370,15 +371,16 @@ Target "PublishMntr" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "netcoreapp1.1"
-                    VersionSuffix = overrideVersionSuffix project }))
+                    VersionSuffix = versionSuffix }))
 )
 
 Target "CreateMntrNuget" (fun _ -> 
     // uses the template file to create a temporary .nuspec file with the correct version
     CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
     let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
-    let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix ]
+    let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
     TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
+
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     
     executableProjects |> Seq.iter (fun project ->  
