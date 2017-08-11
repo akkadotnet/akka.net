@@ -1,5 +1,50 @@
-#### 1.3.0 June 28 2017 ####
-Placeholder
+#### 1.3.0 August 11 2017 ####
+**Feature Release for Akka.NET**
+Akka.NET 1.3.0 is a major feature release that introduces the significant changes to Akka.NET and its runtime.
+
+**.NET Core and .NET Standard 1.6 Support**
+This release introduces support for .NET Standard 1.6 for our core libraries and .NET Core 1.1 for the MultiNode Test Runner standalone executable. All packages for Akka.NET are dual-released under both .NET 4.5 and .NET Standard 1.6.
+
+As a side note: Akka.NET on .NET 4.5 is not wire compatible with Akka.NET on .NET Core; this is due to fundamental changes made to the fundamental types in the CLR on .NET Core. It's a common problem facing my different serializers and networking libraries in .NET at the moment. We can a X-plat serializer we've developed here: https://github.com/akkadotnet/akka.net/pull/2947 - please comment on that thread if you're considering building hybrid .NET and .NET Core clusters.
+
+**Akka.Persistence Released to Market**
+Akka.Persistence has graduated from beta status to stable modules and its interfaces are now considered to be stable. We'll begin updating all of the Akka.Persistence plugins to stable and to add .NET Standard / .NET 4.5 support to each of them as well following this patch.
+
+**DocFx-based Documentation Site**
+Documentation is now generated using DocFx and compiled from within the Akka.NET project rather than a separate documentation repository. 
+
+**API Changes**
+This release does **not** maintain wire format compatibility with the previous release (v1.2.3) inside Akka.Remote; primarily this is due to having to upgrade from Google Protobuf2 to Protobuf3 in order to add .NET Standard support, but we've also taken the liberty of making other serialization improvements while we're at it. So be advised that during an upgrade from 1.2.* to 1.3.* there will be periods of network disruption between nodes using different versions of the service.
+
+**Akka.Remote Performance Improvements**
+Akka.Remote's throughput has been significantly increased.
+
+[See the full set of Akka.NET 1.3.0 fixes here](https://github.com/akkadotnet/akka.net/milestone/14).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 64 | 7109 | 2670 | Marc Piechura |
+| 61 | 2420 | 6703 | Nick Chamberlain |
+| 46 | 2316 | 10066 | Aaron Stannard |
+| 42 | 56428 | 85473 | Alex Valuyskiy |
+| 32 | 7924 | 9483 | ravengerUA |
+| 31 | 17284 | 13592 | Bartosz Sypytkowski |
+| 25 | 2527 | 1124 | Gregorius Soedharmo |
+| 21 | 7810 | 1688 | zbynek001 |
+| 11 | 1932 | 2167 | Sean Gilliam |
+| 9 | 946 | 219 | Arjen Smits |
+| 4 | 679 | 105 | alexvaluyskiy |
+| 4 | 344 | 6 | Lealand Vettleson |
+| 4 | 1644 | 2210 | Arkatufus |
+| 3 | 32 | 6 | Lukas Rieger |
+| 3 | 153 | 17 | Quartus Dev |
+| 2 | 8 | 11 | Paweł Bańka |
+| 2 | 4866 | 12678 | olegz |
+| 2 | 1148 | 176 | Ismael Hamed |
+| 1 | 62 | 5 | Mikhail Kantarovskiy |
+| 1 | 4 | 2 | tstojecki |
+| 1 | 22 | 2 | Maxim Cherednik |
+| 1 | 1 | 1 | Sean Killeen |
 
 #### 1.2.3 July 07 2017 ####
 **Maintenance Release for Akka.NET 1.2**
