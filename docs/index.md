@@ -21,7 +21,7 @@ img.main-logo{
       <h1 class="title">Try <strong>Akka.NET</strong> now!</h1>
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
       <div class="options">
-        <a class="btn btn-lg btn-primary" href="articles/intro/getting-started.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/tuturial-1.html">Read the documentation</a>
+        <a class="btn btn-lg btn-primary" href="articles/intro/tutorial-1.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.html">Read the documentation</a>
       </div>
     </div>
 </div>
