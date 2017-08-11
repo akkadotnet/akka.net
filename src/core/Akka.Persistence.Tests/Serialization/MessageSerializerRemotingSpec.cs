@@ -23,12 +23,12 @@ namespace Akka.Persistence.Tests.Serialization
 akka.actor {
   serializers {
     my-payload = ""Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests""
-    my-payload2 = ""Akka.Persistence.Tests.Serialization.MyPayload2Serializer, Akka.Persistence.Tests""
     old-payload = ""Akka.Persistence.Tests.Serialization.OldPayloadSerializer, Akka.Persistence.Tests""
+    testserializer = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
   }
   serialization-bindings {
     ""Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests"" = my-payload
-    ""Akka.Persistence.Tests.Serialization.MyPayload2, Akka.Persistence.Tests"" = my-payload2
+    ""System.Object"" = testserializer
     # this entry was used when creating the data for the test
     # ""deserialize data when class is removed""
     #""Akka.Persistence.Tests.Serialization.OldPayload, Akka.Persistence.Tests"" = old-payload

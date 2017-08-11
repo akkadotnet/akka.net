@@ -40,7 +40,7 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var message = new TestMessage("this is my test message");
             var serializer = _serialization.FindSerializerFor(message, "json");
-            Assert.True(serializer.Identifier == 1); //by default configuration the serializer id for json == newtonsoft == 1
+            Assert.Equal(1, serializer.Identifier); //by default configuration the serializer id for json == newtonsoft == 1
         }
 
         [Fact]
@@ -50,7 +50,7 @@ namespace Akka.Persistence.Tests.Serialization
             var serializer = _serialization.FindSerializerFor(message, "unicorn");
             //since unicorn is an unknown serializer, the system default will be used
             //which incedentally is JSON at the moment
-            Assert.True(serializer.Identifier == 1); //by default configuration the serializer id for json == newtonsoft == 1
+            Assert.Equal(-5, serializer.Identifier); //system serializer is currently configured to be hyperion which is -5
         }
     }
 }
