@@ -62,11 +62,11 @@ message RemoteWatcherHeartbeatResponse {
   uint64 uid = 1;
 }
 
-message ExceptionLiteData {
+message ExceptionData {
   string typeName = 1;
   string message = 2;
   string stackTrace = 3;
   string source = 4;
-  ExceptionLiteData innerException = 5;
+  ExceptionData innerException = 5;
   map<string, Payload> customFields = 6;
 }

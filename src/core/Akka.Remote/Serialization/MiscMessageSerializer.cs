@@ -40,6 +40,7 @@ namespace Akka.Remote.Serialization
         private const string RandomPoolManifest = "RORP";
         private const string ScatterGatherPoolManifest = "ROSGP";
         private const string TailChoppingPoolManifest = "ROTCP";
+        private const string ConsistentHashingPoolManifest = "ROCHP";
         private const string RemoteRouterConfigManifest = "RORRC";
 
         private static readonly byte[] EmptyBytes = {};
@@ -58,24 +59,25 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Identify) return IdentifyToProto((Identify)obj);
-            if (obj is ActorIdentity) return ActorIdentityToProto((ActorIdentity)obj);
-            if (obj is IActorRef) return ActorRefToProto((IActorRef)obj);
+            if (obj is Identify identify) return IdentifyToProto(identify);
+            if (obj is ActorIdentity actorIdentity) return ActorIdentityToProto(actorIdentity);
+            if (obj is IActorRef actorRef) return ActorRefToProto(actorRef);
             if (obj is PoisonPill) return EmptyBytes;
             if (obj is Kill) return EmptyBytes;
             if (obj is RemoteWatcher.Heartbeat) return EmptyBytes;
-            if (obj is RemoteWatcher.HeartbeatRsp) return HeartbeatRspToProto((RemoteWatcher.HeartbeatRsp)obj);
+            if (obj is RemoteWatcher.HeartbeatRsp heartbeatRsp) return HeartbeatRspToProto(heartbeatRsp);
             if (obj is LocalScope) return EmptyBytes;
-            if (obj is RemoteScope) return RemoteScopeToProto((RemoteScope)obj);
-            if (obj is Config) return ConfigToProto((Config)obj);
-            if (obj is FromConfig) return FromConfigToProto((FromConfig)obj);
-            if (obj is DefaultResizer) return DefaultResizerToProto((DefaultResizer)obj);
-            if (obj is RoundRobinPool) return RoundRobinPoolToProto((RoundRobinPool)obj);
-            if (obj is BroadcastPool) return BroadcastPoolToProto((BroadcastPool)obj);
-            if (obj is RandomPool) return RandomPoolToProto((RandomPool)obj);
-            if (obj is ScatterGatherFirstCompletedPool) return ScatterGatherFirstCompletedPoolToProto((ScatterGatherFirstCompletedPool)obj);
-            if (obj is TailChoppingPool) return TailChoppingPoolToProto((TailChoppingPool)obj);
-            if (obj is RemoteRouterConfig) return RemoteRouterConfigToProto((RemoteRouterConfig)obj);
+            if (obj is RemoteScope remoteScope) return RemoteScopeToProto(remoteScope);
+            if (obj is Config config) return ConfigToProto(config);
+            if (obj is FromConfig fromConfig) return FromConfigToProto(fromConfig);
+            if (obj is DefaultResizer defaultResizer) return DefaultResizerToProto(defaultResizer);
+            if (obj is RoundRobinPool roundRobinPool) return RoundRobinPoolToProto(roundRobinPool);
+            if (obj is BroadcastPool broadcastPool) return BroadcastPoolToProto(broadcastPool);
+            if (obj is RandomPool randomPool) return RandomPoolToProto(randomPool);
+            if (obj is ScatterGatherFirstCompletedPool scatterPool) return ScatterGatherFirstCompletedPoolToProto(scatterPool);
+            if (obj is TailChoppingPool tailChoppingPool) return TailChoppingPoolToProto(tailChoppingPool);
+            if (obj is ConsistentHashingPool hashingPool) return ConsistentHashingPoolToProto(hashingPool);
+            if (obj is RemoteRouterConfig remoteRouterConfig) return RemoteRouterConfigToProto(remoteRouterConfig);
 
             throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
@@ -100,6 +102,7 @@ namespace Akka.Remote.Serialization
             if (obj is RandomPool) return RandomPoolManifest;
             if (obj is ScatterGatherFirstCompletedPool) return ScatterGatherPoolManifest;
             if (obj is TailChoppingPool) return TailChoppingPoolManifest;
+            if (obj is ConsistentHashingPool) return ConsistentHashingPoolManifest;
             if (obj is RemoteRouterConfig) return RemoteRouterConfigManifest;
 
             throw new ArgumentException($"Cannot deserialize object of type [{obj.GetType().TypeQualifiedName()}]");
@@ -125,6 +128,7 @@ namespace Akka.Remote.Serialization
             if (manifest == RandomPoolManifest) return RandomPoolFromProto(bytes);
             if (manifest == ScatterGatherPoolManifest) return ScatterGatherFirstCompletedPoolFromProto(bytes);
             if (manifest == TailChoppingPoolManifest) return TailChoppingPoolFromProto(bytes);
+            if (manifest == ConsistentHashingPoolManifest) return ConsistentHashingPoolFromProto(bytes);
             if (manifest == RemoteRouterConfigManifest) return RemoteRouterConfigFromProto(bytes);
  
             throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{nameof(MiscMessageSerializer)}]");
@@ -409,7 +413,7 @@ namespace Akka.Remote.Serialization
         {
             var message = new Proto.Msg.ScatterGatherPool();
             message.Generic = GenericRoutingPoolBuilder(scatterGatherFirstCompletedPool);
-            message.Within = new Proto.Msg.Timespan { Ticks = (ulong) scatterGatherFirstCompletedPool.Within.Ticks };
+            message.Within = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(scatterGatherFirstCompletedPool.Within);
             return message.ToByteArray();
         }
 
@@ -428,7 +432,7 @@ namespace Akka.Remote.Serialization
             return new ScatterGatherFirstCompletedPool(
                 (int)scatterGatherFirstCompletedPool.Generic.NrOfInstances,
                 resizer,
-                TimeSpan.FromTicks((long)scatterGatherFirstCompletedPool.Within.Ticks),
+                scatterGatherFirstCompletedPool.Within.ToTimeSpan(),
                 Pool.DefaultSupervisorStrategy,
                 routerDispatcher,
                 scatterGatherFirstCompletedPool.Generic.UsePoolDispatcher);
@@ -441,8 +445,8 @@ namespace Akka.Remote.Serialization
         {
             var message = new Proto.Msg.TailChoppingPool();
             message.Generic = GenericRoutingPoolBuilder(tailChoppingPool);
-            message.Within = new Proto.Msg.Timespan { Ticks = (ulong)tailChoppingPool.Within.Ticks };
-            message.Interval = new Proto.Msg.Timespan { Ticks = (ulong)tailChoppingPool.Interval.Ticks };
+            message.Within = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(tailChoppingPool.Within);
+            message.Interval = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(tailChoppingPool.Interval);
             return message.ToByteArray();
         }
 
@@ -463,9 +467,36 @@ namespace Akka.Remote.Serialization
                 resizer,
                 Pool.DefaultSupervisorStrategy,
                 routerDispatcher,
-                TimeSpan.FromTicks((long)tailChoppingPool.Within.Ticks),
-                TimeSpan.FromTicks((long)tailChoppingPool.Interval.Ticks),
+                tailChoppingPool.Within.ToTimeSpan(),
+                tailChoppingPool.Interval.ToTimeSpan(),
                 tailChoppingPool.Generic.UsePoolDispatcher);
+        }
+
+        //
+        // ConsistentHashingPool
+        //
+        private byte[] ConsistentHashingPoolToProto(ConsistentHashingPool hashingPool)
+        {
+            return GenericRoutingPoolBuilder(hashingPool).ToByteArray();
+        }
+
+        private object ConsistentHashingPoolFromProto(byte[] bytes)
+        {
+            var consistentHashingPool = Proto.Msg.GenericRoutingPool.Parser.ParseFrom(bytes);
+
+            Resizer resizer = consistentHashingPool.Resizer != null
+                ? (Resizer)_payloadSupport.PayloadFrom(consistentHashingPool.Resizer)
+                : null;
+            var routerDispatcher = !string.IsNullOrEmpty(consistentHashingPool.RouterDispatcher)
+                ? consistentHashingPool.RouterDispatcher
+                : Dispatchers.DefaultDispatcherId;
+
+            return new ConsistentHashingPool(
+                (int)consistentHashingPool.NrOfInstances,
+                resizer,
+                Pool.DefaultSupervisorStrategy,
+                routerDispatcher,
+                consistentHashingPool.UsePoolDispatcher);
         }
 
         //

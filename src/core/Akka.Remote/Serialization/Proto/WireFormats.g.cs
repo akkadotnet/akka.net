@@ -23,71 +23,69 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChFXaXJlRm9ybWF0cy5wcm90bxIjQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMucHJvdG8ipwEKF0Fja0Fu",
-            "ZEVudmVsb3BlQ29udGFpbmVyEkUKA2FjaxgBIAEoCzI4LkFra2EuUmVtb3Rl",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFja25vd2xlZGdlbWVudEluZm8S",
-            "RQoIZW52ZWxvcGUYAiABKAsyMy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5SZW1vdGVFbnZlbG9wZSLlAQoOUmVtb3RlRW52ZWxvcGUS",
-            "RAoJcmVjaXBpZW50GAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEj0KB21lc3NhZ2UYAiABKAsyLC5B",
-            "a2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEkEK",
-            "BnNlbmRlchgEIAEoCzIxLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLkFjdG9yUmVmRGF0YRILCgNzZXEYBSABKAYiOwoTQWNrbm93bGVk",
-            "Z2VtZW50SW5mbxIVCg1jdW11bGF0aXZlQWNrGAEgASgGEg0KBW5hY2tzGAIg",
-            "AygGIuoBChNEYWVtb25Nc2dDcmVhdGVEYXRhEj0KBXByb3BzGAEgASgLMi4u",
-            "QWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUHJvcHNEYXRh",
+            "bi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMucHJvdG8aDmR1cmF0aW9u",
+            "LnByb3RvIqcBChdBY2tBbmRFbnZlbG9wZUNvbnRhaW5lchJFCgNhY2sYASAB",
+            "KAsyOC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BY2tu",
+            "b3dsZWRnZW1lbnRJbmZvEkUKCGVudmVsb3BlGAIgASgLMjMuQWtrYS5SZW1v",
+            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUmVtb3RlRW52ZWxvcGUi5QEK",
+            "DlJlbW90ZUVudmVsb3BlEkQKCXJlY2lwaWVudBgBIAEoCzIxLkFra2EuUmVt",
+            "b3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFjdG9yUmVmRGF0YRI9Cgdt",
+            "ZXNzYWdlGAIgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuUGF5bG9hZBJBCgZzZW5kZXIYBCABKAsyMS5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BY3RvclJlZkRhdGESCwoDc2VxGAUg",
+            "ASgGIjsKE0Fja25vd2xlZGdlbWVudEluZm8SFQoNY3VtdWxhdGl2ZUFjaxgB",
+            "IAEoBhINCgVuYWNrcxgCIAMoBiLqAQoTRGFlbW9uTXNnQ3JlYXRlRGF0YRI9",
+            "CgVwcm9wcxgBIAEoCzIuLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLlByb3BzRGF0YRI/CgZkZXBsb3kYAiABKAsyLy5Ba2thLlJlbW90",
+            "ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EZXBsb3lEYXRhEgwKBHBhdGgY",
+            "AyABKAkSRQoKc3VwZXJ2aXNvchgEIAEoCzIxLkFra2EuUmVtb3RlLlNlcmlh",
+            "bGl6YXRpb24uUHJvdG8uTXNnLkFjdG9yUmVmRGF0YSKoAQoJUHJvcHNEYXRh",
             "Ej8KBmRlcGxveRgCIAEoCzIvLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLkRlcGxveURhdGESDAoEcGF0aBgDIAEoCRJFCgpzdXBlcnZp",
-            "c29yGAQgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5N",
-            "c2cuQWN0b3JSZWZEYXRhIqgBCglQcm9wc0RhdGESPwoGZGVwbG95GAIgASgL",
-            "Mi8uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGVwbG95",
-            "RGF0YRINCgVjbGF6ehgDIAEoCRIMCgRhcmdzGAQgAygMEhEKCW1hbmlmZXN0",
-            "cxgFIAMoCRIVCg1zZXJpYWxpemVySWRzGAYgAygFEhMKC2hhc01hbmlmZXN0",
-            "GAcgAygIIokCCgpEZXBsb3lEYXRhEgwKBHBhdGgYASABKAkSDgoGY29uZmln",
-            "GAIgASgMEhQKDHJvdXRlckNvbmZpZxgDIAEoDBINCgVzY29wZRgEIAEoDBIS",
-            "CgpkaXNwYXRjaGVyGAUgASgJEhkKEXNjb3BlU2VyaWFsaXplcklkGAYgASgF",
-            "EhUKDXNjb3BlTWFuaWZlc3QYByABKAkSGgoSY29uZmlnU2VyaWFsaXplcklk",
-            "GAggASgFEhYKDmNvbmZpZ01hbmlmZXN0GAkgASgJEiAKGHJvdXRlckNvbmZp",
-            "Z1NlcmlhbGl6ZXJJZBgKIAEoBRIcChRyb3V0ZXJDb25maWdNYW5pZmVzdBgL",
-            "IAEoCSJ0ChNBa2thUHJvdG9jb2xNZXNzYWdlEg8KB3BheWxvYWQYASABKAwS",
-            "TAoLaW5zdHJ1Y3Rpb24YAiABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0",
-            "aW9uLlByb3RvLk1zZy5Ba2thQ29udHJvbE1lc3NhZ2UiqgEKEkFra2FDb250",
-            "cm9sTWVzc2FnZRJFCgtjb21tYW5kVHlwZRgBIAEoDjIwLkFra2EuUmVtb3Rl",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkNvbW1hbmRUeXBlEk0KDWhhbmRz",
-            "aGFrZUluZm8YAiABKAsyNi5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5Ba2thSGFuZHNoYWtlSW5mbyJyChFBa2thSGFuZHNoYWtlSW5m",
-            "bxJACgZvcmlnaW4YASABKAsyMC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5BZGRyZXNzRGF0YRILCgN1aWQYAiABKAYSDgoGY29va2ll",
-            "GAMgASgJIk0KC1JlbW90ZVNjb3BlEj4KBG5vZGUYASABKAsyMC5Ba2thLlJl",
-            "bW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNzRGF0YSKxAQoO",
-            "RGVmYXVsdFJlc2l6ZXISEgoKbG93ZXJCb3VuZBgBIAEoDRISCgp1cHBlckJv",
-            "dW5kGAIgASgNEhkKEXByZXNzdXJlVGhyZXNob2xkGAMgASgNEhIKCnJhbXB1",
-            "cFJhdGUYBCABKAESGAoQYmFja29mZlRocmVzaG9sZBgFIAEoARITCgtiYWNr",
-            "b2ZmUmF0ZRgGIAEoARIZChFtZXNzYWdlc1BlclJlc2l6ZRgHIAEoDSJlCgpG",
-            "cm9tQ29uZmlnEj0KB3Jlc2l6ZXIYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhgKEHJvdXRlckRpc3BhdGNo",
-            "ZXIYAiABKAkinwEKEkdlbmVyaWNSb3V0aW5nUG9vbBIVCg1uck9mSW5zdGFu",
-            "Y2VzGAEgASgNEhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAkSGQoRdXNlUG9v",
-            "bERpc3BhdGNoZXIYAyABKAgSPQoHcmVzaXplchgEIAEoCzIsLkFra2EuUmVt",
-            "b3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQinAEKEVNjYXR0",
-            "ZXJHYXRoZXJQb29sEkgKB2dlbmVyaWMYASABKAsyNy5Ba2thLlJlbW90ZS5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5HZW5lcmljUm91dGluZ1Bvb2wSPQoG",
-            "d2l0aGluGAIgASgLMi0uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuVGltZXNwYW4i3AEKEFRhaWxDaG9wcGluZ1Bvb2wSSAoHZ2VuZXJp",
-            "YxgBIAEoCzI3LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "LkdlbmVyaWNSb3V0aW5nUG9vbBI9CgZ3aXRoaW4YAiABKAsyLS5Ba2thLlJl",
-            "bW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UaW1lc3BhbhI/CghpbnRl",
-            "cnZhbBgDIAEoCzItLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLlRpbWVzcGFuIpIBChJSZW1vdGVSb3V0ZXJDb25maWcSOwoFbG9jYWwY",
-            "ASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Q",
-            "YXlsb2FkEj8KBW5vZGVzGAIgAygLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
-            "dGlvbi5Qcm90by5Nc2cuQWRkcmVzc0RhdGEiGQoIVGltZXNwYW4SDQoFdGlj",
-            "a3MYASABKAQqhQEKC0NvbW1hbmRUeXBlEggKBE5PTkUQABINCglBU1NPQ0lB",
-            "VEUQARIQCgxESVNBU1NPQ0lBVEUQAhINCglIRUFSVEJFQVQQAxIeChpESVNB",
-            "U1NPQ0lBVEVfU0hVVFRJTkdfRE9XThAEEhwKGERJU0FTU09DSUFURV9RVUFS",
-            "QU5USU5FRBAFYgZwcm90bzM="));
+            "UHJvdG8uTXNnLkRlcGxveURhdGESDQoFY2xhenoYAyABKAkSDAoEYXJncxgE",
+            "IAMoDBIRCgltYW5pZmVzdHMYBSADKAkSFQoNc2VyaWFsaXplcklkcxgGIAMo",
+            "BRITCgtoYXNNYW5pZmVzdBgHIAMoCCKJAgoKRGVwbG95RGF0YRIMCgRwYXRo",
+            "GAEgASgJEg4KBmNvbmZpZxgCIAEoDBIUCgxyb3V0ZXJDb25maWcYAyABKAwS",
+            "DQoFc2NvcGUYBCABKAwSEgoKZGlzcGF0Y2hlchgFIAEoCRIZChFzY29wZVNl",
+            "cmlhbGl6ZXJJZBgGIAEoBRIVCg1zY29wZU1hbmlmZXN0GAcgASgJEhoKEmNv",
+            "bmZpZ1NlcmlhbGl6ZXJJZBgIIAEoBRIWCg5jb25maWdNYW5pZmVzdBgJIAEo",
+            "CRIgChhyb3V0ZXJDb25maWdTZXJpYWxpemVySWQYCiABKAUSHAoUcm91dGVy",
+            "Q29uZmlnTWFuaWZlc3QYCyABKAkidAoTQWtrYVByb3RvY29sTWVzc2FnZRIP",
+            "CgdwYXlsb2FkGAEgASgMEkwKC2luc3RydWN0aW9uGAIgASgLMjcuQWtrYS5S",
+            "ZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWtrYUNvbnRyb2xNZXNz",
+            "YWdlIqoBChJBa2thQ29udHJvbE1lc3NhZ2USRQoLY29tbWFuZFR5cGUYASAB",
+            "KA4yMC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Db21t",
+            "YW5kVHlwZRJNCg1oYW5kc2hha2VJbmZvGAIgASgLMjYuQWtrYS5SZW1vdGUu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWtrYUhhbmRzaGFrZUluZm8icgoR",
+            "QWtrYUhhbmRzaGFrZUluZm8SQAoGb3JpZ2luGAEgASgLMjAuQWtrYS5SZW1v",
+            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzc0RhdGESCwoDdWlk",
+            "GAIgASgGEg4KBmNvb2tpZRgDIAEoCSJNCgtSZW1vdGVTY29wZRI+CgRub2Rl",
+            "GAEgASgLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "QWRkcmVzc0RhdGEisQEKDkRlZmF1bHRSZXNpemVyEhIKCmxvd2VyQm91bmQY",
+            "ASABKA0SEgoKdXBwZXJCb3VuZBgCIAEoDRIZChFwcmVzc3VyZVRocmVzaG9s",
+            "ZBgDIAEoDRISCgpyYW1wdXBSYXRlGAQgASgBEhgKEGJhY2tvZmZUaHJlc2hv",
+            "bGQYBSABKAESEwoLYmFja29mZlJhdGUYBiABKAESGQoRbWVzc2FnZXNQZXJS",
+            "ZXNpemUYByABKA0iZQoKRnJvbUNvbmZpZxI9CgdyZXNpemVyGAEgASgLMiwu",
+            "QWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5bG9hZBIY",
+            "ChByb3V0ZXJEaXNwYXRjaGVyGAIgASgJIp8BChJHZW5lcmljUm91dGluZ1Bv",
+            "b2wSFQoNbnJPZkluc3RhbmNlcxgBIAEoDRIYChByb3V0ZXJEaXNwYXRjaGVy",
+            "GAIgASgJEhkKEXVzZVBvb2xEaXNwYXRjaGVyGAMgASgIEj0KB3Jlc2l6ZXIY",
+            "BCABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Q",
+            "YXlsb2FkIogBChFTY2F0dGVyR2F0aGVyUG9vbBJICgdnZW5lcmljGAEgASgL",
+            "MjcuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuR2VuZXJp",
+            "Y1JvdXRpbmdQb29sEikKBndpdGhpbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1",
+            "Zi5EdXJhdGlvbiK0AQoQVGFpbENob3BwaW5nUG9vbBJICgdnZW5lcmljGAEg",
+            "ASgLMjcuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuR2Vu",
+            "ZXJpY1JvdXRpbmdQb29sEikKBndpdGhpbhgCIAEoCzIZLmdvb2dsZS5wcm90",
+            "b2J1Zi5EdXJhdGlvbhIrCghpbnRlcnZhbBgDIAEoCzIZLmdvb2dsZS5wcm90",
+            "b2J1Zi5EdXJhdGlvbiKSAQoSUmVtb3RlUm91dGVyQ29uZmlnEjsKBWxvY2Fs",
+            "GAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "UGF5bG9hZBI/CgVub2RlcxgCIAMoCzIwLkFra2EuUmVtb3RlLlNlcmlhbGl6",
+            "YXRpb24uUHJvdG8uTXNnLkFkZHJlc3NEYXRhKoUBCgtDb21tYW5kVHlwZRII",
+            "CgROT05FEAASDQoJQVNTT0NJQVRFEAESEAoMRElTQVNTT0NJQVRFEAISDQoJ",
+            "SEVBUlRCRUFUEAMSHgoaRElTQVNTT0NJQVRFX1NIVVRUSU5HX0RPV04QBBIc",
+            "ChhESVNBU1NPQ0lBVEVfUVVBUkFOVElORUQQBWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.Remote.Serialization.Proto.Msg.CommandType), }, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AckAndEnvelopeContainer), global::Akka.Remote.Serialization.Proto.Msg.AckAndEnvelopeContainer.Parser, new[]{ "Ack", "Envelope" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteEnvelope), global::Akka.Remote.Serialization.Proto.Msg.RemoteEnvelope.Parser, new[]{ "Recipient", "Message", "Sender", "Seq" }, null, null, null),
@@ -104,8 +102,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool), global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool.Parser, new[]{ "NrOfInstances", "RouterDispatcher", "UsePoolDispatcher", "Resizer" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool), global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool.Parser, new[]{ "Generic", "Within" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool), global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool.Parser, new[]{ "Generic", "Within", "Interval" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig), global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig.Parser, new[]{ "Local", "Nodes" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Timespan), global::Akka.Remote.Serialization.Proto.Msg.Timespan.Parser, new[]{ "Ticks" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig), global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig.Parser, new[]{ "Local", "Nodes" }, null, null, null)
           }));
     }
     #endregion
@@ -2816,9 +2813,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "within" field.</summary>
     public const int WithinFieldNumber = 2;
-    private global::Akka.Remote.Serialization.Proto.Msg.Timespan within_;
+    private global::Google.Protobuf.WellKnownTypes.Duration within_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Within {
+    public global::Google.Protobuf.WellKnownTypes.Duration Within {
       get { return within_; }
       set {
         within_ = value;
@@ -2893,7 +2890,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.within_ != null) {
         if (within_ == null) {
-          within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+          within_ = new global::Google.Protobuf.WellKnownTypes.Duration();
         }
         Within.MergeFrom(other.Within);
       }
@@ -2916,7 +2913,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           }
           case 18: {
             if (within_ == null) {
-              within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+              within_ = new global::Google.Protobuf.WellKnownTypes.Duration();
             }
             input.ReadMessage(within_);
             break;
@@ -2974,9 +2971,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "within" field.</summary>
     public const int WithinFieldNumber = 2;
-    private global::Akka.Remote.Serialization.Proto.Msg.Timespan within_;
+    private global::Google.Protobuf.WellKnownTypes.Duration within_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Within {
+    public global::Google.Protobuf.WellKnownTypes.Duration Within {
       get { return within_; }
       set {
         within_ = value;
@@ -2985,9 +2982,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "interval" field.</summary>
     public const int IntervalFieldNumber = 3;
-    private global::Akka.Remote.Serialization.Proto.Msg.Timespan interval_;
+    private global::Google.Protobuf.WellKnownTypes.Duration interval_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Interval {
+    public global::Google.Protobuf.WellKnownTypes.Duration Interval {
       get { return interval_; }
       set {
         interval_ = value;
@@ -3071,13 +3068,13 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.within_ != null) {
         if (within_ == null) {
-          within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+          within_ = new global::Google.Protobuf.WellKnownTypes.Duration();
         }
         Within.MergeFrom(other.Within);
       }
       if (other.interval_ != null) {
         if (interval_ == null) {
-          interval_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+          interval_ = new global::Google.Protobuf.WellKnownTypes.Duration();
         }
         Interval.MergeFrom(other.Interval);
       }
@@ -3100,14 +3097,14 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           }
           case 18: {
             if (within_ == null) {
-              within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+              within_ = new global::Google.Protobuf.WellKnownTypes.Duration();
             }
             input.ReadMessage(within_);
             break;
           }
           case 26: {
             if (interval_ == null) {
-              interval_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+              interval_ = new global::Google.Protobuf.WellKnownTypes.Duration();
             }
             input.ReadMessage(interval_);
             break;
@@ -3253,126 +3250,6 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           }
           case 18: {
             nodes_.AddEntriesFrom(input, _repeated_nodes_codec);
-            break;
-          }
-        }
-      }
-    }
-
-  }
-
-  internal sealed partial class Timespan : pb::IMessage<Timespan> {
-    private static readonly pb::MessageParser<Timespan> _parser = new pb::MessageParser<Timespan>(() => new Timespan());
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Timespan> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[16]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Timespan() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Timespan(Timespan other) : this() {
-      ticks_ = other.ticks_;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Timespan Clone() {
-      return new Timespan(this);
-    }
-
-    /// <summary>Field number for the "ticks" field.</summary>
-    public const int TicksFieldNumber = 1;
-    private ulong ticks_;
-    /// <summary>
-    /// TODO: temporary
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ulong Ticks {
-      get { return ticks_; }
-      set {
-        ticks_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as Timespan);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Timespan other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (Ticks != other.Ticks) return false;
-      return true;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Ticks != 0UL) hash ^= Ticks.GetHashCode();
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (Ticks != 0UL) {
-        output.WriteRawTag(8);
-        output.WriteUInt64(Ticks);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (Ticks != 0UL) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Ticks);
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Timespan other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Ticks != 0UL) {
-        Ticks = other.Ticks;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            input.SkipLastField();
-            break;
-          case 8: {
-            Ticks = input.ReadUInt64();
             break;
           }
         }
