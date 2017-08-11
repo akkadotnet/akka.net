@@ -9,7 +9,7 @@ This release introduces support for .NET Standard 1.6 for our core libraries and
 Akka.Persistence has graduated from beta status to stable modules and its interfaces are now considered to be stable.
 
 **DocFx-based Documentation Site**
-Documentation is now generated using DocFx and compiled from the Akka.NET project rather than a separate documentation repository.
+Documentation is now generated using DocFx and compiled from within the Akka.NET project rather than a separate documentation repository.
 
 **API Changes**
 This release does **not** maintain wire format compatibility with the previous release (v1.2.3).
