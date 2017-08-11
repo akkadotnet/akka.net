@@ -4,7 +4,7 @@
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.3.0</VersionPrefix>
     <PackageReleaseNotes>Placeholder</PackageReleaseNotes>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
