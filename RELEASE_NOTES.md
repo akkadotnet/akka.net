@@ -1,4 +1,4 @@
-#### 1.3.0 June 28 2017 ####
+#### 1.3.0 August 11 2017 ####
 **Feature Release for Akka.NET**
 Akka.NET 1.3.0 is a major feature release that introduces the significant changes to Akka.NET and its runtime.
 
