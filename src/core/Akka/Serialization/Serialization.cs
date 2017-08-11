@@ -267,14 +267,12 @@ namespace Akka.Serialization
                 }
             }
 
+            if (serializer == null)
+                serializer = GetSerializerByName(defaultSerializerName);
+
             // do a final check for the "object" serializer
             if (serializer == null)
                 _serializerMap.TryGetValue(_objectType, out serializer);
-
-            if (serializer == null)
-            {
-                serializer = GetSerializerByName(defaultSerializerName);
-            }
 
             if (serializer == null)
                 throw new SerializationException($"Serializer not found for type {objectType.Name}");
