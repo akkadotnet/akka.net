@@ -9,7 +9,7 @@ open Fake.Git
 
 module IncrementalTests =   
 
-    let akkaDefaultBranch = "v1.3"
+    let akkaDefaultBranch = "dev"
 
     type Supports =
     | Windows
@@ -218,7 +218,7 @@ module IncrementalTests =
     let getIncrementalTestProjects2 testMode =
         logfn "Searching for incremental tests to run in %s test mode..." (testMode.ToString())
         let updatedFiles = getUpdatedFiles()
-        log "The following files have been updated since forking from v1.3 branch..."
+        log "The following files have been updated since forking from dev branch..."
         updatedFiles |> Seq.iter (fun x -> logfn "\t%s" x)
         log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
