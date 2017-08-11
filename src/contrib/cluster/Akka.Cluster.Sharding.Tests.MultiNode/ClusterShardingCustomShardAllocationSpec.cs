@@ -190,9 +190,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
-        internal ShardResolver extractShardId = message => message is int ? ((int)message).ToString() : null;
+        internal ExtractShardId extractShardId = message => message is int ? ((int)message).ToString() : null;
 
         private Lazy<IActorRef> _region;
         private Lazy<IActorRef> _allocator;
@@ -234,8 +234,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId,
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId,
                 allocationStrategy: new TestAllocationStrategy(_allocator.Value),
                 handOffStopMessage: PoisonPill.Instance);
         }

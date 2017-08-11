@@ -28,8 +28,8 @@ namespace Akka.Cluster.Sharding
             string shardId,
             Props entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
         {
             _shardSemantic = new Shard(
@@ -308,8 +308,8 @@ namespace Akka.Cluster.Sharding
             ShardId shardId,
             Props entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
         {
             if (settings.RememberEntities)
@@ -400,11 +400,11 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IdExtractor ExtractEntityId;
+        public readonly ExtractEntityId ExtractEntityId;
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ShardResolver ExtractShardId;
+        public readonly ExtractShardId ExtractShardId;
         /// <summary>
         /// TBD
         /// </summary>
@@ -457,8 +457,8 @@ namespace Akka.Cluster.Sharding
             string shardId,
             Props entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
         {
             _context = context;

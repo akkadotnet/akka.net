@@ -103,9 +103,9 @@ namespace Akka.Cluster.Sharding.Tests
 
         readonly static int ShardCount = 3;
 
-        internal IdExtractor extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
-        internal static ShardResolver extractShardId1 = message =>
+        internal static ExtractShardId extractShardId1 = message =>
         {
             if (message is int)
                 return (((int)message) % ShardCount).ToString();
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        internal static ShardResolver extractShardId2 = message =>
+        internal static ExtractShardId extractShardId2 = message =>
         {
             if (message is int)
                 return (((int)message + 1) % ShardCount).ToString();
@@ -158,8 +158,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(null)),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(true).WithRole("sharding"),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId1);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId1);
         }
 
         private void StartShardingWithExtractor2(ActorSystem sys, IActorRef probe)
@@ -168,8 +168,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(probe)),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(true).WithRole("sharding"),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId2);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId2);
         }
 
         private IActorRef Region(ActorSystem sys)

@@ -27,8 +27,8 @@ namespace Akka.Cluster.Sharding
             string shardId,
             Props entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
         {
             _shardSemantic = new PersistentShard(
@@ -100,8 +100,8 @@ namespace Akka.Cluster.Sharding
             string shardId,
             Props entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
             : base(context, unhandled, typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)
         {
