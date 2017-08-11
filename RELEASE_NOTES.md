@@ -5,7 +5,7 @@ Akka.NET 1.3.0 is a major feature release that introduces the significant change
 **.NET Core and .NET Standard 1.6 Support**
 This release introduces support for .NET Standard 1.6 for our core libraries and .NET Core 1.1 for the MultiNode Test Runner standalone executable. All packages for Akka.NET are dual-released under both .NET 4.5 and .NET Standard 1.6.
 
-As a side note: Akka.NET on .NET 4.5 is not wire compatible with Akka.NET on .NET Core; this is due to fundamental changes made to the fundamental types in the CLR on .NET Core. It's a common problem facing my different serializers and networking libraries in .NET at the moment. We can a X-plat serializer we've developed here: https://github.com/akkadotnet/akka.net/pull/2947 - please comment on that thread if you're considering building hybrid .NET and .NET Core clusters.
+As a side note: Akka.NET on .NET 4.5 is not wire compatible with Akka.NET on .NET Core; this is due to fundamental changes made to the base types in the CLR on .NET Core. It's a common problem facing many different serializers and networking libraries in .NET at the moment. You can use a X-plat serializer we've developed here: https://github.com/akkadotnet/akka.net/pull/2947 - please comment on that thread if you're considering building hybrid .NET and .NET Core clusters.
 
 **Akka.Persistence Released to Market**
 Akka.Persistence has graduated from beta status to stable modules and its interfaces are now considered to be stable. We'll begin updating all of the Akka.Persistence plugins to stable and to add .NET Standard / .NET 4.5 support to each of them as well following this patch.
