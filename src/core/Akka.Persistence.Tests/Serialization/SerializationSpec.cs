@@ -1,7 +1,9 @@
-﻿// <copyright file="SerializationSpec.cs" company="Copaco B.V.">
-//        Copyright (c) 2015 - 2017 All Right Reserved
-//        Author: Arjen Smits
+//-----------------------------------------------------------------------
+// <copyright file="SerializationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
+//-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Configuration;
