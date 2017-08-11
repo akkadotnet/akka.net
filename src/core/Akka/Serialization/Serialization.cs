@@ -119,6 +119,26 @@ namespace Akka.Serialization
             }
         }
 
+        private Serializer GetSerializerByName(string name)
+        {
+            if (name == null)
+                return null;
+
+            var serializersConfig = System.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
+            foreach (var kvp in serializersConfig)
+            {
+                if (kvp.Key.Equals(name))
+                {
+                    var serializerTypeName = kvp.Value.GetString();
+                    var serializerType = Type.GetType(serializerTypeName);
+
+                    var serializerId = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(serializerType, (ExtendedActorSystem)System);
+                    return GetSerializerById(serializerId);
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -204,11 +224,12 @@ namespace Akka.Serialization
         /// <summary>
         /// Returns the Serializer configured for the given object, returns the NullSerializer if it's null.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public Serializer FindSerializerFor(object obj)
+        /// <param name="obj">The object that needs to be serialized</param>
+        /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
+        /// <returns>The serializer configured for the given object type</returns>
+        public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
         {
-            return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType());
+            return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType(), defaultSerializerName);
         }
 
         //cache to eliminate lots of typeof operator calls
@@ -222,11 +243,12 @@ namespace Akka.Serialization
         /// and secondly the entry configured first.
         /// </summary>
         /// <param name="objectType">TBD</param>
+        /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
         /// </exception>
-        /// <returns>TBD</returns>
-        public Serializer FindSerializerForType(Type objectType)
+        /// <returns>The serializer configured for the given object type</returns>
+        public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;
@@ -244,6 +266,9 @@ namespace Akka.Serialization
                     break;
                 }
             }
+
+            if (serializer == null)
+                serializer = GetSerializerByName(defaultSerializerName);
 
             // do a final check for the "object" serializer
             if (serializer == null)

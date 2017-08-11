@@ -224,6 +224,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public QueryConfiguration NamingConventions { get; }
 
         /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public string DefaultSerializer { get; }
+
+    /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
@@ -281,6 +286,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
+            DefaultSerializer = config.GetString("serializer");
         }
 
         /// <summary>
@@ -302,7 +308,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </param>
         /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
-        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
+        /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions, string defaultSerializer)
         {
             ConnectionString = connectionString;
             MaxConcurrentOperations = maxConcurrentOperations;
@@ -314,6 +321,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
+            DefaultSerializer = defaultSerializer;
         }
     }
 
@@ -1148,7 +1156,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var manifest = string.IsNullOrEmpty(persistent.Manifest)
                 ? payloadType.TypeQualifiedName()
                 : persistent.Manifest;
-            var serializer = _serialization.FindSerializerForType(payloadType);
+            var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
             var binary = serializer.ToBinary(persistent.Payload);
 
             AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
@@ -1174,7 +1182,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payload = reader[PayloadIndex];
 
             var type = Type.GetType(manifest, true);
-            var deserializer = _serialization.FindSerializerForType(type);
+            var deserializer = _serialization.FindSerializerForType(type, Setup.DefaultSerializer);
             var deserialized = deserializer.FromBinary((byte[])payload, type);
 
             var persistent = new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
