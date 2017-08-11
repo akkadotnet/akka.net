@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sql.Common</AssemblyTitle>
     <Description>Akka.NET Persistence ADO.NET middleware</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

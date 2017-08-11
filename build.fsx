@@ -28,10 +28,20 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
+let preReleaseVersionSuffix = (if (not (buildNumber = "0")) then (buildNumber) else "") + "-beta"
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
-    | "dev" -> (if (not (buildNumber = "0")) then (buildNumber) else "") + "-beta"
+    | "dev" -> preReleaseVersionSuffix
     | _ -> ""
+let overrideVersionSuffix (project:string) =
+    match project with
+    | p when p.Contains("Akka.Serialization.Wire") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.Serialization.Hyperion") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.Cluster.Sharding") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.DistributedData") -> preReleaseVersionSuffix
+    | p when p.Contains("Akka.DistributedData.LightningDB") -> preReleaseVersionSuffix
+    | _ -> versionSuffix
+
 let releaseNotes =
     File.ReadLines "./RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
@@ -322,15 +332,14 @@ Target "CreateNuget" (fun _ ->
                     Project = project
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = versionSuffix
+                    VersionSuffix = overrideVersionSuffix project
                     OutputPath = outputNuGet })
 
     projects |> Seq.iter (runSingleProject)
 )
-
+open Fake.TemplateHelper
 Target "PublishMntr" (fun _ ->
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-    let versionSuffixArg = sprintf "/p:VersionSuffix=%s" versionSuffix
 
     // Windows .NET 4.5.2
     executableProjects |> Seq.iter (fun project ->
@@ -338,7 +347,7 @@ Target "PublishMntr" (fun _ ->
             (fun p -> 
                 { p with
                     Project = project                  
-                    AdditionalArgs = ["-r win7-x64"; versionSuffixArg] })
+                    AdditionalArgs = ["-r win7-x64"; overrideVersionSuffix project] })
     )
 
     // Windows .NET 4.5.2
@@ -350,7 +359,7 @@ Target "PublishMntr" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "net452"
-                    VersionSuffix = versionSuffix }))
+                    VersionSuffix = overrideVersionSuffix project }))
 
     // Windows .NET Core
     executableProjects |> Seq.iter (fun project ->  
@@ -361,10 +370,15 @@ Target "PublishMntr" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "netcoreapp1.1"
-                    VersionSuffix = versionSuffix }))
+                    VersionSuffix = overrideVersionSuffix project }))
 )
 
-Target "CreateMntrNuget" (fun _ ->    
+Target "CreateMntrNuget" (fun _ -> 
+    // uses the template file to create a temporary .nuspec file with the correct version
+    CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
+    let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
+    let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix ]
+    TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     
     executableProjects |> Seq.iter (fun project ->  
@@ -374,9 +388,11 @@ Target "CreateMntrNuget" (fun _ ->
                     Project = project
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = versionSuffix
+                    VersionSuffix = overrideVersionSuffix project
                     OutputPath = outputNuGet } )
     )
+
+    DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
 )
 
 Target "PublishNuget" (fun _ ->
