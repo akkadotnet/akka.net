@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Tests.Serialization
@@ -94,7 +95,7 @@ akka {
     }
 
 	// TODO: temporary disabled
-    public abstract class MessageSerializerRemotingSpec : AkkaSpec
+    public class MessageSerializerRemotingSpec : AkkaSpec
     {
         internal class LocalActor : ActorBase
         {
@@ -186,7 +187,7 @@ akka {
             // this also verifies serialization of Persistent.Sender,
             // because the RemoteActor will reply to the Persistent.Sender
             _localActor.Tell(new Persistent(new MyPayload("a"), sender: TestActor));
-            ExpectMsg("p.a.");
+            ExpectMsg("pa");
         }
 
         [Fact]
@@ -195,8 +196,10 @@ akka {
             var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
             var p2 = new Persistent(new MyPayload("b"), sender: TestActor);
             _localActor.Tell(new AtomicWrite(ImmutableList.Create(new IPersistentRepresentation[] {p1, p2})));
-            ExpectMsg("p.a.");
-            ExpectMsg("p.b.");
+            Within(5.Seconds(), () => { 
+                ExpectMsg("pa");
+                ExpectMsg("pb");
+            });
         }
 
         [Fact]
@@ -208,15 +211,6 @@ akka {
             var back = (Persistent)serializer.FromBinary(bytes, typeof (Persistent));
 
             back.Manifest.ShouldBe(p1.Manifest);
-        }
-
-        [Fact]
-        public void Serialization_respects_default_serializer_parameter()
-        {
-            var message = "this is my test message";
-            var serializer = _serialization.FindSerializerFor(message, "json");
-            Assert.True(serializer.Identifier == 1); //by default configuration the serializer id for json == newtonsoft == 1
-
         }
     }
 }
