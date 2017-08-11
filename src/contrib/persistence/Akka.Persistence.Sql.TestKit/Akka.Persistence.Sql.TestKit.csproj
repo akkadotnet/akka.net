@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sql.TestKit</AssemblyTitle>
     <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;testkit;eventsource;sql;reactive;streams</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
