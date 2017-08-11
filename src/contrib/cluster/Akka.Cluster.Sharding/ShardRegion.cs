@@ -237,7 +237,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="extractShardId">TBD</param>
         /// <param name="handOffStopMessage">TBD</param>
         /// <returns>TBD</returns>
-        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
+        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
         }
@@ -251,7 +251,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="extractEntityId">TBD</param>
         /// <param name="extractShardId">TBD</param>
         /// <returns>TBD</returns>
-        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId)
+        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance)).WithDeploy(Deploy.Local);
         }
@@ -275,11 +275,11 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IdExtractor IdExtractor;
+        public readonly ExtractEntityId ExtractEntityId;
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ShardResolver ShardResolver;
+        public readonly ExtractShardId ExtractShardId;
         /// <summary>
         /// TBD
         /// </summary>
@@ -345,14 +345,14 @@ namespace Akka.Cluster.Sharding
         /// <param name="extractEntityId">TBD</param>
         /// <param name="extractShardId">TBD</param>
         /// <param name="handOffStopMessage">TBD</param>
-        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
+        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage)
         {
             TypeName = typeName;
             EntityProps = entityProps;
             Settings = settings;
             CoordinatorPath = coordinatorPath;
-            IdExtractor = extractEntityId;
-            ShardResolver = extractShardId;
+            ExtractEntityId = extractEntityId;
+            ExtractShardId = extractShardId;
             HandOffStopMessage = handOffStopMessage;
 
             _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
@@ -462,7 +462,7 @@ namespace Akka.Cluster.Sharding
             else if (message is IShardRegionQuery) HandleShardRegionQuery(message as IShardRegionQuery);
             else if (message is RestartShard) DeliverMessage(message, Sender);
             else if (message is StartEntity) DeliverStartEntity(message, Sender);
-            else if (IdExtractor(message) != null) DeliverMessage(message, Sender);
+            else if (ExtractEntityId(message) != null) DeliverMessage(message, Sender);
             else
             {
                 Log.Warning("Message does not have an extractor defined in shard [{0}] so it was ignored: {1}", TypeName, message);
@@ -529,7 +529,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                var shardId = ShardResolver(message);
+                var shardId = ExtractShardId(message);
                 if (RegionByShard.TryGetValue(shardId, out var region))
                 {
                     if (region.Equals(Self))
@@ -868,8 +868,8 @@ namespace Akka.Cluster.Sharding
                         id,
                         EntityProps,
                         Settings,
-                        IdExtractor,
-                        ShardResolver,
+                        ExtractEntityId,
+                        ExtractShardId,
                         HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), name));
 
                     ShardsByRef = ShardsByRef.SetItem(shardRef, id);

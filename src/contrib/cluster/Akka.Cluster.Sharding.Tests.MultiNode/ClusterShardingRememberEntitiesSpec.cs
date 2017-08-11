@@ -98,9 +98,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
-        internal ShardResolver extractShardId = message =>
+        internal ExtractShardId extractShardId = message =>
         {
             if (message is int)
                 return ((int)message).ToString();
@@ -146,8 +146,8 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create(() => new TestEntity(probe)),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
         [MultiNodeFact]
