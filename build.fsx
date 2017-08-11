@@ -402,14 +402,24 @@ Target "PublishNuget" (fun _ ->
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
+    let shouldPublishSymbolsPackages = not (symbolSource = "")
 
-    if (not (source = "") && not (apiKey = "")) then
+    if (not (source = "") && not (apiKey = "") && shouldPublishSymbolsPackages) then
         let runSingleProject project =
             DotNetCli.RunCommand
                 (fun p -> 
                     { p with 
                         TimeOut = TimeSpan.FromMinutes 10. })
                 (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
+
+        projects |> Seq.iter (runSingleProject)
+    else if (not (source = "") && not (apiKey = "") && not shouldPublishSymbolsPackages) then
+        let runSingleProject project =
+            DotNetCli.RunCommand
+                (fun p -> 
+                    { p with 
+                        TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "nuget push %s --api-key %s --source %s" project apiKey source)
 
         projects |> Seq.iter (runSingleProject)
 )
