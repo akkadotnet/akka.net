@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -16,6 +17,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
+using Akka.Remote.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -38,8 +40,8 @@ namespace Akka.Remote
             settings.InjectTopLevelFallback(RemoteConfigFactory.Default());
 
             var remoteDeployer = new RemoteDeployer(settings);
-            Func<ActorPath, IInternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
-            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
+            IInternalActorRef DeadLettersFactory(ActorPath path) => new RemoteDeadLetterActorRef(this, path, eventStream);
+            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, DeadLettersFactory);
             RemoteSettings = new RemoteSettings(settings.Config);
             Deployer = remoteDeployer;
             _log = _local.Log;
@@ -136,6 +138,9 @@ namespace Akka.Remote
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
 
+        private volatile ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+        private volatile ActorPathThreadLocalCache _actorPathThreadLocalCache;
+
         /// <summary>
         /// The remote death watcher.
         /// </summary>
@@ -148,6 +153,9 @@ namespace Akka.Remote
             _system = system;
 
             _local.Init(system);
+
+            _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
+            _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
 
             _remotingTerminator =
                 _system.SystemActorOf(
@@ -357,6 +365,20 @@ namespace Akka.Remote
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryParseCachedPath(string actorPath, out ActorPath path)
+        {
+            if (_actorPathThreadLocalCache != null)
+            {
+                path = _actorPathThreadLocalCache.Cache.GetOrCompute(actorPath);
+                return path != null;
+            }
+            else // cache not initialized yet
+            {
+                return ActorPath.TryParse(actorPath, out path);
+            }
+        }
+
 
         /// <summary>
         /// INTERNAL API.
@@ -369,7 +391,7 @@ namespace Akka.Remote
         internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (TryParseCachedPath(path, out actorPath))
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
@@ -387,11 +409,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves a deserialized path into an <see cref="IActorRef"/>
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The path of the actor we are attempting to resolve.</param>
+        /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
+        {
+            // using thread local LRU cache, which will call InternalRresolveActorRef
+            // if the value is not cached
+            if (_actorRefResolveThreadLocalCache == null)
+            {
+                return InternalResolveActorRef(path); // cache not initialized yet
+            }
+            return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
+        }
+
+        /// <summary>
+        /// INTERNAL API: this is used by the <see cref="ActorRefResolveCache"/> via the public
+        /// <see cref="ResolveActorRef(string)"/> method.
+        /// </summary>
+        /// <param name="path">The path of the actor we intend to resolve.</param>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        internal IActorRef InternalResolveActorRef(string path)
         {
             if (path == String.Empty)
                 return ActorRefs.NoSender;

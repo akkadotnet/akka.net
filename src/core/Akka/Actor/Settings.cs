@@ -7,26 +7,24 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
-using Akka.Util;
 
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Settings are the overall ActorSystem Settings which also provides a convenient access to the Config object.
-    ///     For more detailed information about the different possible configuration options, look in the Akka .NET
-    ///     Documentation under "Configuration"
+    /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
+    /// access to the <see cref="Akka.Configuration.Config"/> object. For more detailed information about the
+    /// different possible configuration options, look in the Akka.NET Documentation under Configuration
+    /// (http://getakka.net/docs/concepts/configuration).
     /// </summary>
     public class Settings
     {
         private readonly Config _userConfig;
         private Config _fallbackConfig;
 
-        /// <summary>
-        /// Combines the user config and the fallback chain of configs
-        /// </summary>
         private void RebuildConfig()
         {
             Config = _userConfig.SafeWithFallback(_fallbackConfig);
@@ -34,6 +32,8 @@ namespace Akka.Actor
             //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
             if(System != null && System.Dispatchers != null)
                 System.Dispatchers.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
+            if (System is Internal.ISupportSerializationConfigReload rs)
+                rs.ReloadSerialization();
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Settings" /> class.
+        /// Initializes a new instance of the <see cref="Settings" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="config">The configuration.</param>
@@ -304,14 +304,10 @@ namespace Akka.Actor
         /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
-        /// <summary>
-        ///     Returns a <see cref="string" /> that represents this instance.
-        /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return Config.ToString();
         }
     }
 }
-

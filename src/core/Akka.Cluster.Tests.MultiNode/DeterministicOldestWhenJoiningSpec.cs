@@ -46,7 +46,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected DeterministicOldestWhenJoiningSpec(DeterministicOldestWhenJoiningConfig config) : base(config)
+        protected DeterministicOldestWhenJoiningSpec(DeterministicOldestWhenJoiningConfig config) : base(config, typeof(DeterministicOldestWhenJoiningSpec))
         {
             _config = config;
         }

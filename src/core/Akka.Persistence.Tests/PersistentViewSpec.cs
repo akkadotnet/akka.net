@@ -229,4 +229,3 @@ namespace Akka.Persistence.Tests
         }
     }
 }
-

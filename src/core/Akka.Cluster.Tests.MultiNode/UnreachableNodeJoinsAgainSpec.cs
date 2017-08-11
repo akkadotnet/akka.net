@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public UnreachableNodeJoinsAgainSpec () : this(new UnreachableNodeJoinsAgainConfig()){ }
 
-        protected UnreachableNodeJoinsAgainSpec(UnreachableNodeJoinsAgainConfig config) : base(config)
+        protected UnreachableNodeJoinsAgainSpec(UnreachableNodeJoinsAgainConfig config) : base(config, typeof(UnreachableNodeJoinsAgainSpec))
         {
             _config = config;
             _master = new Lazy<RoleName>(() => _config.Second);

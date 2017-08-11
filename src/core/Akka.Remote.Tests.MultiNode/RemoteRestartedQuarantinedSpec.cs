@@ -10,6 +10,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using FluentAssertions;
 
 namespace Akka.Remote.Tests.MultiNode
 {
@@ -65,7 +66,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         protected RemoteRestartedQuarantinedSpec(RemoteRestartedQuarantinedMultiNetSpec config)
-            : base(config)
+            : base(config, typeof(RemoteRestartedQuarantinedSpec))
         {
             _config = config;
 
@@ -102,7 +103,7 @@ namespace Akka.Remote.Tests.MultiNode
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/"subject")
                             .Tell(new Identify("subject"));
-                        ExpectMsg<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(1));
+                        ExpectMsg<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(10));
                     });
                 });
 
@@ -120,12 +121,12 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("quarantined");
 
                 // Check that quarantine is intact
-                Within(TimeSpan.FromSeconds(10), () =>
+                Within(TimeSpan.FromSeconds(30), () =>
                 {
                     AwaitAssert(() =>
                     {
                         EventFilter.Warning(null, null, "The remote system has quarantined this system")
-                            .ExpectOne(() => actorRef.Tell("boo!"));
+                            .ExpectOne(10.Seconds(), () => actorRef.Tell("boo!"));
                     });
                 });
 

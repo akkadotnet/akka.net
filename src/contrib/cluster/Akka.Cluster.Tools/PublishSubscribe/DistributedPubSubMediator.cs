@@ -166,13 +166,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Send>(send =>
             {
                 var routees = new List<Routee>();
-
-                Bucket bucket;
                 ValueHolder valueHolder;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket) && bucket.Content.TryGetValue(send.Path, out valueHolder) && send.LocalAffinity)
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) && 
+                    bucket.Content.TryGetValue(send.Path, out valueHolder) && 
+                    send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;
-                    if (routee != null) routees.Add(routee);
+                    if (routee != null)
+                        routees.Add(routee);
                 }
                 else
                 {
@@ -181,20 +182,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         if (entry.Value.Content.TryGetValue(send.Path, out valueHolder))
                         {
                             var routee = valueHolder.Routee;
-                            if (routee != null) routees.Add(routee);
+                            if (routee != null)
+                                routees.Add(routee);
                         }
                     }
                 }
 
                 if (routees.Count != 0)
-                {
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
-                }
                 else
-                {
                     SendToDeadLetters(send.Message);
-                }
             });
             Receive<SendToAll>(sendToAll =>
             {
@@ -211,9 +209,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Put>(put =>
             {
                 if (put.Ref.Path.Address.HasGlobalScope)
-                {
                     Log.Warning("Registered actor must be local: [{0}]", put.Ref);
-                }
                 else
                 {
                     PutToRegistry(Internal.Utils.MakeKey(put.Ref), put.Ref);
@@ -222,11 +218,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Remove>(remove =>
             {
-                Bucket bucket;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
-                    ValueHolder valueHolder;
-                    if (bucket.Content.TryGetValue(remove.Path, out valueHolder) && valueHolder.Ref != null)
+                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
                     {
                         Context.Unwatch(valueHolder.Ref);
                         PutToRegistry(remove.Path, null);
@@ -242,13 +236,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 {
                     var child = Context.Child(encodedTopic);
                     if (!child.IsNobody())
-                    {
                         child.Forward(subscribe);
-                    }
                     else
-                    {
                         NewTopicActor(encodedTopic).Forward(subscribe);
-                    }
                 });
             });
             Receive<RegisterTopic>(register =>
@@ -282,12 +272,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 {
                     var child = Context.Child(encodedTopic);
                     if (!child.IsNobody())
-                    {
                         child.Forward(unsubscribe);
-                    }
                     else
                     {
-                        // no such topic here
+                        // no such topic here  
                     }
                 });
             });
@@ -324,14 +312,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     {
                         if (_nodes.Contains(bucket.Owner))
                         {
-                            Bucket myBucket;
-                            if (!_registry.TryGetValue(bucket.Owner, out myBucket))
+                            if (!_registry.TryGetValue(bucket.Owner, out var myBucket))
                                 myBucket = new Bucket(bucket.Owner);
 
                             if (bucket.Version > myBucket.Version)
-                            {
                                 _registry[bucket.Owner] = new Bucket(myBucket.Owner, bucket.Version, myBucket.Content.SetItems(bucket.Content));
-                            }
                         }
                     }
                 }
@@ -342,15 +327,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var key = Internal.Utils.MakeKey(terminated.ActorRef);
 
-                Bucket bucket;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
-                {
-                    ValueHolder holder;
-                    if (bucket.Content.TryGetValue(key, out holder) && terminated.ActorRef.Equals(holder.Ref))
-                    {
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
+                    if (bucket.Content.TryGetValue(key, out var holder) && terminated.ActorRef.Equals(holder.Ref))
                         PutToRegistry(key, null); // remove
-                    }
-                }
+
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
             });
             Receive<ClusterEvent.CurrentClusterState>(state =>
@@ -377,9 +357,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var member = removed.Member;
                 if (member.Address == _cluster.SelfAddress)
-                {
                     Context.Stop(Self);
-                }
                 else if (IsMatchingRole(member))
                 {
                     _nodes.Remove(member.Address);
@@ -402,11 +380,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             return versions.Any(entry =>
             {
-                Bucket bucket;
-                if (_registry.TryGetValue(entry.Key, out bucket))
-                {
+                if (_registry.TryGetValue(entry.Key, out var bucket))
                     return entry.Value > bucket.Version;
-                }
+
                 return entry.Value > 0L;
             });
         }
@@ -426,8 +402,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var owner = entry.Key;
                 var v = entry.Value;
 
-                Bucket bucket;
-                if (!_registry.TryGetValue(owner, out bucket))
+                if (!_registry.TryGetValue(owner, out var bucket))
                     bucket = new Bucket(owner);
 
                 if (bucket.Version > v && count < _settings.MaxDeltaElements)
@@ -486,16 +461,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private void PutToRegistry(string key, IActorRef value)
         {
             var v = NextVersion();
-            Bucket bucket;
-            if (!_registry.TryGetValue(_cluster.SelfAddress, out bucket))
-            {
+            if (!_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 _registry.Add(_cluster.SelfAddress,
                     new Bucket(_cluster.SelfAddress, v, ImmutableDictionary<string, ValueHolder>.Empty.Add(key, new ValueHolder(v, value))));
-            }
             else
-            {
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
-            }
         }
 
         private void SendToDeadLetters(object message)
@@ -510,17 +480,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var address = entry.Key;
                 var bucket = entry.Value;
 
-                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.ContainsKey(path))
+                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
                 {
-                    var valueHolder = bucket.Content[path];
                     if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
-                    {
                         valueHolder.Ref.Forward(message);
-                    }
                     else
-                    {
                         SendToDeadLetters(message);
-                    }
                 }
             }
         }

@@ -473,8 +473,15 @@ namespace Akka.Configuration.Hocon
             }
             if (IsObject())
             {
-                var i = new string(' ', indent*2);
-                return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                if (indent == 0)
+                {
+                    return GetObject().ToString(indent + 1);
+                }
+                else
+                {
+                    var i = new string(' ', indent * 2);
+                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                }
             }
             if (IsArray())
             {
@@ -483,13 +490,17 @@ namespace Akka.Configuration.Hocon
             return "<<unknown value>>";
         }
 
+        private static readonly Regex Regexp = new Regex("[ \t:]{1}", RegexOptions.Compiled);
+
         private string QuoteIfNeeded(string text)
         {
-            if(text == null) return "";
-            if(text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            if (text == null) return "";
+
+            if (Regexp.IsMatch(text))
             {
                 return "\"" + text + "\"";
             }
+
             return text;
         }
     }

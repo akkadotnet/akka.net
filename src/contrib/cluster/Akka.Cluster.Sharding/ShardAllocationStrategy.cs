@@ -106,7 +106,7 @@ namespace Akka.Cluster.Sharding
 
                 if (mostShards.Length - leastShardsRegion.Value.Count >= _rebalanceThreshold)
                 {
-                    return Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet.Create(mostShards.First()));
+                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.Take(_maxSimultaneousRebalance - rebalanceInProgress.Count).ToImmutableHashSet());
                 }
             }
 

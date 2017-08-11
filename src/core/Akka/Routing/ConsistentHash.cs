@@ -289,35 +289,39 @@ namespace Akka.Routing
         /// <returns>The object encoded into bytes - in the case of custom classes, the hashcode may be used.</returns>
         internal static object ToBytesOrObject(object obj)
         {
-            if (obj == null)
-                return new byte[] { 0 };
-            if (obj is byte[])
-                return (byte[])obj;
-            if (obj is int)
-                return BitConverter.GetBytes((int)obj);
-            if (obj is uint)
-                return BitConverter.GetBytes((uint)obj);
-            if (obj is short)
-                return BitConverter.GetBytes((short)obj);
-            if (obj is ushort)
-                return BitConverter.GetBytes((ushort)obj);
-            if (obj is bool)
-                return BitConverter.GetBytes((bool)obj);
-            if (obj is long)
-                return BitConverter.GetBytes((long)obj);
-            if (obj is ulong)
-                return BitConverter.GetBytes((ulong)obj);
-            if (obj is char)
-                return BitConverter.GetBytes((char)obj);
-            if (obj is float)
-                return BitConverter.GetBytes((float)obj);
-            if (obj is double)
-                return BitConverter.GetBytes((double)obj);
-            if (obj is decimal)
-                return new BitArray(decimal.GetBits((decimal)obj)).ToBytes();
-            if (obj is Guid)
-                return ((Guid)obj).ToByteArray();
-            return obj;
+            switch (obj)
+            {
+                case null:
+                    return new byte[] { 0 };
+                case byte[] bytes:
+                    return bytes;
+                case int @int:
+                    return BitConverter.GetBytes(@int);
+                case uint @uint:
+                    return BitConverter.GetBytes(@uint);
+                case short @short:
+                    return BitConverter.GetBytes(@short);
+                case ushort @ushort:
+                    return BitConverter.GetBytes(@ushort);
+                case bool @bool:
+                    return BitConverter.GetBytes(@bool);
+                case long @long:
+                    return BitConverter.GetBytes(@long);
+                case ulong @ulong:
+                    return BitConverter.GetBytes(@ulong);
+                case char @char:
+                    return BitConverter.GetBytes(@char);
+                case float @float:
+                    return BitConverter.GetBytes(@float);
+                case double @double:
+                    return BitConverter.GetBytes(@double);
+                case decimal @decimal:
+                    return new BitArray(decimal.GetBits(@decimal)).ToBytes();
+                case Guid guid:
+                    return guid.ToByteArray();
+                default:
+                    return obj;
+            }
         }
 
         /// <summary>

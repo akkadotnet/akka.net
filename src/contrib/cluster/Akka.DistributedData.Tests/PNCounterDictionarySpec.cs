@@ -5,10 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Numerics;
 using Akka.Cluster;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +29,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_increment_and_decrement_entries()
+        public void PNCounterDictionary_must_be_able_to_increment_and_decrement_entries()
         {
             var m = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 2)
@@ -42,7 +44,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
+        public void PNCounterDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
         {
             var m1 = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 1)
@@ -64,7 +66,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_remove_entry()
+        public void PNCounterDictionary_must_be_able_to_remove_entry()
         {
             var m1 = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 1)
@@ -91,6 +93,43 @@ namespace Akka.DistributedData.Tests
                 new KeyValuePair<string, BigInteger>("b", new BigInteger(13)),
                 new KeyValuePair<string, BigInteger>("c", new BigInteger(7))
             }), m3.Merge(m4).Entries);
+        }
+
+        [Fact]
+        public void PNCounterDictionary_must_be_able_to_work_with_deltas()
+        {
+            var m1 = PNCounterDictionary<string>.Empty
+                .Increment(_node1, "a", 1)
+                .Increment(_node1, "b", 3)
+                .Increment(_node1, "c", 2);
+            var m2 = PNCounterDictionary<string>.Empty.Increment(_node2, "c", 5);
+
+            var expected = new Dictionary<string, BigInteger>
+            {
+                { "a", 1 },
+                { "b", 3 },
+                { "c", 7 },
+            }.ToImmutableDictionary();
+            PNCounterDictionary<string>.Empty.MergeDelta(m1.Delta).MergeDelta(m2.Delta).Entries.Should().BeEquivalentTo(expected);
+            PNCounterDictionary<string>.Empty.MergeDelta(m2.Delta).MergeDelta(m1.Delta).Entries.Should().BeEquivalentTo(expected);
+
+            var merged1 = m1.Merge(m2);
+
+            var m3 = merged1.ResetDelta().Remove(_node1, "b");
+            merged1.MergeDelta(m3.Delta).Entries.Should().BeEquivalentTo(new Dictionary<string, BigInteger>
+            {
+                { "a", 1 },
+                { "c", 7 },
+            });
+
+            // but if there is a conflicting update the entry is not removed
+            var m4 = merged1.ResetDelta().Increment(_node2, "b", 10);
+            m3.MergeDelta(m4.Delta).Entries.Should().BeEquivalentTo(new Dictionary<string, BigInteger>
+            {
+                { "a", 1 },
+                { "b", 13 },
+                { "c", 7 },
+            });
         }
     }
 }

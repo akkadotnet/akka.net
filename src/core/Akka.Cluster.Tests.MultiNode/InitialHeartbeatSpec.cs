@@ -66,7 +66,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
 
             private InitialHeartbeatSpec(InitialHeartbeatMultiNodeConfig config)
-                : base(config)
+                : base(config, typeof(InitialHeartbeatSpec))
             {
                 _config = config;
                 MuteMarkingAsUnreachable();

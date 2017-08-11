@@ -1,0 +1,42 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = 'proto3';
+package Akka.Remote.Serialization.Proto.Msg;
+
+import 'ContainerFormats.proto';
+
+message CreateData {
+	ExceptionData cause = 1;
+}
+
+message RecreateData {
+	ExceptionData cause = 1;
+}
+
+message ResumeData {
+	ExceptionData cause = 1;
+}
+
+message SuperviseData {
+	ActorRefData child = 1;
+	bool async = 2;
+}
+
+message WatchData {
+	ActorRefData watchee = 1;
+	ActorRefData watcher = 2;
+}
+
+message FailedData {
+	ActorRefData child = 1;
+	ExceptionData cause = 2;
+	uint64 uid = 3;
+}
+
+message DeathWatchNotificationData {
+	ActorRefData actor = 1;
+	bool existenceConfirmed = 2;
+	bool addressTerminated = 3;
+}

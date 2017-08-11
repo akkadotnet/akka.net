@@ -13,15 +13,12 @@ namespace Akka.Persistence.Query
     /// Event wrapper adding meta data for the events in the result stream of
     /// <see cref="IEventsByTagQuery"/> query, or similar queries.
     /// </summary>
-    [Serializable]
     public sealed class EventEnvelope : IEquatable<EventEnvelope>
     {
-        public readonly long Offset;
-        public readonly string PersistenceId;
-        public readonly long SequenceNr;
-        public readonly object Event;
-
-        public EventEnvelope(long offset, string persistenceId, long sequenceNr, object @event)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
+        /// </summary>
+        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event)
         {
             Offset = offset;
             PersistenceId = persistenceId;
@@ -29,7 +26,14 @@ namespace Akka.Persistence.Query
             Event = @event;
         }
 
-        /// <inheritdoc/>
+        public Offset Offset { get; }
+
+        public string PersistenceId { get; }
+
+        public long SequenceNr { get; }
+
+        public object Event { get; }
+
         public bool Equals(EventEnvelope other)
         {
             if (ReferenceEquals(this, other)) return true;
@@ -41,13 +45,8 @@ namespace Akka.Persistence.Query
                    && Equals(Event, other.Event);
         }
 
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return obj is EventEnvelope && Equals((EventEnvelope) obj);
-        }
+        public override bool Equals(object obj) => obj is EventEnvelope evt && Equals(evt);
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -60,7 +59,6 @@ namespace Akka.Persistence.Query
             }
         }
 
-        /// <inheritdoc/>
         public override string ToString() => $"EventEnvelope(persistenceId:{PersistenceId}, seqNr:{SequenceNr}, offset:{Offset}, event:{Event})";
     }
 }

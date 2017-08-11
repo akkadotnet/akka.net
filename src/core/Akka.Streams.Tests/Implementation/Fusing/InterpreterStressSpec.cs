@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         // GraphStages can be reused
         private static readonly Select<int, int> Select = new Select<int, int>(x => x + 1);
-        private static readonly Drop<int> DropOne = new Drop<int>(1);
+        private static readonly Skip<int> SkipOne = new Skip<int>(1);
         private static readonly Take<int> TakeOne = new Take<int>(1);
         private static readonly Take<int> TakeHalfOfRepetition = new Take<int>(Repetition/2);
 
@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_drops()
         {
-            var ops = Enumerable.Range(1, ChainLength/1000).Select(_ => DropOne).ToArray();
+            var ops = Enumerable.Range(1, ChainLength/1000).Select(_ => SkipOne).ToArray();
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {

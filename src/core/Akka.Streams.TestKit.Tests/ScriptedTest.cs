@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
@@ -26,7 +27,10 @@ namespace Akka.Streams.TestKit.Tests
         public ScriptException() { }
         public ScriptException(string message) : base(message) { }
         public ScriptException(string message, Exception inner) : base(message, inner) { }
+
+#if SERIALIZATION
         protected ScriptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     public abstract class ScriptedTest : AkkaSpec

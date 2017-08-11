@@ -1,0 +1,62 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Cluster.Sharding.Serialization.Proto.Msg;
+
+message CoordinatorState {
+  message ShardEntry {
+    string shardId = 1;
+    string regionRef = 2;
+  }
+  
+  repeated ShardEntry shards = 1;
+  repeated string regions = 2;
+  repeated string regionProxies = 3;
+  repeated string unallocatedShards = 4; 
+}
+
+message ActorRefMessage {
+  string ref = 1;
+}
+
+message ShardIdMessage {
+  string shard = 1;
+}
+
+message ShardHomeAllocated {
+  string shard = 1;
+  string region = 2;
+}
+
+message ShardHome {
+  string shard = 1;
+  string region = 2;
+}
+
+message EntityState {
+  repeated string entities = 1;
+}
+
+message EntityStarted {
+  string entityId = 1;
+}
+
+message EntityStopped {
+  string entityId = 1;
+}
+
+message ShardStats {
+  string shard = 1;
+  int32 entityCount = 2;
+}
+
+message StartEntity {
+    string entityId = 1;
+}
+
+message StartEntityAck {
+    string entityId = 1;
+    string shardId = 2;
+}

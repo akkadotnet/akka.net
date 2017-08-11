@@ -24,7 +24,7 @@ namespace Akka.DistributedData
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public interface IKey<out T> : IKey { }
+    public interface IKey<out T> : IKey where T : IReplicatedData { }
 
     /// <summary>
     /// TBD

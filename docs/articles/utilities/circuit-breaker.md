@@ -47,14 +47,14 @@ Here's how a `CircuitBreaker` would be configured for:
   * a call timeout of 10 seconds
   * a reset timeout of 1 minute
 
-[!code-csharp[Main](../../examples/Actors/UntypedActorAPI/Follower.cs?range=9-19,32-38)]
+[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
 
 ### Call Protection
 
 Here's how the `CircuitBreaker` would be used to protect an asynchronous
 call as well as a synchronous one:
 
-[!code-csharp[Main](../../examples/Actors/UntypedActorAPI/Follower.cs?range=21-31)]
+[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=call-protection)]
 
 ```csharp
 dangerousActor.Tell("is my middle name");

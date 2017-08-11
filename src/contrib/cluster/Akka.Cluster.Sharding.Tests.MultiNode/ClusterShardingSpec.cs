@@ -22,52 +22,88 @@ using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingSpecConfig : MultiNodeConfig
     {
-        public ClusterShardingSpecConfig()
+        public RoleName Controller { get; private set; }
+
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
+        public RoleName Third { get; private set; }
+
+        public RoleName Fourth { get; private set; }
+
+        public RoleName Fifth { get; private set; }
+
+        public RoleName Sixth { get; private set; }
+
+        public ClusterShardingSpecConfig(/*string entityRecoveryStrategy*/)
         {
-            var controller = Role("controller");
-            var first = Role("first");
-            var second = Role("second");
-            var third = Role("third");
-            var fourth = Role("fourth");
-            var fifth = Role("fifth");
-            var sixth = Role("sixth");
+            Controller = Role("controller");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+            Sixth = Role("sixth");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.roles = [""backend""]
-                akka.persistence.journal.plugin = ""akka.persistence.journal.leveldb-shared""
-                akka.persistence.journal.leveldb-shared.store {
-                  native = off
-                  dir = ""target/journal-ClusterShardingSpec""
-                }
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-ClusterShardingSpec""
-                akka.cluster.sharding {
-                  retry-interval = 1 s
-                  handoff-timeout = 10 s
-                  shard-start-timeout = 5s
-                  entity-restart-backoff = 1s
-                  rebalance-interval = 2 s
-                  entity-recovery-strategy = ""all""
-                  entity-recovery-constant-rate-strategy {
-                    frequency = 1 ms
-                    number-of-entities = 1
-                  }
-                  least-shard-allocation-strategy {
-                    rebalance-threshold = 2
-                    max-simultaneous-rebalance = 1
-                  }
-                }");
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.actor {
+                        serializers {
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }
+                        serialization-bindings {
+                            ""System.Object"" = hyperion
+                        }
+                    }
 
-            NodeConfig(new[] { sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
+                    akka.cluster.auto-down-unreachable-after = 0s
+                    akka.cluster.roles = [""backend""]
+                    akka.cluster.sharding {
+                        retry-interval = 1 s
+                        handoff-timeout = 10 s
+                        shard-start-timeout = 5s
+                        entity-restart-backoff = 1s
+                        rebalance-interval = 2 s
+                        entity-recovery-strategy = ""all""
+                        entity-recovery-constant-rate-strategy {
+                            frequency = 1 ms
+                            number-of-entities = 1
+                        }
+                        least-shard-allocation-strategy {
+                            rebalance-threshold = 2
+                            max-simultaneous-rebalance = 1
+                        }
+                    }
+
+                    akka.testconductor.barrier-timeout = 70s
+
+
+                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+
+                    akka.persistence.journal.MemoryJournal {
+                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }
+
+                    akka.persistence.journal.memory-journal-shared {
+                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        timeout = 5s
+                    }
+                "))
+                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+
+            NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
         }
     }
 
@@ -139,7 +175,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         #endregion
 
-        public static readonly IdExtractor ExtractEntityId = message =>
+        public static readonly ExtractEntityId ExtractEntityId = message =>
         {
             if (message is EntityEnvelope)
             {
@@ -153,17 +189,18 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        public static readonly ShardResolver ExtractShardId = message =>
+        public static readonly ExtractShardId ExtractShardId = message =>
         {
             if (message is EntityEnvelope)
-                return (((EntityEnvelope)message).Id % ShardsCount).ToString();
+                return (((EntityEnvelope)message).Id % NumberOfShards).ToString();
             if (message is Get)
-                return (((Get)message).CounterId % ShardsCount).ToString();
+                return (((Get)message).CounterId % NumberOfShards).ToString();
+            if (message is ShardRegion.StartEntity)
+                return (long.Parse(((ShardRegion.StartEntity)message).EntityId) % NumberOfShards).ToString();
             return null;
-
         };
 
-        public const int ShardsCount = 12;
+        public const int NumberOfShards = 12;
         private int _count = 0;
 
         public Counter()
@@ -178,7 +215,8 @@ namespace Akka.Cluster.Sharding.Tests
             Thread.Sleep(500);
         }
 
-        public override string PersistenceId { get { return Self.Path.Parent.Name + "-" + Self.Path.Name; } }
+        public override string PersistenceId { get { return "Counter-" + Self.Path.Name; } }
+
         protected override bool ReceiveRecover(object message)
         {
             return message.Match()
@@ -190,7 +228,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             return message.Match()
                 .With<Increment>(_ => Persist(new CounterChanged(1), UpdateState))
-                .With<Increment>(_ => Persist(new CounterChanged(-1), UpdateState))
+                .With<Decrement>(_ => Persist(new CounterChanged(-1), UpdateState))
                 .With<Get>(_ => Sender.Tell(_count))
                 .With<ReceiveTimeout>(_ => Context.Parent.Tell(new Passivate(Stop.Instance)))
                 .With<Stop>(_ => Context.Stop(Self))
@@ -202,22 +240,82 @@ namespace Akka.Cluster.Sharding.Tests
             _count += e.Delta;
         }
     }
-    public class ClusterShardingNode1 : ClusterShardingSpec { }
-    public class ClusterShardingNode2 : ClusterShardingSpec { }
-    public class ClusterShardingNode3 : ClusterShardingSpec { }
+
+    internal class QualifiedCounter : Counter
+    {
+        public static Props Props(string typeName)
+        {
+            return Actor.Props.Create(() => new QualifiedCounter(typeName));
+        }
+
+        public readonly string TypeName;
+
+        public override string PersistenceId { get { return TypeName + "-" + Self.Path.Name; } }
+
+        public QualifiedCounter(string typeName)
+        {
+            TypeName = typeName;
+        }
+    }
+
+    internal class AnotherCounter : QualifiedCounter
+    {
+        public AnotherCounter()
+            : base("AnotherCounter")
+        {
+        }
+    }
+
+    internal class CounterSupervisor : ActorBase
+    {
+        public readonly IActorRef Counter;
+
+        public CounterSupervisor()
+        {
+            Counter = Context.ActorOf(Props.Create<Counter>(), "theCounter");
+        }
+
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return new AllForOneStrategy(Decider.From(ex =>
+            {
+                switch (ex)
+                {
+                    //case _: IllegalArgumentException     ⇒ SupervisorStrategy.Resume
+                    //case _: ActorInitializationException ⇒ SupervisorStrategy.Stop
+                    //case _: DeathPactException           ⇒ SupervisorStrategy.Stop
+                    //case _: Exception                    ⇒ SupervisorStrategy.Restart
+
+                    default:
+                        return Directive.Restart;
+                }
+            }));
+        }
+
+        protected override bool Receive(object message)
+        {
+            Counter.Forward(message);
+            return true;
+        }
+    }
+
+
+    public class ClusterShardingSpecRecoveryAll : ClusterShardingSpec
+    {
+        public ClusterShardingSpecRecoveryAll()
+            : this(new ClusterShardingSpecConfig(/*"all"*/))
+        {
+        }
+
+        protected ClusterShardingSpecRecoveryAll(ClusterShardingSpecConfig config)
+            : base(config, typeof(ClusterShardingSpec))
+        {
+        }
+    }
 
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         #region Setup
-
-        private readonly DirectoryInfo[] _storageLocations;
-        private readonly RoleName _controller;
-        private readonly RoleName _second;
-        private readonly RoleName _first;
-        private readonly RoleName _third;
-        private readonly RoleName _fourth;
-        private readonly RoleName _sixth;
-        private readonly RoleName _fifth;
 
         private readonly Lazy<IActorRef> _region;
         private readonly Lazy<IActorRef> _rebalancingRegion;
@@ -227,64 +325,31 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly Lazy<IActorRef> _rebalancingPersistentRegion;
         private readonly Lazy<IActorRef> _autoMigrateRegion;
 
-        protected ClusterShardingSpec() : base(new ClusterShardingSpecConfig())
-        {
-            _storageLocations = new[]
-            {
-                "akka.persistence.journal.leveldb.dir",
-                "akka.persistence.journal.leveldb-shared.store.dir",
-                "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
+        private readonly ClusterShardingSpecConfig _config;
 
-            _controller = new RoleName("controller");
-            _first = new RoleName("first");
-            _second = new RoleName("second");
-            _third = new RoleName("third");
-            _fourth = new RoleName("fourth");
-            _fifth = new RoleName("fifth");
-            _sixth = new RoleName("sixth");
+        protected ClusterShardingSpec(ClusterShardingSpecConfig config, Type type)
+            : base(config, type)
+        {
+            _config = config;
 
             _region = new Lazy<IActorRef>(() => CreateRegion("counter", false));
             _rebalancingRegion = new Lazy<IActorRef>(() => CreateRegion("rebalancingCounter", false));
 
-            _persistentEntitiesRegion = new Lazy<IActorRef>(() => CreateRegion("PersistentCounterEntities", true));
-            _anotherPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("AnotherPersistentCounter", true));
-            _persistentRegion = new Lazy<IActorRef>(() => CreateRegion("PersistentCounter", true));
-            _rebalancingPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("RebalancingPersistentCounter", true));
-            _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRegionTest", true));
+            _persistentEntitiesRegion = new Lazy<IActorRef>(() => CreateRegion("RememberCounterEntities", true));
+            _anotherPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("AnotherRememberCounter", true));
+            _persistentRegion = new Lazy<IActorRef>(() => CreateRegion("RememberCounter", true));
+            _rebalancingPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("RebalancingRememberCounter", true));
+            _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
         }
 
         protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            RunOn(() =>
-            {
-                foreach (var dir in _storageLocations)
-                {
-                    if (dir.Exists) dir.Delete();
-                }
-            }, _controller);
-        }
-
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            RunOn(() =>
-            {
-                foreach (var dir in _storageLocations)
-                {
-                    if (dir.Exists) dir.Delete();
-                }
-            }, _controller);
-        }
 
         private void Join(RoleName from, RoleName to)
         {
             RunOn(() =>
             {
                 Cluster.Join(Node(to).Address);
+                CreateCoordinator();
             }, from);
 
             EnterBarrier(from.Name + "-joined");
@@ -294,15 +359,16 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var typeNames = new[]
             {
-                "counter", "rebalancingCounter", "PersistentCounterEntities", "AnotherPersistentCounter",
-                "PersistentCounter", "RebalancingPersistentCounter", "AutoMigrateRegionTest"
+                "counter", "rebalancingCounter", "RememberCounterEntities", "AnotherRememberCounter",
+                "RememberCounter", "RebalancingRememberCounter", "AutoMigrateRememberRegionTest"
             };
 
             foreach (var typeName in typeNames)
             {
-                var rebalanceEnabled = string.Equals(typeName, "rebalancing", StringComparison.InvariantCultureIgnoreCase);
+                var rebalanceEnabled = typeName.ToLowerInvariant().StartsWith("rebalancing");
+                var rememberEnabled = typeName.ToLowerInvariant().Contains("remember");
                 var singletonProps = BackoffSupervisor.Props(
-                    CoordinatorProps(typeName, rebalanceEnabled),
+                    CoordinatorProps(typeName, rebalanceEnabled, rememberEnabled),
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
@@ -316,27 +382,33 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private Props CoordinatorProps(string typeName, bool rebalanceEntities)
+        private Props CoordinatorProps(string typeName, bool rebalanceEntities, bool rememberEntities)
         {
             var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-            var config = ConfigurationFactory.ParseString(string.Format(""));
-            var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"));
-
+            var config = ConfigurationFactory.ParseString(string.Format(@"
+                handoff-timeout = 10s
+                shard-start-timeout = 10s
+                rebalance-interval = " + (rebalanceEntities ? "2s" : "3600s")))
+                .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
+            var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
+                .WithRememberEntities(rememberEntities);
             return PersistentShardCoordinator.Props(typeName, settings, allocationStrategy);
         }
 
         private IActorRef CreateRegion(string typeName, bool rememberEntities)
         {
             var config = ConfigurationFactory.ParseString(@"
-              retry-interval = 1s
-              shard-failure-backoff = 1s
-              entity-restart-backoff = 1s
-              buffer-size = 1000").WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
-            var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton")).WithRememberEntities(rememberEntities);
+                retry-interval = 1s
+                shard-failure-backoff = 1s
+                entity-restart-backoff = 1s
+                buffer-size = 1000")
+                .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
+            var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
+                .WithRememberEntities(rememberEntities);
 
             return Sys.ActorOf(Props.Create(() => new ShardRegion(
                 typeName,
-                Props.Create<Counter>(),
+                QualifiedCounter.Props(typeName),
                 settings,
                 "/user/" + typeName + "Coordinator/singleton/coordinator",
                 Counter.ExtractEntityId,
@@ -349,32 +421,66 @@ namespace Akka.Cluster.Sharding.Tests
 
         #region Cluster shardings specs
 
-        [MultiNodeFact(Skip = "TODO")]
+        [MultiNodeFact]
+        public void ClusterSharding_specs()
+        {
+            ClusterSharding_should_setup_shared_journal();
+            ClusterSharding_should_work_in_single_node_cluster();
+            ClusterSharding_should_use_second_node();
+            ClusterSharding_should_support_passivation_and_activation_of_entities();
+            ClusterSharding_should_support_proxy_only_mode();
+            ClusterSharding_should_failover_shards_on_crashed_node();
+            ClusterSharding_should_use_third_and_fourth_node();
+            ClusterSharding_should_recover_coordinator_state_after_coordinator_crash();
+            ClusterSharding_should_rebalance_to_nodes_with_less_shards();
+
+            ClusterSharding_should_be_easy_to_use_with_extensions();
+
+            ClusterSharding_should_be_easy_API_for_starting();
+
+            PersistentClusterShards_should_recover_entities_upon_restart();
+            PersistentClusterShards_should_permanently_stop_entities_which_passivate();
+            PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
+            PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
+            PersistentClusterShards_should_ensure_rebalance_restarts_shards();
+        }
+
         public void ClusterSharding_should_setup_shared_journal()
         {
             // start the Persistence extension
             Persistence.Persistence.Instance.Apply(Sys);
-            RunOn(() => Sys.ActorOf<MemoryJournal>("store"), _controller);
+            RunOn(() =>
+            {
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+            }, _config.Controller);
             EnterBarrier("persistence-started");
 
             RunOn(() =>
             {
-                Sys.ActorSelection(Node(_controller) / "user" / "store").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>().Subject;
-                //SharedLeveldbJournal.setStore(sharedStore, system)
-            }, _first, _second, _third, _fourth, _fifth, _sixth);
+                Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
+                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
+                sharedStore.Should().NotBeNull();
 
+                MemoryJournalShared.SetStore(sharedStore, Sys);
+            }, _config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth, _config.Sixth);
             EnterBarrier("after-1");
+
+            RunOn(() =>
+            {
+                //check persistence running
+                var probe = CreateTestProbe();
+                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
+                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
+                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+            }, _config.First, _config.Second);
+            EnterBarrier("after-1-test");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_work_in_single_node_cluster()
         {
-            ClusterSharding_should_setup_shared_journal();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                Join(_first, _first);
+                Join(_config.First, _config.First);
 
                 RunOn(() =>
                 {
@@ -387,21 +493,18 @@ namespace Akka.Cluster.Sharding.Tests
 
                     ExpectMsg(2);
                     r.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>(m => m.Regions.Length == 1 && m.Regions[0].Equals(Cluster.SelfAddress));
-                }, _first);
+                    ExpectMsg<CurrentRegions>(m => m.Regions.Count == 1 && m.Regions.Contains(Cluster.SelfAddress));
+                }, _config.First);
 
                 EnterBarrier("after-2");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_use_second_node()
         {
-            ClusterSharding_should_work_in_single_node_cluster();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                Join(_second, _first);
+                Join(_config.Second, _config.First);
 
                 RunOn(() =>
                 {
@@ -420,7 +523,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg(1);
                     r.Tell(new Counter.Get(12));
                     ExpectMsg(1);
-                }, _second);
+                }, _config.Second);
                 EnterBarrier("second-update");
 
                 RunOn(() =>
@@ -429,16 +532,20 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
-                    Assert.Equal(Node(_second) / "user" / "counterRegion" / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "2" / "2");
 
                     r.Tell(new Counter.Get(11));
                     ExpectMsg(1);
-                    // local on first
-                    Assert.Equal(r.Path / "11" / "11", LastSender.Path);
+                    var path11 = LastSender.Path;
+                    LastSender.Path.ToStringWithoutAddress().Should().Be((r.Path / "11" / "11").ToStringWithoutAddress());
                     r.Tell(new Counter.Get(12));
                     ExpectMsg(1);
-                    Assert.Equal(Node(_second) / "user" / "counterRegion" / "0" / "12", LastSender.Path);
-                }, _first);
+                    var path12 = LastSender.Path;
+                    LastSender.Path.ToStringWithoutAddress().Should().Be((r.Path / "0" / "12").ToStringWithoutAddress());
+
+                    //one has to be local, the other one remote
+                    (path11.Address.HasLocalScope && path12.Address.HasGlobalScope || path11.Address.HasGlobalScope && path12.Address.HasLocalScope).Should().BeTrue();
+                }, _config.First);
                 EnterBarrier("first-update");
 
                 RunOn(() =>
@@ -446,42 +553,34 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
-                    Assert.Equal(r.Path / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "2" / "2");
 
                     r.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>(x => x.Regions.Length == 2
-                                                   && x.Regions[0].Equals(Cluster.SelfAddress)
-                                                   && x.Regions[1].Equals(Node(_first).Address));
-                }, _second);
+                    ExpectMsg<CurrentRegions>(x => x.Regions.SetEquals(new[] { Cluster.SelfAddress, Node(_config.First).Address }));
+                }, _config.Second);
                 EnterBarrier("after-3");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_support_passivation_and_activation_of_entities()
         {
-            ClusterSharding_should_use_second_node();
-
             RunOn(() =>
             {
                 var r = _region.Value;
                 r.Tell(new Counter.Get(2));
-                ExpectMsg(3); //TODO: shouldn't we tell increment 3x first?
+                ExpectMsg(3);
                 r.Tell(new Counter.EntityEnvelope(2, ReceiveTimeout.Instance));
                 // let the Passivate-Stop roundtrip begin to trigger buffering of subsequent messages
                 Thread.Sleep(200);
                 r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
                 r.Tell(new Counter.Get(2));
                 ExpectMsg(4);
-            }, _second);
+            }, _config.Second);
             EnterBarrier("after-4");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_support_proxy_only_mode()
         {
-            ClusterSharding_should_support_passivation_and_activation_of_entities();
-
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 RunOn(() =>
@@ -497,39 +596,31 @@ namespace Akka.Cluster.Sharding.Tests
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
                         extractEntityId: Counter.ExtractEntityId,
-                        extractShardId: Counter.ExtractShardId));
-
-                    proxy.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
-                    proxy.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
-                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                        extractShardId: Counter.ExtractShardId
+                        ), "regionProxy");
 
                     proxy.Tell(new Counter.Get(1));
                     ExpectMsg(2);
                     proxy.Tell(new Counter.Get(2));
                     ExpectMsg(4);
-                }, _second);
+                }, _config.Second);
                 EnterBarrier("after-5");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_failover_shards_on_crashed_node()
         {
-            ClusterSharding_should_support_proxy_only_mode();
-
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 // mute logging of deadLetters during shutdown of systems
-                if (!Log.IsDebugEnabled) Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(x => true), new PredicateMatcher(x => true))));
+                if (!Log.IsDebugEnabled)
+                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(x => true), new PredicateMatcher(x => true))));
                 EnterBarrier("logs-muted");
 
                 RunOn(() =>
                 {
-                    TestConductor.Exit(_second, 0).Wait();
-                }, _controller);
+                    TestConductor.Exit(_config.Second, 0).Wait();
+                }, _config.Controller);
                 EnterBarrier("crash-second");
 
                 RunOn(() =>
@@ -542,7 +633,7 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = _region.Value;
                             r.Tell(new Counter.Get(2), probe1.Ref);
                             probe1.ExpectMsg(4);
-                            Assert.Equal(r.Path / "2" / "2", probe1.LastSender.Path);
+                            probe1.LastSender.Path.Should().Be(r.Path / "2" / "2");
                         });
                     });
 
@@ -554,23 +645,19 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = _region.Value;
                             r.Tell(new Counter.Get(12), probe2.Ref);
                             probe2.ExpectMsg(1);
-                            Assert.Equal(r.Path / "0" / "12", probe2.LastSender.Path);
+                            probe2.LastSender.Path.Should().Be(r.Path / "0" / "12");
                         });
                     });
-                }, _first);
+                }, _config.First);
                 EnterBarrier("after-6");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_use_third_and_fourth_node()
         {
-            ClusterSharding_should_failover_shards_on_crashed_node();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
-                Join(_third, _first);
-                Join(_fourth, _first);
+                Join(_config.Third, _config.First);
 
                 RunOn(() =>
                 {
@@ -580,9 +667,11 @@ namespace Akka.Cluster.Sharding.Tests
 
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(10);
-                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
-                }, _third);
+                    LastSender.Path.Should().Be(r.Path / "3" / "3");
+                }, _config.Third);
                 EnterBarrier("third-update");
+
+                Join(_config.Fourth, _config.First);
 
                 RunOn(() =>
                 {
@@ -592,8 +681,8 @@ namespace Akka.Cluster.Sharding.Tests
 
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(20);
-                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
-                }, _fourth);
+                    LastSender.Path.Should().Be(r.Path / "4" / "4");
+                }, _config.Fourth);
                 EnterBarrier("fourth-update");
 
                 RunOn(() =>
@@ -602,13 +691,13 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
-                    Assert.Equal(Node(_third) / "user" / "counterRegion" / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
 
                     r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
-                    Assert.Equal(Node(_third) / "user" / "counterRegion" / "4" / "4", LastSender.Path);
-                }, _first);
+                    LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
+                }, _config.First);
                 EnterBarrier("first-update");
 
                 RunOn(() =>
@@ -616,32 +705,29 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
-                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
-                }, _third);
+                    LastSender.Path.Should().Be(r.Path / "3" / "3");
+                }, _config.Third);
 
                 RunOn(() =>
                 {
                     var r = _region.Value;
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
-                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
-                }, _fourth);
+                    LastSender.Path.Should().Be(r.Path / "4" / "4");
+                }, _config.Fourth);
                 EnterBarrier("after-7");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
         {
-            ClusterSharding_should_use_third_and_fourth_node();
-
             Within(TimeSpan.FromSeconds(60), () =>
             {
-                Join(_fifth, _fourth);
+                Join(_config.Fifth, _config.Fourth);
                 RunOn(() =>
                 {
-                    TestConductor.Exit(_first, 0).Wait();
-                }, _controller);
+                    TestConductor.Exit(_config.First, 0).Wait();
+                }, _config.Controller);
                 EnterBarrier("crash-first");
 
                 RunOn(() =>
@@ -653,7 +739,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(3), probe3.Ref);
                             probe3.ExpectMsg(11);
-                            Assert.Equal(Node(_third) / "user" / "counterRegion" / "3" / "3", probe3.LastSender.Path);
+                            probe3.LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
                         });
                     });
 
@@ -664,19 +750,16 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(4), probe4.Ref);
                             probe4.ExpectMsg(21);
-                            Assert.Equal(Node(_fourth) / "user" / "counterRegion" / "4" / "4", probe4.LastSender.Path);
+                            probe4.LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
                         });
                     });
-                }, _fifth);
+                }, _config.Fifth);
                 EnterBarrier("after-8");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_rebalance_to_nodes_with_less_shards()
         {
-            ClusterSharding_should_recover_coordinator_state_after_coordinator_crash();
-
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 RunOn(() =>
@@ -688,10 +771,10 @@ namespace Akka.Cluster.Sharding.Tests
                         rebalancingRegion.Tell(new Counter.Get(i));
                         ExpectMsg(1);
                     }
-                }, _fourth);
+                }, _config.Fourth);
                 EnterBarrier("rebalancing-shards-allocated");
 
-                Join(_sixth, _third);
+                Join(_config.Sixth, _config.Third);
 
                 RunOn(() =>
                 {
@@ -710,19 +793,16 @@ namespace Akka.Cluster.Sharding.Tests
                                     count++;
                             }
 
-                            Assert.True(count >= 2);
+                            count.Should().BeGreaterOrEqualTo(2);
                         });
                     });
-                }, _sixth);
+                }, _config.Sixth);
                 EnterBarrier("after-9");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_to_use_with_extensions()
         {
-            ClusterSharding_should_rebalance_to_nodes_with_less_shards();
-
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -732,17 +812,25 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "Counter",
                         entityProps: Props.Create<Counter>(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        idExtractor: Counter.ExtractEntityId,
-                        shardResolver: Counter.ExtractShardId);
+                        extractEntityId: Counter.ExtractEntityId,
+                        extractShardId: Counter.ExtractShardId);
 
                     //#counter-start
                     ClusterSharding.Get(Sys).Start(
                         typeName: "AnotherCounter",
-                        entityProps: Props.Create<Counter>(),
+                        entityProps: Props.Create<AnotherCounter>(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        idExtractor: Counter.ExtractEntityId,
-                        shardResolver: Counter.ExtractShardId);
-                }, _third, _fourth, _fifth, _sixth);
+                        extractEntityId: Counter.ExtractEntityId,
+                        extractShardId: Counter.ExtractShardId);
+
+                    //#counter-supervisor-start
+                    ClusterSharding.Get(Sys).Start(
+                      typeName: "SupervisedCounter",
+                      entityProps: Props.Create<CounterSupervisor>(),
+                      settings: ClusterShardingSettings.Create(Sys),
+                      extractEntityId: Counter.ExtractEntityId,
+                      extractShardId: Counter.ExtractShardId);
+                }, _config.Third, _config.Fourth, _config.Fifth, _config.Sixth);
                 EnterBarrier("extension-started");
 
                 RunOn(() =>
@@ -755,13 +843,13 @@ namespace Akka.Cluster.Sharding.Tests
                     counterRegion.Tell(new Counter.EntityEnvelope(123, Counter.Increment.Instance));
                     counterRegion.Tell(new Counter.Get(123));
                     ExpectMsg(1);
-
                     //#counter-usage
+
                     var anotherCounterRegion = ClusterSharding.Get(Sys).ShardRegion("AnotherCounter");
                     anotherCounterRegion.Tell(new Counter.EntityEnvelope(123, Counter.Decrement.Instance));
                     anotherCounterRegion.Tell(new Counter.Get(123));
                     ExpectMsg(-1);
-                }, _fifth);
+                }, _config.Fifth);
                 EnterBarrier("extension-used");
 
                 // sixth is a frontend node, i.e. proxy only
@@ -772,18 +860,15 @@ namespace Akka.Cluster.Sharding.Tests
                         ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
                         ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.Get(i));
                         ExpectMsg(1);
-                        Assert.NotEqual(Cluster.SelfAddress, LastSender.Path.Address);
+                        LastSender.Path.Address.Should().NotBe(Cluster.SelfAddress);
                     }
-                }, _sixth);
+                }, _config.Sixth);
                 EnterBarrier("after-10");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_API_for_starting()
         {
-            ClusterSharding_should_be_easy_to_use_with_extensions();
-
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -792,13 +877,13 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "ApiTest",
                         entityProps: Props.Create<Counter>(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        idExtractor: Counter.ExtractEntityId,
-                        shardResolver: Counter.ExtractShardId);
+                        extractEntityId: Counter.ExtractEntityId,
+                        extractShardId: Counter.ExtractShardId);
 
                     var counterRegionViaGet = ClusterSharding.Get(Sys).ShardRegion("ApiTest");
 
-                    Assert.Equal(counterRegionViaGet, counterRegionViaStart);
-                }, _first);
+                    counterRegionViaStart.Should().Be(counterRegionViaGet);
+                }, _config.First);
                 EnterBarrier("after-11");
             });
         }
@@ -807,8 +892,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         #region Persistent cluster shards specs
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void Persistent_cluster_shards_should_recover_entities_upon_restart()
+        public void PersistentClusterShards_should_recover_entities_upon_restart()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -816,7 +900,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     var x = _persistentEntitiesRegion.Value;
                     var y = _anotherPersistentRegion.Value;
-                }, _third, _fourth, _fifth);
+                }, _config.Third, _config.Fourth, _config.Fifth);
                 EnterBarrier("persistent-start");
 
                 RunOn(() =>
@@ -830,15 +914,15 @@ namespace Akka.Cluster.Sharding.Tests
                     var shard = Sys.ActorSelection(LastSender.Path.Parent);
                     var region = Sys.ActorSelection(LastSender.Path.Parent.Parent);
 
-                    // stop shard
+                    //Stop the shard cleanly
                     region.Tell(new PersistentShardCoordinator.HandOff("1"));
-                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10), "ShardStopped not received");
 
                     var probe = CreateTestProbe();
                     AwaitAssert(() =>
                     {
                         shard.Tell(new Identify(1), probe.Ref);
-                        probe.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1), "Shard was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     //Get the path to where the shard now resides
@@ -848,12 +932,19 @@ namespace Akka.Cluster.Sharding.Tests
                     //Check that counter 1 is now alive again, even though we have
                     // not sent a message to it via the ShardRegion
                     var counter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
-                    counter1.Tell(new Identify(2));
-                    Assert.NotNull(ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(3)).Subject);
+                    Within(TimeSpan.FromSeconds(5), () =>
+                    {
+                        AwaitAssert(() =>
+                        {
+                            var probe2 = CreateTestProbe();
+                            counter1.Tell(new Identify(2), probe2.Ref);
+                            probe2.ExpectMsg<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(2));
+                        });
+                    });
 
                     counter1.Tell(new Counter.Get(1));
                     ExpectMsg(1);
-                }, _third);
+                }, _config.Third);
                 EnterBarrier("after-shard-restart");
 
                 RunOn(() =>
@@ -869,22 +960,19 @@ namespace Akka.Cluster.Sharding.Tests
                     var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
                     secondCounter1.Tell(new Identify(3));
                     ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(3) && i.Subject == null, TimeSpan.FromSeconds(3));
-                }, _fourth);
+                }, _config.Fourth);
                 EnterBarrier("after-12");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void Persistent_cluster_shards_should_permanently_stop_entities_which_passivate()
+        public void PersistentClusterShards_should_permanently_stop_entities_which_passivate()
         {
-            Persistent_cluster_shards_should_recover_entities_upon_restart();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
                     var x = _persistentRegion.Value;
-                }, _third, _fourth, _fifth);
+                }, _config.Third, _config.Fourth, _config.Fifth);
                 EnterBarrier("cluster-started-12");
 
                 RunOn(() =>
@@ -905,7 +993,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     var counter13 = LastSender;
 
-                    Assert.Equal(counter1.Path.Parent, counter13.Path.Parent);
+                    counter13.Path.Parent.Should().Be(counter1.Path.Parent);
 
                     //Send the shard the passivate message from the counter
                     Watch(counter1);
@@ -919,21 +1007,21 @@ namespace Akka.Cluster.Sharding.Tests
                     {
                         // check counter 1 is dead
                         counter1.Tell(new Identify(1), probe1.Ref);
-                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1), "Entity 1 was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     // stop shard cleanly
                     region.Tell(new PersistentShardCoordinator.HandOff("1"));
-                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10), "ShardStopped not received");
 
                     var probe2 = CreateTestProbe();
                     AwaitAssert(() =>
                     {
                         shard.Tell(new Identify(2), probe2.Ref);
-                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe2.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(2) && i.Subject == null, TimeSpan.FromSeconds(1), "Shard was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
-                }, _third);
+                }, _config.Third);
                 EnterBarrier("shard-shutdonw-12");
 
                 RunOn(() =>
@@ -949,25 +1037,25 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(3) && i.Subject == null);
 
                     // check counter 13 is alive again
-                    Sys.ActorSelection(shard / "13").Tell(new Identify(4));
-                    ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(4) && i.Subject != null);
-
-                }, _fourth);
+                    var probe3 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        Sys.ActorSelection(shard / "13").Tell(new Identify(4), probe3.Ref);
+                        probe3.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(4) && i.Subject != null);
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+                }, _config.Fourth);
                 EnterBarrier("after-13");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void Persistent_cluster_shards_should_restart_entities_which_stop_without_passivation()
+        public void PersistentClusterShards_should_restart_entities_which_stop_without_passivation()
         {
-            Persistent_cluster_shards_should_permanently_stop_entities_which_passivate();
-
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
                 {
                     var x = _persistentRegion.Value;
-                }, _third, _fourth);
+                }, _config.Third, _config.Fourth);
                 EnterBarrier("cluster-started-12");
 
                 RunOn(() =>
@@ -984,18 +1072,15 @@ namespace Akka.Cluster.Sharding.Tests
                     AwaitAssert(() =>
                     {
                         counter1.Tell(new Identify(1), probe.Ref);
-                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                        probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject.Should().NotBeNull();
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
-                }, _third);
+                }, _config.Third);
                 EnterBarrier("after-14");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void Persistent_cluster_shards_should_be_migrated_to_new_regions_upon_region_failure()
+        public void PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure()
         {
-            Persistent_cluster_shards_should_restart_entities_which_stop_without_passivation();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 //Start only one region, and force an entity onto that region
@@ -1004,7 +1089,7 @@ namespace Akka.Cluster.Sharding.Tests
                     _autoMigrateRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
                     _autoMigrateRegion.Value.Tell(new Counter.Get(1));
                     ExpectMsg(1);
-                }, _third);
+                }, _config.Third);
                 EnterBarrier("shard1-region3");
 
                 //Start another region and test it talks to node 3
@@ -1014,56 +1099,53 @@ namespace Akka.Cluster.Sharding.Tests
                     _autoMigrateRegion.Value.Tell(new Counter.Get(1));
                     ExpectMsg(2);
 
-                    Assert.Equal(Node(_third) / "user" / "AutoMigrateRegionTestRegion" / "1" / "1", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / "AutoMigrateRememberRegionTestRegion" / "1" / "1");
 
                     // kill region 3
                     Sys.ActorSelection(LastSender.Path.Parent.Parent).Tell(PoisonPill.Instance);
-                }, _fourth);
+                }, _config.Fourth);
                 EnterBarrier("region4-up");
 
                 // Wait for migration to happen
                 //Test the shard, thus counter was moved onto node 4 and started.
                 RunOn(() =>
                 {
-                    var counter1 = Sys.ActorSelection(ActorPath.Parse("user") / "AutoMigrateRegionTestRegion" / "1" / "1");
+                    var counter1 = Sys.ActorSelection("user/AutoMigrateRememberRegionTestRegion/1/1");
                     var probe = CreateTestProbe();
                     AwaitAssert(() =>
                     {
                         counter1.Tell(new Identify(1), probe.Ref);
-                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                        probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject.Should().NotBeNull();
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     counter1.Tell(new Counter.Get(1));
                     ExpectMsg(2);
-                }, _fourth);
+                }, _config.Fourth);
                 EnterBarrier("after-15");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void Persistent_cluster_shards_should_ensure_rebalance_restarts_shards()
+        public void PersistentClusterShards_should_ensure_rebalance_restarts_shards()
         {
-            Persistent_cluster_shards_should_be_migrated_to_new_regions_upon_region_failure();
-
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
                 {
-                    for (int i = 1; i <= 12; i++)
+                    for (int i = 2; i <= 12; i++)
                         _rebalancingPersistentRegion.Value.Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
 
-                    for (int i = 1; i <= 12; i++)
+                    for (int i = 2; i <= 12; i++)
                     {
                         _rebalancingPersistentRegion.Value.Tell(new Counter.Get(i));
                         ExpectMsg(1);
                     }
-                }, _fourth);
+                }, _config.Fourth);
                 EnterBarrier("entities-started");
 
                 RunOn(() =>
                 {
                     var r = _rebalancingPersistentRegion.Value;
-                }, _fifth);
+                }, _config.Fifth);
                 EnterBarrier("fifth-joined-shard");
 
                 RunOn(() =>
@@ -1077,13 +1159,13 @@ namespace Akka.Cluster.Sharding.Tests
                             entity.Tell(new Identify(i));
 
                             var msg = ReceiveOne(TimeSpan.FromSeconds(3)) as ActorIdentity;
-                            if (msg != null && msg.Subject != null)
+                            if (msg != null && msg.Subject != null && msg.MessageId.Equals(i))
                                 count++;
                         }
 
-                        Assert.True(count >= 2);
+                        count.Should().BeGreaterOrEqualTo(2);
                     });
-                }, _fifth);
+                }, _config.Fifth);
                 EnterBarrier("after-16");
             });
         }

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -29,7 +30,7 @@ namespace PingPong
     {
         public static uint CpuSpeed()
         {
-#if !mono
+#if THREADS
             var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
             var sp = (uint)(mo["CurrentClockSpeed"]);
             mo.Dispose();
@@ -59,23 +60,26 @@ namespace PingPong
             const long repeat = 30000L * repeatFactor;
 
             var processorCount = Environment.ProcessorCount;
-            if(processorCount == 0)
+            if (processorCount == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Failed to read processor count..");
                 return;
             }
 
+#if THREADS
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
 
             Console.WriteLine("Worker threads:         {0}", workerThreads);
             Console.WriteLine("OSVersion:              {0}", Environment.OSVersion);
+#endif
             Console.WriteLine("ProcessorCount:         {0}", processorCount);
             Console.WriteLine("ClockSpeed:             {0} MHZ", CpuSpeed());
             Console.WriteLine("Actor Count:            {0}", processorCount * 2);
             Console.WriteLine("Messages sent/received: {0}  ({0:0e0})", GetTotalMessagesReceived(repeat));
+            Console.WriteLine("Is Server GC:           {0}", GCSettings.IsServerGC);
             Console.WriteLine();
 
             //Warm up
@@ -110,7 +114,7 @@ namespace PingPong
             }
             Console.WriteLine();
 
-            for(var i = 0; i < timesToRun; i++)
+            for (var i = 0; i < timesToRun; i++)
             {
                 var redCountActorBase=0;
                 var redCountReceiveActor=0;
@@ -150,11 +154,11 @@ namespace PingPong
             yield return 5;
             yield return 10;
             yield return 15;
-            for(int i = 20; i < 100; i += 10)
+            for (int i = 20; i < 100; i += 10)
             {
                 yield return i;
             }
-            for(int i = 100; i < 1000; i += 100)
+            for (int i = 100; i < 1000; i += 100)
             {
                 yield return i;
             }
@@ -174,7 +178,7 @@ namespace PingPong
             var clients = new List<IActorRef>();
             var tasks = new List<Task>();
             var started = new Messages.Started();
-            for(int i = 0; i < numberOfClients; i++)
+            for (int i = 0; i < numberOfClients; i++)
             {
                 var destination = (RepointableActorRef)system.ActorOf<Destination>("destination-" + i);
                 SpinWait.SpinUntil(() => destination.IsStarted);
@@ -190,7 +194,7 @@ namespace PingPong
                 client.Tell(started, waitForStartsActor);
                 destination.Tell(started, waitForStartsActor);
             }
-            if(!countdown.Wait(TimeSpan.FromSeconds(10)))
+            if (!countdown.Wait(TimeSpan.FromSeconds(10)))
             {
                 Console.WriteLine("The system did not start in 10 seconds. Aborting.");
                 return Tuple.Create(false, bestThroughput, redCount);
@@ -209,7 +213,7 @@ namespace PingPong
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : totalMessagesReceived / elapsedMilliseconds * 1000;
             var foregroundColor = Console.ForegroundColor;
-            if(throughput >= bestThroughput)
+            if (throughput >= bestThroughput)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 bestThroughput = throughput;
@@ -220,15 +224,15 @@ namespace PingPong
                 redCount++;
                 Console.ForegroundColor = ConsoleColor.Red;
             }
-            if(printStats.HasFlag(PrintStats.StartTimeOnly))
+            if (printStats.HasFlag(PrintStats.StartTimeOnly))
             {
                 Console.Write("{0,5}", setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
             }
             else
             {
-                if(printStats.HasFlag(PrintStats.LineStart))
+                if (printStats.HasFlag(PrintStats.LineStart))
                     Console.Write("{0,10}, ", factor);
-                if(printStats.HasFlag(PrintStats.Stats))
+                if (printStats.HasFlag(PrintStats.Stats))
                     Console.Write("{0,8}, {1,10}, {2,10}", throughput, setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), totalWatch.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
             }
             Console.ForegroundColor = foregroundColor;
@@ -245,9 +249,9 @@ namespace PingPong
         {
             protected override void OnReceive(object message)
             {
-                if(message is Messages.Msg)
+                if (message is Messages.Msg)
                     Sender.Tell(message);
-                else if(message is Messages.Started)
+                else if (message is Messages.Started)
                     Sender.Tell(message);
             }
         }
@@ -263,10 +267,11 @@ namespace PingPong
 
             protected override void OnReceive(object message)
             {
-                if(message is Messages.Started)
+                if (message is Messages.Started)
                     _countdown.Signal();
             }
         }
+        
         [Flags]
         public enum PrintStats
         {
@@ -276,7 +281,4 @@ namespace PingPong
             StartTimeOnly=32768,
         }
     }
-
-
 }
-

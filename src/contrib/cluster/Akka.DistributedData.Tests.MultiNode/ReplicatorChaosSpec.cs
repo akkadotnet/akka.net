@@ -38,7 +38,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         public readonly GCounterKey KeyX = new GCounterKey("X");
 
         public ReplicatorChaosSpec() : this(new ReplicatorChaosSpecConfig()) { }
-        protected ReplicatorChaosSpec(ReplicatorChaosSpecConfig config) : base(config)
+        protected ReplicatorChaosSpec(ReplicatorChaosSpecConfig config) : base(config, typeof(ReplicatorChaosSpec))
         {
             _cluster = Akka.Cluster.Cluster.Get(Sys);
             _timeout = Dilated(TimeSpan.FromSeconds(3));

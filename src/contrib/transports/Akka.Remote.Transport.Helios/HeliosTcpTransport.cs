@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Helios.Buffers;
 using Helios.Channels;
 using Helios.Exceptions;

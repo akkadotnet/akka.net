@@ -22,15 +22,8 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         private const string HandOverDoneManifest = "C";
         private const string TakeOverFromMeManifest = "D";
 
-        private static readonly byte[] EmptyBytes = new byte[0];
+        private static readonly byte[] EmptyBytes = {};
         private readonly IDictionary<string, Func<byte[], IClusterSingletonMessage>> _fromBinaryMap;
-
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier { get { return _identifier; } }
-        private readonly int _identifier;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSingletonMessageSerializer"/> class.
@@ -38,7 +31,6 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterSingletonMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterSingletonMessage>>
             {
                 {HandOverToMeManifest, _ => HandOverToMe.Instance},
@@ -78,11 +70,8 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            Func<byte[], IClusterSingletonMessage> mapper;
-            if (_fromBinaryMap.TryGetValue(manifest, out mapper))
-            {
+            if (_fromBinaryMap.TryGetValue(manifest, out var mapper))
                 return mapper(bytes);
-            }
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }

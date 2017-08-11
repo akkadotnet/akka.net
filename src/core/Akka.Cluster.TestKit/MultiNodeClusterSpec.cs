@@ -148,8 +148,8 @@ namespace Akka.Cluster.TestKit
 
         readonly ITestKitAssertions _assertions;
 
-        protected MultiNodeClusterSpec(MultiNodeConfig config)
-            : base(config)
+        protected MultiNodeClusterSpec(MultiNodeConfig config, Type type)
+            : base(config, type)
         {
             _assertions = new XunitAssertions();
             _roleNameComparer = new RoleNameComparer(this);
@@ -223,8 +223,7 @@ namespace Akka.Cluster.TestKit
 
         public Address GetAddress(RoleName role)
         {
-            Address address;
-            if (!_cachedAddresses.TryGetValue(role, out address))
+            if (!_cachedAddresses.TryGetValue(role, out var address))
             {
                 address = Node(role).Address;
                 _cachedAddresses.TryAdd(role, address);

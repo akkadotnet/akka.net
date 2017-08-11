@@ -1,3 +1,8 @@
+<style>
+img.akka-logo{
+    height: 51px;
+}
+</style>
 <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
   <div class="container">
     <div class="navbar-header">
@@ -8,7 +13,7 @@
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand" href="{{_rel}}index.html">
-        <img id="logo" class="svg" src="{{_rel}}Images/akkalogo.png" alt="{{_appName}}">
+        <img id="logo" class="svg akka-logo" src="{{_rel}}Images/akkalogo.png" alt="{{_appName}}">
       </a>
     </div>
     <div class="collapse navbar-collapse" id="navbar">

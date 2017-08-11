@@ -60,7 +60,7 @@ namespace Akka.Persistence.Tests
                 _probe = probe;
             }
 
-            public override Recovery Recovery { get { return Recovery.None; } }
+            public override Recovery Recovery => new Recovery(SnapshotSelectionCriteria.Latest, 0);
 
             protected override bool ReceiveRecover(object message)
             {

@@ -273,7 +273,7 @@ namespace Akka.Tests.Actor
             co.AddTask("a", "a1", () =>
             {
                 TestActor.Tell("A");
-                return TaskEx.FromException<Done>(new ApplicationException("boom"));
+                return TaskEx.FromException<Done>(new Exception("boom"));
             });
 
             co.AddTask("a", "a2", () =>
@@ -334,7 +334,7 @@ namespace Akka.Tests.Actor
                 }
                 else
                 {
-                    throw new ApplicationException("CoordinatedShutdown task did not complete");
+                    throw new Exception("CoordinatedShutdown task did not complete");
                 }
             });
 
