@@ -61,11 +61,11 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IdExtractor IdExtractor;
+            public readonly ExtractEntityId ExtractEntityId;
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ShardResolver ShardResolver;
+            public readonly ExtractShardId ExtractShardId;
             /// <summary>
             /// TBD
             /// </summary>
@@ -81,15 +81,15 @@ namespace Akka.Cluster.Sharding
             /// <param name="typeName">TBD</param>
             /// <param name="entityProps">TBD</param>
             /// <param name="settings">TBD</param>
-            /// <param name="idIdExtractor">TBD</param>
-            /// <param name="shardResolver">TBD</param>
+            /// <param name="extractEntityId">TBD</param>
+            /// <param name="extractShardId">TBD</param>
             /// <param name="allocationStrategy">TBD</param>
             /// <param name="handOffStopMessage">TBD</param>
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
             /// </exception>
             public Start(string typeName, Props entityProps, ClusterShardingSettings settings,
-                IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
+                ExtractEntityId extractEntityId, ExtractShardId extractShardId, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
                 if (entityProps == null) throw new ArgumentNullException(nameof(entityProps), $"ClusterSharding start requires Props for [{typeName}] to be provided");
@@ -97,8 +97,8 @@ namespace Akka.Cluster.Sharding
                 TypeName = typeName;
                 EntityProps = entityProps;
                 Settings = settings;
-                IdExtractor = idIdExtractor;
-                ShardResolver = shardResolver;
+                ExtractEntityId = extractEntityId;
+                ExtractShardId = extractShardId;
                 AllocationStrategy = allocationStrategy;
                 HandOffStopMessage = handOffStopMessage;
             }
@@ -121,11 +121,11 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IdExtractor ExtractEntityId;
+            public readonly ExtractEntityId ExtractEntityId;
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ShardResolver ExtractShardId;
+            public readonly ExtractShardId ExtractShardId;
 
             /// <summary>
             /// TBD
@@ -137,7 +137,7 @@ namespace Akka.Cluster.Sharding
             /// <exception cref="ArgumentException">
             /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
             /// </exception>
-            public StartProxy(string typeName, ClusterShardingSettings settings, IdExtractor extractEntityId, ShardResolver extractShardId)
+            public StartProxy(string typeName, ClusterShardingSettings settings, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start proxy requires type name to be provided");
 
@@ -184,8 +184,8 @@ namespace Akka.Cluster.Sharding
                             entityProps: start.EntityProps,
                             settings: settings,
                             coordinatorPath: coordinatorPath,
-                            extractEntityId: start.IdExtractor,
-                            extractShardId: start.ShardResolver,
+                            extractEntityId: start.ExtractEntityId,
+                            extractShardId: start.ExtractShardId,
                             handOffStopMessage: start.HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 

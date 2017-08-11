@@ -136,9 +136,9 @@ namespace Akka.Cluster.Sharding.Tests
         readonly static int NumberOfShards = 3;
         readonly static string ShardTypeName = "Ping";
 
-        internal IdExtractor extractEntityId = message => message is Ping ? Tuple.Create(((Ping)message).Id.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping ? Tuple.Create(((Ping)message).Id.ToString(), message) : null;
 
-        internal ShardResolver extractShardId = message => message is Ping ? (((Ping)message).Id % NumberOfShards).ToString() : null;
+        internal ExtractShardId extractShardId = message => message is Ping ? (((Ping)message).Id % NumberOfShards).ToString() : null;
 
         private Lazy<IActorRef> _region;
 
@@ -176,8 +176,8 @@ namespace Akka.Cluster.Sharding.Tests
                typeName: ShardTypeName,
                entityProps: Props.Create<ShardedActor>(),
                settings: ClusterShardingSettings.Create(Sys).WithRole("shard"),
-               idExtractor: extractEntityId,
-               shardResolver: extractShardId);
+               extractEntityId: extractEntityId,
+               extractShardId: extractShardId);
         }
 
         private void StartProxy()
@@ -185,8 +185,8 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys).StartProxy(
                 typeName: ShardTypeName,
                 role: "shard",
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
         [MultiNodeFact]
