@@ -54,7 +54,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected RemoteQuarantinePiercingSpec(RemoteQuarantinePiercingSpecConfig specConfig) : base(specConfig)
+        protected RemoteQuarantinePiercingSpec(RemoteQuarantinePiercingSpecConfig specConfig) : base(specConfig, typeof(RemoteQuarantinePiercingSpec))
         {
             _specConfig = specConfig;
         }

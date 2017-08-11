@@ -32,6 +32,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaException"/> class.
         /// </summary>
@@ -41,6 +42,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
 
         /// <summary>
         /// The exception that is the cause of the current exception.
@@ -72,6 +74,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="InvalidActorNameException"/> class.
         /// </summary>
@@ -81,6 +84,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -97,6 +101,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AskTimeoutException"/> class.
         /// </summary>
@@ -106,6 +111,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -128,12 +134,10 @@ namespace Akka.Actor
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
-        private readonly IActorRef _actor;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorInitializationException"/> class.
         /// </summary>
-        protected ActorInitializationException()
+        public ActorInitializationException()
             : base()
         {
         }
@@ -166,9 +170,10 @@ namespace Akka.Actor
         public ActorInitializationException(IActorRef actor, string message, Exception cause = null)
             : base(message, cause)
         {
-            _actor = actor;
+            Actor = actor;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorInitializationException"/> class.
         /// </summary>
@@ -177,12 +182,21 @@ namespace Akka.Actor
         protected ActorInitializationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
         }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("Actor", Actor);
+            base.GetObjectData(info, context);
+        }
+#endif
 
         /// <summary>
         /// Retrieves the actor whose initialization logic failed.
         /// </summary>
-        public IActorRef Actor { get { return _actor; } }
+        public IActorRef Actor { get; set; }
 
         /// <summary>
         /// Returns a <see cref="String" /> that represents this instance.
@@ -192,8 +206,8 @@ namespace Akka.Actor
         /// </returns>
         public override string ToString()
         {
-            if (_actor == null) return base.ToString();
-            return _actor + ": " + base.ToString();
+            if (Actor == null) return base.ToString();
+            return Actor + ": " + base.ToString();
         }
     }
 
@@ -229,6 +243,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="LoggerInitializationException"/> class.
         /// </summary>
@@ -238,6 +253,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -246,6 +262,10 @@ namespace Akka.Actor
     /// </summary>
     public class ActorKilledException : AkkaException
     {
+        public ActorKilledException()
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
         /// </summary>
@@ -255,6 +275,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
         /// </summary>
@@ -264,6 +285,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -281,6 +303,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="IllegalActorStateException"/> class.
         /// </summary>
@@ -290,6 +313,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -306,6 +330,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="IllegalActorNameException"/> class.
         /// </summary>
@@ -315,6 +340,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -335,6 +361,7 @@ namespace Akka.Actor
             _deadActor = deadActor;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="DeathPactException"/> class.
         /// </summary>
@@ -344,6 +371,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
 
         /// <summary>
         /// Retrieves the actor that has been terminated.
@@ -384,6 +412,7 @@ namespace Akka.Actor
             this.optionalMessage = optionalMessage;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="PreRestartException"/> class.
         /// </summary>
@@ -393,6 +422,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -415,6 +445,7 @@ namespace Akka.Actor
             _originalCause = originalCause;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="PostRestartException"/> class.
         /// </summary>
@@ -424,6 +455,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
 
         ///<summary>
         /// Retrieves the exception which caused the restart in the first place.
@@ -444,6 +476,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorNotFoundException"/> class.
         /// </summary>
@@ -453,6 +486,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
 
         /// <summary>
         /// <see cref="ActorNotFoundException"/> that takes a descriptive <paramref name="message"/> and optional <paramref name="innerException"/>.
@@ -488,6 +522,7 @@ namespace Akka.Actor
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="InvalidMessageException"/> class.
         /// </summary>
@@ -497,6 +532,7 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 }
 

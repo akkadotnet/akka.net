@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
                 BidiFlow.FromFlows(
                     Flow.Create<int>().Select(x => ((long) x) + 2).WithAttributes(Attributes.CreateName("top")),
                     Flow.Create<ByteString>()
-                        .Select(x => x.DecodeString(Encoding.UTF8))
+                        .Select(x => x.ToString(Encoding.UTF8))
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(Source.Single(42).MapMaterializedValue(_=>Task.FromResult(0))).To(s);
 
                 var top = b.Add(Flow.Create<int>().Select(x => ((long) x) + 2));
-                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.DecodeString(Encoding.UTF8)));
+                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.ToString(Encoding.UTF8)));
                 return new BidiShape<int,long,ByteString, string>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
             }));
         }

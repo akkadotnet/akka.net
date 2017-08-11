@@ -58,7 +58,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected RemoteNodeShutdownAndComesBackSpec(RemoteNodeShutdownAndComesBackMultiNetSpec config) : base(config)
+        protected RemoteNodeShutdownAndComesBackSpec(RemoteNodeShutdownAndComesBackMultiNetSpec config) : base(config, typeof(RemoteNodeShutdownAndComesBackSpec))
         {
             _config = config;
 

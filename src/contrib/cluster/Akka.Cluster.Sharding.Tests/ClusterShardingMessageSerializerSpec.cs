@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.Tests
                 .CreateBuilder<string, IActorRef>()
                 .AddAndReturn("a", region1)
                 .AddAndReturn("b", region2)
-                .AddAndReturn("c", region3)
+                .AddAndReturn("c", region2)
                 .ToImmutableDictionary();
 
             var regions = ImmutableDictionary
@@ -69,10 +69,10 @@ namespace Akka.Cluster.Sharding.Tests
                 .ToImmutableDictionary();
 
             var state = new PersistentShardCoordinator.State(
-                shards,
-                regions,
-                ImmutableHashSet.Create(regionProxy1, regionProxy2),
-                ImmutableHashSet.Create("d"));
+                shards: shards,
+                regions: regions,
+                regionProxies: ImmutableHashSet.Create(regionProxy1, regionProxy2),
+                unallocatedShards: ImmutableHashSet.Create("d"));
 
             CheckSerialization(state);
         }
@@ -128,6 +128,13 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardStats()
         {
             CheckSerialization(new Shard.ShardStats("a", 23));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_be_able_to_serialize_StartEntity()
+        {
+            CheckSerialization(new ShardRegion.StartEntity("42"));
+            CheckSerialization(new ShardRegion.StartEntityAck("13", "37"));
         }
     }
 }

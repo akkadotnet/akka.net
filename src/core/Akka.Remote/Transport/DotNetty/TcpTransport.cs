@@ -17,7 +17,7 @@ using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
 using DotNetty.Transport.Channels;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -71,8 +71,28 @@ namespace Akka.Remote.Transport.DotNetty
         /// <param name="exception">TBD</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            base.ExceptionCaught(context, exception);
-            NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            var se = exception as SocketException;
+
+            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            {
+                Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else if (se?.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                Log.Info("Connection was reset by the remote peer. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else
+            {
+                base.ExceptionCaught(context, exception);
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            }
+
             context.CloseAsync(); // close the channel
         }
     }

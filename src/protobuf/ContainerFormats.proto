@@ -1,0 +1,72 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Remote.Serialization.Proto.Msg;
+
+/******************************************
+  ActorSelection related formats
+*******************************************/
+
+message SelectionEnvelope {
+  Payload payload = 1;
+  repeated Selection pattern = 2;
+}
+
+message Selection {
+  enum PatternType {
+    NO_PATERN = 0;
+    PARENT = 1;
+    CHILD_NAME = 2;
+    CHILD_PATTERN = 3;
+  }
+  PatternType type = 1;
+  string matcher = 2;
+}
+
+/******************************************
+  Common types
+*******************************************/
+
+// Defines a remote ActorRef that "remembers" and uses its original Actor instance on the original node.
+message ActorRefData {
+  string path = 1;
+}
+
+// Defines a remote address.
+message AddressData {
+  string system = 1;
+  string hostname = 2;
+  uint32 port = 3;
+  string protocol = 4;
+}
+
+// Defines a payload.
+message Payload {
+  bytes message = 1;
+  int32 serializerId = 2;
+  bytes messageManifest = 3;
+}
+
+message Identify {
+  Payload messageId = 1;
+}
+
+message ActorIdentity {
+  Payload correlationId = 1;
+  string path = 2;
+}
+
+message RemoteWatcherHeartbeatResponse {
+  uint64 uid = 1;
+}
+
+message ExceptionData {
+  string typeName = 1;
+  string message = 2;
+  string stackTrace = 3;
+  string source = 4;
+  ExceptionData innerException = 5;
+  map<string, Payload> customFields = 6;
+}

@@ -1,8 +1,10 @@
 ---
-layout: docs.hbs
+uid: resources
 title: Resources
-active_selector: resources
 ---
+
+# Resources
+
 ## Akka.NET Bootcamp
 [Akka.NET Bootcamp]({{site.bootcamp_url}}) is a free, self-directed learning course brought to you by the folks at [Petabridge](https://petabridge.com). Over the three units of this bootcamp you will learn how to create fully-functional, real-world programs using Akka.NET actors and many other parts of the core Akka.NET framework.
 
@@ -34,7 +36,7 @@ active_selector: resources
 - [Introduction to Akka.Cluster.Sharding in Akka.NET](https://petabridge.com/blog/introduction-to-cluster-sharding-akkadotnet/) (Bartosz Sypytkowski on January 17, 2017)
 - [Technical Overview of Akka.Cluster.Sharding in Akka.NET](https://petabridge.com/blog/cluster-sharding-technical-overview-akkadotnet/) (Bartosz Sypytkowski on January 31, 2017)
 - [Introduction to Distributed Publish-Subscribe in Akka.NET](https://petabridge.com/blog/distributed-pub-sub-intro-akkadotnet/) (Bartosz Sypytkowski on February 14, 2017)
-
+- [Introducing Petabridge.Cmd - a Command-line Management Tool for Akka.NET Applications](https://petabridge.com/blog/petabridgecmd-release/) (Aaron Stannard on June 7, 2017)
 
 **Others**
 - [Deploying actors with Akka.NET](https://rogeralsing.com/2014/03/09/deploying-actors-with-akka-net/) (Roger Johansson on March 9, 2014)
@@ -42,7 +44,7 @@ active_selector: resources
 - [Map reduce with FSharp and Akka.net](http://bartoszsypytkowski.com/map-reduce-with-fsharp-and-akka-net/) (Bartosz Sypytkowski on July 8th, 2014)
 - [Actor supervisors in Akka.NET FSharp API](http://bartoszsypytkowski.com/actor-supervisors-in-akka-net-fsharp-api/) (Bartosz Sypytkowski on August 6th, 2014)
 - [Hipsterize your backend for The Greater Good with Akka.NET, F# and some DDD flavor](http://bartoszsypytkowski.com/hipsterize-your-backend-for-the-greater-good-with-akka-net-f-and-some-ddd-flavor/) (Bartosz Sypytkowski on October 26th, 2014)
-- [Akka.NET – Concurrency control](https://rogeralsing.com/2014/11/10/akka-net-concurrency-control/) (Roger Johansson on November 10, 2014)
+- [Akka.NET – Concurrency control](https://rogeralsing.com/2014/11/10/akka-net-concurrency-control/) (Roger Johansson on November 10th, 2014)
 - [Akka.NET remote deployment with F#](http://bartoszsypytkowski.com/akka-net-remote-deployment-with-f/) (Bartosz Sypytkowski on December 14th, 2014)
 - [An Actor Model Example with Akka.NET](http://blog.geist.no/an-actor-model-example-with-akka-net/) (Claus Sørensen on February 24th, 2015)
 - [Create your own Akka.NET persistence plugin](http://bartoszsypytkowski.com/create-your-own-akka-net-persistence-plugin/) (Bartosz Sypytkowski on March 28th, 2015)
@@ -55,12 +57,20 @@ active_selector: resources
 - [Akka.NET underestimated features - Akka.IO](http://bartoszsypytkowski.com/akka-net-underestimated-feature-akka-io/) (Bartosz Sypytkowski on November 14th, 2015)
 - [Random things learned building Akka.NET – Part 1](https://rogeralsing.com/2016/03/13/random-things-learned-building-akka-net-part-1/) (Roger Johansson on March 13, 2016)
 - [Don't Ask, Tell](http://bartoszsypytkowski.com/dont-ask-tell-2/) (Bartosz Sypytkowski on May 3rd, 2016)
+- [Monitoring Akka.NET Systems with Datadog](https://gregshackles.com/monitoring-akka-net-systems-with-datadog/) (Creg Shackles on May 25th, 2017)
+- [Actor model and using of Akka.NET](https://rubikscode.net/2017/05/28/actor-model-and-using-of-akka-net/) (Nikola Živković on May 28th, 2017)
 
 ## Videos
 - [The Actor Model in F# and Akka.Net](https://www.youtube.com/watch?v=RiWXo_5CAvg) (March 17, 2015)
 - [Streaming ETL w/ Akka.NET](https://vimeo.com/123452527) (Andrew Skotzko on March 18, 2015)
 - [Akka.NET Internals: How Akka.Remote Connections Work](https://www.youtube.com/watch?v=6c1gVLyYcMM) (Aaron Stannard on May 5, 2015)
-- [Full-Stack, Message-Oriented Programming with Akka.NET Actors](https://www.youtube.com/watch?v=nPGMVhI7zyk) (Andrew Skotzko on 8 December, 2015)
+- [Full-Stack, Message-Oriented Programming with Akka.NET Actors](https://www.youtube.com/watch?v=nPGMVhI7zyk) (Andrew Skotzko on 8th December, 2015)
+- [Akka.NET: The Future of Distributed Programming in .NET](https://www.youtube.com/watch?v=ozelpjr9SXE) (Aaron Stannard on August 31, 2016)
+- [Life with actors: experience report](https://www.youtube.com/watch?v=KQwskUjsSi8) (Vagif Abilov and Erlend Wiig on February 16th, 2017)
+- [Akka.NET: The Future of Distributed Programming in .NET](https://www.youtube.com/watch?v=Q3SzfO8jloc) (Aaron Stannard on June 8th, 2017)
+- [Easy Eventual Consistency with Actor Models + Amazon Web Services](https://www.youtube.com/watch?v=PJT9D_4uUEg) (Philip Laureano on July 5th, 2017)
+- [Composing high performance process workflows with Akka Streams](https://www.youtube.com/watch?v=kWU_LxYXMjE) (Vagif Abilov on July 5th, 2017)
+- [Getting real(time) with Akka.NET, React and Redux](https://www.youtube.com/watch?v=irvm5EdHQc0) (Francis Paulin on July 5th, 2017)
 
 ## Courses
 - [Building Concurrent Applications with the Actor Model in Akka.NET (Pluralsight)](https://www.pluralsight.com/courses/akka-dotnet-actor-model-building-concurrent-applications) (Jason Roberts on 5 August 2015)
@@ -88,8 +98,3 @@ active_selector: resources
 - [Writing scalable and distributed systems with Akka.NET](https://www.youtube.com/watch?v=fwWA6Bugg_c) (Nikita Tsukanov on June 5, 2015)
 - [Actor Model on .NET (in Russian)](https://www.youtube.com/watch?v=jek8Qmc3ZjQ) (Anton Moldovan on October 30, 2015)
 - [Actor-based Concurrency with F# and Akka.NET (in Russian)](https://www.youtube.com/watch?v=LLG8_0XtD4o) (Akim Boyko on 19 December, 2015)
-
-## Notable materials from Akka JVM world
-- [Above the Clouds: Introducing Akka](https://www.youtube.com/watch?v=UY3fuHebRMI) - Geared towards Akka in Java.  Gives an overview of the Actor model
-- [Up, Up, and Out: Scaling Software with Akka](https://www.youtube.com/watch?v=GBvtE61Wrto) - Introduction to Akka
-- [Building Reactive Applications with Akka](https://www.youtube.com/watch?v=6Cb1wSVRI-Q) - Jonas Bonér (creator of original Akka project) explains the Reactive Model and Akka.

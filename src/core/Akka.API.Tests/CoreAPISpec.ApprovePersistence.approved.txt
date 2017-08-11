@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
@@ -243,6 +244,7 @@ namespace Akka.Persistence
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
+        protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
         public void SaveSnapshot(object snapshot) { }
         protected override void Unhandled(object message) { }
     }
@@ -431,6 +433,8 @@ namespace Akka.Persistence
         protected PersistentActor() { }
         protected override bool Receive(object message) { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public abstract class PersistentView : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>, Akka.Persistence.IPersistenceRecovery, Akka.Persistence.IPersistentIdentity, Akka.Persistence.ISnapshotter
     {
         protected readonly Akka.Persistence.PersistenceExtension Extension;
@@ -477,6 +481,11 @@ namespace Akka.Persistence
         protected void Command(System.Type messageType, System.Func<object, bool> handler) { }
         protected void Command(System.Action<object> handler) { }
         protected void CommandAny(System.Action<object> handler) { }
+        protected void CommandAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
+        protected void CommandAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void CommandAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void CommandAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void CommandAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
         protected virtual void OnCommand(object message) { }
         protected virtual void OnRecover(object message) { }
         protected void Recover<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
@@ -590,6 +599,8 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public sealed class ScheduledUpdate
     {
         public ScheduledUpdate(long replayMax) { }
@@ -693,6 +704,8 @@ namespace Akka.Persistence
         protected virtual bool ReceiveCommand(object message) { }
         protected virtual bool ReceiveRecover(object message) { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public sealed class Update
     {
         public Update() { }
@@ -761,119 +774,89 @@ namespace Akka.Persistence
 }
 namespace Akka.Persistence.Fsm
 {
+    public class static PersistentFSM
+    {
+        public interface IFsmState
+        {
+            string Identifier { get; }
+        }
+        public class PersistentFSMSnapshot<TD>
+        {
+            public PersistentFSMSnapshot(string stateIdentifier, TD data, System.Nullable<System.TimeSpan> timeout) { }
+            public TD Data { get; }
+            public string StateIdentifier { get; }
+            public System.Nullable<System.TimeSpan> Timeout { get; }
+            protected bool Equals(Akka.Persistence.Fsm.PersistentFSM.PersistentFSMSnapshot<TD> other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public class State<TS, TD, TE>
+        {
+            public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, System.Collections.Generic.IReadOnlyList<TE> domainEvents = null, System.Action<TD> afterTransitionDo = null, bool notifies = True) { }
+            public System.Action<TD> AfterTransitionDo { get; }
+            public System.Collections.Generic.IReadOnlyList<TE> DomainEvents { get; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
+            public TD StateData { get; }
+            public TS StateName { get; }
+            public Akka.Actor.FSMBase.Reason StopReason { get; }
+            public System.Nullable<System.TimeSpan> Timeout { get; }
+            public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> AndThen(System.Action<TD> handler) { }
+            public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Applying(params TE[] events) { }
+            public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> ForMax(System.TimeSpan timeout) { }
+            public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Replying(object replyValue) { }
+            public override string ToString() { }
+            public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Using(TD nextStateData) { }
+        }
+        public class StateChangeEvent
+        {
+            public StateChangeEvent(string stateIdentifier, System.Nullable<System.TimeSpan> timeout) { }
+            public string StateIdentifier { get; }
+            public System.Nullable<System.TimeSpan> Timeout { get; }
+        }
+    }
     public abstract class PersistentFSM<TState, TData, TEvent> : Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>
+        where TState : Akka.Persistence.Fsm.PersistentFSM.IFsmState
     {
         protected PersistentFSM() { }
-        protected abstract TData ApplyEvent(TEvent e, TData data);
-        protected override void ApplyState(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State upcomingState) { }
-        protected abstract void OnRecoveryCompleted();
+        protected abstract TData ApplyEvent(TEvent domainEvent, TData currentData);
+        protected override void ApplyState(Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> nextState) { }
+        protected virtual void OnRecoveryCompleted() { }
         protected override bool ReceiveRecover(object message) { }
+        public void SaveStateSnapshot() { }
     }
     public abstract class PersistentFSMBase<TState, TData, TEvent> : Akka.Persistence.PersistentActor, Akka.Routing.IListeners
     {
-        protected Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State _currentState;
-        protected long _generation;
-        protected readonly Akka.Routing.ListenerSupport _listener;
-        protected Akka.Actor.ICancelable _timeoutFuture;
-        protected readonly System.Collections.Generic.IDictionary<string, Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.Timer> _timers;
-        protected bool DebugEvent;
         protected PersistentFSMBase() { }
-        public bool IsStateTimerActive { get; }
         public Akka.Routing.ListenerSupport Listeners { get; }
         public TData NextStateData { get; }
         public TData StateData { get; }
         public TState StateName { get; }
-        protected virtual void ApplyState(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State upcomingState) { }
+        protected System.Collections.Generic.IEnumerable<TState> StateNames { get; }
+        protected virtual void ApplyState(Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> nextState) { }
         public void CancelTimer(string name) { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName) { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName, TData stateData) { }
-        [System.ObsoleteAttribute("Removed from API, called internally.")]
-        protected internal void Initialize() { }
+        public Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> GoTo(TState nextStateName) { }
         public bool IsTimerActive(string name) { }
         protected virtual void LogTermination(Akka.Actor.FSMBase.Reason reason) { }
         public void OnTermination(System.Action<Akka.Actor.FSMBase.StopEvent<TState, TData>> terminationHandler) { }
         public void OnTransition(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.TransitionHandler transitionHandler) { }
         protected override void PostStop() { }
-        protected void ProcessMsg(object any, object source) { }
         protected override bool ReceiveCommand(object message) { }
         public void SetStateTimeout(TState state, System.Nullable<System.TimeSpan> timeout) { }
         public void SetTimer(string name, object msg, System.TimeSpan timeout, bool repeat = False) { }
         public void StartWith(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null) { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Stay() { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Stop() { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Stop(Akka.Actor.FSMBase.Reason reason) { }
-        public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Stop(Akka.Actor.FSMBase.Reason reason, TData stateData) { }
-        protected void Terminate(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State upcomingState) { }
+        public Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> Stay() { }
+        public Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> Stop() { }
+        public Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> Stop(Akka.Actor.FSMBase.Reason reason) { }
+        public Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> Stop(Akka.Actor.FSMBase.Reason reason, TData stateData) { }
         public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.TransformHelper Transform(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction func) { }
         public void When(TState stateName, Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction func, System.Nullable<System.TimeSpan> timeout = null) { }
         public void WhenUnhandled(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction stateFunction) { }
-        public class State<TState, TData, TEvent> : Akka.Actor.FSMBase.State<TState, TData>
-        {
-            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
-            public System.Action<TData> AfterTransitionHandler { get; }
-            public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
-            public new bool Notifies { get; set; }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State AndThen(System.Action<TData> handler) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(Akka.Util.ILinearSeq<TEvent> events) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(TEvent e) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State ForMax(System.TimeSpan timeout) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Replying(object replyValue) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Using(TData nextStateData) { }
-        }
-        [System.ObsoleteAttribute("This was left for backward compatibility. Use type parameterless class instead. C" +
-            "an be removed in future releases.")]
-        public class State<TState, TData, TEvent, TS, TD, TE>
-            where TS : TState
-            where TD : TData
-            where TE : TEvent
-        {
-            public State(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State state) { }
-            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
-            public System.Action<TData> AfterTransitionHandler { get; }
-            public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
-            public bool Notifies { get; set; }
-            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
-            public TData StateData { get; }
-            public TState StateName { get; }
-            public Akka.Actor.FSMBase.Reason StopReason { get; }
-            public System.Nullable<System.TimeSpan> Timeout { get; }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State AndThen(System.Action<TData> handler) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(Akka.Util.ILinearSeq<TEvent> events) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(TEvent e) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State ForMax(System.TimeSpan timeout) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Replying(object replyValue) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Using(TData nextStateData) { }
-        }
-        public class StateChangeEvent<TState, TData, TEvent> : Akka.Persistence.Serialization.IMessage
-        {
-            public StateChangeEvent(TState state, System.Nullable<System.TimeSpan> timeOut) { }
-            public TState State { get; }
-            public System.Nullable<System.TimeSpan> TimeOut { get; }
-        }
-        public delegate Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State StateFunction<TState, TData, TEvent>(Akka.Actor.FSMBase.Event<TData> fsmEvent, Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State state = null);
-        public class StateTimeout<TState, TData, TEvent>
-        {
-            public StateTimeout() { }
-        }
-        [System.Diagnostics.DebuggerDisplayAttribute("Timer {Name,nq}, message: {Message")]
-        public class Timer<TState, TData, TEvent> : Akka.Actor.INoSerializationVerificationNeeded
-        {
-            public Timer(string name, object message, bool repeat, int generation, Akka.Actor.IActorContext context, Akka.Event.ILoggingAdapter debugLog) { }
-            public Akka.Actor.IActorContext Context { get; }
-            public int Generation { get; }
-            public object Message { get; }
-            public string Name { get; }
-            public bool Repeat { get; }
-            public void Cancel() { }
-            public void Schedule(Akka.Actor.IActorRef actor, System.TimeSpan timeout) { }
-        }
+        public delegate Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> StateFunction<TState, TData, TEvent>(Akka.Actor.FSMBase.Event<TData> fsmEvent, Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent> state = null);
         public sealed class TransformHelper<TState, TData, TEvent>
         {
             public TransformHelper(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction func) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction Func { get; }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction Using(System.Func<Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State, Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State> andThen) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction Using(System.Func<Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent>, Akka.Persistence.Fsm.PersistentFSM.State<TState, TData, TEvent>> andThen) { }
         }
         public delegate void TransitionHandler<TState, TData, TEvent>(TState initialState, TState nextState);
     }
@@ -1107,32 +1090,12 @@ namespace Akka.Persistence.Journal
 namespace Akka.Persistence.Serialization
 {
     public interface IMessage { }
-    public class MessageSerializer : Akka.Serialization.Serializer
-    {
-        public MessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
-        public override byte[] ToBinary(object obj) { }
-    }
     public sealed class Snapshot
     {
         public Snapshot(object data) { }
         public object Data { get; }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-    }
-    public sealed class SnapshotHeader
-    {
-        public SnapshotHeader(int serializerId, string manifest) { }
-        public string Manifest { get; }
-        public int SerializerId { get; }
-    }
-    public class SnapshotSerializer : Akka.Serialization.Serializer
-    {
-        public SnapshotSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
-        public override byte[] ToBinary(object obj) { }
     }
 }
 namespace Akka.Persistence.Snapshot
@@ -1151,6 +1114,15 @@ namespace Akka.Persistence.Snapshot
         protected void Serialize(System.IO.Stream stream, Akka.Persistence.Serialization.Snapshot snapshot) { }
         protected System.IO.FileInfo WithOutputStream(Akka.Persistence.SnapshotMetadata metadata, System.Action<System.IO.Stream> p) { }
     }
+    public class MemorySnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
+    {
+        public MemorySnapshotStore() { }
+        protected virtual System.Collections.Generic.List<Akka.Persistence.Snapshot.SnapshotEntry> Snapshots { get; }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override async System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+    }
     public sealed class NoSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
     {
         public NoSnapshotStore() { }
@@ -1165,6 +1137,15 @@ namespace Akka.Persistence.Snapshot
             public NoSnapshotStoreException(string message, System.Exception innerException) { }
             protected NoSnapshotStoreException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         }
+    }
+    public class SnapshotEntry
+    {
+        public SnapshotEntry() { }
+        public string Id { get; set; }
+        public string PersistenceId { get; set; }
+        public long SequenceNr { get; set; }
+        public object Snapshot { get; set; }
+        public long Timestamp { get; set; }
     }
     public abstract class SnapshotStore : Akka.Actor.ActorBase
     {

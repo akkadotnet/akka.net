@@ -240,6 +240,7 @@ namespace Akka.Streams.Tests.Implementation
             CheckMaterialized(runnable);
         }
 
+#if !CORECLR
         [Fact(Skip = "We can't catch a StackOverflowException")]
         public void StreamLayout_should_fail_fusing_when_value_computation_is_too_complex()
         {
@@ -249,6 +250,7 @@ namespace Akka.Streams.Tests.Implementation
                     (flow, i) => flow.MapMaterializedValue(x => x + i));
             g.Invoking(flow => Streams.Fusing.Aggressive(flow)).ShouldThrow<StackOverflowException>();
         }
+#endif
 
         [Fact]
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
@@ -371,8 +373,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 foreach (var inPort in atomic.InPorts)
                 {
-                    TestSubscriber subscriber;
-                    if (inToSubscriber.TryGetValue(inPort, out subscriber))
+                    if (inToSubscriber.TryGetValue(inPort, out var subscriber))
                     {
                         subscriber.Owner.Should().Be(atomic);
                         subscriber.UpstreamPort.Should().Be(topLevel.Upstreams[inPort]);
@@ -382,8 +383,7 @@ namespace Akka.Streams.Tests.Implementation
 
                 foreach (var outPort in atomic.OutPorts)
                 {
-                    TestPublisher publisher;
-                    if (outToPublisher.TryGetValue(outPort, out publisher))
+                    if (outToPublisher.TryGetValue(outPort, out var publisher))
                     {
                         publisher.Owner.Should().Be(atomic);
                         publisher.DownstreamPort.Should().Be(topLevel.Downstreams[outPort]);
@@ -402,9 +402,10 @@ namespace Akka.Streams.Tests.Implementation
         {
             var group = module.SubModules.GroupBy(x => x.IsAtomic).ToDictionary(x => x.Key, x => x.ToImmutableHashSet());
 
-            ImmutableHashSet<IModule> atomics, composites;
-            if (!group.TryGetValue(true, out atomics)) atomics = ImmutableHashSet<IModule>.Empty;
-            if (!group.TryGetValue(false, out composites)) composites = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(true, out var atomics))
+                atomics = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(false, out var composites))
+                composites = ImmutableHashSet<IModule>.Empty;
 
             return atomics.Union(composites.SelectMany(GetAllAtomic));
         }

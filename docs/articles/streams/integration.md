@@ -3,31 +3,108 @@ layout: docs.hbs
 title: Integration
 ---
 
-#Integrating with Actors
-For piping the elements of a stream as messages to an ordinary actor you can use the
-``Sink.ActorRef``. Messages can be sent to a stream via the `IActorRef` that is
+# Integrating with Actors
+For piping the elements of a stream as messages to an ordinary actor you can use ``Ask`` in a 
+``SelectAsync`` or use ``Sink.ActorRefWithAck``.
+
+Messages can be sent to a stream with ``Source.Queue`` or via the ``IActorRef`` that is 
 materialized by ``Source.ActorRef``.
 
-For more advanced use cases the `IActorPublisher` and `IActorSubscriber` interfaces are
-provided to support implementing Reactive Streams `IPublisher` and `ISubscriber` with an `Actor`.
+#### SelectAsync + Ask
+A nice way to delegate some processing of elements in a stream to an actor is to use ``Ask`` 
+in ``SelectAsync``. The back-pressure of the stream is maintained by the ``Task`` of the ``Ask``
+and the mailbox of the actor will not be filled with more messages than the given 
+``parallelism`` of the ``SelectAsync`` stage.
 
-These can be consumed by other Reactive Stream libraries or used as a Akka Streams `Source` or `Sink`.
+```csharp
+var words = Source.From(new [] { "hello", "hi" });
+words
+	.SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
+	.Select(elem => (string)elem)
+	.Select(elem => elem.ToLower())
+	.RunWith(Sink.Ignore<string>(), _actorMaterializer);
+```
 
+Note that the messages received in the actor will be in the same order as the stream elements, 
+i.e. the `parallelism` does not change the ordering of the messages. There is a performance 
+advantage of using parallelism > 1 even though the actor will only process one message at a time 
+because then there is already a message in the mailbox when the actor has completed previous message. 
 
-> [!WARNING]
-> `IActorPublisher` and `IActorSubscriber` cannot be used with remote actors, because if signals of the 
-Reactive Streams protocol (e.g. ``request``) are lost the stream may deadlock.
+The actor must reply to the `Sender` for each message from the stream. That reply will complete 
+the `CompletionStage` of the `Ask` and it will be the element that is emitted downstreams 
+from `SelectAsync`.
 
-####Source.ActorRef
+```csharp
+public class Translator : ReceiveActor
+{
+	public Translator()
+	{
+		Receive<string>(word => {
+			// ... process message
+			string reply = word.ToUpper();
+			// reply to the ask
+			Sender.Tell(reply, Self);
+		});
+	}
+}
+```
+The stream can be completed with failure by sending `Akka.Actor.Status.Failure` as reply from the actor.
 
+If the `Ask` fails due to timeout the stream will be completed with `TimeoutException` failure. 
+If that is not desired outcome you can use `Recover` on the `Ask` `CompletionStage`.
+
+If you don't care about the replies you can use `Sink.Ignore` after the `SelectAsync` stage 
+and then actor is effectively a sink of the stream.
+
+The same pattern can be used with [Actor routers](../actors/routers.md#Routers). Then you can use 
+`SelectAsyncUnordered` for better efficiency if you don't care about the order of the emitted 
+downstream elements (the replies).
+
+#### Sink.ActorRefWithAck
+The sink sends the elements of the stream to the given `IActorRef` that sends back back-pressure signal.
+First element is always `OnInitMessage`, then stream is waiting for the given acknowledgement message 
+from the given actor which means that it is ready to process elements. 
+It also requires the given acknowledgement message after each stream element to make back-pressure work.
+
+If the target actor terminates the stream will be cancelled. When the stream is completed successfully 
+the  given `OnCompleteMessage` will be sent to the destination actor. When the stream 
+is completed with failure a `Akka.Actor.Status.Failure` message will be sent to the destination actor.
+
+>**Note**<br/>
+>Using `Sink.ActorRef` or ordinary `Tell` from a `Select` or `ForEach` stage means that there is 
+>no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages 
+>fast enough the mailbox of the actor will grow, unless you use a bounded mailbox with zero 
+>`mailbox-push-timeout-time` or use a rate limiting stage in front. 
+>It's often better to use `Sink.ActorRefWithAck` or `Ask` in `SelectAsync`, though. 
+
+#### Source.Queue
+`Source.Queue` can be used for emitting elements to a stream from an actor (or from anything running 
+outside the stream). The elements will be buffered until the stream can process them. You can `Offer`
+elements to  the queue and they will be emitted to the stream if there is demand from downstream, 
+otherwise they will be buffered until request for demand is received.
+
+Use overflow strategy `Akka.Streams.OverflowStrategy.Backpressure` to avoid dropping of elements 
+if the  buffer is full.
+
+`ISourceQueueWithComplete.OfferAsync` returns `Task<IQueueOfferResult>` 
+which completes with `QueueOfferResult.Enqueued` if element was added to buffer or sent downstream. 
+It completes with `QueueOfferResult.Dropped` if element was dropped. It can also complete with
+`QueueOfferResult.Failure` when stream failed or `QueueOfferResult.QueueClosed` 
+when downstream is completed.
+
+When used from an actor you typically `pipe` the result of the `Task` back to the actor 
+to continue processing.
+
+#### Source.ActorRef
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
 stream if there is demand from downstream, otherwise they will be buffered until request for
 demand is received.
 
 Depending on the defined `OverflowStrategy` it might drop elements if there is no space
 available in the buffer. The strategy ``OverflowStrategy.Backpressure`` is not supported
-for this Source type, you should consider using ``IActorPublisher`` if you want a backpressured
-actor interface.
+for this Source type, i.e. elements will be dropped if the buffer is filled by sending 
+at a rate that is faster than the stream can consume. You should consider using ``Source.Queue`` 
+if you want a backpressured actor interface.
 
 The stream can be completed successfully by sending ``Akka.Actor.PoisonPill`` or
 ``Akka.Actor.Status.Success`` to the actor reference.
@@ -38,306 +115,7 @@ actor reference.
 The actor will be stopped when the stream is completed, failed or cancelled from downstream,
 i.e. you can watch it to get notified when that happens.
 
-####Sink.ActorRef
-
-The sink sends the elements of the stream to the given `IActorRef`. If the target actor terminates
-the stream will be cancelled. When the stream is completed successfully the given ``OnCompleteMessage``
-will be sent to the destination actor. When the stream is completed with failure a ``Akka.Actor.Status.Failure``
-message will be sent to the destination actor.
-
->**Warning**<br/>
-There is no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages fast enough 
-the mailbox of the actor will grow. For potentially slow consumer actors it is recommended to use a bounded mailbox 
-with zero `mailbox-push-timeout-time` or use a rate limiting stage in front of this stage.
-
-####ActorPublisher
-Extend/mixin `Akka.Streams.Actor.ActorPublisher` in your `Actor` to make it a
-stream publisher that keeps track of the subscription life cycle and requested elements.
-
-Here is an example of such an actor. It dispatches incoming jobs to the attached subscriber:
-
-```csharp
-public sealed class Job
-{
-    public Job(string payload)
-    {
-        Payload = payload;
-    }
-
-    public string Payload { get; }
-}
-
-public sealed class JobAccepted
-{
-    public static JobAccepted Instance { get; } = new JobAccepted();
-
-    private JobAccepted() { }
-}
-
-public sealed class JobDenied
-{
-    public static JobDenied Instance { get; } = new JobDenied();
-
-    private JobDenied() { }
-}
-
-public class JobManager : Actors.ActorPublisher<Job>
-{
-    public static Props Props { get; } = Props.Create<JobManager>();
-    
-    private List<Job> _buffer;
-    private const int MaxBufferSize = 100;
-
-    public JobManager()
-    {
-        _buffer = new List<Job>();
-    }
-
-    protected override bool Receive(object message)
-    {
-        return message.Match()
-            .With<Job>(job =>
-            {
-                if (_buffer.Count == MaxBufferSize)
-                    Sender.Tell(JobDenied.Instance);
-                else
-                {
-                    Sender.Tell(JobAccepted.Instance);
-                    if (_buffer.Count == 0 && TotalDemand > 0)
-                        OnNext(job);
-                    else
-                    {
-                        _buffer.Add(job);
-                        DeliverBuffer();
-                    }
-                }
-            })
-            .With<Request>(DeliverBuffer)
-            .With<Cancel>(() => Context.Stop(Self))
-            .WasHandled;
-    }
-
-    private void DeliverBuffer()
-    {
-        if (TotalDemand > 0)
-        {
-            // totalDemand is a Long and could be larger than
-            // what _buffer.Take and Skip can accept
-            if (TotalDemand < int.MaxValue)
-            {
-                var use = _buffer.Take((int) TotalDemand).ToList();
-                _buffer = _buffer.Skip((int) TotalDemand).ToList();
-                use.ForEach(OnNext);
-            }
-            else
-            {
-                var use = _buffer.Take(int.MaxValue).ToList();
-                _buffer = _buffer.Skip(int.MaxValue).ToList();
-                use.ForEach(OnNext);
-                DeliverBuffer();
-            }
-        }
-    }
-}
-```
-
-You send elements to the stream by calling ``OnNext``. You are allowed to send as many
-elements as have been requested by the stream subscriber. This amount can be inquired with
-``TotalDemand``. It is only allowed to use ``OnNext`` when ``IsActive`` and ``TotalDemand > 0``,
-otherwise ``OnNext`` will throw ``IllegalStateException``.
-
-When the stream subscriber requests more elements the ``ActorPublisherMessage.Request`` message
-is delivered to this actor, and you can act on that event. The ``TotalDemand``
-is updated automatically.
-
-When the stream subscriber cancels the subscription the ``ActorPublisherMessage.Cancel`` message
-is delivered to this actor. After that subsequent calls to ``OnNext`` will be ignored.
-
-You can complete the stream by calling ``OnComplete``. After that you are not allowed to
-call ``OnNext``, ``OnError`` and ``OnComplete``.
-
-You can terminate the stream with failure by calling ``OnError``. After that you are not allowed to
-call ``OnNext``, ``OnError`` and ``OnComplete``.
-
-If you suspect that this ``ActorPublisher`` may never get subscribed to, you can set the ``SubscriptionTimeout``
-property to provide a timeout after which this Publisher should be considered canceled. The actor will be notified when
-the timeout triggers via an ``ActorPublisherMessage.SubscriptionTimeoutExceeded`` message and MUST then perform
-cleanup and stop itself.
-
-If the actor is stopped the stream will be completed, unless it was not already terminated with
-failure, completed or canceled.
-
-More detailed information can be found in the API documentation.
-
-This is how it can be used as input `Source` to a `Flow`:
-
-```csharp
-var jobManagerSource = Source.ActorPublisher<Job>(JobManager.Props);
-var actorRef = Flow.Create<Job>()
-    .Select(x => x.Payload.ToUpper())
-    .Select(x =>
-    {
-        Console.WriteLine(x);
-        return x;
-    })
-    .To(Sink.Ignore<string>())
-    .RunWith(jobManagerSource, materializer);
-
-actorRef.Tell(new Job("a"));
-actorRef.Tell(new Job("b"));
-actorRef.Tell(new Job("c"));
-```
-
-A publisher that is created with ``Sink.AsPublisher`` supports a specified number of subscribers. Additional
-subscription attempts will be rejected with an `IllegalStateException`.
-
-####ActorSubscriber
-Extend/mixin `Akka.Stream.Actor.ActorSubscriber` in your `Actor` to make it a
-stream subscriber with full control of stream back pressure. It will receive
-``ActorSubscriberMessage.OnNext``, ``ActorSubscriberMessage.OnComplete`` and ``ActorSubscriberMessage.OnError``
-messages from the stream. It can also receive other, non-stream messages, in the same way as any actor.
-
-Here is an example of such an actor. It dispatches incoming jobs to child worker actors:
-
-```csharp
-public class Message
-{
-    public int Id { get; }
-
-    public IActorRef ReplyTo { get; }
-
-    public Message(int id, IActorRef replyTo)
-    {
-        Id = id;
-        ReplyTo = replyTo;
-    }
-}
-
-public class Work
-{
-    public Work(int id)
-    {
-        Id = id;
-    }
-
-    public int Id { get; }
-}
-
-public class Reply
-{
-    public Reply(int id)
-    {
-        Id = id;
-    }
-
-    public int Id { get; }
-}
-
-public class Done
-{
-    public Done(int id)
-    {
-        Id = id;
-    }
-
-    public int Id { get; }
-}
-
-public class WorkerPool : Actors.ActorSubscriber
-{
-    public static Props Props { get; } = Props.Create<WorkerPool>();
-        
-    private class Strategy : MaxInFlightRequestStrategy
-    {
-        private readonly Dictionary<int, IActorRef> _queue;
-
-        public Strategy(int max, Dictionary<int, IActorRef> queue) : base(max)
-        {
-            _queue = queue;
-        }
-
-        public override int InFlight => _queue.Count;
-    }
-
-    private const int MaxQueueSize = 10;
-    private readonly Dictionary<int, IActorRef> _queue;
-    private readonly Router _router;
-
-    public WorkerPool()
-    {
-        _queue = new Dictionary<int, IActorRef>();
-        var routees = new Routee[]
-        {
-            new ActorRefRoutee(Context.ActorOf<Worker>()),
-            new ActorRefRoutee(Context.ActorOf<Worker>()),
-            new ActorRefRoutee(Context.ActorOf<Worker>())
-        };
-        _router = new Router(new RoundRobinRoutingLogic(), routees);
-        RequestStrategy = new Strategy(MaxQueueSize, _queue);
-    }
-
-    public override IRequestStrategy RequestStrategy { get; }
-
-    protected override bool Receive(object message)
-    {
-        return message.Match()
-            .With<OnNext>(next =>
-            {
-                var msg = next.Element as Message;
-                if (msg != null)
-                {
-                    _queue.Add(msg.Id, msg.ReplyTo);
-                    if (_queue.Count <= MaxQueueSize)
-                        throw new IllegalStateException($"Queued too many : {_queue.Count}");
-                    _router.Route(new Work(msg.Id), Self);
-                }
-            })
-            .With<Reply>(reply =>
-            {
-                _queue[reply.Id].Tell(new Done(reply.Id));
-                _queue.Remove(reply.Id);
-            })
-            .WasHandled;
-    }
-}
-
-public class Worker : ReceiveActor
-{
-    public Worker()
-    {
-        Receive<Work>(work =>
-        {
-            //...
-            Sender.Tell(new Reply(work.Id));
-        });
-    }
-}
-```
-
-Subclass must define the ``RequestStrategy`` to control stream back pressure.
-After each incoming message the ``ActorSubscriber`` will automatically invoke
-the ``RequestStrategy.RequestDemand`` and propagate the returned demand to the stream.
-
-* The provided ``WatermarkRequestStrategy`` is a good strategy if the actor performs work itself.
-* The provided ``MaxInFlightRequestStrategy`` is useful if messages are queued internally or
-  delegated to other actors.
-* You can also implement a custom ``RequestStrategy`` or call ``Request`` manually together with
-  ``ZeroRequestStrategy`` or some other strategy. In that case
-  you must also call ``Request`` when the actor is started or when it is ready, otherwise
-  it will not receive any elements.
-
-More detailed information can be found in the API documentation.
-
-This is how it can be used as output `Sink` to a `Flow`:
-
-```csharp
-var n = 118;
-Source.From(Enumerable.Range(1, n))
-    .Select(x => new Message(x, replyTo))
-    .RunWith(Sink.ActorSubscriber<Message>(WorkerPool.Props), materializer);
-```
-
-#Integrating with External Services
+# Integrating with External Services
 Stream transformations and side effects involving external non-stream based services can be
 performed with ``SelectAsync`` or ``SelectAsyncUnordered``.
 
@@ -440,7 +218,7 @@ Note that if the ``Ask`` is not completed within the given timeout the stream is
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
 
-####Illustrating ordering and parallelism
+#### Illustrating ordering and parallelism
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
 
@@ -626,7 +404,7 @@ The numbers in parenthesis illustrates how many calls that are in progress at
 the same time. Here the downstream demand and thereby the number of concurrent
 calls are limited by the buffer size (4) of the `ActorMaterializerSettings`.
 
-####Integrating with Reactive Streams
+#### Integrating with Reactive Streams
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
@@ -735,3 +513,306 @@ var flow = Flow.FromProcessor(()=> createProcessor(materializer));
 ```
 
 Please note that a factory is necessary to achieve reusability of the resulting `Flow`.
+
+#### Implementing Reactive Streams Publisher or Subscriber
+
+As described above any Akka Streams ``Source`` can be exposed as a Reactive Streams ``Publisher`` 
+and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
+implement Reactive Streams integrations with built-in stages or [custom stages](customstreamprocessing.md).
+
+For historical reasons the `ActorPublisher` and `ActorSubscriber`  are
+provided to support implementing Reactive Streams `Publisher` class and `Subscriber` class with
+an `Actor` class.
+
+These can be consumed by other Reactive Stream libraries or used as an Akka Streams `Source` class or `Sink` class.
+
+>**Warning**<br/>
+>`ActorPublisher` class and `ActorSubscriber` class will probably be deprecated in 
+>future versions of Akka.
+
+>**Warning**<br/>
+>`ActorPublisher` class and `ActorSubscriber` class cannot be used with remote actors,
+>because if signals of the Reactive Streams protocol (e.g. ``Request``) are lost the
+>the stream may deadlock.
+
+#### ActorPublisher
+Extend `Akka.Streams.Actor.ActorPublisher` to implement a stream publisher that keeps track of the subscription life cycle and requested elements.
+
+Here is an example of such an actor. It dispatches incoming jobs to the attached subscriber:
+
+```csharp
+public sealed class Job
+{
+    public Job(string payload)
+    {
+        Payload = payload;
+    }
+
+    public string Payload { get; }
+}
+
+public sealed class JobAccepted
+{
+    public static JobAccepted Instance { get; } = new JobAccepted();
+
+    private JobAccepted() { }
+}
+
+public sealed class JobDenied
+{
+    public static JobDenied Instance { get; } = new JobDenied();
+
+    private JobDenied() { }
+}
+
+public class JobManager : Actors.ActorPublisher<Job>
+{
+    public static Props Props { get; } = Props.Create<JobManager>();
+    
+    private List<Job> _buffer;
+    private const int MaxBufferSize = 100;
+
+    public JobManager()
+    {
+        _buffer = new List<Job>();
+    }
+
+    protected override bool Receive(object message)
+    {
+        return message.Match()
+            .With<Job>(job =>
+            {
+                if (_buffer.Count == MaxBufferSize)
+                    Sender.Tell(JobDenied.Instance);
+                else
+                {
+                    Sender.Tell(JobAccepted.Instance);
+                    if (_buffer.Count == 0 && TotalDemand > 0)
+                        OnNext(job);
+                    else
+                    {
+                        _buffer.Add(job);
+                        DeliverBuffer();
+                    }
+                }
+            })
+            .With<Request>(DeliverBuffer)
+            .With<Cancel>(() => Context.Stop(Self))
+            .WasHandled;
+    }
+
+    private void DeliverBuffer()
+    {
+        if (TotalDemand > 0)
+        {
+            // totalDemand is a Long and could be larger than
+            // what _buffer.Take and Skip can accept
+            if (TotalDemand < int.MaxValue)
+            {
+                var use = _buffer.Take((int) TotalDemand).ToList();
+                _buffer = _buffer.Skip((int) TotalDemand).ToList();
+                use.ForEach(OnNext);
+            }
+            else
+            {
+                var use = _buffer.Take(int.MaxValue).ToList();
+                _buffer = _buffer.Skip(int.MaxValue).ToList();
+                use.ForEach(OnNext);
+                DeliverBuffer();
+            }
+        }
+    }
+}
+```
+
+You send elements to the stream by calling ``OnNext``. You are allowed to send as many
+elements as have been requested by the stream subscriber. This amount can be inquired with
+``TotalDemand``. It is only allowed to use ``OnNext`` when ``IsActive`` and ``TotalDemand > 0``,
+otherwise ``OnNext`` will throw ``IllegalStateException``.
+
+When the stream subscriber requests more elements the ``ActorPublisherMessage.Request`` message
+is delivered to this actor, and you can act on that event. The ``TotalDemand``
+is updated automatically.
+
+When the stream subscriber cancels the subscription the ``ActorPublisherMessage.Cancel`` message
+is delivered to this actor. After that subsequent calls to ``OnNext`` will be ignored.
+
+You can complete the stream by calling ``OnComplete``. After that you are not allowed to
+call ``OnNext``, ``OnError`` and ``OnComplete``.
+
+You can terminate the stream with failure by calling ``OnError``. After that you are not allowed to
+call ``OnNext``, ``OnError`` and ``OnComplete``.
+
+If you suspect that this ``ActorPublisher`` may never get subscribed to, you can set the ``SubscriptionTimeout``
+property to provide a timeout after which this Publisher should be considered canceled. The actor will be notified when
+the timeout triggers via an ``ActorPublisherMessage.SubscriptionTimeoutExceeded`` message and MUST then perform
+cleanup and stop itself.
+
+If the actor is stopped the stream will be completed, unless it was not already terminated with
+failure, completed or canceled.
+
+More detailed information can be found in the API documentation.
+
+This is how it can be used as input `Source` to a `Flow`:
+
+```csharp
+var jobManagerSource = Source.ActorPublisher<Job>(JobManager.Props);
+var actorRef = Flow.Create<Job>()
+    .Select(job => job.Payload.ToUpper())
+    .Select(elem =>
+    {
+        Console.WriteLine(elem);
+        return elem;
+    })
+    .To(Sink.Ignore<string>())
+    .RunWith(jobManagerSource, materializer);
+
+actorRef.Tell(new Job("a"));
+actorRef.Tell(new Job("b"));
+actorRef.Tell(new Job("c"));
+```
+
+You can only attach one subscriber to this publisher. Use a ``Broadcast``-element or attach a ``Sink.AsPublisher(true)`` to enable multiple subscribers.
+
+#### ActorSubscriber
+Extend `Akka.Streams.Actor.ActorSubscriber` to make your class a stream subscriber with full control of stream back pressure. It will receive `OnNext`, `OnComplete` and `OnError` messages from the stream. It can also receive other, non-stream messages, in the same way as any actor.
+
+Here is an example of such an actor. It dispatches incoming jobs to child worker actors:
+
+```csharp
+public class Message
+{
+    public int Id { get; }
+
+    public IActorRef ReplyTo { get; }
+
+    public Message(int id, IActorRef replyTo)
+    {
+        Id = id;
+        ReplyTo = replyTo;
+    }
+}
+
+public class Work
+{
+    public Work(int id)
+    {
+        Id = id;
+    }
+
+    public int Id { get; }
+}
+
+public class Reply
+{
+    public Reply(int id)
+    {
+        Id = id;
+    }
+
+    public int Id { get; }
+}
+
+public class Done
+{
+    public Done(int id)
+    {
+        Id = id;
+    }
+
+    public int Id { get; }
+}
+
+public class WorkerPool : Actors.ActorSubscriber
+{
+    public static Props Props { get; } = Props.Create<WorkerPool>();
+        
+    private class Strategy : MaxInFlightRequestStrategy
+    {
+        private readonly Dictionary<int, IActorRef> _queue;
+
+        public Strategy(int max, Dictionary<int, IActorRef> queue) : base(max)
+        {
+            _queue = queue;
+        }
+
+        public override int InFlight => _queue.Count;
+    }
+
+    private const int MaxQueueSize = 10;
+    private readonly Dictionary<int, IActorRef> _queue;
+    private readonly Router _router;
+
+    public WorkerPool()
+    {
+        _queue = new Dictionary<int, IActorRef>();
+        var routees = new Routee[]
+        {
+            new ActorRefRoutee(Context.ActorOf<Worker>()),
+            new ActorRefRoutee(Context.ActorOf<Worker>()),
+            new ActorRefRoutee(Context.ActorOf<Worker>())
+        };
+        _router = new Router(new RoundRobinRoutingLogic(), routees);
+        RequestStrategy = new Strategy(MaxQueueSize, _queue);
+    }
+
+    public override IRequestStrategy RequestStrategy { get; }
+
+    protected override bool Receive(object message)
+    {
+        return message.Match()
+            .With<OnNext>(next =>
+            {
+                var msg = next.Element as Message;
+                if (msg != null)
+                {
+                    _queue.Add(msg.Id, msg.ReplyTo);
+                    if (_queue.Count > MaxQueueSize)
+                        throw new IllegalStateException($"Queued too many : {_queue.Count}");
+                    _router.Route(new Work(msg.Id), Self);
+                }
+            })
+            .With<Reply>(reply =>
+            {
+                _queue[reply.Id].Tell(new Done(reply.Id));
+                _queue.Remove(reply.Id);
+            })
+            .WasHandled;
+    }
+}
+
+public class Worker : ReceiveActor
+{
+    public Worker()
+    {
+        Receive<Work>(work =>
+        {
+            //...
+            Sender.Tell(new Reply(work.Id));
+        });
+    }
+}
+```
+
+Subclass must define the ``RequestStrategy`` to control stream back pressure.
+After each incoming message the ``ActorSubscriber`` will automatically invoke
+the ``IRequestStrategy.RequestDemand`` and propagate the returned demand to the stream.
+
+* The provided ``WatermarkRequestStrategy`` is a good strategy if the actor performs work itself.
+* The provided ``MaxInFlightRequestStrategy`` is useful if messages are queued internally or
+  delegated to other actors.
+* You can also implement a custom ``IRequestStrategy`` or call ``Request`` manually together with
+  ``ZeroRequestStrategy`` or some other strategy. In that case
+  you must also call ``Request`` when the actor is started or when it is ready, otherwise
+  it will not receive any elements.
+
+More detailed information can be found in the API documentation.
+
+This is how it can be used as output `Sink` to a `Flow`:
+
+```csharp
+var n = 118;
+Source.From(Enumerable.Range(1, n))
+    .Select(x => new Message(x, replyTo))
+    .RunWith(Sink.ActorSubscriber<Message>(WorkerPool.Props), materializer);
+```

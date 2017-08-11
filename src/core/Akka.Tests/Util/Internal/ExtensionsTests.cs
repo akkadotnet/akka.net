@@ -141,7 +141,6 @@ namespace Akka.Tests.Util.Internal
             }
         }
 
-
         /// <summary>
         /// Like selectMany, but alternates between two selectors (starting with even for item 0)
         /// </summary>

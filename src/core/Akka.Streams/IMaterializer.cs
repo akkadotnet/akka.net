@@ -12,7 +12,14 @@ using Akka.Dispatch;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Materializer SPI (Service Provider Interface) 
+    /// 
+    /// Custom materializer implementations should be aware that the materializer SPI
+    /// is not yet final and may change in patch releases of Akka. Please note that this
+    /// does not impact end-users of Akka streams, only implementors of custom materializers,
+    /// with whom the Akka.Net team co-ordinates such changes.
+    /// 
+    /// Once the SPI is final this notice will be removed.
     /// </summary>
     public interface IMaterializer
     {
@@ -31,10 +38,22 @@ namespace Akka.Streams
         /// stream. The result can be highly implementation specific, ranging from
         /// local actor chains to remote-deployed processing networks.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The type of the materialized value</typeparam>
+        /// <param name="runnable">The flow that should be materialized.</param>
+        /// <returns>The materialized value</returns>
         TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
+
+        /// <summary>
+        /// This method interprets the given Flow description and creates the running
+        /// stream using an explicitly provided <see cref="Attributes"/> as top level attributes.
+        /// stream. The result can be highly implementation specific, ranging from
+        /// local actor chains to remote-deployed processing networks.
+        /// </summary>
+        /// <typeparam name="TMat">The type of the materialized value</typeparam>
+        /// <param name="runnable">The flow that should be materialized.</param>
+        /// <param name="initialAttributes">The initialAttributes for this materialization</param>
+        /// <returns>The materialized value</returns>
+        TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
 
         /// <summary>
         /// Interface for stages that need timer services for their functionality. Schedules a
@@ -104,6 +123,22 @@ namespace Akka.Streams
         /// </exception>
         /// <returns>N/A</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
+        {
+            throw new NotSupportedException("NoMaterializer cannot materialize");
+        }
+
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <typeparam name="TMat">N/A</typeparam>
+        /// <param name="runnable">N/A</param>
+        /// <param name="initialAttributes">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be materialized.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes)
         {
             throw new NotSupportedException("NoMaterializer cannot materialize");
         }

@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected MembershipChangeListenerUpSpec(MembershipChangeListenerUpConfig config) : base(config)
+        protected MembershipChangeListenerUpSpec(MembershipChangeListenerUpConfig config) : base(config, typeof(MembershipChangeListenerUpSpec))
         {
             _config = config;
         }

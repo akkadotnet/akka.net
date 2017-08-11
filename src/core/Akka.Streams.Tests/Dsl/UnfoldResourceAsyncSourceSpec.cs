@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -237,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     promise.SetResult(s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Take(s)
+                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
                         : Option<ByteString>.None);
                     return promise.Task;
 
@@ -265,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(0, 122).ForEach(i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().DecodeString().Should().Be(nextChunk());
+                    c.ExpectNext().ToString().Should().Be(nextChunk());
                 });
                 sub.Request(1);
                 c.ExpectComplete();
@@ -349,7 +350,23 @@ namespace Akka.Streams.Tests.Dsl
         protected override void AfterAll()
         {
             base.AfterAll();
-            _manyLinesFile.Delete();
+
+            try
+            {
+                _manyLinesFile.Delete();
+            }
+            catch 
+            {
+                Thread.Sleep(3000);
+                try
+                {
+                    _manyLinesFile.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
         }
     }
 }

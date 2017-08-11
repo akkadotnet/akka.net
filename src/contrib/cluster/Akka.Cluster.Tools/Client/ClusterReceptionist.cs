@@ -546,14 +546,11 @@ namespace Akka.Cluster.Tools.Client
 
         private void UpdateClientInteractions(IActorRef client)
         {
-            if (_clientInteractions.ContainsKey(client))
-            {
-                var failureDetector = _clientInteractions[client];
+            if (_clientInteractions.TryGetValue(client, out var failureDetector))
                 failureDetector.HeartBeat();
-            }
             else
             {
-                var failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
+                failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
                 failureDetector.HeartBeat();
                 _clientInteractions = _clientInteractions.Add(client, failureDetector);
                 _log.Debug($"Received new contact from [{client.Path}]");

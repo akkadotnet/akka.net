@@ -323,7 +323,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config)
+        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config, typeof(ClusterSingletonManagerSpec))
         {
             _controller = config.Controller;
             _observer = config.Observer;
@@ -466,7 +466,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                ExpectMsg(msg, TimeSpan.FromSeconds(1));
+                ExpectMsg(msg, TimeSpan.FromSeconds(5));
             }, oldest);
 
             RunOn(() =>

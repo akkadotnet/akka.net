@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Persistence.Sql.Common.Queries;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -103,17 +103,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="cancellationToken">TBD</param>
         /// <returns>TBD</returns>
         Task CreateTablesAsync(DbConnection connection, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="connection">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <param name="hints">TBD</param>
-        /// <param name="callback">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("This method will be obsoleted. Use Akka.Persistence.Query read journal features instead.")]
-        Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback);
     }
 
     /// <summary>
@@ -174,6 +163,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly TimeSpan Timeout;
 
         /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public string DefaultSerializer { get; }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -188,6 +182,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tagsColumnName">TBD</param>
         /// <param name="orderingColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -200,7 +195,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             string isDeletedColumnName,
             string tagsColumnName,
             string orderingColumnName,
-            TimeSpan timeout)
+            TimeSpan timeout,
+            string defaultSerializer)
         {
             SchemaName = schemaName;
             JournalEventsTableName = journalEventsTableName;
@@ -214,6 +210,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
             OrderingColumnName = orderingColumnName;
+            DefaultSerializer = defaultSerializer;
         }
 
         /// <summary>
@@ -630,7 +627,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
-            var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().QualifiedTypeName() : e.Manifest;
+            var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().TypeQualifiedName() : e.Manifest;
             var serializer = Serialization.FindSerializerFor(e.Payload);
             var binary = serializer.ToBinary(e.Payload);
 
@@ -669,7 +666,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payload = reader[PayloadIndex];
 
             var type = Type.GetType(manifest, true);
-            var deserializer = Serialization.FindSerializerForType(type);
+            var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
             var deserialized = deserializer.FromBinary((byte[])payload, type);
 
             return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
@@ -691,83 +688,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             parameter.Value = value;
 
             command.Parameters.Add(parameter);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="connection">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <param name="hints">TBD</param>
-        /// <param name="callback">TBD</param>
-        /// <returns>TBD</returns>
-        public virtual async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
-        {
-            using (var command = GetCommand(connection, QueryEventsSql))
-            {
-                command.CommandText += string.Join(" AND ", hints.Select(h => HintToSql(h, command)));
-
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
-                {
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        var persistent = ReadEvent(reader);
-                        callback(persistent);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="hint">TBD</param>
-        /// <param name="command">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
-        protected virtual string HintToSql(IHint hint, DbCommand command)
-        {
-            if (hint is TimestampRange)
-            {
-                var range = (TimestampRange)hint;
-                var sb = new StringBuilder();
-
-                if (range.From.HasValue)
-                {
-                    sb.Append(" e.").Append(Configuration.TimestampColumnName).Append(" >= @TimestampFrom ");
-                    AddParameter(command, "@TimestampFrom", DbType.Int64, range.From.Value);
-                }
-                if (range.From.HasValue && range.To.HasValue) sb.Append("AND");
-                if (range.To.HasValue)
-                {
-                    sb.Append(" e.").Append(Configuration.TimestampColumnName).Append(" < @TimestampTo ");
-                    AddParameter(command, "@TimestampTo", DbType.Int64, range.To.Value);
-                }
-
-                return sb.ToString();
-            }
-            if (hint is PersistenceIdRange)
-            {
-                var range = (PersistenceIdRange)hint;
-                var sb = new StringBuilder(" e.").Append(Configuration.PersistenceIdColumnName).Append(" IN (");
-                var i = 0;
-                foreach (var persistenceId in range.PersistenceIds)
-                {
-                    var paramName = "@Pid" + (i++);
-                    sb.Append(paramName).Append(',');
-                    AddParameter(command, paramName, DbType.String, persistenceId);
-                }
-                return range.PersistenceIds.Count == 0
-                    ? string.Empty
-                    : sb.Remove(sb.Length - 1, 1).Append(')').ToString();
-            }
-            else if (hint is WithManifest)
-            {
-                var manifest = (WithManifest)hint;
-                AddParameter(command, "@Manifest", DbType.String, manifest.Manifest);
-                return $" e.{Configuration.ManifestColumnName} = @Manifest";
-            }
-            else throw new NotSupportedException($"Sqlite journal doesn't support query with hint [{hint.GetType()}]");
         }
     }
 }

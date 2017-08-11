@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -369,8 +370,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public virtual IEventAdapter Get(Type type)
         {
-            IEventAdapter adapter;
-            if (_map.TryGetValue(type, out adapter))
+            if (_map.TryGetValue(type, out IEventAdapter adapter))
                 return adapter;
 
             // bindings are ordered from most specific to least specific

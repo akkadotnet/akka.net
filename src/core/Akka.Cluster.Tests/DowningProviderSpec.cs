@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tests
             loglevel = WARNING
             actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             remote {
-              netty.tcp {
+              dot-netty.tcp {
                 hostname = ""127.0.0.1""
                 port = 0
               }
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Tests
             {
                 var downingProvider = Cluster.Get(system).DowningProvider;
                 downingProvider.Should().BeOfType<DummyDowningProvider>();
-                AwaitCondition(() => 
+                AwaitCondition(() =>
                     (downingProvider as DummyDowningProvider).ActorPropsAccessed.Value,
                     TimeSpan.FromSeconds(3));
             }
@@ -106,13 +106,15 @@ namespace Akka.Cluster.Tests
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.cluster.downing-provider-class = ""Akka.Cluster.Tests.FailingDowningProvider, Akka.Cluster.Tests""");
-            using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
-            {
-                var cluster = Cluster.Get(system);
-                cluster.Join(cluster.SelfAddress);
 
-                AwaitCondition(() => cluster.IsTerminated, TimeSpan.FromSeconds(3));
-            }
+            var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig));
+
+            var cluster = Cluster.Get(system);
+            cluster.Join(cluster.SelfAddress);
+
+            AwaitCondition(() => cluster.IsTerminated, TimeSpan.FromSeconds(3));
+
+            Shutdown(system);
         }
     }
 }

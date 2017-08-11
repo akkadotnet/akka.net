@@ -1,0 +1,140 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Remote.Serialization.Proto.Msg;
+
+import 'ContainerFormats.proto';
+import 'duration.proto';
+
+/******************************************
+ * Remoting message formats
+ ******************************************/
+ 
+message AckAndEnvelopeContainer {
+	AcknowledgementInfo ack = 1;
+	RemoteEnvelope envelope = 2;
+}
+
+// Defines a remote message.
+message RemoteEnvelope {
+	ActorRefData recipient = 1;
+	Payload message = 2;
+	ActorRefData sender = 4;
+	fixed64 seq = 5;
+}
+
+message AcknowledgementInfo {
+	fixed64 cumulativeAck = 1;
+	repeated fixed64 nacks = 2;
+}
+
+// Defines Akka.Remote.DaemonMsgCreate
+message DaemonMsgCreateData {
+	PropsData props = 1;
+	DeployData deploy = 2;
+	string path = 3;
+	ActorRefData supervisor = 4;
+}
+
+// Serialization of Akka.Actor.Props
+message PropsData {
+	DeployData deploy = 2;
+	string clazz = 3;
+	repeated bytes args = 4; // serialized props parameters
+	repeated string manifests = 5; // contains string manifest for each arg
+	repeated int32 serializerIds = 6; // serializer id for each arg
+	repeated bool hasManifest = 7;
+}
+
+// Serialization of akka.actor.Deploy
+message DeployData {
+	string path = 1;
+	bytes config = 2;
+	bytes routerConfig = 3;
+	bytes scope = 4;
+	string dispatcher = 5;
+	int32 scopeSerializerId = 6;
+	string scopeManifest = 7;
+	int32 configSerializerId = 8;
+	string configManifest = 9;
+	int32 routerConfigSerializerId = 10;
+	string routerConfigManifest = 11;
+}
+
+/******************************************
+* Akka Protocol message formats
+******************************************/
+
+// Message format of Akka Protocol. Message contains either a payload or an instruction.
+message AkkaProtocolMessage {
+	bytes payload = 1;
+	AkkaControlMessage instruction = 2;
+}
+
+// Defines some control messages for the remoting
+message AkkaControlMessage {
+	CommandType commandType = 1;
+	AkkaHandshakeInfo handshakeInfo = 2;
+}
+
+message AkkaHandshakeInfo {
+	AddressData origin = 1;
+	fixed64 uid = 2;
+	string cookie = 3;
+}
+
+// Defines the type of the AkkaControlMessage command type
+enum CommandType {
+	NONE = 0;
+	ASSOCIATE = 1;
+	DISASSOCIATE = 2;
+	HEARTBEAT = 3;
+	DISASSOCIATE_SHUTTING_DOWN = 4; // Remote system is going down and will not accepts new connections
+	DISASSOCIATE_QUARANTINED = 5;   // Remote system refused the association since the current system is quarantined
+}
+
+message RemoteScope {
+  AddressData node = 1;
+}
+
+// router configs
+
+message DefaultResizer {
+  uint32 lowerBound = 1;
+  uint32 upperBound = 2;
+  uint32 pressureThreshold = 3;
+  double rampupRate = 4;
+  double backoffThreshold = 5;
+  double backoffRate = 6;
+  uint32 messagesPerResize = 7;
+}
+
+message FromConfig {
+  Payload resizer = 1;
+  string routerDispatcher = 2;
+}
+
+message GenericRoutingPool {
+  uint32 nrOfInstances = 1;
+  string routerDispatcher = 2;
+  bool usePoolDispatcher = 3;
+  Payload resizer = 4;
+}
+
+message ScatterGatherPool {
+  GenericRoutingPool generic = 1;
+  google.protobuf.Duration within = 2;
+}
+
+message TailChoppingPool {
+  GenericRoutingPool generic = 1;
+  google.protobuf.Duration within = 2;
+  google.protobuf.Duration interval = 3;
+}
+
+message RemoteRouterConfig {
+  Payload local = 1;
+  repeated AddressData nodes = 2;
+}

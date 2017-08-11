@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;
+using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
@@ -86,6 +87,7 @@ namespace Akka.Persistence
         private long _sequenceNr;
         private EventsourcedState _currentState;
         private LinkedList<IPersistentEnvelope> _eventBatch = new LinkedList<IPersistentEnvelope>();
+        private bool _asyncTaskRunning = false;
 
         /// Used instead of iterating `pendingInvocations` in order to check if safe to revert to processing commands
         private long _pendingStashingPersistInvocations = 0L;
@@ -482,6 +484,46 @@ namespace Akka.Persistence
             if (Log.IsWarningEnabled)
                 Log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
                     @event.GetType(), sequenceNr, PersistenceId, cause.Message);
+        }
+
+        /// <summary>
+        /// Runs an asynchronous task for incoming messages in context of <see cref="ReceiveCommand(object)"/> .
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="action"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" />
+        /// and <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// </summary>
+        /// <param name="action">Async task to run</param>
+        protected void RunTask(Func<Task> action)
+        {
+            if (_asyncTaskRunning)
+                throw new NotSupportedException("RunTask calls cannot be nested");
+            Func<Task> wrap = () =>
+            {
+                Task t = action();
+                if (!t.IsCompleted)
+                {
+                    _asyncTaskRunning = true;
+                    var tcs = new TaskCompletionSource<object>();
+
+                    t.ContinueWith(r =>
+                    {
+                        _asyncTaskRunning = false;
+
+                        OnProcessingCommandsAroundReceiveComplete(r.IsFaulted || r.IsCanceled);
+
+                        if (r.IsFaulted)
+                            tcs.TrySetException(r.Exception);
+                        else if (r.IsCanceled)
+                            tcs.TrySetCanceled();
+                        else
+                            tcs.TrySetResult(null);
+                    }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+
+                    t = tcs.Task;
+                }
+                return t;
+            };
+
+            Dispatch.ActorTaskScheduler.RunTask(wrap);
         }
 
         private void ChangeState(EventsourcedState state)

@@ -176,8 +176,7 @@ namespace Akka.Streams.Implementation
             Func<int> ids = () => currentId++;
             Func<object, int> id = obj =>
             {
-                int x;
-                if (!idMap.TryGetValue(obj, out x))
+                if (!idMap.TryGetValue(obj, out int x))
                 {
                     x = ids();
                     idMap.Add(obj, x);
@@ -1216,15 +1215,134 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// When fusing a <see cref="IGraph{TShape}"/> a part of the internal stage wirings are hidden within
+    /// <see cref="GraphAssembly"/> objects that are
+    /// optimized for high-speed execution. This structural information bundle contains
+    /// the wirings in a more accessible form, allowing traversal from port to upstream
+    /// or downstream port and from there to the owning module (or graph vertex).
     /// </summary>
-    public sealed class FusedModule : Module
+    public sealed class StructuralInfoModule : Module
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Streams.Fusing.StructuralInfo Info;
+        /// <param name="subModules">TBD</param>
+        /// <param name="shape">TBD</param>
+        /// <param name="downstreams">TBD</param>
+        /// <param name="upstreams">TBD</param>
+        /// <param name="inOwners">TBD</param>
+        /// <param name="outOwners">TBD</param>
+        /// <param name="materializedValues">TBD</param>
+        /// <param name="materializedValueComputation">TBD</param>
+        /// <param name="attributes">TBD</param>
+        public StructuralInfoModule(ImmutableArray<IModule> subModules,
+            Shape shape,
+            IImmutableDictionary<OutPort, InPort> downstreams,
+            IImmutableDictionary<InPort, OutPort> upstreams,
+            IImmutableDictionary<InPort, IModule> inOwners, 
+            IImmutableDictionary<OutPort, IModule> outOwners,
+            IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> materializedValues,
+            StreamLayout.IMaterializedValueNode materializedValueComputation,
+            Attributes attributes)
+        {
+            InOwners = inOwners;
+            OutOwners = outOwners;
+            MaterializedValues = materializedValues;
 
+            SubModules = subModules;
+            Shape = shape;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
+            MaterializedValueComputation = materializedValueComputation;
+            Attributes = attributes;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override bool IsFused { get; } = false;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Shape Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override ImmutableArray<IModule> SubModules { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Attributes Attributes { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<InPort, IModule> InOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<OutPort, IModule> OutOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule ReplaceShape(Shape shape)
+        {
+            if (!ReferenceEquals(Shape, shape))
+            {
+                if(!Shape.HasSamePortsAs(shape))
+                    throw new ArgumentException("StructuralInfoModule requires shape with same ports to replace", nameof(shape));
+                return new StructuralInfoModule(SubModules, shape, Downstreams, Upstreams, InOwners, OutOwners,
+                    MaterializedValues, MaterializedValueComputation, Attributes);
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule WithAttributes(Attributes attributes)
+        {
+            return new StructuralInfoModule(SubModules, Shape, Downstreams, Upstreams, InOwners, OutOwners,
+                MaterializedValues, MaterializedValueComputation, attributes);
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class FusedModule : Module
+    {
         /// <summary>
         /// TBD
         /// </summary>
@@ -1242,7 +1360,7 @@ namespace Akka.Streams.Implementation
             IImmutableDictionary<InPort, OutPort> upstreams,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes,
-            Streams.Fusing.StructuralInfo info)
+            StructuralInfoModule info)
         {
             SubModules = subModules;
             Shape = shape;
@@ -1252,6 +1370,12 @@ namespace Akka.Streams.Implementation
             Attributes = attributes;
             Info = info;
         }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public StructuralInfoModule Info { get; }
 
         /// <summary>
         /// TBD
@@ -2023,6 +2147,7 @@ namespace Akka.Streams.Implementation
             {
             }
 
+#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="MaterializationPanicException" /> class.
             /// </summary>
@@ -2032,6 +2157,7 @@ namespace Akka.Streams.Implementation
                 : base(info, context)
             {
             }
+#endif
         }
 
         /// <summary>
@@ -2215,8 +2341,8 @@ namespace Akka.Streams.Implementation
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
 
-            if (MaterializedValueSource.ContainsKey(materializedSource.Computation))
-                MaterializedValueSource[materializedSource.Computation].AddFirst(materializedSource);
+            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out var list))
+                list.AddFirst(materializedSource);
             else
                 MaterializedValueSource.Add(materializedSource.Computation,
                     new LinkedList<IMaterializedValueSource>(new[] {materializedSource}));
@@ -2298,7 +2424,8 @@ namespace Akka.Streams.Implementation
             int spaces)
         {
             var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
-            if (IsDebug) Console.WriteLine($"{indent}{node}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
             {
@@ -2316,14 +2443,16 @@ namespace Akka.Streams.Implementation
                 var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = NotUsed.Instance;
+            else
+                result = NotUsed.Instance;
 
-            if (IsDebug) Console.WriteLine($"{indent}result = {result}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}result = {result}");
 
-            if (MaterializedValueSource.ContainsKey(node))
+            if (MaterializedValueSource.TryGetValue(node, out var sources))
             {
-                var sources = MaterializedValueSource[node];
-                if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
+                if (IsDebug)
+                    Console.WriteLine($"{indent}triggering sources {sources}");
                 MaterializedValueSource.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);
@@ -2342,12 +2471,9 @@ namespace Akka.Streams.Implementation
             Subscribers[inPort] = subscriberOrVirtual;
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Upstreams.ContainsKey(inPort))
-            {
-                IUntypedPublisher publisher;
-                if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
+            if (CurrentLayout.Upstreams.TryGetValue(inPort, out var outPort))
+                if (Publishers.TryGetValue(outPort, out var publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
-            }
         }
 
 
@@ -2360,12 +2486,9 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Downstreams.ContainsKey(outPort))
-            {
-                object subscriber;
-                if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
+            if (CurrentLayout.Downstreams.TryGetValue(outPort, out var inPort))
+                if (Subscribers.TryGetValue(inPort, out var subscriber))
                     DoSubscribe(publisher, subscriber);
-            }
         }
 
         private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)

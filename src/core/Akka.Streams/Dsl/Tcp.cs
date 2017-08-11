@@ -240,7 +240,7 @@ namespace Akka.Streams.Dsl
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
-            connectionTimeout = connectionTimeout ?? TimeSpan.MaxValue;
+            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
 
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
@@ -260,7 +260,15 @@ namespace Akka.Streams.Dsl
         /// <param name="port">TBD</param>
         /// <returns>TBD</returns>
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
-            => OutgoingConnection(new DnsEndPoint(host, port));
+            => OutgoingConnection(CreateEndpoint(host, port));
+
+        internal static EndPoint CreateEndpoint(string host, int port)
+        {
+            IPAddress address;
+            return IPAddress.TryParse(host, out address)
+                ? (EndPoint) new IPEndPoint(address, port)
+                : new DnsEndPoint(host, port);
+        }
     }
 
     /// <summary>
@@ -274,5 +282,15 @@ namespace Akka.Streams.Dsl
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
+    }
+
+    public sealed class TcpIdleTimeoutException : TimeoutException
+    {
+        public TcpIdleTimeoutException(string message, TimeSpan duration) : base(message)
+        {
+            Duration = duration;
+        }
+
+        public TimeSpan Duration { get; }
     }
 }

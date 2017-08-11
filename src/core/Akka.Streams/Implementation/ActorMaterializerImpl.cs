@@ -37,6 +37,16 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="props">TBD</param>
         /// <returns>TBD</returns>
@@ -59,21 +69,23 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
-            if (Supervisor is LocalActorRef)
-            {
-                var aref = (LocalActorRef)Supervisor;
-                return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
-            }
-            if (Supervisor is RepointableActorRef)
-            {
-                var aref = (RepointableActorRef)Supervisor;
-                if (aref.IsStarted)
-                    return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+            var localActorRef = Supervisor as LocalActorRef;
+            if (localActorRef != null)
+                return ((ActorCell) localActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher),
+                    isSystemService: false, name: name);
 
-                var timeout = aref.Underlying.System.Settings.CreationTimeout;
-                var f = Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
+
+            var repointableActorRef = Supervisor as RepointableActorRef;
+            if (repointableActorRef != null)
+            {
+                if (repointableActorRef.IsStarted)
+                    return ((ActorCell)repointableActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+
+                var timeout = repointableActorRef.Underlying.System.Settings.CreationTimeout;
+                var f = repointableActorRef.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
                 return f.Result;
             }
+
             throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
         }
     }
@@ -268,7 +280,7 @@ namespace Akka.Streams.Implementation
 
         private string CreateFlowName() => _flowNames.Next();
 
-        private Attributes InitialAttributes =>
+        private Attributes DefaultInitialAttributes =>
             Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
                 .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
                 .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
@@ -282,15 +294,18 @@ namespace Akka.Streams.Implementation
         {
             return attributes.AttributeList.Aggregate(Settings, (settings, attribute) =>
             {
-                if (attribute is Attributes.InputBuffer)
-                {
-                    var inputBuffer = (Attributes.InputBuffer)attribute;
-                    return settings.WithInputBuffer(inputBuffer.Initial, inputBuffer.Max);
-                }
-                if (attribute is ActorAttributes.Dispatcher)
-                    return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
-                if (attribute is ActorAttributes.SupervisionStrategy)
-                    return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
+                var buffer = attribute as Attributes.InputBuffer;
+                if (buffer != null)
+                    return settings.WithInputBuffer(buffer.Initial, buffer.Max);
+
+                var dispatcher = attribute as ActorAttributes.Dispatcher;
+                if (dispatcher != null)
+                    return settings.WithDispatcher(dispatcher.Name);
+                
+                var strategy = attribute as ActorAttributes.SupervisionStrategy;
+                if (strategy != null)
+                    return settings.WithSupervisionStrategy(strategy.Decider);
+
                 return settings;
             });
         }
@@ -320,7 +335,8 @@ namespace Akka.Streams.Implementation
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null);
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null,
+            DefaultInitialAttributes);
 
         /// <summary>
         /// TBD
@@ -328,9 +344,30 @@ namespace Akka.Streams.Implementation
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <param name="subFlowFuser">TBD</param>
+        /// <returns>TBD</returns>
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser) 
+            => Materialize(runnable, subFlowFuser, DefaultInitialAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
+            Materialize(runnable, null, initialAttributes);
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
         /// <exception cref="IllegalStateException">TBD</exception>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes)
         {
             var runnableGraph = _settings.IsAutoFusing
                 ? Fusing.Fusing.Aggressive(runnable)
@@ -342,17 +379,25 @@ namespace Akka.Streams.Implementation
             if (StreamLayout.IsDebug)
                 StreamLayout.Validate(runnableGraph.Module);
 
-            var session = new ActorMaterializerSession(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
+            var session = new ActorMaterializerSession(this, runnableGraph.Module, initialAttributes, subFlowFuser);
 
             var matVal = session.Materialize();
             return (TMat) matVal;
         }
 
-        private readonly Lazy<MessageDispatcher> _executionContext;
+        /// <summary>
+        /// Creates a new logging adapter.
+        /// </summary>
+        /// <param name="logSource">The source that produces the log events.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        public override ILoggingAdapter MakeLogger(object logSource) => Logging.GetLogger(System, logSource);
+
         /// <summary>
         /// TBD
         /// </summary>
         public override MessageDispatcher ExecutionContext => _executionContext.Value;
+
+        private readonly Lazy<MessageDispatcher> _executionContext;
 
         /// <summary>
         /// TBD
@@ -401,6 +446,16 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
             => _delegateMaterializer.Materialize(runnable, _registerShell);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
+            _delegateMaterializer.Materialize(runnable, _registerShell, initialAttributes);
 
         /// <summary>
         /// TBD
@@ -469,6 +524,7 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public readonly Props Props;
+
             /// <summary>
             /// TBD
             /// </summary>

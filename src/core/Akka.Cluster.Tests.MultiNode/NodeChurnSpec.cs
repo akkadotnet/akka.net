@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeChurnSpec(NodeChurnConfig config) : base(config)
+        protected NodeChurnSpec(NodeChurnConfig config) : base(config, typeof(NodeChurnSpec))
         {
             _config = config;
         }

@@ -115,8 +115,8 @@ namespace Akka.Actor
         {
             return m =>
             {
-                Func<Task> wrap = () => asyncHandler(m);
-                ActorTaskScheduler.RunTask(wrap);
+                Task Wrap() => asyncHandler(m);
+                ActorTaskScheduler.RunTask(Wrap);
             };
         }
 

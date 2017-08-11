@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
 
-        protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config)
+        protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config, typeof(JoinSeedNodeSpec))
         {
             _config = config;
         }

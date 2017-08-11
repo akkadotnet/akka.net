@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected MembershipChangeListenerExitingSpec(MembershipChangeListenerExitingConfig config) : base(config)
+        protected MembershipChangeListenerExitingSpec(MembershipChangeListenerExitingConfig config) : base(config, typeof(MembershipChangeListenerExitingSpec))
         {
             _config = config;
         }

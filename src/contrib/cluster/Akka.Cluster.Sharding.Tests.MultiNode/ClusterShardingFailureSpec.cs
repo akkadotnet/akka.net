@@ -15,46 +15,66 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
+using Xunit;
+using Akka.Event;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingFailureSpecConfig : MultiNodeConfig
     {
+        public RoleName Controller { get; private set; }
+
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
         public ClusterShardingFailureSpecConfig()
         {
-            var controller = Role("controller");
-            var first = Role("first");
-            var second = Role("second");
+            Controller = Role("controller");
+            First = Role("first");
+            Second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.roles = [""backend""]
-                akka.persistence.journal.plugin = ""akka.persistence.journal.in-mem""
-                akka.persistence.journal.in-mem {
-                  timeout = 5s
-                  store {
-                    native = off
-                    dir = ""target/journal-ClusterShardingFailureSpec""
-                  }
-                }
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-ClusterShardingFailureSpec""
-                akka.cluster.sharding.coordinator-failure-backoff = 3s
-                akka.cluster.sharding.shard-failure-backoff = 3s
-            ");
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.actor {
+                        serializers {
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }
+                        serialization-bindings {
+                            ""System.Object"" = hyperion
+                        }
+                    }
+
+                    akka.cluster.auto-down-unreachable-after = 0s
+                    akka.cluster.roles = [""backend""]
+                    akka.cluster.sharding {
+                        coordinator-failure-backoff = 3s
+                        shard-failure-backoff = 3s
+                    }
+                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+
+                    akka.persistence.journal.MemoryJournal {
+                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }
+
+                    akka.persistence.journal.memory-journal-shared {
+                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        timeout = 5s
+                    }
+                "))
+                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             TestTransport = true;
         }
     }
 
-    public class ClusterShardingFailureNode1 : ClusterShardingFailureSpec { }
-    public class ClusterShardingFailureNode2 : ClusterShardingFailureSpec { }
-    public class ClusterShardingFailureNode3 : ClusterShardingFailureSpec { }
-
-    public abstract class ClusterShardingFailureSpec : MultiNodeClusterSpec
+    public class ClusterShardingFailureSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -103,60 +123,37 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message =>
+        internal ExtractEntityId extractEntityId = message =>
         {
             if (message is Get) return Tuple.Create((message as Get).Id, message);
             if (message is Add) return Tuple.Create((message as Add).Id, message);
             return null;
         };
 
-        internal ShardResolver extractShardId = message =>
+        internal ExtractShardId extractShardId = message =>
         {
             if (message is Get) return (message as Get).Id[0].ToString();
             if (message is Add) return (message as Add).Id[0].ToString();
             return null;
         };
 
-        private DirectoryInfo[] _storageLocations;
         private Lazy<IActorRef> _region;
-        private RoleName _first;
-        private RoleName _second;
-        private RoleName _controller;
 
-        protected ClusterShardingFailureSpec() : base(new ClusterShardingFailureSpecConfig())
+        private readonly ClusterShardingFailureSpecConfig _config;
+
+        public ClusterShardingFailureSpec()
+            : this(new ClusterShardingFailureSpecConfig())
         {
-            _storageLocations = new[]
-            {
-                "akka.persistence.journal.leveldb.dir",
-                "akka.persistence.journal.leveldb-shared.store.dir",
-                "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
+        }
+
+        protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config)
+            : base(config, typeof(ClusterShardingFailureSpec))
+        {
+            _config = config;
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-
-            _controller = new RoleName("controller");
-            _first = new RoleName("first");
-            _second = new RoleName("second");
         }
 
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
-        }
-
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
-        }
 
         #endregion
 
@@ -164,8 +161,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             RunOn(() =>
             {
-                Cluster.Join(Node(to).Address);
+                Cluster.Join(GetAddress(to));
                 StartSharding();
+
+                AwaitAssert(() =>
+                {
+                    Cluster.State.Members.Select(i => i.UniqueAddress).Should().Contain(Cluster.SelfUniqueAddress);
+                    Cluster.State.Members.Select(i => i.Status).Should().OnlyContain(i => i == MemberStatus.Up);
+                });
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
@@ -176,39 +179,55 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void ClusterSharding_with_flaky_journal_should_setup_shared_journal()
+        [MultiNodeFact]
+        public void ClusterSharding_with_flaky_journal_network_specs()
+        {
+            ClusterSharding_with_flaky_journal_network_should_setup_shared_journal();
+            ClusterSharding_with_flaky_journal_network_should_join_cluster();
+            ClusterSharding_with_flaky_journal_network_should_recover_after_journal_network_failure();
+        }
+
+        public void ClusterSharding_with_flaky_journal_network_should_setup_shared_journal()
         {
             // start the Persistence extension
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Sys.ActorOf(Props.Create<MemoryJournal>(), "store");
-            }, _controller);
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+            }, _config.Controller);
             EnterBarrier("persistence-started");
 
             RunOn(() =>
             {
-                Sys.ActorSelection(Node(_first) / "user" / "store").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>().Subject;
-                //TODO: SharedLeveldbJournal.setStore(sharedStore, system)
-            }, _first, _second);
+                Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
+                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
+                sharedStore.Should().NotBeNull();
+
+                MemoryJournalShared.SetStore(sharedStore, Sys);
+            }, _config.First, _config.Second);
             EnterBarrier("after-1");
+
+            RunOn(() =>
+            {
+                //check persistence running
+                var probe = CreateTestProbe();
+                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
+                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
+                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+            }, _config.First, _config.Second);
+            EnterBarrier("after-1-test");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void ClusterSharding_with_flaky_journal_should_join_cluster()
+        public void ClusterSharding_with_flaky_journal_network_should_join_cluster()
         {
-            ClusterSharding_with_flaky_journal_should_setup_shared_journal();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                Join(_first, _first);
-                Join(_second, _first);
+                Join(_config.First, _config.First);
+                Join(_config.Second, _config.First);
 
                 RunOn(() =>
                 {
@@ -222,23 +241,20 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<Value>(v => v.Id == "20" && v.N == 2);
                     region.Tell(new Get("21"));
                     ExpectMsg<Value>(v => v.Id == "21" && v.N == 3);
-                }, _first);
+                }, _config.First);
                 EnterBarrier("after-2");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void ClusterSharding_with_flaky_journal_should_recover_after_journal_failure()
+        public void ClusterSharding_with_flaky_journal_network_should_recover_after_journal_network_failure()
         {
-            ClusterSharding_with_flaky_journal_should_join_cluster();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 RunOn(() =>
                 {
-                    TestConductor.Blackhole(_controller, _first, ThrottleTransportAdapter.Direction.Both).Wait();
-                    TestConductor.Blackhole(_controller, _second, ThrottleTransportAdapter.Direction.Both).Wait();
-                }, _controller);
+                    TestConductor.Blackhole(_config.Controller, _config.First, ThrottleTransportAdapter.Direction.Both).Wait();
+                    TestConductor.Blackhole(_config.Controller, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                }, _config.Controller);
                 EnterBarrier("journal-backholded");
 
                 RunOn(() =>
@@ -249,14 +265,14 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     region.Tell(new Get("40"), probe.Ref);
                     probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                }, _first);
+                }, _config.First);
                 EnterBarrier("first-delayed");
 
                 RunOn(() =>
                 {
-                    TestConductor.PassThrough(_controller, _first, ThrottleTransportAdapter.Direction.Both).Wait();
-                    TestConductor.PassThrough(_controller, _second, ThrottleTransportAdapter.Direction.Both).Wait();
-                }, _controller);
+                    TestConductor.PassThrough(_config.Controller, _config.First, ThrottleTransportAdapter.Direction.Both).Wait();
+                    TestConductor.PassThrough(_config.Controller, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                }, _config.Controller);
                 EnterBarrier("journal-ok");
 
                 RunOn(() =>
@@ -289,7 +305,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     region.Tell(new Get("40"));
                     ExpectMsg<Value>(v => v.Id == "40" && v.N == 4);
-                }, _first);
+                }, _config.First);
                 EnterBarrier("verified-first");
 
                 RunOn(() =>
@@ -307,7 +323,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<Value>(v => v.Id == "20" && v.N == 4);
                     region.Tell(new Get("30"));
                     ExpectMsg<Value>(v => v.Id == "30" && v.N == 6);
-                }, _second);
+                }, _config.Second);
                 EnterBarrier("after-3");
             });
         }

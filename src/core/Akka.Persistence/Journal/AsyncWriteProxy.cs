@@ -37,6 +37,7 @@ namespace Akka.Persistence.Journal
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -46,6 +47,7 @@ namespace Akka.Persistence.Journal
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
