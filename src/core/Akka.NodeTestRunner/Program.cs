@@ -7,6 +7,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -19,6 +20,7 @@ using Akka.Remote.TestKit;
 using Xunit;
 #if CORECLR
 using System.Runtime.Loader;
+using Microsoft.Extensions.DependencyModel;
 #endif
 
 namespace Akka.NodeTestRunner
@@ -32,7 +34,7 @@ namespace Akka.NodeTestRunner
         private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(5);
         private static IActorRef _logger;
 
-        static int Main(string[] args) 
+        static int Main(string[] args)
         {
             var nodeIndex = CommandLine.GetInt32("multinode.index");
             var nodeRole = CommandLine.GetProperty("multinode.role");
@@ -52,28 +54,13 @@ namespace Akka.NodeTestRunner
 #if CORECLR
             // In NetCore, if the assembly file hasn't been touched, 
             // XunitFrontController would fail loading external assemblies and its dependencies.
+            AssemblyLoadContext.Default.Resolving += (assemblyLoadContext, assemblyName) => DefaultOnResolving(assemblyLoadContext, assemblyName, assemblyFileName);
             var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyFileName);
-            var asms = assembly.GetReferencedAssemblies();
-            var basePath = Path.GetDirectoryName(assemblyFileName);
-            foreach (var asm in asms)
-            {
-                try
-                {
-                    Assembly.Load(new AssemblyName(asm.FullName));
-                }
-                catch (Exception)
-                {
-                    var path = Path.Combine(basePath, asm.Name + ".dll");
-                    try
-                    {
-                        AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.Out.WriteLine($"Failed to load dll: {path}");
-                    }
-                }
-            }
+            DependencyContext.Load(assembly)
+                .CompileLibraries
+                .Where(dep => dep.Name.ToLower()
+                    .Contains(assembly.FullName.Split(new[] { ',' })[0].ToLower()))
+                .Select(dependency => AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(dependency.Name)));
 #endif
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
@@ -162,39 +149,47 @@ namespace Akka.NodeTestRunner
                 Console.WriteLine("Exception thrown while waiting for TCP transport to flush - not all messages may have been logged.");
             }
         }
+
+#if CORECLR
+        private static Assembly DefaultOnResolving(AssemblyLoadContext assemblyLoadContext, AssemblyName assemblyName, string assemblyPath)
+        {
+            string dllName = assemblyName.Name.Split(new[] { ',' })[0] + ".dll";
+            return assemblyLoadContext.LoadFromAssemblyPath(Path.Combine(Path.GetDirectoryName(assemblyPath), dllName));
+        }
+#endif
     }
 
-     class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
-     {
-         public RunnerTcpClient()
-         {
-             Become(WaitingForConnection);
-         }
- 
-         private void WaitingForConnection()
-         {
-             Receive<Tcp.Connected>(connected =>
-             {
-                 Sender.Tell(new Tcp.Register(Self));
-                 Become(Connected(Sender));
-             });
-             Receive<string>(_ => Stash.Stash());
-         }
- 
-         private Receive Connected(IActorRef connection)
-         {
-             Stash.UnstashAll();
- 
-             return message =>
-             {
-                 var bytes = ByteString.FromString(message.ToString());
-                 connection.Tell(Tcp.Write.Create(bytes));
- 
-                 return true;
-             };
-         }
- 
-         public IStash Stash { get; set; }
-     }
+    class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
+    {
+        public RunnerTcpClient()
+        {
+            Become(WaitingForConnection);
+        }
+
+        private void WaitingForConnection()
+        {
+            Receive<Tcp.Connected>(connected =>
+            {
+                Sender.Tell(new Tcp.Register(Self));
+                Become(Connected(Sender));
+            });
+            Receive<string>(_ => Stash.Stash());
+        }
+
+        private Receive Connected(IActorRef connection)
+        {
+            Stash.UnstashAll();
+
+            return message =>
+            {
+                var bytes = ByteString.FromString(message.ToString());
+                connection.Tell(Tcp.Write.Create(bytes));
+
+                return true;
+            };
+        }
+
+        public IStash Stash { get; set; }
+    }
 }
 
