@@ -743,6 +743,14 @@ namespace Akka.Configuration.Hocon
                 sb.Append(Take());
             }
 
+            // Unquoted text does not support assignment character.
+            if (IsAssignment())
+                throw new ConfigurationException(
+                    @"Could not parse an unquoted text value containing assignment character '=' or ':'.
+- If you want to declare a new object, please enclose the item with curly brackets.
+- If you want to declare a URI address, please enclose the item with double quotes."
+                );
+
             return Token.LiteralValue(sb.ToString());
         }
 

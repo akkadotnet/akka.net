@@ -879,6 +879,43 @@ ip = ""::1""
             var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
             Assert.Equal(50, res.TotalMilliseconds);
         }
+
+        [Fact(Skip = "not working yet")]
+        public void Can_substitute_with_concated_string()
+        {
+            var hocon = @"
+    akka.cluster.name = cluster
+    akka.cluster.seed-node = ""akka.tcp://${akka.cluster.name}@127.0.0.1:4053""";
+
+            var config = ConfigurationFactory.ParseString(hocon);
+            var actual = config.GetString("akka.cluster.seed-node");
+            Console.Out.WriteLine($"RESULT:{actual}");
+            Assert.Equal("akka.tcp://cluster@127.0.0.1:4053", actual);
+        }
+
+        [Fact]
+        public void Can_parse_unquoted_string_list()
+        {
+            var hocon = @"hocon-array = [array-value-1, array-value-2]";
+            var config = ConfigurationFactory.ParseString(hocon);
+            var actual = config.GetStringList("hocon-array");
+            Assert.True(actual.Contains("array-value-1"));
+            Assert.True(actual.Contains("array-value-2"));
+        }
+
+        [Fact]
+        public void Should_throw_an_exception_when_parsing_invalid_unquoted_string()
+        {
+            var hocon = @"unquoted-string = akka.tcp://Cluster@127.0.0.1:4053";
+            Assert.Throws<ConfigurationException>(() => { ConfigurationFactory.ParseString(hocon); });
+        }
+        
+        [Fact]
+        public void Should_throw_an_exception_when_parsing_invalid_unquoted_string_inside_array()
+        {
+            var hocon = @"akka.cluster.seed-nodes = [akka.tcp://Cluster@127.0.0.1:4053]";
+            Assert.Throws<ConfigurationException>(() => { ConfigurationFactory.ParseString(hocon); });
+        }
     }
 }
 
