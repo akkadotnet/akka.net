@@ -22,11 +22,16 @@ using Akka.Util;
 
 namespace Akka.Actor.Internal
 {
+    internal interface ISupportSerializationConfigReload
+    {
+        void ReloadSerialization();
+    }
+
     /// <summary>
     /// TBD
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class ActorSystemImpl : ExtendedActorSystem
+    public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
@@ -398,6 +403,11 @@ namespace Akka.Actor.Internal
         private void ConfigureSerialization()
         {
             _serialization = new Serialization.Serialization(this);
+        }
+
+        void ISupportSerializationConfigReload.ReloadSerialization() {
+            if(_serialization != null)
+                ConfigureSerialization();
         }
 
         private void ConfigureMailboxes()

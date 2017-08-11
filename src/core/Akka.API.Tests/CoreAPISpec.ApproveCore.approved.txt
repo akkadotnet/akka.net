@@ -1811,7 +1811,7 @@ namespace Akka.Actor.Internal
         public void UnstashAll() { }
         public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> predicate) { }
     }
-    public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
+    public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem, Akka.Actor.Internal.ISupportSerializationConfigReload
     {
         public ActorSystemImpl(string name) { }
         public ActorSystemImpl(string name, Akka.Configuration.Config config) { }
