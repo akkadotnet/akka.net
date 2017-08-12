@@ -309,7 +309,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.DistributedData.LightningDB.csproj"
                    ++ "src/**/Akka.Persistence.csproj"
                    ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TestKit.csproj"
+                   ++ "src/**/Akka.Persistence.TCK.csproj"
                    ++ "src/**/Akka.Persistence.Query.Sql.csproj"
                    ++ "src/**/Akka.Persistence.Sql.Common.csproj"
                    ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
