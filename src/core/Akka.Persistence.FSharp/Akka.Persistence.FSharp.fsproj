@@ -1,36 +1,94 @@
-﻿<Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
-
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.FSharp</AssemblyTitle>
-    <Description>F# API for persistence actors in Akka.NET</Description>
-    <TargetFrameworks>net45</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;F#;Fsharp;persistence;eventsource</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>86267468-b463-4f3e-b818-7d0357ed0236</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Akka.Persistence.FSharp</RootNamespace>
+    <AssemblyName>Akka.Persistence.FSharp</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Name>Akka.Persistence.FSharp</Name>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <Tailcalls>false</Tailcalls>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <Choose>
+    <When Condition="'$(VisualStudioVersion)' == '11.0'">
+      <PropertyGroup Condition=" '$(FSharpTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets') ">
+        <FSharpTargetsPath>$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets</FSharpTargetsPath>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup Condition=" '$(FSharpTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\FSharp\Microsoft.FSharp.Targets') ">
+        <FSharpTargetsPath>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\FSharp\Microsoft.FSharp.Targets</FSharpTargetsPath>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+  <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
+    <Content Include="packages.config" />
     <Compile Include="FsApi.fs" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj" />
-    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.1.0" />
-    <PackageReference Include="FSharp.NET.Sdk" Version="1.0.1" PrivateAssets="All" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <Reference Include="mscorlib" />
+    <Reference Include="FSharp.Core">
+      <Name>FSharp.Core</Name>
+      <AssemblyName>FSharp.Core.dll</AssemblyName>
+      <HintPath>$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\$(TargetFSharpCoreVersion)\FSharp.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.ValueTuple">
+      <HintPath>..\..\..\packages\System.ValueTuple.4.3.1\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
+      <Name>Akka.FSharp</Name>
+      <Project>{8c8e841c-21d2-4c35-93e7-b59f7ac81699}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
+      <Name>Akka.Persistence</Name>
+      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Name>Akka</Name>
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
 </Project>
