@@ -141,7 +141,8 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
             member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
-            member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
+            member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria)
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith(aref, msg) }
             
     member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
@@ -275,7 +276,8 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
             member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
-            member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
+            member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria)
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith(aref, msg) }
       
     member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
@@ -353,7 +355,8 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.ConfirmDelivery id = this.ConfirmDelivery(id)
             member __.GetDeliverySnapshot() = this.GetDeliverySnapshot()
             member __.SetDeliverySnapshot snap = this.SetDeliverySnapshot snap
-            member __.UnconfirmedCount() = this.UnconfirmedCount }
+            member __.UnconfirmedCount() = this.UnconfirmedCount
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith(aref, msg) }
       
     member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg

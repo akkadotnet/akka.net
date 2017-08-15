@@ -10,7 +10,7 @@ namespace Akka.FSharp
 open Akka.Actor
 open System
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Linq.QuotationEvaluation
+open FSharp.Quotations.Evaluator
 
 module Serialization = 
     open MBrace.FsPickler
@@ -282,9 +282,10 @@ module Actors =
                         member __.Defer fn = deferables <- fn::deferables 
                         member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
-                        member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
+                        member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll()
+                        member __.WatchWith(aref:IActorRef, msg) = context.WatchWith(aref, msg) }
         
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile ())
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
@@ -294,7 +295,7 @@ module Actors =
                 | :? 'Message as m -> state <- f m
                 | _ -> x.Unhandled msg
             | Return _ -> x.PostStop()
-        override x.PostStop() =
+        override __.PostStop() =
             base.PostStop ()
             List.iter (fun fn -> fn()) deferables
             
@@ -411,7 +412,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
     member __.Expr = expr
-    member private this.Compiled = lazy this.Expr.Compile()()
+    member private this.Compiled = lazy this.Expr.Compile()
     interface IDecider with
         member this.Decide (e: exn): Directive = this.Compiled.Value (e)
     interface ISurrogated with
