@@ -5,14 +5,14 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>8c8e841c-21d2-4c35-93e7-b59f7ac81699</ProjectGuid>
+    <ProjectGuid>64b26dc3-d065-438f-9f3b-51a2794d380d</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Akka.FSharp</RootNamespace>
-    <AssemblyName>Akka.FSharp</AssemblyName>
+    <RootNamespace>Akka.FSharp.Tests</RootNamespace>
+    <AssemblyName>Akka.FSharp.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>Akka.FSharp</Name>
+    <Name>Akka.FSharp.Tests</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,6 +34,10 @@
     <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+  <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
   </PropertyGroup>
   <Choose>
@@ -51,29 +55,50 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Content Include="packages.config" />
-    <Compile Include="FsApi.fs" />
-    <Compile Include="Schedulers.fs" />
-    <None Include="README.md" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="ApiTests.fs" />
+    <Compile Include="ComputationExpression.fs" />
+    <Compile Include="InfrastructureTests.fs" />
+    <Content Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
       <HintPath>..\..\packages\FSharp.Core.4.2.2\lib\net45\FSharp.Core.dll</HintPath>
     </Reference>
-    <Reference Include="FSharp.Quotations.Evaluator">
-      <HintPath>..\..\packages\FSharp.Quotations.Evaluator.1.0.7\lib\net40\FSharp.Quotations.Evaluator.dll</HintPath>
-    </Reference>
-    <Reference Include="FsPickler">
-      <HintPath>..\..\packages\FsPickler.3.3.0\lib\net45\FsPickler.dll</HintPath>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
+      <HintPath>..\..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+    </Reference>
     <Reference Include="System.ValueTuple">
       <HintPath>..\..\..\packages\System.ValueTuple.4.3.1\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="xunit.abstractions">
+      <HintPath>..\..\packages\xunit.abstractions.2.0.1\lib\net35\xunit.abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.assert">
+      <HintPath>..\..\packages\xunit.assert.2.2.0\lib\netstandard1.1\xunit.assert.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.core">
+      <HintPath>..\..\packages\xunit.extensibility.core.2.2.0\lib\netstandard1.1\xunit.core.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.execution.dotnet">
+      <HintPath>..\..\packages\xunit.extensibility.execution.2.2.0\lib\netstandard1.1\xunit.execution.dotnet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
+      <Name>Akka.FSharp</Name>
+      <Project>{8c8e841c-21d2-4c35-93e7-b59f7ac81699}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
