@@ -319,6 +319,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.Streams.csproj"
                    ++ "src/**/Akka.Streams.TestKit.csproj"
                    ++ "src/**/Akka.TestKit.csproj"
+                   ++ "src/**/Akka.TestKit.Xunit.csproj"
                    ++ "src/**/Akka.TestKit.Xunit2.csproj"
                    ++ "src/**/Akka.DI.Core.csproj"
                    ++ "src/**/Akka.DI.TestKit.csproj"
