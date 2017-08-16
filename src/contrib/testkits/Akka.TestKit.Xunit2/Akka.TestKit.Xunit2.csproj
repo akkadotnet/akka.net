@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.TestKit.Xunit2</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
