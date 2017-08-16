@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Query</AssemblyTitle>
     <Description>Stream based query interface for persistence journal plugins for Akka.NET</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;query;stream</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
