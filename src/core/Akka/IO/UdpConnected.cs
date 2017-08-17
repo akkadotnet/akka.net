@@ -158,9 +158,9 @@ namespace Akka.IO
             /// <param name="payload">TBD</param>
             /// <param name="ack">TBD</param>
             /// <exception cref="ArgumentNullException">TBD</exception>
-            public Send(IEnumerator<ByteBuffer> payload, object ack)
+            public Send(ByteString payload, object ack)
             {
-                if(ack == null)
+                if (ack == null)
                     throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
 
                 Payload = payload;
@@ -170,7 +170,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerator<ByteBuffer> Payload { get; }
+            public ByteString Payload { get; }
             /// <summary>
             /// TBD
             /// </summary>
@@ -186,10 +186,7 @@ namespace Akka.IO
             /// </summary>
             /// <param name="data">TBD</param>
             /// <returns>TBD</returns>
-            public static Send Create(ByteString data)
-            {
-                return new Send(data.Buffers.GetEnumerator(), NoAck.Instance);
-            }
+            public static Send Create(ByteString data) => new Send(data, NoAck.Instance);
         }
 
         /// <summary>

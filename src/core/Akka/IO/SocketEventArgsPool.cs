@@ -80,4 +80,28 @@ namespace Akka.IO
             return e;
         }
     }
+
+    internal static class SocketAsyncEventArgsExtensions
+    {
+        public static void SetBuffer(this SocketAsyncEventArgs args, ByteString data)
+        {
+            if (data.IsCompact)
+            {
+                var buffer = data.Buffers[0];
+                if (args.BufferList != null)
+                {
+                    // BufferList property setter is not simple member association operation, 
+                    // but the getter is. Therefore we first check if we need to clear buffer list
+                    // and only do so if necessary.
+                    args.BufferList = null;
+                }
+                args.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            }
+            else
+            {
+                args.SetBuffer(null, 0, 0);
+                args.BufferList = data.Buffers;
+            }
+        }
+    }
 }

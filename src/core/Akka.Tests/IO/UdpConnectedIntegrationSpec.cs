@@ -82,7 +82,7 @@ namespace Akka.Tests.IO
             var serverAddress = _addresses[0];
             var clientAddress = _addresses[1];
             var server = BindUdp(serverAddress, TestActor);
-            var data1 = ByteString.FromString("To infinity and beyond!");
+            var data1 = ByteString.FromString("To infinity") + ByteString.FromString(" and beyond!");
             var data2 = ByteString.FromString("All your datagram belong to us");
             ConnectUdp(clientAddress, serverAddress, TestActor).Tell(UdpConnected.Send.Create(data1));
 

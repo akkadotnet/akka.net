@@ -126,7 +126,7 @@ namespace Akka.IO
         /// must be set to an instance of this class. The token contained within can be used
         /// to recognize which write failed when receiving a <see cref="CommandFailed"/> message.
         /// </summary>
-        public class NoAck : Event
+        public sealed class NoAck : Event
         {
             /// <summary>
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
@@ -177,24 +177,21 @@ namespace Akka.IO
             /// <param name="target">TBD</param>
             /// <param name="ack">TBD</param>
             /// <exception cref="ArgumentNullException">TBD</exception>
-            public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
+            public Send(ByteString payload, EndPoint target, Event ack)
             {
                 if (ack == null)
                     throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
                 Payload = payload;
-                HasData = Payload.MoveNext();
                 Target = target;
                 Ack = ack;
             }
 
-            internal bool HasData { get; set; }
-
-            internal Send Advance() => new Send(Payload, Target, Ack);
+            internal bool HasData => !Payload.IsEmpty;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerator<ByteBuffer> Payload { get; }
+            public ByteString Payload { get; }
 
             /// <summary>
             /// TBD
@@ -219,10 +216,7 @@ namespace Akka.IO
             /// <param name="data">TBD</param>
             /// <param name="target">TBD</param>
             /// <returns>TBD</returns>
-            public static Send Create(ByteString data, EndPoint target)
-            {
-                return new Send(data.Buffers.GetEnumerator(), target, NoAck.Instance);
-            }
+            public static Send Create(ByteString data, EndPoint target) => new Send(data, target, NoAck.Instance);
         }
 
         /// <summary>
@@ -268,7 +262,7 @@ namespace Akka.IO
         /// message in order to close the listening socket. The recipient will reply
         /// with an <see cref="Unbound"/> message.
         /// </summary>
-        public class Unbind : Command
+        public sealed class Unbind : Command
         {
             /// <summary>
             /// TBD
@@ -288,7 +282,7 @@ namespace Akka.IO
         /// The "simple sender" will not stop itself, you will have to send it a <see cref="Akka.Actor.PoisonPill"/>
         /// when you want to close the socket.
         /// </summary>
-        public class SimpleSender : Command
+        public sealed class SimpleSender : Command
         {
             /// <summary>
             /// TBD
@@ -316,7 +310,7 @@ namespace Akka.IO
         /// buffer runs full then subsequent datagrams will be silently discarded.
         /// Re-enable reading from the socket using the `ResumeReading` command.
         /// </summary>
-        public class SuspendReading : Command
+        public sealed class SuspendReading : Command
         {
             /// <summary>
             /// TBD
@@ -331,7 +325,7 @@ namespace Akka.IO
         ///  This message must be sent to the listener actor to re-enable reading from
         ///  the socket after a `SuspendReading` command.
         /// </summary>
-        public class ResumeReading : Command
+        public sealed class ResumeReading : Command
         {
             /// <summary>
             /// TBD
@@ -438,7 +432,7 @@ namespace Akka.IO
         /// This message is sent by the listener actor in response to an `Unbind` command
         /// after the socket has been closed.
         /// </summary>
-        public class Unbound
+        public sealed class Unbound
         {
             /// <summary>
             /// TBD
@@ -450,7 +444,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public class SO : Inet.SoForwarders
+        public sealed class SO : Inet.SoForwarders
         {
             /// <summary>
             /// <see cref="Akka.IO.Inet.SocketOption"/> to set the SO_BROADCAST option

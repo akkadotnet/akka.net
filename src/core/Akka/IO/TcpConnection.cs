@@ -833,7 +833,7 @@ namespace Akka.IO
                     {
                         connection.SetStatus(ConnectionStatus.Sending);
 
-                        SetBuffer(data);
+                        sendArgs.SetBuffer(data);
 
                         if (!connection.Socket.SendAsync(sendArgs))
                             self.Tell(SocketSent.Instance);
@@ -847,27 +847,6 @@ namespace Akka.IO
                 {
                     connection.HandleError(info.Handler, e);
                     return this;
-                }
-            }
-
-            private void SetBuffer(ByteString data)
-            {
-                if (data.IsCompact)
-                {
-                    var buffer = data.Buffers[0];
-                    if (sendArgs.BufferList != null)
-                    {
-                        // BufferList property setter is not simple member association operation, 
-                        // but the getter is. Therefore we first check if we need to clear buffer list
-                        // and only do so if necessary.
-                        sendArgs.BufferList = null;
-                    }
-                    sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-                }
-                else
-                {
-                    sendArgs.SetBuffer(null, 0, 0);
-                    sendArgs.BufferList = data.Buffers;
                 }
             }
 
