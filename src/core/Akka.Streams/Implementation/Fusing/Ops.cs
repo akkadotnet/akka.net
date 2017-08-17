@@ -256,6 +256,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         public TakeWhile(Predicate<T> predicate, bool inclusive)
         {
             _inclusive = inclusive;

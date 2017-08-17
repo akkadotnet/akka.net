@@ -67,7 +67,8 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="m">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {

@@ -240,15 +240,15 @@ namespace Akka.DI.TestKit
         protected abstract IDependencyResolver NewDependencyResolver(object diContainer, ActorSystem system);
 
         /// <summary>
-        /// Create a binding for type <typeparam name="T"/> on the provided DI container.
+        /// Create a binding for type <typeparamref name="T"/> on the provided DI container.
         /// </summary>
         /// <typeparam name="T">The type we're binding onto the DI container.</typeparam>
         /// <param name="diContainer">The DI container.</param>
-        /// <param name="generator">A generator function that yields new objects of type <typeparam name="T"/>.</param>
+        /// <param name="generator">A generator function that yields new objects of type <typeparamref name="T"/>.</param>
         protected abstract void Bind<T>(object diContainer, Func<T> generator);
 
         /// <summary>
-        /// Create a binding for type <typeparam name="T"/> on the provided DI container.
+        /// Create a binding for type <typeparamref name="T"/> on the provided DI container.
         /// 
         /// Used for DI frameworks that require the DI target to be registered as well
         /// as the injected components.

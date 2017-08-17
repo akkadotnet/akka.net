@@ -430,8 +430,8 @@ namespace Akka.Remote.Transport
     ///     currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior" /> which
     ///     can not be popped out.
     /// </summary>
-    /// <typeparam name="TIn"></typeparam>
-    /// <typeparam name="TOut"></typeparam">
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class SwitchableLoggedBehavior<TIn, TOut>
     {
         private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack =
