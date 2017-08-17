@@ -443,6 +443,8 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="unhandled">TBD</param>
         /// <param name="typeName">TBD</param>
         /// <param name="shardId">TBD</param>
         /// <param name="entityProps">TBD</param>

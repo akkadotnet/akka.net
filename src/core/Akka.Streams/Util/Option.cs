@@ -43,7 +43,7 @@ namespace Akka.Streams.Util
         public T Value { get; }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="T"/> to <see cref="Option{T}"/>.
+        /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="Option{T}"/>.
         /// </summary>
         /// <param name="value">The object to convert</param>
         /// <returns>The result of the conversion.</returns>

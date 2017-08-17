@@ -51,14 +51,14 @@ namespace Akka.Actor
         private TimeSpan _shutdownTimeout;
 
         /// <summary>
-        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter"/> instead.
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter)"/> instead.
         /// </summary>
         /// <param name="sys">N/A</param>
         [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead. [1.1.2]")]
         public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
 
         /// <summary>
-        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter"/> instead.
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter)"/> instead.
         /// </summary>
         /// <param name="config">N/A</param>
         /// <param name="log">N/A</param>
