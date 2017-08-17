@@ -70,7 +70,8 @@ namespace Akka.Serialization
                     preserveObjectReferences: settings.PreserveObjectReferences,
                     versionTolerance: settings.VersionTolerance,
                     surrogates: new[] { akkaSurrogate },
-                    knownTypes: provider.GetKnownTypes()));
+                    knownTypes: provider.GetKnownTypes(), 
+                    ignoreISerializable:true));
         }
 
         /// <summary>
