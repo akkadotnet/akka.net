@@ -96,6 +96,7 @@ namespace Akka.Remote.Transport.Helios
         /// </summary>
         /// <param name="system">TBD</param>
         /// <param name="config">TBD</param>
+        /// <param name="fallbackConfigPath">TBD</param>
         protected HeliosTransport(ActorSystem system, Config config, string fallbackConfigPath)
         {
             Config = config;

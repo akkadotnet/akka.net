@@ -136,6 +136,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <param name="flow">TBD</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static Source<TOut, TMat> SelectError<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -378,10 +379,13 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
+        /// <para>
         /// Backpressures when downstream backpressures
+        /// </para>
         /// <para>
         /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
         /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>

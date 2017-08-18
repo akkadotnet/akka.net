@@ -102,8 +102,8 @@ namespace Akka.TestKit
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
         /// <param name="system">The actor system this test will use. Can be null.</param>
-        /// <param name="config">The configuration that <see cref="system"/> will use if it's null.</param>
-        /// <param name="actorSystemName">The name that <see cref="system"/> will use if it's null.</param>
+        /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
         /// <param name="testActorName">The name of the test actor. Can be null.</param>
         protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
         {

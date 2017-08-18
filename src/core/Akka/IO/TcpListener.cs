@@ -32,9 +32,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="selectorRouter">TBD</param>
         /// <param name="tcp">TBD</param>
-        /// <param name="channelRegistry">TBD</param>
         /// <param name="bindCommander">TBD</param>
         /// <param name="bind">TBD</param>
         public TcpListener(TcpExt tcp, IActorRef bindCommander,
