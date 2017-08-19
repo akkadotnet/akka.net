@@ -23,11 +23,40 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : IEquatable<Address>, ISurrogated
+    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated
 #if CLONEABLE
         , ICloneable
 #endif
     {
+        #region comparer
+
+        private sealed class AddressComparer : IComparer<Address>
+        {
+            public int Compare(Address x, Address y)
+            {
+                if (x == null) throw new ArgumentNullException(nameof(x));
+                if (y == null) throw new ArgumentNullException(nameof(y));
+
+                if (ReferenceEquals(x, y)) return 0;
+
+                var result = string.CompareOrdinal(x.Protocol, y.Protocol);
+                if (result != 0) return result;
+                result = string.CompareOrdinal(x.System, y.System);
+                if (result != 0) return result;
+                result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                if (result != 0) return result;
+                result = Nullable.Compare(x.Port, x.Port);
+                return result;
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// An <see cref="Address"/> comparer. Compares two addresses by their protocol, name, host and port.
+        /// </summary>
+        public static readonly IComparer<Address> Comparer = new AddressComparer();
+
         /// <summary>
         /// Pseudo address for all systems
         /// </summary>
@@ -50,7 +79,7 @@ namespace Akka.Actor
         {
             _protocol = protocol;
             _system = system;
-            _host = host != null ? host.ToLowerInvariant() : null;
+            _host = host?.ToLowerInvariant();
             _port = port;
             _toString = CreateLazyToString();
         }
@@ -79,10 +108,7 @@ namespace Akka.Actor
         /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
         ///  hosts. See also <see cref="HasGlobalScope"/>
         /// </summary>
-        public bool HasLocalScope
-        {
-            get { return string.IsNullOrEmpty(Host); }
-        }
+        public bool HasLocalScope => string.IsNullOrEmpty(Host);
 
         /// <summary>
         /// Returns true if this Address is usable globally. Unlike locally defined addresses <see cref="HasLocalScope"/>
@@ -104,6 +130,16 @@ namespace Akka.Actor
 
                 return sb.ToString();
             }, true);
+        }
+
+        /// <summary>
+        /// Compares current address with provided one by their protocol, name, host and port.
+        /// </summary>
+        /// <param name="other">Other address to compare with.</param>
+        /// <returns></returns>
+        public int CompareTo(Address other)
+        {
+            return Comparer.Compare(this, other);
         }
 
         /// <inheritdoc/>
@@ -131,6 +167,13 @@ namespace Akka.Actor
                 hashCode = (hashCode * 397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
                 return hashCode;
             }
+        }
+
+        int IComparable.CompareTo(object obj)
+        {
+            if (obj is Address address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(Address)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
         }
 
         /// <summary>

@@ -364,9 +364,10 @@ namespace Akka.Actor
             where T :  class, Akka.Actor.IExtension
             where TI : Akka.Actor.IExtensionId { }
     }
-    public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IEquatable<Akka.Actor.Address>
+    public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
     {
         public static readonly Akka.Actor.Address AllSystems;
+        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> Comparer;
         public Address(string protocol, string system, string host = null, System.Nullable<int> port = null) { }
         public bool HasGlobalScope { get; }
         public bool HasLocalScope { get; }
@@ -375,6 +376,7 @@ namespace Akka.Actor
         public string Protocol { get; }
         public string System { get; }
         public object Clone() { }
+        public int CompareTo(Akka.Actor.Address other) { }
         public bool Equals(Akka.Actor.Address other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

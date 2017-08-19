@@ -420,7 +420,7 @@ namespace Akka.Cluster
     /// The `uid` is needed to be able to distinguish different
     /// incarnations of a member with same hostname and port.
     /// </summary>
-    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>
+    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>, IComparable
     {
         /// <summary>
         /// The bound listening address for Akka.Remote.
@@ -468,16 +468,21 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="that">TBD</param>
+        /// <param name="uniqueAddress">TBD</param>
         /// <returns>TBD</returns>
-        public int CompareTo(UniqueAddress that)
+        public int CompareTo(UniqueAddress uniqueAddress)
         {
-            var result = Member.AddressOrdering.Compare(Address, that.Address);
-            if (result == 0)
-                if (Uid < that.Uid) return -1;
-                else if (Uid == that.Uid) return 0;
-                else return 1;
-            return result;
+            if (uniqueAddress == null) throw new ArgumentNullException(nameof(uniqueAddress));
+
+            var result = Address.Comparer.Compare(Address, uniqueAddress.Address);
+            return result == 0 ? Uid.CompareTo(uniqueAddress.Uid) : result;
+        }
+
+        int IComparable.CompareTo(object obj)
+        {
+            if (obj is UniqueAddress address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(UniqueAddress)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
         }
 
         /// <inheritdoc cref="object.ToString"/>
