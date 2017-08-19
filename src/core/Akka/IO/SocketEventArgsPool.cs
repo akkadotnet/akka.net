@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.IO.Buffers;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -99,8 +100,18 @@ namespace Akka.IO
             }
             else
             {
-                args.SetBuffer(null, 0, 0);
-                args.BufferList = data.Buffers;
+                if (RuntimeDetector.IsMono)
+                {
+                    // Mono doesn't support BufferList - falback to compacting ByteString
+                    var compacted = data.Compact();
+                    var buffer = compacted.Buffers[0];
+                    args.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+                }
+                else
+                {
+                    args.SetBuffer(null, 0, 0);
+                    args.BufferList = data.Buffers;
+                }
             }
         }
     }

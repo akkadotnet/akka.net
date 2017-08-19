@@ -170,40 +170,47 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
+            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
+            public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
+                : this(ByteString.FromBuffers(payload), target, ack)
+            {
+            }
+
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
+            /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
+            /// object.
             /// </summary>
-            /// <param name="payload">TBD</param>
-            /// <param name="target">TBD</param>
-            /// <param name="ack">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="payload">Binary payload to be send.</param>
+            /// <param name="target">An endpoint of the message receiver.</param>
+            /// <param name="ack">Acknowledgement send back to the sender, once <paramref name="payload"/> has been send through a socket.</param>
             public Send(ByteString payload, EndPoint target, Event ack)
             {
-                if (ack == null)
-                    throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
                 Payload = payload;
                 Target = target;
-                Ack = ack;
+                Ack = ack ?? throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
             }
 
             internal bool HasData => !Payload.IsEmpty;
 
             /// <summary>
-            /// TBD
+            /// A binary payload to be send to the <see cref="Target"/>. It must fit into a single UDP datagram.
             /// </summary>
             public ByteString Payload { get; }
 
             /// <summary>
-            /// TBD
+            /// An endpoint, to which current <see cref="Payload"/> will be send.
             /// </summary>
             public EndPoint Target { get; }
+
             /// <summary>
-            /// TBD
+            /// Acknowledgement send back to the sender, once <see cref="Payload"/> has been send through a socket.
+            /// If it's <see cref="NoAck"/>, then no acknowledgement will be send.
             /// </summary>
             public Event Ack { get; }
 
             /// <summary>
-            /// TBD
+            /// Flag determining is a message sender is interested in receving send acknowledgement.
             /// </summary>
             public bool WantsAck => !(Ack is NoAck);
 
@@ -211,10 +218,11 @@ namespace Akka.IO
                 $"Send(to: {Target}, ack: {Ack})";
 
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
+            /// Once send completes, this request will not be acknowledged on by the sender side.
             /// </summary>
-            /// <param name="data">TBD</param>
-            /// <param name="target">TBD</param>
+            /// <param name="data">Binary payload to be send.</param>
+            /// <param name="target">An endpoint of the message receiver.</param>
             /// <returns>TBD</returns>
             public static Send Create(ByteString data, EndPoint target) => new Send(data, target, NoAck.Instance);
         }

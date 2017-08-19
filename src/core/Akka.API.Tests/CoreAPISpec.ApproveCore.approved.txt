@@ -3530,6 +3530,9 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.Udp.Command
         {
+            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
+                "eString, EndPoint, Event)` instead.")]
+            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Send(Akka.IO.ByteString payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Akka.IO.Udp.Event Ack { get; }
             public Akka.IO.ByteString Payload { get; }
@@ -3631,11 +3634,14 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.UdpConnected.Command
         {
+            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
+                "eString, EndPoint, Event)` instead.")]
+            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, Akka.IO.UdpConnected.Event ack) { }
             public Send(Akka.IO.ByteString payload, object ack) { }
             public object Ack { get; }
             public Akka.IO.ByteString Payload { get; }
             public bool WantsAck { get; }
-            public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString data) { }
+            public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString payload) { }
         }
         public class SuspendReading : Akka.IO.UdpConnected.Command
         {
