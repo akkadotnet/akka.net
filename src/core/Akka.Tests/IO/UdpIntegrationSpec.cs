@@ -28,7 +28,8 @@ namespace Akka.Tests.IO
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024
-                    akka.loglevel = INFO", output)
+                    #akka.io.udp.trace-logging = on
+                    akka.loglevel = DEBUG", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
         }
@@ -55,6 +56,20 @@ namespace Akka.Tests.IO
             var serverAddress = _addresses[0];
             var server = BindUdp(serverAddress, TestActor);
             var data = ByteString.FromString("To infinity and beyond!");
+            SimpleSender().Tell(Udp.Send.Create(data, serverAddress));
+
+            ExpectMsg<Udp.Received>(x => x.Data.ShouldBe(data));
+        }
+
+        [Fact]
+        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_multipart_ByteString_without_binding()
+        {
+            var serverAddress = _addresses[0];
+            var server = BindUdp(serverAddress, TestActor);
+            var data = ByteString.FromString("This ") 
+                + ByteString.FromString("is ") 
+                + ByteString.FromString("multiline ") 
+                + ByteString.FromString(" string!");
             SimpleSender().Tell(Udp.Send.Create(data, serverAddress));
 
             ExpectMsg<Udp.Received>(x => x.Data.ShouldBe(data));

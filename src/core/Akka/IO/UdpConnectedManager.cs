@@ -27,33 +27,34 @@ namespace Akka.IO
             _udpConn = udpConn;
             Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
-        
+
         protected override bool Receive(object message)
         {
-            var c = message as UdpConnected.Connect;
-            if (c != null)
+            switch (message)
             {
-                var commander = Sender;
-                Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, c)));
-                return true;
-            }
-            var dl = message as DeadLetter;
-            if (dl != null)
-            {
-                var completed = dl.Message as UdpConnected.SocketCompleted;
-                if (completed != null)
-                {
-                    var e = completed.EventArgs;
-                    if (e.Buffer != null)
+                case UdpConnected.Connect connect:
                     {
-                        var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
-                        _udpConn.BufferPool.Release(buffer);
+                        var commander = Sender;
+                        Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, connect)));
+                        return true;
                     }
-                    _udpConn.SocketEventArgsPool.Release(e);
-                }
-                return true;
+                case DeadLetter dl when dl.Message is UdpConnected.SocketCompleted completed:
+                    {
+                        var e = completed.EventArgs;
+                        if (e.Buffer != null)
+                        {
+                            // no need to check for e.BufferList: release buffer only 
+                            // on complete reads, which are always mono-buffered 
+                            var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
+                            _udpConn.BufferPool.Release(buffer);
+                        }
+                        _udpConn.SocketEventArgsPool.Release(e);
+                        return true;
+                    }
+                case DeadLetter _: return true;
+                default: throw new ArgumentException($"The supplied message type [{message.GetType()}] is invalid. Only Connect messages are supported.", nameof(message));
+
             }
-            throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(message));
         }
 
     }
