@@ -196,7 +196,7 @@ namespace Akka.Cluster
         Akka.Actor.Props DowningActorProps { get; }
         System.TimeSpan DownRemovalMargin { get; }
     }
-    public class Member : System.IComparable<Akka.Cluster.Member>
+    public class Member : System.IComparable, System.IComparable<Akka.Cluster.Member>
     {
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
         public Akka.Actor.Address Address { get; }
