@@ -108,9 +108,9 @@ Similarly we can have an actor that behaves in a similar fashion for learning wh
 ## Configuration
 The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can be configured with the following properties:
 
-```json
-[!include[reference config](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
-```
+[!code-json[ConfigReference](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
+
+
 
 The 'akka.cluster.client' configuration properties are read by the `ClusterClientSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterClientSettings` or create it from another config section with the same layout in the reference config. `ClusterClientSettings` is a parameter to the `ClusterClient.Props()` factory method, i.e. each client can be configured with different settings if needed.
 
