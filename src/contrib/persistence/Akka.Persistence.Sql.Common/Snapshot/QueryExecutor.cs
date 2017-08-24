@@ -316,9 +316,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="command">TBD</param>
         protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
         {
-            var serializer = Serialization.FindSerializerForType(typeof(Serialization.Snapshot), Configuration.DefaultSerializer);
+            var snapshotType = snapshot.GetType();
+            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
 
-            var binary = serializer.ToBinary(new Serialization.Snapshot(snapshot));
+            var binary = serializer.ToBinary(snapshot);
             AddParameter(command, "@Payload", DbType.Binary, binary);
         }
 
@@ -527,12 +528,13 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <returns>TBD</returns>
         protected object GetSnapshot(DbDataReader reader)
         {
+            var type = Type.GetType(reader.GetString(3), true);
+            var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
             var binary = (byte[])reader[4];
 
-            var deserializer = Serialization.FindSerializerForType(typeof(Serialization.Snapshot), Configuration.DefaultSerializer);
-            var snapshot = (Serialization.Snapshot) deserializer.FromBinary(binary, typeof(Serialization.Snapshot));
+            var obj = serializer.FromBinary(binary, type);
 
-            return snapshot.Data;
+            return obj;
         }
     }
 }
