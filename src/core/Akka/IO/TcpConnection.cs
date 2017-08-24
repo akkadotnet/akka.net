@@ -799,26 +799,27 @@ namespace Akka.IO
 
         private sealed class PendingBufferWrite : PendingWrite
         {
-            private readonly TcpConnection connection;
-            private readonly IActorRef self;
-            private readonly ByteString data;
-            private readonly WriteCommand tail;
-            private readonly SocketAsyncEventArgs sendArgs;
+            private readonly TcpConnection _connection;
+            private readonly IActorRef _self;
+            private readonly ByteString _remainingData;
+            private readonly ByteString _buffer;
+            private readonly WriteCommand _tail;
+            private readonly SocketAsyncEventArgs _sendArgs;
 
             public PendingBufferWrite(
                 TcpConnection connection,
                 SocketAsyncEventArgs sendArgs,
                 IActorRef self,
                 IActorRef commander,
-                ByteString data,
+                ByteString buffer,
                 object ack,
                 WriteCommand tail) : base(commander, ack)
             {
-                this.connection = connection;
-                this.sendArgs = sendArgs;
-                this.self = self;
-                this.data = data;
-                this.tail = tail;
+                _connection = connection;
+                _sendArgs = sendArgs;
+                _self = self;
+                _buffer = buffer;
+                _tail = tail;
 
                 // start immediatelly as we'll need to cover the case if 
                 // after buffer write request, the remaining enumerator is empty
@@ -829,28 +830,40 @@ namespace Akka.IO
             {
                 try
                 {
-                    if (!data.IsEmpty)
+                    PendingWrite writeToChannel(ByteString data)
                     {
-                        connection.SetStatus(ConnectionStatus.Sending);
-
-                        sendArgs.SetBuffer(data);
-
-                        if (!connection.Socket.SendAsync(sendArgs))
-                            self.Tell(SocketSent.Instance);
+                        var bytesWritten = _connection.Socket.Send(data.Buffers);
+                        if (_connection.traceLogging)
+                            _connection.Log.Debug("Wrote [{0}] bytes to channel", bytesWritten);
+                        if (bytesWritten < data.Count)
+                        {
+                            // we weren't able to write all bytes from the buffer, so we need to try again later
+                            return writeToChannel(data.Slice(bytesWritten));
+                        }
+                        else // finished writing
+                        {
+                            if(Ack != NoAck.Instance) Commander.Tell(Ack);
+                            Release();
+                            return _connection.CreatePendingWrite(Commander, _tail, info);
+                        }
                     }
 
-                    var ack = Ack == NoAck.Instance ? null : Tuple.Create(Commander, Ack);
-                    connection.SetPendingAcknowledgement(ack);
-                    return connection.CreatePendingWrite(Commander, tail, info);
+                    return writeToChannel(_buffer);
+
                 }
                 catch (SocketException e)
                 {
-                    connection.HandleError(info.Handler, e);
+                    _connection.HandleError(info.Handler, e);
                     return this;
                 }
             }
 
             public override void Release() { }
+
+            public PendingWrite Copy(ByteString newData)
+            {
+                return new PendingBufferWrite(_connection, _sendArgs, _self, Commander, newData, Ack, _tail);
+            }
         }
     }
 }
