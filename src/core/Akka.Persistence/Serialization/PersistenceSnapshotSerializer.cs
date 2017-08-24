@@ -64,14 +64,14 @@ namespace Akka.Persistence.Serialization
             throw new ArgumentException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
         }
 
-        private object GetSnapshot(byte[] bytes)
+        private Snapshot GetSnapshot(byte[] bytes)
         {
             PersistentPayload payload = PersistentPayload.Parser.ParseFrom(bytes);
 
             string manifest = "";
             if (payload.PayloadManifest != null) manifest = payload.PayloadManifest.ToStringUtf8();
 
-            return _serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest);
+            return new Snapshot(_serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest));
         }
     }
 }
