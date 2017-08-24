@@ -38,6 +38,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     isDeletedColumnName: "is_deleted",
                     tagsColumnName: "tags",
                     orderingColumnName: "ordering",
+                    serializerIdColumnName: "serializer_id",
                     timeout: config.GetTimeSpan("connection-timeout"),
                     defaultSerializer: config.GetString("serializer")))
         {
@@ -104,6 +105,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     {conventions.TimestampColumnName} INTEGER NOT NULL,
                     {conventions.PayloadColumnName} BLOB NOT NULL,
                     {conventions.TagsColumnName} VARCHAR(2000) NULL,
+                    {conventions.SerializerIdColumnName} INTEGER(4) NOT NULL,
                     UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
                 );"),
                 new KeyValuePair<string, string>("CreateMetadataSql", $@"
