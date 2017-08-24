@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Tests.IO
 {
@@ -141,6 +142,31 @@ namespace Akka.Tests.IO
 
                 actors.ClientHandler.ExpectMsg<Tcp.ErrorClosed>();
                 VerifyActorTermination(actors.ClientConnection);
+            });
+        }
+
+        [Fact]
+        public void BugFix_3021_Tcp_Should_not_drop_large_messages()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection();
+
+                // create a large-ish byte string
+                var str = Enumerable.Repeat("f", 567).Join("");
+                var testData = ByteString.FromString(str);
+
+                // queue 3 writes
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+
+                var serverMsgs = actors.ServerHandler.ReceiveWhile<Tcp.Received>(o =>
+                {
+                    return o as Tcp.Received;
+                }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
+
+                serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
             });
         }
 
