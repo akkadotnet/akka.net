@@ -628,8 +628,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
             var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().TypeQualifiedName() : e.Manifest;
-            var serializer = Serialization.FindSerializerFor(e.Payload);
-            var binary = serializer.ToBinary(e.Payload);
+            var serializer = Serialization.FindSerializerForType(typeof(IPersistentRepresentation));
+            var binary = serializer.ToBinary(e);
 
             AddParameter(command, "@PersistenceId", DbType.String, e.PersistenceId);
             AddParameter(command, "@SequenceNr", DbType.Int64, e.SequenceNr);
@@ -658,18 +658,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual IPersistentRepresentation ReadEvent(DbDataReader reader)
         {
-            var persistenceId = reader.GetString(PersistenceIdIndex);
-            var sequenceNr = reader.GetInt64(SequenceNrIndex);
-            var timestamp = reader.GetInt64(TimestampIndex);
-            var isDeleted = reader.GetBoolean(IsDeletedIndex);
-            var manifest = reader.GetString(ManifestIndex);
             var payload = reader[PayloadIndex];
-
-            var type = Type.GetType(manifest, true);
-            var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-            var deserialized = deserializer.FromBinary((byte[])payload, type);
-
-            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+            var deserializer = Serialization.FindSerializerForType(typeof(IPersistentRepresentation), Configuration.DefaultSerializer);
+            return (IPersistentRepresentation) deserializer.FromBinary((byte[]) payload, typeof(IPersistentRepresentation));
         }
 
         /// <summary>
