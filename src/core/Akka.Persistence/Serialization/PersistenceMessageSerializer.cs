@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
@@ -15,19 +17,18 @@ namespace Akka.Persistence.Serialization
 {
     public class PersistenceMessageSerializer : Serializer
     {
-        private readonly Akka.Serialization.Serialization _serialization;
-
         public PersistenceMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             IncludeManifest = true;
-            _serialization = system.Serialization;
         }
 
         public override bool IncludeManifest { get; }
 
         public override byte[] ToBinary(object obj)
         {
-            if (obj is IPersistentRepresentation) return GetPersistentMessage(obj as IPersistentRepresentation).ToByteArray();
+            if (obj is IPersistentRepresentation) return GetPersistentMessage((IPersistentRepresentation)obj).ToByteArray();
+            if (obj is AtomicWrite) return GetAtomicWrite((AtomicWrite)obj).ToByteArray();
+            if (obj is AtLeastOnceDeliverySnapshot) return GetAtLeastOnceDeliverySnapshot((AtLeastOnceDeliverySnapshot)obj).ToByteArray();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
@@ -50,7 +51,7 @@ namespace Akka.Persistence.Serialization
 
         private PersistentPayload GetPersistentPayload(object obj)
         {
-            Serializer serializer = _serialization.FindSerializerFor(obj);
+            Serializer serializer = system.Serialization.FindSerializerFor(obj);
             PersistentPayload payload = new PersistentPayload();
 
             if (serializer is SerializerWithStringManifest)
@@ -73,17 +74,47 @@ namespace Akka.Persistence.Serialization
             return payload;
         }
 
+        private Proto.Msg.AtomicWrite GetAtomicWrite(AtomicWrite write)
+        {
+            Proto.Msg.AtomicWrite message = new Proto.Msg.AtomicWrite();
+            foreach (var pr in (IImmutableList<IPersistentRepresentation>)write.Payload)
+            {
+                message.Payload.Add(GetPersistentMessage(pr));
+            }
+            return message;
+        }
+
+        private Proto.Msg.AtLeastOnceDeliverySnapshot GetAtLeastOnceDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
+        {
+            Proto.Msg.AtLeastOnceDeliverySnapshot message = new Proto.Msg.AtLeastOnceDeliverySnapshot
+            {
+                CurrentDeliveryId = snapshot.CurrentDeliveryId
+            };
+
+            foreach (var unconfirmed in snapshot.UnconfirmedDeliveries)
+            {
+                message.UnconfirmedDeliveries.Add(new Proto.Msg.UnconfirmedDelivery
+                {
+                    DeliveryId = unconfirmed.DeliveryId,
+                    Destination = unconfirmed.Destination.ToString(),
+                    Payload = GetPersistentPayload(unconfirmed.Message)
+                });
+            }
+            return message;
+        }
+
         public override object FromBinary(byte[] bytes, Type type)
         {
-            if (type == typeof(IPersistentRepresentation)) return GetPersistentRepresentation(bytes);
+            if (type == typeof(Persistent)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
+            if (type == typeof(IPersistentRepresentation)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
+            if (type == typeof(AtomicWrite)) return GetAtomicWrite(bytes);
+            if (type == typeof(AtLeastOnceDeliverySnapshot)) return GetAtLeastOnceDeliverySnapshot(bytes);
 
             throw new ArgumentException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
         }
 
-        private IPersistentRepresentation GetPersistentRepresentation(byte[] bytes)
+        private IPersistentRepresentation GetPersistentRepresentation(PersistentMessage message)
         {
-            PersistentMessage message = PersistentMessage.Parser.ParseFrom(bytes);
-
             IActorRef sender = ActorRefs.NoSender;
             if (message.Sender != null)
             {
@@ -105,7 +136,32 @@ namespace Akka.Persistence.Serialization
             string manifest = "";
             if (payload.PayloadManifest != null) manifest = payload.PayloadManifest.ToStringUtf8();
 
-            return _serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest);
+            return system.Serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest);
+        }
+
+        private AtomicWrite GetAtomicWrite(byte[] bytes)
+        {
+            Proto.Msg.AtomicWrite message = Proto.Msg.AtomicWrite.Parser.ParseFrom(bytes);
+            var payloads = new List<IPersistentRepresentation>();
+            foreach (var payload in message.Payload)
+            {
+                payloads.Add(GetPersistentRepresentation(payload));
+            }
+            return new AtomicWrite(payloads.ToImmutableList());
+        }
+
+        private AtLeastOnceDeliverySnapshot GetAtLeastOnceDeliverySnapshot(byte[] bytes)
+        {
+            Proto.Msg.AtLeastOnceDeliverySnapshot message = Proto.Msg.AtLeastOnceDeliverySnapshot.Parser.ParseFrom(bytes);
+
+            var unconfirmedDeliveries = new List<UnconfirmedDelivery>();
+            foreach (var unconfirmed in message.UnconfirmedDeliveries)
+            {
+                ActorPath.TryParse(unconfirmed.Destination, out var actorPath);
+                unconfirmedDeliveries.Add(new UnconfirmedDelivery(unconfirmed.DeliveryId, actorPath, GetPayload(unconfirmed.Payload)));
+            }
+
+            return new AtLeastOnceDeliverySnapshot(message.CurrentDeliveryId, unconfirmedDeliveries.ToArray());
         }
     }
 }

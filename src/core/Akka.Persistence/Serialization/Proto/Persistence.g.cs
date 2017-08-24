@@ -30,12 +30,23 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
             "c2VuZGVyGAsgASgJEhAKCG1hbmlmZXN0GAwgASgJEhIKCndyaXRlckd1aWQY",
             "DSABKAkiUwoRUGVyc2lzdGVudFBheWxvYWQSFAoMc2VyaWFsaXplcklkGAEg",
             "ASgFEg8KB3BheWxvYWQYAiABKAwSFwoPcGF5bG9hZE1hbmlmZXN0GAMgASgM",
-            "YgZwcm90bzM="));
+            "IlsKC0F0b21pY1dyaXRlEkwKB3BheWxvYWQYASADKAsyOy5Ba2thLlBlcnNp",
+            "c3RlbmNlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBlcnNpc3RlbnRNZXNz",
+            "YWdlIowBChNVbmNvbmZpcm1lZERlbGl2ZXJ5EhIKCmRlbGl2ZXJ5SWQYASAB",
+            "KAMSEwoLZGVzdGluYXRpb24YAiABKAkSTAoHcGF5bG9hZBgDIAEoCzI7LkFr",
+            "a2EuUGVyc2lzdGVuY2UuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGVyc2lz",
+            "dGVudFBheWxvYWQilgEKG0F0TGVhc3RPbmNlRGVsaXZlcnlTbmFwc2hvdBIZ",
+            "ChFjdXJyZW50RGVsaXZlcnlJZBgBIAEoAxJcChV1bmNvbmZpcm1lZERlbGl2",
+            "ZXJpZXMYAiADKAsyPS5Ba2thLlBlcnNpc3RlbmNlLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlVuY29uZmlybWVkRGVsaXZlcnliBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage), global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage.Parser, new[]{ "Payload", "SequenceNr", "PersistenceId", "Deleted", "Sender", "Manifest", "WriterGuid" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload), global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload.Parser, new[]{ "SerializerId", "Payload", "PayloadManifest" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload), global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload.Parser, new[]{ "SerializerId", "Payload", "PayloadManifest" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite), global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite.Parser, new[]{ "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery), global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery.Parser, new[]{ "DeliveryId", "Destination", "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot), global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot.Parser, new[]{ "CurrentDeliveryId", "UnconfirmedDeliveries" }, null, null, null)
           }));
     }
     #endregion
@@ -504,6 +515,431 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
           }
           case 26: {
             PayloadManifest = input.ReadBytes();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class AtomicWrite : pb::IMessage<AtomicWrite> {
+    private static readonly pb::MessageParser<AtomicWrite> _parser = new pb::MessageParser<AtomicWrite>(() => new AtomicWrite());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<AtomicWrite> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Persistence.Serialization.Proto.Msg.PersistenceReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtomicWrite() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtomicWrite(AtomicWrite other) : this() {
+      payload_ = other.payload_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtomicWrite Clone() {
+      return new AtomicWrite(this);
+    }
+
+    /// <summary>Field number for the "payload" field.</summary>
+    public const int PayloadFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage> _repeated_payload_codec
+        = pb::FieldCodec.ForMessage(10, global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage> payload_ = new pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage> Payload {
+      get { return payload_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as AtomicWrite);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(AtomicWrite other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!payload_.Equals(other.payload_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= payload_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      payload_.WriteTo(output, _repeated_payload_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      size += payload_.CalculateSize(_repeated_payload_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(AtomicWrite other) {
+      if (other == null) {
+        return;
+      }
+      payload_.Add(other.payload_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            payload_.AddEntriesFrom(input, _repeated_payload_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class UnconfirmedDelivery : pb::IMessage<UnconfirmedDelivery> {
+    private static readonly pb::MessageParser<UnconfirmedDelivery> _parser = new pb::MessageParser<UnconfirmedDelivery>(() => new UnconfirmedDelivery());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<UnconfirmedDelivery> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Persistence.Serialization.Proto.Msg.PersistenceReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public UnconfirmedDelivery() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public UnconfirmedDelivery(UnconfirmedDelivery other) : this() {
+      deliveryId_ = other.deliveryId_;
+      destination_ = other.destination_;
+      Payload = other.payload_ != null ? other.Payload.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public UnconfirmedDelivery Clone() {
+      return new UnconfirmedDelivery(this);
+    }
+
+    /// <summary>Field number for the "deliveryId" field.</summary>
+    public const int DeliveryIdFieldNumber = 1;
+    private long deliveryId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long DeliveryId {
+      get { return deliveryId_; }
+      set {
+        deliveryId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "destination" field.</summary>
+    public const int DestinationFieldNumber = 2;
+    private string destination_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string Destination {
+      get { return destination_; }
+      set {
+        destination_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "payload" field.</summary>
+    public const int PayloadFieldNumber = 3;
+    private global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload payload_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload Payload {
+      get { return payload_; }
+      set {
+        payload_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as UnconfirmedDelivery);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(UnconfirmedDelivery other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (DeliveryId != other.DeliveryId) return false;
+      if (Destination != other.Destination) return false;
+      if (!object.Equals(Payload, other.Payload)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (DeliveryId != 0L) hash ^= DeliveryId.GetHashCode();
+      if (Destination.Length != 0) hash ^= Destination.GetHashCode();
+      if (payload_ != null) hash ^= Payload.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (DeliveryId != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(DeliveryId);
+      }
+      if (Destination.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Destination);
+      }
+      if (payload_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Payload);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (DeliveryId != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(DeliveryId);
+      }
+      if (Destination.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Destination);
+      }
+      if (payload_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Payload);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(UnconfirmedDelivery other) {
+      if (other == null) {
+        return;
+      }
+      if (other.DeliveryId != 0L) {
+        DeliveryId = other.DeliveryId;
+      }
+      if (other.Destination.Length != 0) {
+        Destination = other.Destination;
+      }
+      if (other.payload_ != null) {
+        if (payload_ == null) {
+          payload_ = new global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload();
+        }
+        Payload.MergeFrom(other.Payload);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            DeliveryId = input.ReadInt64();
+            break;
+          }
+          case 18: {
+            Destination = input.ReadString();
+            break;
+          }
+          case 26: {
+            if (payload_ == null) {
+              payload_ = new global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload();
+            }
+            input.ReadMessage(payload_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class AtLeastOnceDeliverySnapshot : pb::IMessage<AtLeastOnceDeliverySnapshot> {
+    private static readonly pb::MessageParser<AtLeastOnceDeliverySnapshot> _parser = new pb::MessageParser<AtLeastOnceDeliverySnapshot>(() => new AtLeastOnceDeliverySnapshot());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<AtLeastOnceDeliverySnapshot> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Persistence.Serialization.Proto.Msg.PersistenceReflection.Descriptor.MessageTypes[4]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtLeastOnceDeliverySnapshot() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtLeastOnceDeliverySnapshot(AtLeastOnceDeliverySnapshot other) : this() {
+      currentDeliveryId_ = other.currentDeliveryId_;
+      unconfirmedDeliveries_ = other.unconfirmedDeliveries_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AtLeastOnceDeliverySnapshot Clone() {
+      return new AtLeastOnceDeliverySnapshot(this);
+    }
+
+    /// <summary>Field number for the "currentDeliveryId" field.</summary>
+    public const int CurrentDeliveryIdFieldNumber = 1;
+    private long currentDeliveryId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long CurrentDeliveryId {
+      get { return currentDeliveryId_; }
+      set {
+        currentDeliveryId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "unconfirmedDeliveries" field.</summary>
+    public const int UnconfirmedDeliveriesFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery> _repeated_unconfirmedDeliveries_codec
+        = pb::FieldCodec.ForMessage(18, global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery> unconfirmedDeliveries_ = new pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery> UnconfirmedDeliveries {
+      get { return unconfirmedDeliveries_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as AtLeastOnceDeliverySnapshot);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(AtLeastOnceDeliverySnapshot other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (CurrentDeliveryId != other.CurrentDeliveryId) return false;
+      if(!unconfirmedDeliveries_.Equals(other.unconfirmedDeliveries_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (CurrentDeliveryId != 0L) hash ^= CurrentDeliveryId.GetHashCode();
+      hash ^= unconfirmedDeliveries_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (CurrentDeliveryId != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(CurrentDeliveryId);
+      }
+      unconfirmedDeliveries_.WriteTo(output, _repeated_unconfirmedDeliveries_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (CurrentDeliveryId != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(CurrentDeliveryId);
+      }
+      size += unconfirmedDeliveries_.CalculateSize(_repeated_unconfirmedDeliveries_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(AtLeastOnceDeliverySnapshot other) {
+      if (other == null) {
+        return;
+      }
+      if (other.CurrentDeliveryId != 0L) {
+        CurrentDeliveryId = other.CurrentDeliveryId;
+      }
+      unconfirmedDeliveries_.Add(other.unconfirmedDeliveries_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            CurrentDeliveryId = input.ReadInt64();
+            break;
+          }
+          case 18: {
+            unconfirmedDeliveries_.AddEntriesFrom(input, _repeated_unconfirmedDeliveries_codec);
             break;
           }
         }

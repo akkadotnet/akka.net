@@ -15,12 +15,9 @@ namespace Akka.Persistence.Serialization
 {
     public class PersistenceSnapshotSerializer : Serializer
     {
-        private readonly Akka.Serialization.Serialization _serialization;
-
         public PersistenceSnapshotSerializer(ExtendedActorSystem system) : base(system)
         {
             IncludeManifest = true;
-            _serialization = system.Serialization;
         }
 
         public override bool IncludeManifest { get; }
@@ -34,7 +31,7 @@ namespace Akka.Persistence.Serialization
 
         private PersistentPayload GetPersistentPayload(Snapshot snapshot)
         {
-            Serializer serializer = _serialization.FindSerializerFor(snapshot.Data);
+            Serializer serializer = system.Serialization.FindSerializerFor(snapshot.Data);
             PersistentPayload payload = new PersistentPayload();
 
             if (serializer is SerializerWithStringManifest)
@@ -71,7 +68,7 @@ namespace Akka.Persistence.Serialization
             string manifest = "";
             if (payload.PayloadManifest != null) manifest = payload.PayloadManifest.ToStringUtf8();
 
-            return new Snapshot(_serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest));
+            return new Snapshot(system.Serialization.Deserialize(payload.Payload.ToByteArray(), payload.SerializerId, manifest));
         }
     }
 }

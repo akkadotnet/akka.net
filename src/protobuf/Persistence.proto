@@ -21,3 +21,18 @@ message PersistentPayload {
   bytes payload = 2;
   bytes payloadManifest = 3;
 }
+
+message AtomicWrite {
+  repeated PersistentMessage payload = 1;
+}
+
+message UnconfirmedDelivery {
+  int64 deliveryId = 1;
+  string destination = 2;
+  PersistentPayload payload = 3;
+}
+
+message AtLeastOnceDeliverySnapshot {
+  int64 currentDeliveryId = 1;
+  repeated UnconfirmedDelivery unconfirmedDeliveries = 2;
+}
