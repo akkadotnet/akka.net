@@ -39,10 +39,7 @@ namespace Akka.Persistence.Serialization
             if (persistent.PersistenceId != null) message.PersistenceId = persistent.PersistenceId;
             if (persistent.Manifest != null) message.Manifest = persistent.Manifest;
             if (persistent.WriterGuid != null) message.WriterGuid = persistent.WriterGuid;
-            if (persistent.Sender != null && !persistent.Sender.Equals(ActorRefs.NoSender))
-            {
-                message.Sender = Akka.Serialization.Serialization.SerializedActorPath(persistent.Sender);
-            }
+            if (persistent.Sender != null) message.Sender = Akka.Serialization.Serialization.SerializedActorPath(persistent.Sender);
 
             message.Payload = GetPersistentPayload(persistent.Payload);
             message.SequenceNr = persistent.SequenceNr;
