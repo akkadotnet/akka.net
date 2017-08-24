@@ -144,6 +144,27 @@ namespace Akka.Tests.IO
             });
         }
 
+        [Fact]
+        public void BugFix_3021_Tcp_Should_not_drop_large_messages()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection();
+
+                // create a 256 byte string
+                var str = Enumerable.Repeat("f", 128).Join("");
+                var testData = ByteString.FromString(str);
+
+                // queue 3 writes
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+
+                var serverMsgs = actors.ServerHandler.ReceiveN(3, TimeSpan.FromMinutes(10));
+                
+            });
+        }
+
         class Aye : Tcp.Event { public static readonly Aye Instance = new Aye();}
         class Yes : Tcp.Event { public static readonly Yes Instance = new Yes();}
         [Fact]
