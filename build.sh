@@ -51,12 +51,13 @@ if [ ! -f "$DOTNET_EXE" ]; then
     fi
     curl -Lsfo "$SCRIPT_DIR/.dotnet/dotnet-install.sh" $DOTNET_INSTALLER_URL
     bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version $DOTNET_VERSION --install-dir .dotnet --no-path
-    export PATH="$SCRIPT_DIR/.dotnet":$PATH
-    export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-    export DOTNET_CLI_TELEMETRY_OPTOUT=1
-    chmod -R 0755 ".dotnet"
-    "$SCRIPT_DIR/.dotnet/dotnet" --info
 fi
+
+export PATH="$SCRIPT_DIR/.dotnet":$PATH
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+chmod -R 0755 ".dotnet"
+"$SCRIPT_DIR/.dotnet/dotnet" --info
 
 ###########################################################################
 # INSTALL NUGET
@@ -94,7 +95,6 @@ fi
 # INSTALL PROTOC
 ###########################################################################
 
-unameOut="$(uname -s)"
 if [[ $(uname -s) == Darwin* ]]; then
     PROTOC_EXE="src/packages/Google.Protobuf.Tools/tools/macosx_x64/protoc"
 else
