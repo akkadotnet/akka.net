@@ -859,11 +859,6 @@ namespace Akka.IO
             }
 
             public override void Release() { }
-
-            public PendingWrite Copy(ByteString newData)
-            {
-                return new PendingBufferWrite(_connection, _sendArgs, _self, Commander, newData, Ack, _tail);
-            }
         }
     }
 }
