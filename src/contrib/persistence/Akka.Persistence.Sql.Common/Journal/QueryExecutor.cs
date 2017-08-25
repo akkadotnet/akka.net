@@ -641,7 +641,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
-            var serializer = Serialization.FindSerializerFor(e.Payload);
+            var payloadType = e.Payload.GetType();
+            var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
 
             string manifest = "";
             if (serializer is SerializerWithStringManifest)
