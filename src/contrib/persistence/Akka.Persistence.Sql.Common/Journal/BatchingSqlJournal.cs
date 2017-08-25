@@ -1161,7 +1161,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tags">Optional tags extracted from persistent event payload.</param>
         protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
-            var serializer = _serialization.FindSerializerFor(persistent.Payload);
+            var payloadType = persistent.Payload.GetType();
+            var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
 
             string manifest = "";
             if (serializer is SerializerWithStringManifest)
