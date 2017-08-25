@@ -187,7 +187,7 @@ akka {
             // this also verifies serialization of Persistent.Sender,
             // because the RemoteActor will reply to the Persistent.Sender
             _localActor.Tell(new Persistent(new MyPayload("a"), sender: TestActor));
-            ExpectMsg("pa");
+            ExpectMsg("p.a.");
         }
 
         [Fact]
@@ -197,8 +197,8 @@ akka {
             var p2 = new Persistent(new MyPayload("b"), sender: TestActor);
             _localActor.Tell(new AtomicWrite(ImmutableList.Create(new IPersistentRepresentation[] {p1, p2})));
             Within(5.Seconds(), () => { 
-                ExpectMsg("pa");
-                ExpectMsg("pb");
+                ExpectMsg("p.a.");
+                ExpectMsg("p.b.");
             });
         }
 
