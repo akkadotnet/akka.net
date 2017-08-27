@@ -129,9 +129,9 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!(message is InitTimeout))
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore)
+            else if (message is SetStore msg)
             {
-                _store = ((SetStore)message).Store;
+                _store = msg.Store;
                 Stash.UnstashAll();
                 _isInitialized = true;
             }
@@ -337,30 +337,27 @@ namespace Akka.Cluster.Sharding.Tests
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is ReplayedMessage rm)
+            switch (message)
             {
-                //rm.Persistent
-                _replayCallback(rm.Persistent);
+                case ReplayedMessage rm:
+                    //rm.Persistent
+                    _replayCallback(rm.Persistent);
+                    return true;
+                case RecoverySuccess _:
+                    _replayCompletionPromise.SetResult(new object());
+                    Context.Stop(Self);
+                    return true;
+                case ReplayMessagesFailure failure:
+                    _replayCompletionPromise.SetException(failure.Cause);
+                    Context.Stop(Self);
+                    return true;
+                case ReceiveTimeout _:
+                    var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
+                    _replayCompletionPromise.SetException(timeoutException);
+                    Context.Stop(Self);
+                    return true;
             }
-            else if (message is RecoverySuccess)
-            {
-                _replayCompletionPromise.SetResult(new object());
-                Context.Stop(Self);
-            }
-            else if (message is ReplayMessagesFailure)
-            {
-                var failure = message as ReplayMessagesFailure;
-                _replayCompletionPromise.SetException(failure.Cause);
-                Context.Stop(Self);
-            }
-            else if (message is ReceiveTimeout)
-            {
-                var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
-                _replayCompletionPromise.SetException(timeoutException);
-                Context.Stop(Self);
-            }
-            else return false;
-            return true;
+            return false;
         }
     }
 
@@ -404,11 +401,11 @@ namespace Akka.Cluster.Sharding.Tests
             if (InternalCurrentActorCellKeeper.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
+            if (self is IInternalActorRef iar)
+                return iar.Provider;
 
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            if (self is ActorSelection asel)
+                return ResolveProvider(asel.Anchor);
 
             return null;
         }

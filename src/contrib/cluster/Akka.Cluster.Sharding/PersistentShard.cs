@@ -179,29 +179,24 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public bool ReceiveRecover(object message)
         {
-            SnapshotOffer offer;
-            if (message is EntityStarted)
+            switch (message)
             {
-                var started = (EntityStarted)message;
-                State = new ShardState(State.Entries.Add(started.EntityId));
+                case EntityStarted started:
+                    State = new ShardState(State.Entries.Add(started.EntityId));
+                    return true;
+                case EntityStopped stopped:
+                    State = new ShardState(State.Entries.Remove(stopped.EntityId));
+                    return true;
+                case SnapshotOffer offer when offer.Snapshot is ShardState:
+                    State = (ShardState)offer.Snapshot;
+                    return true;
+                case RecoveryCompleted _:
+                    RestartRememberedEntities();
+                    base.Initialized();
+                    Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
+                    return true;
             }
-            else if (message is EntityStopped)
-            {
-                var stopped = (EntityStopped)message;
-                State = new ShardState(State.Entries.Remove(stopped.EntityId));
-            }
-            else if ((offer = message as SnapshotOffer) != null && offer.Snapshot is ShardState)
-            {
-                State = (ShardState)offer.Snapshot;
-            }
-            else if (message is RecoveryCompleted)
-            {
-                RestartRememberedEntities();
-                base.Initialized();
-                Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
-            }
-            else return false;
-            return true;
+            return false;
         }
 
         /// <summary>

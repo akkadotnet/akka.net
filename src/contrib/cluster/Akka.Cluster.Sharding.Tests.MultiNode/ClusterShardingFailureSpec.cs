@@ -125,15 +125,25 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal ExtractEntityId extractEntityId = message =>
         {
-            if (message is Get) return Tuple.Create((message as Get).Id, message);
-            if (message is Add) return Tuple.Create((message as Add).Id, message);
+            switch (message)
+            {
+                case Get msg:
+                    return Tuple.Create(msg.Id, message);
+                case Add msg:
+                    return Tuple.Create(msg.Id, message);
+            }
             return null;
         };
 
         internal ExtractShardId extractShardId = message =>
         {
-            if (message is Get) return (message as Get).Id[0].ToString();
-            if (message is Add) return (message as Add).Id[0].ToString();
+            switch (message)
+            {
+                case Get msg:
+                    return msg.Id[0].ToString();
+                case Add msg:
+                    return msg.Id[0].ToString();
+            }
             return null;
         };
 
