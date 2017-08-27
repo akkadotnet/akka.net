@@ -231,7 +231,7 @@ namespace Akka.Tests.Actor
 
             public Directive Decide(Exception cause)
             {
-                if (cause != null && cause.Message != null && cause.Message.Equals("error", StringComparison.InvariantCultureIgnoreCase))
+                if (cause != null && cause.Message != null && cause.Message.Equals("error", StringComparison.OrdinalIgnoreCase))
                 {
                     Interlocked.Increment(ref counter);
                 }
