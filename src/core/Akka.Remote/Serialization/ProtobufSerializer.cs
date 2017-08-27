@@ -6,12 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
-using Google.Protobuf.Reflection;
 
 namespace Akka.Remote.Serialization
 {
@@ -20,7 +19,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     public class ProtobufSerializer : Serializer
     {
-        private static readonly Dictionary<string, MessageParser> TypeLookup = new Dictionary<string, MessageParser>();
+        private static readonly ConcurrentDictionary<string, MessageParser> TypeLookup = new ConcurrentDictionary<string, MessageParser>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtobufSerializer"/> class.
@@ -28,15 +27,6 @@ namespace Akka.Remote.Serialization
         /// <param name="system">The actor system to associate with this serializer. </param>
         public ProtobufSerializer(ExtendedActorSystem system) : base(system)
         {
-        }
-
-        public static void RegisterFileDescriptor(FileDescriptor fd)
-        {
-            foreach (var msg in fd.MessageTypes)
-            {
-                var name = fd.Package + "." + msg.Name;
-                TypeLookup.Add(name, msg.Parser);
-            }
         }
 
         /// <inheritdoc />
@@ -58,9 +48,15 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (TypeLookup.TryGetValue(type.FullName, out var parser))
+            {
                 return parser.ParseFrom(bytes);
-
-            throw new ArgumentException("Need a protobuf message class to be able to serialize bytes using protobuf");
+            }
+            // MethodParser is not in the cache, look it up with reflection
+            IMessage msg = Activator.CreateInstance(type) as IMessage;
+            if(msg == null) throw new ArgumentException($"Can't deserialize a non-protobuf message using protobuf [{type.TypeQualifiedName()}]");
+            parser = msg.Descriptor.Parser;
+            TypeLookup.TryAdd(type.FullName, parser);
+            return parser.ParseFrom(bytes);
         }
     }
 }
