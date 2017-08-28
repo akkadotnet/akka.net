@@ -89,7 +89,7 @@ namespace Akka.Persistence.Tests
 
             public override object FromBinary(byte[] bytes, Type type)
             {
-                using (var bStream = new MemoryStream())
+                using (var bStream = new MemoryStream(bytes))
                 {
                     using (var reader = new StreamReader(bStream))
                     {

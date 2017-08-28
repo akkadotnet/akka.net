@@ -41,6 +41,7 @@ namespace Akka.Persistence.Sqlite.Journal
                 isDeletedColumnName: "is_deleted",
                 tagsColumnName: "tags",
                 orderingColumnName: "ordering",
+                serializerIdColumnName: "serializer_id",
                 timeout: config.GetTimeSpan("connection-timeout"),
                 defaultSerializer: config.GetString("serializer")), 
                     Context.System.Serialization, 
