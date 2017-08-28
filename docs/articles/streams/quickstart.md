@@ -36,7 +36,7 @@ The nice thing about Akka Streams is that the `Source` is just a description of 
   var factorials = source.Scan(new BigInteger(1), (acc, next) => acc * next);
   var result =
       factorials
-          .Select(num => ByteString.FromString("{num}\n"))
+          .Select(num => ByteString.FromString($"{num}\n"))
           .RunWith(FileIO.ToFile(new FileInfo("factorials.txt")), materializer);
 ```
 First we use the `scan` combinator to run a computation over the whole stream: starting with the number 1 `(BigInteger(1))` we multiple by each of the incoming numbers, one after the other; the `scan` operation emits the initial value and then every calculation result. This yields the series of factorial numbers which we stash away as a Source for later reuse --it is important to keep in mind that nothing is actually computed yet, this is just a description of what we want to have computed once we run the stream. Then we convert the resulting series of numbers into a stream of `ByteString` objects describing lines in a text file. This stream is then run by attaching a file as the receiver of the data. In the terminology of Akka Streams this is called a `Sink. IOResult` is a type that IO operations return in Akka Streams in order to tell you how many bytes or elements were consumed and whether the stream terminated normally or exceptionally.
