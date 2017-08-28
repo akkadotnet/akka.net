@@ -1090,6 +1090,20 @@ namespace Akka.Persistence.Journal
 namespace Akka.Persistence.Serialization
 {
     public interface IMessage { }
+    public class PersistenceMessageSerializer : Akka.Serialization.Serializer
+    {
+        public PersistenceMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public class PersistenceSnapshotSerializer : Akka.Serialization.Serializer
+    {
+        public PersistenceSnapshotSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
     public sealed class Snapshot
     {
         public Snapshot(object data) { }
