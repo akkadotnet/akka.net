@@ -18,7 +18,7 @@ You can see all of these options being used in the following HOCON:
 
 ```xml
 akka {
-   actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+   actor.provider = cluster
     remote {
         dot-netty.tcp {
             port = 8081
@@ -43,7 +43,7 @@ If you want to specify a cluster-wide minimum size, then we need to set the `clu
 
 ```xml
 akka {
-   actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+   actor.provider = cluster
     remote {
         dot-netty.tcp {
             port = 8081
