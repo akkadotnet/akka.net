@@ -19,7 +19,7 @@ Once you've installed valid SSL certificates, TLS is enabled via your HOCON conf
 akka {
   loglevel = DEBUG
   actor {
-    provider = Akka.Remote.RemoteActorRefProvider,Akka.Remote
+    provider = remote
   }
   remote {
     dot-netty.tcp {

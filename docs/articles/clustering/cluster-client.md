@@ -11,6 +11,14 @@ An actor system that is not part of the cluster can communicate with actors some
 
 Also, note it's necessary to change akka.actor.provider from `Akka.Actor.LocalActorRefProvider` to `Akka.Remote.RemoteActorRefProvider` or `Akka.Cluster.ClusterActorRefProvider` when using the cluster client.
 
+```
+  akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+```
+  or this shorthand notation
+```
+  akka.actor.provider = cluster
+```
+
 The receptionist is supposed to be started on all nodes, or all nodes with specified role, in the cluster. The receptionist can be started with the `ClusterClientReceptionist` extension or as an ordinary actor.
 
 You can send messages via the `ClusterClient` to any actor in the cluster that is registered in the `DistributedPubSubMediator` used by the `ClusterReceptionist`. The `ClusterClientReceptionist` provides methods for registration of actors that should be reachable from the client. Messages are wrapped in `ClusterClient.Send`, `ClusterClient.SendToAll` or `ClusterClient.Publish`.
