@@ -56,7 +56,7 @@ class Program
     {
         using (var system = ActorSystem.Create("DeployTarget", ConfigurationFactory.ParseString(@"
             akka {  
-                actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+                actor.provider = remote
                 remote {
                     dot-netty.tcp {
                         port = 8090

@@ -43,7 +43,7 @@ To enable the DotNetty TCP transport, we need to add a section for it inside our
 ```xml
 akka {  
     actor {
-        provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+        provider = remote
     }
     remote {
          dot-netty.tcp {
