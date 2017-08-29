@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void MemberOrdering_must_order_members_by_host_and_port()
         {
-            var members = new SortedSet<Member>         
+            var members = new SortedSet<Member>       
             {
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1112"), MemberStatus.Up),
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1113"), MemberStatus.Joining),
