@@ -84,7 +84,7 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 #### Seed Node Configuration
 ```xml
 akka {
-    actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+    actor.provider = cluster
     remote {
         dot-netty.tcp {
             port = 8081
@@ -107,7 +107,7 @@ You can, and should, specify multiple seed nodes inside this field - and seed no
 #### Non-Seed Node Configuration
 ```xml
 akka {
-    actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+    actor.provider = cluster
     remote {
         dot-netty.tcp {
             port = 0 #let os pick random port
