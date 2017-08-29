@@ -107,22 +107,23 @@ module internal ResultHandling =
 open BuildIncremental.IncrementalTests
 
 Target "RunTests" (fun _ ->    
-    ActivateFinalTarget "KillCreatedProcesses"
-    let projects =
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
-        | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
-    
+    //ActivateFinalTarget "KillCreatedProcesses"
+    //let projects =
+    //    match getBuildParamOrDefault "incremental" "" with
+    //    | "true" -> log "The following test projects would be run under Incremental Test config..."
+    //                getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+    //    | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+    //                        getIncrementalUnitTests() |> Seq.iter log
+    //                        getUnitTestProjects()
+    //    | _ -> log "All test projects will be run..."
+    //           getUnitTestProjects()
+    let projects = !! "./src/**/Akka.Persistence.Sqlite.Tests.csproj"
+
     let runSingleProject project =
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f net452 -c Release -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+            info.Arguments <- (sprintf "xunit -f net452 -c Release -nobuild -parallel none -class \"Akka.Persistence.Sqlite.Tests.xVersionSqliteJournalSpec\" -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
