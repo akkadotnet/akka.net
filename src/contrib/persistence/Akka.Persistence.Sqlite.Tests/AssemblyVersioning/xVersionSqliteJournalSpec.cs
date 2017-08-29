@@ -17,7 +17,7 @@ namespace Akka.Persistence.Sqlite.Tests
         private static AtomicCounter counter = new AtomicCounter(0);
 
         public xVersionSqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig(@"Filename=file:AssemblyVersioning/samples/memdb-journal-1-v123-altered.db;"), "SqliteJournalSpec", output)
+            : base(CreateSpecConfig(@"Filename=file:AssemblyVersioning/samples/memdb-journal-1-v123.db;"), "SqliteJournalSpec", output)
         {
             SqlitePersistence.Get(Sys);
 
