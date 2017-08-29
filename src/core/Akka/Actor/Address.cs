@@ -45,7 +45,7 @@ namespace Akka.Actor
                 if (result != 0) return result;
                 result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
                 if (result != 0) return result;
-                result = Nullable.Compare(x.Port, x.Port);
+                result = (x.Port ?? 0).CompareTo(y.Port ?? 0);
                 return result;
             }
         }
