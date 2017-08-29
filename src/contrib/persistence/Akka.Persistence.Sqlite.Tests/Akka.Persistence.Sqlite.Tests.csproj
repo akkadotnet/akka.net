@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="AssemblyVersioning\akka-v1.2.3-sqlite-spec-dbs\**\*" CopyToOutputDirectory="Always" />
+    <Content Include="AssemblyVersioning\samples\**\*" CopyToOutputDirectory="Always" />
   </ItemGroup>
   
   <ItemGroup>
