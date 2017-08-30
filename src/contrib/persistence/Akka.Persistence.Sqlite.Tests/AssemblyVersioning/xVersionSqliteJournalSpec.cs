@@ -12,12 +12,12 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests
 {
-    public class SqliteJournalSpec : JournalSpec
+    public class xVersionSqliteJournalSpec : xVersionJournalSpec
     {
         private static AtomicCounter counter = new AtomicCounter(0);
 
-        public SqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;"), "SqliteJournalSpec", output)
+        public xVersionSqliteJournalSpec(ITestOutputHelper output)
+            : base(CreateSpecConfig(@"Filename=file:AssemblyVersioning/samples/memdb-journal-1-v123.db;"), "SqliteJournalSpec", output)
         {
             SqlitePersistence.Get(Sys);
 
@@ -36,7 +36,7 @@ namespace Akka.Persistence.Sqlite.Tests
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
                             table-name = event_journal
                             metadata-table-name = journal_metadata
-                            auto-initialize = on
+                            auto-initialize = off
                             connection-string = """ + connectionString + @"""
                         }
                     }
