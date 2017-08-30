@@ -182,14 +182,31 @@ namespace Akka.IO
 
         private void DoWrite()
         {
-            var e = Udp.SocketEventArgsPool.Acquire(Self);
             var send = _pendingSend.Item1;
-            var data = send.Payload;
+            var sender = _pendingSend.Item2;
 
-            e.RemoteEndPoint = _connect.RemoteAddress;
-            e.SetBuffer(data);
+            void WriteToChannel(ByteString data)
+            {
+                var bytesWritten = _socket.Send(data.Buffers);
+                if (Udp.Settings.TraceLogging)
+                    Log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
+                if (bytesWritten < data.Count)
+                {
+                    // we weren't able to write all bytes from the buffer, so we need to try again later
+                    WriteToChannel(data.Slice(bytesWritten));
+                }
+                else // finished writing
+                {
+                    if (send.WantsAck)
+                    {
+                        sender.Tell(send.Ack);
+                    }
 
-            SendAsync(e);
+                    _pendingSend = null;
+                }
+            }
+
+            WriteToChannel(send.Payload);
         }
 
         /// <summary>
