@@ -8,7 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Reflection;
 using Akka.Actor;
+using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
@@ -29,6 +31,8 @@ namespace Akka.Persistence.Serialization
             if (obj is IPersistentRepresentation) return GetPersistentMessage((IPersistentRepresentation)obj).ToByteArray();
             if (obj is AtomicWrite) return GetAtomicWrite((AtomicWrite)obj).ToByteArray();
             if (obj is AtLeastOnceDeliverySnapshot) return GetAtLeastOnceDeliverySnapshot((AtLeastOnceDeliverySnapshot)obj).ToByteArray();
+            if (obj is PersistentFSM.StateChangeEvent) return GetStateChangeEvent((PersistentFSM.StateChangeEvent)obj).ToByteArray();
+            if (obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(obj).ToByteArray();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
@@ -103,12 +107,44 @@ namespace Akka.Persistence.Serialization
             return message;
         }
 
+        private PersistentStateChangeEvent GetStateChangeEvent(PersistentFSM.StateChangeEvent changeEvent)
+        {
+            var message = new PersistentStateChangeEvent
+            {
+                StateIdentifier = changeEvent.StateIdentifier
+            };
+            if (changeEvent.Timeout.HasValue)
+            {
+                message.TimeoutMillis = (long)changeEvent.Timeout.Value.TotalMilliseconds;
+            }
+            return message;
+        }
+
+        private PersistentFSMSnapshot GetPersistentFSMSnapshot(object obj)
+        {
+            Type type = obj.GetType();
+
+            var message = new PersistentFSMSnapshot
+            {
+                StateIdentifier = (string)type.GetProperty("StateIdentifier")?.GetValue(obj),
+                Data = GetPersistentPayload(type.GetProperty("Data")?.GetValue(obj))
+            };
+            TimeSpan? timeout = (TimeSpan?)type.GetProperty("Timeout")?.GetValue(obj);
+            if (timeout.HasValue)
+            {
+                message.TimeoutMillis = (long)timeout.Value.TotalMilliseconds;
+            }
+            return message;
+        }
+
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == typeof(Persistent)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
             if (type == typeof(IPersistentRepresentation)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
             if (type == typeof(AtomicWrite)) return GetAtomicWrite(bytes);
             if (type == typeof(AtLeastOnceDeliverySnapshot)) return GetAtLeastOnceDeliverySnapshot(bytes);
+            if (type == typeof(PersistentFSM.StateChangeEvent)) return GetStateChangeEvent(bytes);
+            if (type.GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(type, bytes);
 
             throw new ArgumentException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
         }
@@ -162,6 +198,34 @@ namespace Akka.Persistence.Serialization
             }
 
             return new AtLeastOnceDeliverySnapshot(message.CurrentDeliveryId, unconfirmedDeliveries.ToArray());
+        }
+
+        private PersistentFSM.StateChangeEvent GetStateChangeEvent(byte[] bytes)
+        {
+            PersistentStateChangeEvent message = PersistentStateChangeEvent.Parser.ParseFrom(bytes);
+            TimeSpan? timeout = null;
+            if (message.TimeoutMillis > 0)
+            {
+                timeout = TimeSpan.FromMilliseconds(message.TimeoutMillis);
+            }
+            return new PersistentFSM.StateChangeEvent(message.StateIdentifier, timeout);
+        }
+
+        private object GetPersistentFSMSnapshot(Type type, byte[] bytes)
+        {
+            PersistentFSMSnapshot message = PersistentFSMSnapshot.Parser.ParseFrom(bytes);
+
+            TimeSpan? timeout = null;
+            if (message.TimeoutMillis > 0)
+            {
+                timeout = TimeSpan.FromMilliseconds(message.TimeoutMillis);
+            }
+
+            // use reflection to create the generic type of PersistentFSM.PersistentFSMSnapshot
+            Type[] types = { typeof(string), type.GenericTypeArguments[0], typeof(TimeSpan?) };
+            object[] arguments = { message.StateIdentifier, GetPayload(message.Data), timeout };
+
+            return type.GetConstructor(types).Invoke(arguments);
         }
     }
 }

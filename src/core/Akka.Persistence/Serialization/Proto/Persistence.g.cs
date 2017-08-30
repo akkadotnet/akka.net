@@ -38,7 +38,12 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
             "dGVudFBheWxvYWQilgEKG0F0TGVhc3RPbmNlRGVsaXZlcnlTbmFwc2hvdBIZ",
             "ChFjdXJyZW50RGVsaXZlcnlJZBgBIAEoAxJcChV1bmNvbmZpcm1lZERlbGl2",
             "ZXJpZXMYAiADKAsyPS5Ba2thLlBlcnNpc3RlbmNlLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlVuY29uZmlybWVkRGVsaXZlcnliBnByb3RvMw=="));
+            "UHJvdG8uTXNnLlVuY29uZmlybWVkRGVsaXZlcnkiTAoaUGVyc2lzdGVudFN0",
+            "YXRlQ2hhbmdlRXZlbnQSFwoPc3RhdGVJZGVudGlmaWVyGAEgASgJEhUKDXRp",
+            "bWVvdXRNaWxsaXMYAiABKAMikgEKFVBlcnNpc3RlbnRGU01TbmFwc2hvdBIX",
+            "Cg9zdGF0ZUlkZW50aWZpZXIYASABKAkSSQoEZGF0YRgCIAEoCzI7LkFra2Eu",
+            "UGVyc2lzdGVuY2UuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGVyc2lzdGVu",
+            "dFBheWxvYWQSFQoNdGltZW91dE1pbGxpcxgDIAEoA2IGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -46,7 +51,9 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload), global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload.Parser, new[]{ "SerializerId", "Payload", "PayloadManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite), global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite.Parser, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery), global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery.Parser, new[]{ "DeliveryId", "Destination", "Payload" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot), global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot.Parser, new[]{ "CurrentDeliveryId", "UnconfirmedDeliveries" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot), global::Akka.Persistence.Serialization.Proto.Msg.AtLeastOnceDeliverySnapshot.Parser, new[]{ "CurrentDeliveryId", "UnconfirmedDeliveries" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentStateChangeEvent), global::Akka.Persistence.Serialization.Proto.Msg.PersistentStateChangeEvent.Parser, new[]{ "StateIdentifier", "TimeoutMillis" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentFSMSnapshot), global::Akka.Persistence.Serialization.Proto.Msg.PersistentFSMSnapshot.Parser, new[]{ "StateIdentifier", "Data", "TimeoutMillis" }, null, null, null)
           }));
     }
     #endregion
@@ -940,6 +947,330 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
           }
           case 18: {
             unconfirmedDeliveries_.AddEntriesFrom(input, _repeated_unconfirmedDeliveries_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class PersistentStateChangeEvent : pb::IMessage<PersistentStateChangeEvent> {
+    private static readonly pb::MessageParser<PersistentStateChangeEvent> _parser = new pb::MessageParser<PersistentStateChangeEvent>(() => new PersistentStateChangeEvent());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<PersistentStateChangeEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Persistence.Serialization.Proto.Msg.PersistenceReflection.Descriptor.MessageTypes[5]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentStateChangeEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentStateChangeEvent(PersistentStateChangeEvent other) : this() {
+      stateIdentifier_ = other.stateIdentifier_;
+      timeoutMillis_ = other.timeoutMillis_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentStateChangeEvent Clone() {
+      return new PersistentStateChangeEvent(this);
+    }
+
+    /// <summary>Field number for the "stateIdentifier" field.</summary>
+    public const int StateIdentifierFieldNumber = 1;
+    private string stateIdentifier_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string StateIdentifier {
+      get { return stateIdentifier_; }
+      set {
+        stateIdentifier_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "timeoutMillis" field.</summary>
+    public const int TimeoutMillisFieldNumber = 2;
+    private long timeoutMillis_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long TimeoutMillis {
+      get { return timeoutMillis_; }
+      set {
+        timeoutMillis_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as PersistentStateChangeEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(PersistentStateChangeEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (StateIdentifier != other.StateIdentifier) return false;
+      if (TimeoutMillis != other.TimeoutMillis) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (StateIdentifier.Length != 0) hash ^= StateIdentifier.GetHashCode();
+      if (TimeoutMillis != 0L) hash ^= TimeoutMillis.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (StateIdentifier.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(StateIdentifier);
+      }
+      if (TimeoutMillis != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(TimeoutMillis);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (StateIdentifier.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StateIdentifier);
+      }
+      if (TimeoutMillis != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(TimeoutMillis);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(PersistentStateChangeEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.StateIdentifier.Length != 0) {
+        StateIdentifier = other.StateIdentifier;
+      }
+      if (other.TimeoutMillis != 0L) {
+        TimeoutMillis = other.TimeoutMillis;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            StateIdentifier = input.ReadString();
+            break;
+          }
+          case 16: {
+            TimeoutMillis = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class PersistentFSMSnapshot : pb::IMessage<PersistentFSMSnapshot> {
+    private static readonly pb::MessageParser<PersistentFSMSnapshot> _parser = new pb::MessageParser<PersistentFSMSnapshot>(() => new PersistentFSMSnapshot());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<PersistentFSMSnapshot> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Persistence.Serialization.Proto.Msg.PersistenceReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentFSMSnapshot() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentFSMSnapshot(PersistentFSMSnapshot other) : this() {
+      stateIdentifier_ = other.stateIdentifier_;
+      Data = other.data_ != null ? other.Data.Clone() : null;
+      timeoutMillis_ = other.timeoutMillis_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public PersistentFSMSnapshot Clone() {
+      return new PersistentFSMSnapshot(this);
+    }
+
+    /// <summary>Field number for the "stateIdentifier" field.</summary>
+    public const int StateIdentifierFieldNumber = 1;
+    private string stateIdentifier_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string StateIdentifier {
+      get { return stateIdentifier_; }
+      set {
+        stateIdentifier_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "data" field.</summary>
+    public const int DataFieldNumber = 2;
+    private global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload data_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload Data {
+      get { return data_; }
+      set {
+        data_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "timeoutMillis" field.</summary>
+    public const int TimeoutMillisFieldNumber = 3;
+    private long timeoutMillis_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long TimeoutMillis {
+      get { return timeoutMillis_; }
+      set {
+        timeoutMillis_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as PersistentFSMSnapshot);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(PersistentFSMSnapshot other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (StateIdentifier != other.StateIdentifier) return false;
+      if (!object.Equals(Data, other.Data)) return false;
+      if (TimeoutMillis != other.TimeoutMillis) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (StateIdentifier.Length != 0) hash ^= StateIdentifier.GetHashCode();
+      if (data_ != null) hash ^= Data.GetHashCode();
+      if (TimeoutMillis != 0L) hash ^= TimeoutMillis.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (StateIdentifier.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(StateIdentifier);
+      }
+      if (data_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Data);
+      }
+      if (TimeoutMillis != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(TimeoutMillis);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (StateIdentifier.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StateIdentifier);
+      }
+      if (data_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Data);
+      }
+      if (TimeoutMillis != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(TimeoutMillis);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(PersistentFSMSnapshot other) {
+      if (other == null) {
+        return;
+      }
+      if (other.StateIdentifier.Length != 0) {
+        StateIdentifier = other.StateIdentifier;
+      }
+      if (other.data_ != null) {
+        if (data_ == null) {
+          data_ = new global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload();
+        }
+        Data.MergeFrom(other.Data);
+      }
+      if (other.TimeoutMillis != 0L) {
+        TimeoutMillis = other.TimeoutMillis;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            StateIdentifier = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (data_ == null) {
+              data_ = new global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload();
+            }
+            input.ReadMessage(data_);
+            break;
+          }
+          case 24: {
+            TimeoutMillis = input.ReadInt64();
             break;
           }
         }
