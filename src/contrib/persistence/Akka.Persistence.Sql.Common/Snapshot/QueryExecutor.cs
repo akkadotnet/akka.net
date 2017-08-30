@@ -267,8 +267,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     {Configuration.SequenceNrColumnName}, 
                     {Configuration.TimestampColumnName}, 
                     {Configuration.ManifestColumnName}, 
-                    {Configuration.PayloadColumnName},
-                    {Configuration.SerializerIdColumnName}
+                    {Configuration.PayloadColumnName}
                 FROM {Configuration.FullSnapshotTableName} 
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId 
                     AND {Configuration.SequenceNrColumnName} <= @SequenceNr
@@ -292,8 +291,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     {Configuration.SequenceNrColumnName}, 
                     {Configuration.TimestampColumnName}, 
                     {Configuration.ManifestColumnName}, 
-                    {Configuration.PayloadColumnName},
-                    {Configuration.SerializerIdColumnName}) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
+                    {Configuration.PayloadColumnName}) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
         }
 
         /// <summary>
@@ -350,13 +348,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
             else
             {
-                if (serializer.IncludeManifest)
-                {
-                    manifest = snapshotType.TypeQualifiedName();
-                }
+                manifest = snapshotType.TypeQualifiedName();
             }
             AddParameter(command, "@Manifest", DbType.String, manifest);
-            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
         }
 
         /// <summary>
@@ -560,18 +554,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var manifest = reader.GetString(3);
             var binary = (byte[])reader[4];
 
-            object obj;
-            if (reader.IsDBNull(5))
-            {
-                var type = Type.GetType(manifest, true);
-                var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                obj = serializer.FromBinary(binary, type);
-            }
-            else
-            {
-                var serializerId = reader.GetInt32(5);
-                obj = Serialization.Deserialize(binary, serializerId, manifest);
-            }
+            var type = Type.GetType(manifest, true);
+            var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
+            var obj = serializer.FromBinary(binary, type);
 
             return obj;
         }

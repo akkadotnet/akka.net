@@ -105,7 +105,6 @@ namespace Akka.Persistence.Sqlite.Journal
                     {conventions.TimestampColumnName} INTEGER NOT NULL,
                     {conventions.PayloadColumnName} BLOB NOT NULL,
                     {conventions.TagsColumnName} VARCHAR(2000) NULL,
-                    {conventions.SerializerIdColumnName} INTEGER(4),
                     UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
                 );"),
                 new KeyValuePair<string, string>("CreateMetadataSql", $@"

@@ -33,19 +33,18 @@ namespace Akka.Persistence.Sqlite.Snapshot
                     {configuration.TimestampColumnName} INTEGER(8) NOT NULL,
                     {configuration.ManifestColumnName} VARCHAR(255) NOT NULL,
                     {configuration.PayloadColumnName} BLOB NOT NULL,
-                    {configuration.SerializerIdColumnName} INTEGER(4),
                     PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
 
             InsertSnapshotSql = $@"
                 UPDATE {configuration.FullSnapshotTableName}
                 SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest,
-                {configuration.PayloadColumnName} = @Payload, {configuration.SerializerIdColumnName} = @SerializerId
+                {configuration.PayloadColumnName} = @Payload
                 WHERE {configuration.PersistenceIdColumnName} = @PersistenceId AND {configuration.SequenceNrColumnName} = @SequenceNr;
                 INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName},
                     {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName},
-                    {configuration.ManifestColumnName}, {configuration.PayloadColumnName}, {configuration.SerializerIdColumnName})
-                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
+                    {configuration.ManifestColumnName}, {configuration.PayloadColumnName})
+                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
         }
 
         /// <summary>
