@@ -1,22 +1,23 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="SqliteSnapshotStoreSpec.cs" company="Akka.NET Project">
+// <copyright file="xVersionSqliteJournalSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
-using Akka.Persistence.TCK.Snapshot;
+using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests
 {
-    public class SqliteSnapshotStoreSpec : SnapshotStoreSpec
+    public class xVersionSqliteJournalSpec : xVersionJournalSpec
     {
         private static AtomicCounter counter = new AtomicCounter(0);
-        public SqliteSnapshotStoreSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("Filename=file:memdb-snapshot-" + counter.IncrementAndGet() + ".db;;Mode=Memory;Cache=Shared"), "SqliteSnapshotStoreSpec", output)
+
+        public xVersionSqliteJournalSpec(ITestOutputHelper output)
+            : base(CreateSpecConfig(@"Filename=file:AssemblyVersioning/samples/memdb-journal-1-v123.db;"), "xVersionSqliteJournalSpec", output)
         {
             SqlitePersistence.Get(Sys);
 
@@ -28,13 +29,14 @@ namespace Akka.Persistence.Sqlite.Tests
             return ConfigurationFactory.ParseString(@"
                 akka.persistence {
                     publish-plugin-commands = on
-                    snapshot-store {
-                        plugin = ""akka.persistence.snapshot-store.sqlite""
+                    journal {
+                        plugin = ""akka.persistence.journal.sqlite""
                         sqlite {
-                            class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
+                            class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
-                            table-name = snapshot_store
-                            auto-initialize = on
+                            table-name = event_journal
+                            metadata-table-name = journal_metadata
+                            auto-initialize = off
                             connection-string = """ + connectionString + @"""
                         }
                     }
