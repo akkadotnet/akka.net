@@ -46,7 +46,7 @@ namespace Akka.IO
                             _pendingSend = send;
                             _pendingCommander = Sender;
 
-                            var e = Udp.SocketEventArgsPool.Acquire(Self);
+                            //var e = Udp.SocketEventArgsPool.Acquire(Self);
                             if (send.Target is DnsEndPoint dns)
                             {
                                 var resolved = Dns.ResolveName(dns.Host, Context.System, Self);
@@ -55,7 +55,7 @@ namespace Akka.IO
                                     try
                                     {
                                         _pendingSend = new Send(_pendingSend.Payload, new IPEndPoint(resolved.Addr, dns.Port), _pendingSend.Ack);
-                                        DoSend(e);
+                                        DoSend();
                                     }
                                     catch (Exception ex)
                                     {
@@ -70,7 +70,7 @@ namespace Akka.IO
                             }
                             else
                             {
-                                DoSend(e);
+                                DoSend();
                             }
                         }
                         else
@@ -104,7 +104,7 @@ namespace Akka.IO
                         }
                         else
                         {
-                            DoSend(sent.EventArgs);
+                            DoSend();
                             _retriedSend = true;
                         }
                         return true;
@@ -113,14 +113,24 @@ namespace Akka.IO
             }
         }
 
-        private void DoSend(SocketAsyncEventArgs e)
+        private void DoSend()
         {
-            var data = _pendingSend.Payload;
-            e.SetBuffer(data);
-            e.RemoteEndPoint = _pendingSend.Target;
+            try
+            {
+                var data = _pendingSend.Payload;
 
-            if (!Socket.SendToAsync(e))
-                Self.Tell(new SocketSent(e));
+                var bytesWritten = Socket.SendTo(data.Buffers.ToS, _pendingSend.);
+                if (Udp.Setting.TraceLogging)
+                    _log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
+
+                // Datagram channel either sends the whole message or nothing
+                if (bytesWritten == 0) _pendingCommander.Tell(new CommandFailed(_pendingSend));
+                else if (_pendingSend.WantsAck) _pendingCommander.Tell(_pendingSend.Ack);
+            }
+            finally
+            {
+                _pendingSend = null;
+            }
         }
     }
 }
