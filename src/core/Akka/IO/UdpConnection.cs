@@ -90,6 +90,7 @@ namespace Akka.IO
                     v2.AfterConnect(_socket);
                 }
 
+                Log.Debug("Sending UdpConnected.Connected back to [{0}]", _commander);
                 _commander.Tell(UdpConnected.Connected.Instance);
 
                 ReceiveAsync();
