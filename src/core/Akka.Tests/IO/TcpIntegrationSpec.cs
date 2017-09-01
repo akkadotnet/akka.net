@@ -145,6 +145,39 @@ namespace Akka.Tests.IO
             });
         }
 
+        [InlineData(AddressFamily.InterNetworkV6)]
+        [InlineData(AddressFamily.InterNetwork)]
+        [Theory]
+        public void The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
+        {
+            var serverHandler = CreateTestProbe();
+            var bindCommander = CreateTestProbe();
+            bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
+                : IPAddress.IPv6Loopback, 0)));
+            var boundMsg = bindCommander.ExpectMsg<Tcp.Bound>();
+
+            // setup client to connect 
+            var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
+            var clientHandler = CreateTestProbe();
+            Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
+            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromMinutes(10));
+            var clientEp = clientHandler.Sender;
+            clientEp.Tell(new Tcp.Register(clientHandler));
+            serverHandler.ExpectMsg<Tcp.Connected>();
+            serverHandler.Sender.Tell(new Tcp.Register(serverHandler));
+
+            var str = Enumerable.Repeat("f", 567).Join("");
+            var testData = ByteString.FromString(str);
+            clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
+            clientHandler.ExpectMsg<Ack>();
+            var received = serverHandler.ReceiveWhile<Tcp.Received>(o =>
+            {
+                return o as Tcp.Received;
+            }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
+
+            received.Sum(s => s.Data.Count).Should().Be(testData.Count);
+        }
+
         [Fact]
         public void BugFix_3021_Tcp_Should_not_drop_large_messages()
         {
