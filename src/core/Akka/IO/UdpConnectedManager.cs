@@ -34,7 +34,7 @@ namespace Akka.IO
             {
                 case UdpConnected.Connect connect:
                     {
-                        var commander = connect.Handler;
+                        var commander = Sender; // NOTE: Aaronontheweb (9/1/2017) this should probably be the Handler...
                         Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, connect)));
                         return true;
                     }
