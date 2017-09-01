@@ -28,7 +28,7 @@ namespace Akka.IO
     /// from whom data can be received. For "unconnected" UDP mode see <see cref="Udp"/>.
     ///
     /// For a full description of the design and philosophy behind this IO
-    /// implementation please refer to <see href="http://doc.akka.io/">the Akka online documentation</see>.
+    /// implementation please refer to <see href="http://getakkat.net/">the Akka online documentation</see>.
     /// </summary>
     public class UdpConnected : ExtensionIdProvider<UdpConnectedExt>
     {

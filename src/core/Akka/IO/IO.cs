@@ -10,12 +10,12 @@ using Akka.Actor;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// An Akka.IO Extension
     /// </summary>
     public abstract class IOExtension : IExtension
     {
         /// <summary>
-        /// TBD
+        /// The connection manager for this particular extension
         /// </summary>
         public abstract IActorRef Manager { get; }
     }

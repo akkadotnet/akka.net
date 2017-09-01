@@ -119,7 +119,7 @@ namespace Akka.IO
             {
                 var data = _pendingSend.Payload;
 
-                var bytesWritten = Socket.SendTo(data.Buffers.ToS, _pendingSend.);
+                var bytesWritten = Socket.SendTo(data.ToArray(), _pendingSend.Target);
                 if (Udp.Setting.TraceLogging)
                     _log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
 
