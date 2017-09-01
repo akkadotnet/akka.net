@@ -570,14 +570,14 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
