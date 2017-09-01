@@ -56,7 +56,7 @@ namespace Akka.IO
             }
         }
 
-        private Tuple<Send, IActorRef> _pendingSend;
+        private Tuple<Send, IActorRef> _pendingSend = null;
         private bool WritePending => _pendingSend != null;
 
         private Receive Resolving(DnsEndPoint remoteAddress) => message =>
@@ -90,6 +90,7 @@ namespace Akka.IO
                     v2.AfterConnect(_socket);
                 }
 
+                Log.Debug("Sending UdpConnected.Connected back to [{0}]", _commander);
                 _commander.Tell(UdpConnected.Connected.Instance);
 
                 ReceiveAsync();
@@ -182,14 +183,24 @@ namespace Akka.IO
 
         private void DoWrite()
         {
-            var e = Udp.SocketEventArgsPool.Acquire(Self);
-            var send = _pendingSend.Item1;
-            var data = send.Payload;
+            try
+            {
+                var send = _pendingSend.Item1;
+                var sender = _pendingSend.Item2;
+                var data = send.Payload;
 
-            e.RemoteEndPoint = _connect.RemoteAddress;
-            e.SetBuffer(data);
+                var bytesWritten = _socket.Send(data.Buffers);
+                if (Udp.Settings.TraceLogging)
+                    Log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
 
-            SendAsync(e);
+                // Datagram channel either sends the whole message or nothing
+                if (bytesWritten == 0) _commander.Tell(new CommandFailed(send));
+                else if (send.WantsAck) _commander.Tell(send.Ack);
+            }
+            finally
+            {
+                _pendingSend = null;
+            }
         }
 
         /// <summary>
