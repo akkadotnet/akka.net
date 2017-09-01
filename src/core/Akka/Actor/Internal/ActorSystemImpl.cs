@@ -18,6 +18,7 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Akka.Actor.Internal
@@ -45,7 +46,7 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private IServiceProviderFactory<IServiceCollection> _serviceProviderFactory;
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -77,6 +78,7 @@ namespace Akka.Actor.Internal
 
             _name = name;            
             ConfigureSettings(config);
+            ConfigureServices();
             ConfigureEventStream();
             ConfigureLoggers();
             ConfigureScheduler();
@@ -85,7 +87,6 @@ namespace Akka.Actor.Internal
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
         }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -119,7 +120,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
+        public override IServiceProviderFactory<IServiceCollection> ServiceProviderFactory { get; }
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -446,10 +447,10 @@ namespace Akka.Actor.Internal
             _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
         }
 
-        private void ConfigureActorProducerPipeline()
+        private void ConfigureServices()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+            _serviceProviderFactory = new DefaultServiceProviderFactory();
         }
 
         private void ConfigureTerminationCallbacks()

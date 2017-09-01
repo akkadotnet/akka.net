@@ -15,46 +15,44 @@ namespace Akka.Actor
     /// <summary>
     /// This class represents a configuration object used in the deployment of an <see cref="Akka.Actor.ActorBase">actor</see>.
     /// </summary>
-    public class Deploy : IEquatable<Deploy>, ISurrogated
+    public sealed class Deploy : IEquatable<Deploy>, ISurrogated
     {
         /// <summary>
         /// A deployment configuration that is bound to the <see cref="Akka.Actor.Scope.Local"/> scope.
         /// </summary>
         public static readonly Deploy Local = new Deploy(Scope.Local);
+
         /// <summary>
         /// This deployment does not have a dispatcher associated with it.
         /// </summary>
         public static readonly string NoDispatcherGiven = string.Empty;
+
         /// <summary>
         /// This deployment does not have a mailbox associated with it.
         /// </summary>
         public static readonly string NoMailboxGiven = string.Empty;
+
         /// <summary>
         /// This deployment has an unspecified scope associated with it.
         /// </summary>
         public static readonly Scope NoScopeGiven = Actor.NoScopeGiven.Instance;
+
         /// <summary>
         /// A deployment configuration where none of the options have been configured.
         /// </summary>
         public static readonly Deploy None = new Deploy();
-        private readonly Config _config;
-        private readonly string _dispatcher;
-        private readonly string _mailbox;
-        private readonly string _path;
-        private readonly RouterConfig _routerConfig;
-        private readonly Scope _scope;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Deploy"/> class.
         /// </summary>
         public Deploy()
         {
-            _path = "";
-            _config = ConfigurationFactory.Empty;
-            _routerConfig = NoRouter.Instance;
-            _scope = NoScopeGiven;
-            _dispatcher = NoDispatcherGiven;
-            _mailbox = NoMailboxGiven;
+            Path = "";
+            Config = ConfigurationFactory.Empty;
+            RouterConfig = NoRouter.Instance;
+            Scope = NoScopeGiven;
+            Dispatcher = NoDispatcherGiven;
+            Mailbox = NoMailboxGiven;
         }
 
         /// <summary>
@@ -65,7 +63,7 @@ namespace Akka.Actor
         public Deploy(string path, Scope scope)
             : this(scope)
         {
-            _path = path;
+            Path = path;
         }
 
         /// <summary>
@@ -75,7 +73,7 @@ namespace Akka.Actor
         public Deploy(Scope scope)
             : this()
         {
-            _scope = scope ?? NoScopeGiven;
+            Scope = scope ?? NoScopeGiven;
         }
 
         /// <summary>
@@ -86,8 +84,8 @@ namespace Akka.Actor
         public Deploy(RouterConfig routerConfig, Scope scope)
             : this()
         {
-            _routerConfig = routerConfig;
-            _scope = scope ?? NoScopeGiven;
+            RouterConfig = routerConfig;
+            Scope = scope ?? NoScopeGiven;
         }
 
         /// <summary>
@@ -96,7 +94,7 @@ namespace Akka.Actor
         /// <param name="routerConfig">The router to use for this deployment.</param>
         public Deploy(RouterConfig routerConfig) : this()
         {
-            _routerConfig = routerConfig;
+            RouterConfig = routerConfig;
         }
 
         /// <summary>
@@ -110,11 +108,11 @@ namespace Akka.Actor
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
             : this()
         {
-            _path = path;
-            _config = config;
-            _routerConfig = routerConfig;
-            _scope = scope ?? NoScopeGiven;
-            _dispatcher = dispatcher ?? NoDispatcherGiven;
+            Path = path;
+            Config = config;
+            RouterConfig = routerConfig;
+            Scope = scope ?? NoScopeGiven;
+            Dispatcher = dispatcher ?? NoDispatcherGiven;
         }
 
         /// <summary>
@@ -130,61 +128,43 @@ namespace Akka.Actor
             string mailbox)
             : this()
         {
-            _path = path;
-            _config = config;
-            _routerConfig = routerConfig;
-            _scope = scope ?? NoScopeGiven;
-            _dispatcher = dispatcher ?? NoDispatcherGiven;
-            _mailbox = mailbox ?? NoMailboxGiven;
+            Path = path;
+            Config = config;
+            RouterConfig = routerConfig;
+            Scope = scope ?? NoScopeGiven;
+            Dispatcher = dispatcher ?? NoDispatcherGiven;
+            Mailbox = mailbox ?? NoMailboxGiven;
         }
 
         /// <summary>
         /// The path where the actor is deployed.
         /// </summary>
-        public string Path
-        {
-            get { return _path; }
-        }
+        public string Path { get; }
 
         /// <summary>
         /// The configuration used for this deployment.
         /// </summary>
-        public Config Config
-        {
-            get { return _config; }
-        }
+        public Config Config { get; }
 
         /// <summary>
         /// The router used for this deployment.
         /// </summary>
-        public RouterConfig RouterConfig
-        {
-            get { return _routerConfig; }
-        }
+        public RouterConfig RouterConfig { get; }
 
         /// <summary>
         /// The scope bound to this deployment.
         /// </summary>
-        public Scope Scope
-        {
-            get { return _scope; }
-        }
+        public Scope Scope { get; }
 
         /// <summary>
         /// The mailbox configured for the actor used in this deployment.
         /// </summary>
-        public string Mailbox
-        {
-            get { return _mailbox; }
-        }
+        public string Mailbox { get; }
 
         /// <summary>
         /// The dispatcher used in this deployment.
         /// </summary>
-        public string Dispatcher
-        {
-            get { return _dispatcher; }
-        }
+        public string Dispatcher { get; }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -195,15 +175,17 @@ namespace Akka.Actor
         /// </returns>
         public bool Equals(Deploy other)
         {
-            if (other == null) return false;
-            return ((string.IsNullOrEmpty(_mailbox) && string.IsNullOrEmpty(other._mailbox)) ||
-                    string.Equals(_mailbox, other._mailbox)) &&
-                   string.Equals(_dispatcher, other._dispatcher) &&
-                   string.Equals(_path, other._path) &&
-                   _routerConfig.Equals(other._routerConfig) &&
-                   ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
-                    _config.ToString().Equals(other._config.ToString())) &&
-                   (_scope == null && other._scope == null || (_scope != null && _scope.Equals(other._scope)));
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+            
+            return ((string.IsNullOrEmpty(Mailbox) && string.IsNullOrEmpty(other.Mailbox)) ||
+                    string.Equals(Mailbox, other.Mailbox)) &&
+                   string.Equals(Dispatcher, other.Dispatcher) &&
+                   string.Equals(Path, other.Path) &&
+                   RouterConfig.Equals(other.RouterConfig) &&
+                   ((Config.IsNullOrEmpty() && other.Config.IsNullOrEmpty()) ||
+                    Config.ToString().Equals(other.Config.ToString())) &&
+                   Equals(Scope, other.Scope);
         }
 
         /// <summary>
@@ -333,6 +315,22 @@ namespace Akka.Actor
                 Dispatcher,
                 Mailbox
                 );
+        }
+
+        public override bool Equals(object obj) => obj is Deploy deploy && Equals(deploy);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Path != null ? Path.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Config != null ? Config.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (RouterConfig != null ? RouterConfig.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Scope != null ? Scope.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Mailbox != null ? Mailbox.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Dispatcher != null ? Dispatcher.GetHashCode() : 0);
+                return hashCode;
+            }
         }
 
         /// <summary>

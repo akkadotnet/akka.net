@@ -348,17 +348,18 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual ActorBase CreateNewActorInstance()
         {
-            var actor = _props.NewActor();
+            var actor = _props.CreateActor();
 
-            // Apply default of custom behaviors to actor.
-            var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
-            pipeline.AfterActorIncarnated(actor, this);
-
-            var initializableActor = actor as IInitializableActor;
-            if (initializableActor != null)
+            if (actor is IWithUnboundedStash stashed)
             {
-                initializableActor.Init();
+                stashed.Stash = this.CreateStash(_props.Type);
             }
+            
+            if (actor is IInitializableActor initializable)
+            {
+                initializable.Init();
+            }
+
             return actor;
         }
 
@@ -464,7 +465,7 @@ namespace Akka.Actor
 
         private void ReleaseActor(ActorBase a)
         {
-            _props.Release(a);
+            _props.ReleaseActor(a);
         }
 
         /// <summary>

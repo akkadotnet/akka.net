@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Akka.Actor
 {

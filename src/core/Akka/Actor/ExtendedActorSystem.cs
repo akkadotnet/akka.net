@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Akka.Actor
 {
     /// <summary>
@@ -38,10 +40,10 @@ namespace Akka.Actor
         public abstract IInternalActorRef SystemGuardian { get; }
 
         /// <summary>
-        /// Gets the actor producer pipeline resolver for current actor system. It may be used by
-        /// Akka plugins to inject custom behavior directly into actor creation chain.
+        /// Gets the service provider factory used for resolution of dependencies and inner
+        /// actor system services creation.
         /// </summary>
-        public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
+        public abstract IServiceProviderFactory<IServiceCollection> ServiceProviderFactory { get; }
 
         /// <summary>
         /// Creates a new system actor in the "/system" namespace. This actor 
