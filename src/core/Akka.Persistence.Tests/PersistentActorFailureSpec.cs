@@ -310,7 +310,7 @@ namespace Akka.Persistence.Tests
 
             // recover by creating another with same name
             var sup = Sys.ActorOf(Props.Create(() => new Supervisor(TestActor)));
-            sup.Tell(new Props(typeof (BehaviorOneActor), new object[] {Name}));
+            sup.Tell(Props.Create(typeof (BehaviorOneActor), new object[] {Name}));
             var newPref = ExpectMsg<IActorRef>();
             Watch(newPref);
             ExpectTerminated(newPref);

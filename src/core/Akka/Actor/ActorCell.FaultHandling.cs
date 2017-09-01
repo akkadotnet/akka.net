@@ -66,10 +66,6 @@ namespace Akka.Actor
                     // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
                     
                     failedActor.AroundPreRestart(cause, optionalMessage);
-
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = SystemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
-                    pipeline.BeforeActorIncarnated(failedActor, this);
                 }
                 catch (Exception e)
                 {
@@ -282,14 +278,7 @@ namespace Akka.Actor
             var a = Actor;
             try
             {
-                if (a != null)
-                {
-                    a.AroundPostStop();
-
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = SystemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
-                    pipeline.BeforeActorIncarnated(a, this);
-                }
+                a?.AroundPostStop();
             }
             catch (Exception x)
             {
@@ -314,9 +303,9 @@ namespace Akka.Actor
                                     Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
                                 ClearActor(a);
-                                ClearActorCell();
+                                Dispose();
 
-                                Actor = null;
+                                _actor = null;
 
                             }
                         }
@@ -335,7 +324,7 @@ namespace Akka.Actor
                 finally { ClearFailed(); }  // must happen in any case, so that failure is propagated
 
                 var freshActor = NewActor();
-                Actor = freshActor; // this must happen before postRestart has a chance to fail
+                _actor = freshActor; // this must happen before postRestart has a chance to fail
                 if (ReferenceEquals(freshActor, failedActor))
                     SetActorFields(freshActor); // If the creator returns the same instance, we need to restore our nulled out fields.
 

@@ -425,7 +425,7 @@ namespace Akka.Actor
             try
             {
                 var created = NewActor();
-                Actor = created;
+                _actor = created;
                 UseThreadContext(() => created.AroundPreStart());
                 CheckReceiveTimeout();
                 if (System.Settings.DebugLifecycle)
@@ -436,7 +436,7 @@ namespace Akka.Actor
                 if (Actor != null)
                 {
                     ClearActor(Actor);
-                    Actor = null; // ensure that we know that we failed during creation
+                    _actor = null; // ensure that we know that we failed during creation
                 }
                 throw new ActorInitializationException(_self, "Exception during creation", e);
             }

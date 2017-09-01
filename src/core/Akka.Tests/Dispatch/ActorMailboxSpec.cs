@@ -145,7 +145,7 @@ akka.actor.deployment {
             CheckMailBoxType(Props.Create(() => new StashMailboxReportingActor()),
                 "default-override-from-stash2", new[] { typeof(UnboundedDequeMessageQueue) });
 
-            CheckMailBoxType(Props.Create<StashMailboxWithParamsReportingActor>(10, "foo"),
+            CheckMailBoxType(Props.Create<StashMailboxWithParamsReportingActor>(new object[] { 10, "foo" }),
                 "default-override-from-stash3", new[] { typeof(UnboundedDequeMessageQueue) });
 
             CheckMailBoxType(Props.Create(() => new StashMailboxWithParamsReportingActor(10, "foo")),
@@ -172,7 +172,7 @@ akka.actor.deployment {
             CheckMailBoxType(Props.Create<MailboxReportingActor>().WithDispatcher("task-dispatcher"),
                 "unbounded-tasks", new[] { typeof(UnboundedMessageQueue) });
         }
-        
+
         #endregion
     }
 }

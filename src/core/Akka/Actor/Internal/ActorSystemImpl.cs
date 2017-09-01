@@ -46,7 +46,7 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        private IServiceProviderFactory<IServiceCollection> _serviceProviderFactory;
+        private IServiceProvider _serviceProvider;
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -90,46 +90,46 @@ namespace Akka.Actor.Internal
         }
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IActorRefProvider Provider { get { return _provider; } }
+        public override IActorRefProvider Provider => _provider;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override Settings Settings { get { return _settings; } }
+        public override Settings Settings => _settings;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override string Name { get { return _name; } }
+        public override string Name => _name;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override Serialization.Serialization Serialization { get { return _serialization; } }
+        public override Serialization.Serialization Serialization => _serialization;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override EventStream EventStream { get { return _eventStream; } }
+        public override EventStream EventStream => _eventStream;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
+        public override IActorRef DeadLetters => Provider.DeadLetters;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override Dispatchers Dispatchers { get { return _dispatchers; } }
+        public override Dispatchers Dispatchers => _dispatchers;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override Mailboxes Mailboxes { get { return _mailboxes; } }
+        public override Mailboxes Mailboxes => _mailboxes;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IScheduler Scheduler { get { return _scheduler; } }
+        public override IScheduler Scheduler => _scheduler;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override ILoggingAdapter Log { get { return _log; } }
+        public override ILoggingAdapter Log => _log;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IServiceProviderFactory<IServiceCollection> ServiceProviderFactory { get; }
+        public override IServiceProvider ServiceProvider => _serviceProvider;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        public override IInternalActorRef Guardian => _provider.Guardian;
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef LookupRoot => _provider.RootGuardian;
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+        public override IInternalActorRef SystemGuardian => _provider.SystemGuardian;
 
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
@@ -450,7 +450,13 @@ namespace Akka.Actor.Internal
         private void ConfigureServices()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _serviceProviderFactory = new DefaultServiceProviderFactory();
+            var serviceProvider = new DefaultServiceProviderFactory();
+            var builder = serviceProvider.CreateBuilder(new ServiceCollection());
+            
+            builder.Add(new ServiceDescriptor(typeof(ExtendedActorSystem), this));
+            builder.Add(new ServiceDescriptor(typeof(ActorSystem), this));
+
+            _serviceProvider = builder.BuildServiceProvider();
         }
 
         private void ConfigureTerminationCallbacks()
@@ -504,7 +510,7 @@ namespace Akka.Actor.Internal
         /// operations on the `dispatcher` of this actor system as it will have been shut down
         /// before this task completes.
         /// </summary>
-        public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
+        public override Task WhenTerminated => _terminationCallbacks.TerminationTask;
 
         /// <summary>
         /// Stops the specified actor permanently.
@@ -572,7 +578,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// The task that is currently being performed
         /// </summary>
-        public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
+        public Task TerminationTask => _atomicRef.Value ?? _terminationTask;
     }
 }
 

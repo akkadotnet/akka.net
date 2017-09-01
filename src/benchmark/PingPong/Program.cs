@@ -186,7 +186,7 @@ namespace PingPong
 
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                var client = (RepointableActorRef)system.ActorOf(new Props(typeof(TActor), null, destination, repeatsPerClient, ts), "client-" + i);
+                var client = (RepointableActorRef)system.ActorOf(Props.Create(typeof(TActor), null, destination, repeatsPerClient, ts), "client-" + i);
                 SpinWait.SpinUntil(() => client.IsStarted);
                 client.Underlying.AsInstanceOf<ActorCell>().Dispatcher.Throughput = factor;
                 clients.Add(client);

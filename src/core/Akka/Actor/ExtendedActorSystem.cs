@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Akka.Actor
@@ -40,10 +41,10 @@ namespace Akka.Actor
         public abstract IInternalActorRef SystemGuardian { get; }
 
         /// <summary>
-        /// Gets the service provider factory used for resolution of dependencies and inner
+        /// Gets the service provider used for resolution of dependencies and inner
         /// actor system services creation.
         /// </summary>
-        public abstract IServiceProviderFactory<IServiceCollection> ServiceProviderFactory { get; }
+        public abstract IServiceProvider ServiceProvider { get; }
 
         /// <summary>
         /// Creates a new system actor in the "/system" namespace. This actor 

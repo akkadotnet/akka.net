@@ -73,12 +73,8 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        private IActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter)
-        {
-            return
-                Sys.ActorOf(new Props(typeof(AutoDownTestActor),
-                    new object[] { autoDownUnreachableAfter, this.TestActor }));
-        }
+        private IActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter) => Sys.ActorOf(Props.Create(typeof(AutoDownTestActor),
+            new object[] { autoDownUnreachableAfter, this.TestActor }));
 
         [Fact]
         public void AutoDown_must_down_unreachable_when_leader()

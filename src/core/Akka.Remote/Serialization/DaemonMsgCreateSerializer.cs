@@ -96,7 +96,7 @@ namespace Akka.Remote.Serialization
                 );
             }
 
-            return new Props(DeployFromProto(protoProps.Deploy), actorClass, args);
+            return Props.Create(actorClass, args).WithDeploy(DeployFromProto(protoProps.Deploy));
         }
 
         //

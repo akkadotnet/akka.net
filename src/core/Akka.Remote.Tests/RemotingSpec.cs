@@ -380,39 +380,7 @@ namespace Akka.Remote.Tests
             var r = Sys.ActorOf<Echo1>("blub");
             Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
         }
-
-        [Fact]
-        public void Remoting_must_create_by_IndirectActorProducer()
-        {
-            try
-            {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
-                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
-            }
-            finally
-            {
-                Resolve.SetResolver(null);
-            }
-        }
-
-        [Fact()]
-        public void Remoting_must_create_by_IndirectActorProducer_and_ping()
-        {
-            try
-            {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
-                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
-                r.Tell("ping", TestActor);
-                ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
-            }
-            finally
-            {
-                Resolve.SetResolver(null);
-            }
-        }
-
+        
         [Fact]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
@@ -697,14 +665,6 @@ namespace Akka.Remote.Tests
             {
                 if (Sender.Path.Equals(_one.Path)) _another.Tell(message);
                 if (Sender.Path.Equals(_another.Path)) _one.Tell(message);
-            }
-        }
-
-        class TestResolver : IResolver
-        {
-            public T Resolve<T>(object[] args)
-            {
-                return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
             }
         }
 

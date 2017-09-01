@@ -281,7 +281,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void RouterConfig_must_not_get_confused_when_trying_to_wildcard_configure_children()
         {
-            var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<SendRefAtStartup>(TestActor)), "weird");
+            var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create(() => new SendRefAtStartup(TestActor))), "weird");
 
             var received = Enumerable.Range(1, 3).Select(_ => ExpectMsg<IActorRef>()).ToList();
             // TODO: wrong actor names

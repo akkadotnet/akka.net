@@ -681,7 +681,7 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 if (e.FsmEvent is StartOldestChangedBuffer)
                 {
-                    _oldestChangedBuffer = Context.ActorOf(Actor.Props.Create<OldestChangedBuffer>(_settings.Role).WithDispatcher(Context.Props.Dispatcher));
+                    _oldestChangedBuffer = Context.ActorOf(Actor.Props.Create<OldestChangedBuffer>(new object[] { _settings.Role }).WithDispatcher(Context.Props.Dispatcher));
                     GetNextOldestChange();
                     return Stay();
                 }
@@ -751,7 +751,8 @@ namespace Akka.Cluster.Tools.Singleton
                     // transition when OldestChanged
                     return Stay().Using(new YoungerData(null));
                 }
-                else if (e.FsmEvent is HandOverToMe) {
+                else if (e.FsmEvent is HandOverToMe)
+                {
                     // this node was probably quickly restarted with same hostname:port,
                     // confirm that the old singleton instance has been stopped
                     Sender.Tell(HandOverDone.Instance);

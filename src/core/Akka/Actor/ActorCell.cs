@@ -15,6 +15,7 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
+using Microsoft.Extensions.DependencyInjection;
 using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Actor
@@ -22,7 +23,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    public partial class ActorCell : IUntypedActorContext, ICell
+    public partial class ActorCell : IUntypedActorContext, ICell, IDisposable
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
@@ -31,7 +32,7 @@ namespace Akka.Actor
         /// </summary>
         public const int UndefinedUid = 0;
         private Props _props;
-        private static readonly Props terminatedProps = new TerminatedProps();
+        private IScope _scope;
 
         private const int DefaultState = 0;
         private const int SuspendedState = 1;
@@ -94,15 +95,17 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public MessageDispatcher Dispatcher { get; private set; }
+        public MessageDispatcher Dispatcher { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public bool IsLocal { get { return true; } }
+        public bool IsLocal => true;
+
         /// <summary>
         /// TBD
         /// </summary>
-        protected ActorBase Actor { get { return _actor; } }
+        protected ActorBase Actor => _actor;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -110,32 +113,34 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        internal static ActorCell Current
-        {
-            get { return InternalCurrentActorCellKeeper.Current; }
-        }
+        internal static ActorCell Current => InternalCurrentActorCellKeeper.Current;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystem System { get { return _systemImpl; } }
+        public ActorSystem System => _systemImpl;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
+        public ActorSystemImpl SystemImpl => _systemImpl;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public Props Props { get { return _props; } }
+        public Props Props => _props;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Self { get { return _self; } }
-        IActorRef IActorContext.Parent { get { return Parent; } }
+        public IActorRef Self => _self;
+
+        IActorRef IActorContext.Parent => Parent;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public IInternalActorRef Parent { get; private set; }
+        public IInternalActorRef Parent { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -143,19 +148,17 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public bool HasMessages { get { return Mailbox.HasMessages; } }
+        public bool HasMessages => Mailbox.HasMessages;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
+        public int NumberOfMessages => Mailbox.NumberOfMessages;
+
         /// <summary>
         /// TBD
         /// </summary>
-        internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal static Props TerminatedProps { get { return terminatedProps; } }
+        internal bool ActorHasBeenCleared => _actorHasBeenCleared;
 
         /// <summary>
         /// TBD
@@ -348,7 +351,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual ActorBase CreateNewActorInstance()
         {
-            var actor = _props.CreateActor();
+            var actor = _scope.Create();
 
             if (actor is IWithUnboundedStash stashed)
             {
@@ -422,10 +425,10 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected void ClearActorCell()
+        public void Dispose()
         {
             UnstashAll();
-            _props = terminatedProps;
+            _scope.Dispose();
         }
 
         /// <summary>
@@ -436,8 +439,7 @@ namespace Akka.Actor
         {
             if (actor != null)
             {
-                var disposable = actor as IDisposable;
-                if (disposable != null)
+                if (actor is IDisposable disposable)
                 {
                     try
                     {
@@ -445,15 +447,11 @@ namespace Akka.Actor
                     }
                     catch (Exception e)
                     {
-                        if (_systemImpl.Log != null)
-                        {
-                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
-                                actor.GetType(), e.Message);
-                        }
+                        _systemImpl.Log?.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
+                            actor.GetType(), e.Message);
                     }
                 }
-
-                ReleaseActor(actor);
+                
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
@@ -461,11 +459,6 @@ namespace Akka.Actor
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
             _state = _state.ClearBehaviorStack();
-        }
-
-        private void ReleaseActor(ActorBase a)
-        {
-            _props.ReleaseActor(a);
         }
 
         /// <summary>
@@ -482,10 +475,7 @@ namespace Akka.Actor
         /// <param name="actor">TBD</param>
         protected void SetActorFields(ActorBase actor)
         {
-            if (actor != null)
-            {
-                actor.Unclear();
-            }
+            actor?.Unclear();
         }
         /// <summary>
         /// TBD

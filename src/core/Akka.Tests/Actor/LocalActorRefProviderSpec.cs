@@ -33,7 +33,6 @@ namespace Akka.Tests.Actor
                 {
                     var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
                     Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
-                    Assert.Equal(ActorCell.TerminatedProps, childPropsAfterTermination);
                 });
         }
 

@@ -35,16 +35,13 @@ namespace Akka.Cluster
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
             TimeSpan unreachableReaperInterval,
-            TimeSpan heartbeatExpectedResponseAfter)
+            TimeSpan heartbeatExpectedResponseAfter) => Actor.Props.Create(typeof(ClusterRemoteWatcher), new object[]
         {
-            return new Props(typeof(ClusterRemoteWatcher), new object[]
-            {
-                failureDetector, 
-                heartbeatInterval, 
-                unreachableReaperInterval, 
-                heartbeatExpectedResponseAfter
-            }).WithDeploy(Deploy.Local);
-        }
+            failureDetector, 
+            heartbeatInterval, 
+            unreachableReaperInterval, 
+            heartbeatExpectedResponseAfter
+        }).WithDeploy(Deploy.Local);
 
         private readonly Cluster _cluster;
         private ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();

@@ -339,8 +339,7 @@ namespace Akka.Remote.TestKit.Tests
         private IActorRef GetBarrier()
         {
             var actor =
-                Sys.ActorOf(
-                    new Props(typeof (BarrierCoordinatorSupervisor), new object[] {TestActor}).WithDeploy(Deploy.Local));
+                Sys.ActorOf(Props.Create(typeof (BarrierCoordinatorSupervisor), new object[] {TestActor}).WithDeploy(Deploy.Local));
             actor.Tell("", TestActor);
             return ExpectMsg<IActorRef>();
         }

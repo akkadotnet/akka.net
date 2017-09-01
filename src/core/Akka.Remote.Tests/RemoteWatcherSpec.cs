@@ -212,7 +212,7 @@ namespace Akka.Remote.Tests
             var fd = CreateFailureDetectorRegistry();
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor1");
             //TODO: Better way to write this?
-            var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[]{TestActor}), "monitor1");
+            var monitorB = CreateRemoteActor(Props.Create(() => new TestActorProxy(TestActor)), "monitor1");
 
             var a1 = Sys.ActorOf(Props.Create<MyActor>(), "a1").AsInstanceOf<IInternalActorRef>();
             var a2 = Sys.ActorOf(Props.Create<MyActor>(), "a2").AsInstanceOf<IInternalActorRef>();
@@ -278,7 +278,7 @@ namespace Akka.Remote.Tests
             Sys.EventStream.Subscribe(q.Ref, typeof(TestRemoteWatcher.Quarantined));
 
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor4");
-            var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor4");
+            var monitorB = CreateRemoteActor(Props.Create(() => new TestActorProxy(TestActor)), "monitor4");
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a4").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b4");
@@ -320,8 +320,8 @@ namespace Akka.Remote.Tests
 
             var fd = CreateFailureDetectorRegistry();
             var heartbeatExpectedResponseAfter = TimeSpan.FromSeconds(2);
-            var monitorA = Sys.ActorOf(new Props(new Deploy(), typeof(TestRemoteWatcher), new object[] {heartbeatExpectedResponseAfter}), "monitor5");
-            var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor5");
+            var monitorA = Sys.ActorOf(Props.Create(() => new TestRemoteWatcher(heartbeatExpectedResponseAfter)), "monitor5");
+            var monitorB = CreateRemoteActor(Props.Create(() => new TestActorProxy(TestActor)), "monitor5");
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a5").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b5");
@@ -360,7 +360,7 @@ namespace Akka.Remote.Tests
             Sys.EventStream.Subscribe(q.Ref, typeof(TestRemoteWatcher.Quarantined));
 
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor6");
-            var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor6");
+            var monitorB = CreateRemoteActor(Props.Create(() => new TestActorProxy(TestActor)), "monitor6");
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a6").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b6");

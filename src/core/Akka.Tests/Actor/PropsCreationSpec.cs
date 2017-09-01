@@ -90,7 +90,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Props_Must_WorkWithGenericType()
         {
-            var props = Props.Create<OneParamActor>(new A());
+            var props = Props.Create<OneParamActor>(new object[] { new A() });
             Sys.ActorOf(props);
         }
     }

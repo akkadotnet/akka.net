@@ -274,7 +274,7 @@ namespace Akka.Persistence
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
             object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
-            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
+            var pluginActorProps = Props.Create(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             return system.SystemActorOf(pluginActorProps, pluginActorName);
         }

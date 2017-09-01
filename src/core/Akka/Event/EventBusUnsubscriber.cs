@@ -44,7 +44,7 @@ namespace Akka.Event
             _eventStream = eventStream;
             _system = system;
             _debug = debug;
-           
+
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Akka.Event
             {
                 if (_debug)
                     _eventStream.Publish(new Debug(this.GetType().Name, GetType(),
-                        string.Format("unsubscribe {0} from {1}, because it was terminated", terminated.Actor , _eventStream )));
+                        string.Format("unsubscribe {0} from {1}, because it was terminated", terminated.Actor, _eventStream)));
                 _eventStream.Unsubscribe(terminated.Actor);
             })
             .WasHandled;
@@ -178,8 +178,8 @@ namespace Akka.Event
         /// <param name="debug">TBD</param>
         public void Start(ActorSystemImpl system, EventStream eventStream, bool debug)
         {
-            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug),
-                string.Format("EventStreamUnsubscriber-{0}", _unsubscribersCounter.IncrementAndGet()));
+            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(new object[] { eventStream, system, debug }),
+                $"EventStreamUnsubscriber-{_unsubscribersCounter.IncrementAndGet()}");
         }
     }
 }
