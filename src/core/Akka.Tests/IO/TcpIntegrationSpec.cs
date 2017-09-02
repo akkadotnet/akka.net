@@ -157,7 +157,7 @@ namespace Akka.Tests.IO
             // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
 #if CORECLR
             if(!System.Runtime.InteropServices.RuntimeInformation
-                .IsOSPlatform(OSPlatform.Windows))
+                .IsOSPlatform(OSPlatform.Windows) && family == AddressFamily.InterNetworkV6)
             return;
 #else
             if (RuntimeDetector.IsMono && family == AddressFamily.InterNetworkV6) // same as above
