@@ -1,3 +1,29 @@
+#### 1.3.1 September 5 2017 ####
+**Maintenance Release for Akka.NET 1.3**
+
+**Updates and bugfixes**:
+
+- Bugfix: Hyperion NuGet package restore creating duplicate assemblies for the same version inside Akka
+- Various documentation fixes and updates
+- Bugfix: issue where data sent via UDP when `ByteString` payload had buffers with length more than 1, `UdpSender` only wrote the first part of the buffers and dropped the rest.
+- Bugfix: Akka.IO.Tcp failed to write some outgoing messages.
+- Improved support for OSX & Rider
+- Bugfix: Akka.Persistence support for `SerializerWithStringManifest` required by Akka.Cluster.Sharding and Akka.Cluster.Tools
+	- Akka.Persistence.Sqlite and Akka.Persistence.SqlServer were unable to support `SerializerWithStringManifest`, so using Akka.Cluster.Sharding with Sql plugins would not work.
+- Bugfix: Akka.Streams generic type parameters of the flow returned from current implementation of Bidiflow's JoinMat method were incorrect.
+- Bugfix: `PersistenceMessageSerializer` was failing with the wrong exceptoin when a non-supported type was provided.
+
+**Akka.Persistence backwards compability warning**:
+
+- Akka.Persistence.Sql introduces an additional field to the schema used by Sql-based plugins to allow for the use of `SerializerWithStringManifest` called `serializer_id`.  It requires any previous Sql schema to be updated to have this field.  Details are included in the Akka.Persistence.Sqlite plugin README.md file.  Users of the Akka.Persistence.Sqlite plugin must alter their existing databases to add the field `serializer_id int (4)`:
+
+```
+ALTER TABLE {your_event_journal_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+ALTER TABLE {your_snapshot_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+```
+
+[See the full set of Akka.NET 1.3.1 fixes here](https://github.com/akkadotnet/akka.net/milestone/19).
+
 #### 1.3.0 August 11 2017 ####
 **Feature Release for Akka.NET**
 Akka.NET 1.3.0 is a major feature release that introduces the significant changes to Akka.NET and its runtime.
