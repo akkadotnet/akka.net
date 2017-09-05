@@ -133,7 +133,6 @@ Target "RunTests" (fun _ ->
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
-
 )
 
 Target "RunTestsNetCore" (fun _ ->
@@ -447,7 +446,11 @@ Target "PublishNuget" (fun _ ->
 // Serialization
 //--------------------------------------------------------------------------------
 Target "Protobuf" <| fun _ ->
-    let protocPath = findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
+
+    let protocPath =
+        if isWindows then findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
+        elif isMacOS then findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/macosx_x64"
+        else findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/linux_x64"
 
     let protoFiles = [
         ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
@@ -458,14 +461,16 @@ Target "Protobuf" <| fun _ ->
         ("ClusterClientMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/Client/Serialization/Proto/");
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
-        ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/") ]
+        ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
 
     printfn "Using proto.exe: %s" protocPath
 
     let runProtobuf assembly =
         let protoName, destinationPath = assembly
         let args = StringBuilder()
-                |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
+                |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") )
+                |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=internal_access:%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
                 |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
@@ -565,14 +570,14 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs

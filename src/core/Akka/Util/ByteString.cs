@@ -35,6 +35,16 @@ namespace Akka.IO
         #region creation methods
 
         /// <summary>
+        /// INTERNAL API: remove this method once <see cref="Udp.Send"/> public constructor will be removed.
+        /// </summary>
+        internal static ByteString FromBuffers(IEnumerator<ByteBuffer> buffers)
+        {
+            var cached = new List<ByteBuffer>();
+            while (buffers.MoveNext()) cached.Add(buffers.Current);
+            return FromBytes(cached);
+        }
+
+        /// <summary>
         /// Creates a new <see cref="ByteString"/> by copying a provided byte array.
         /// </summary>
         /// <param name="array">Array of bytes to copy</param>

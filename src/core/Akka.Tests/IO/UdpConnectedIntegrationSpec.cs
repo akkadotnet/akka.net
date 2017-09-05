@@ -11,6 +11,7 @@ using System.Net;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -82,7 +83,7 @@ namespace Akka.Tests.IO
             var serverAddress = _addresses[0];
             var clientAddress = _addresses[1];
             var server = BindUdp(serverAddress, TestActor);
-            var data1 = ByteString.FromString("To infinity and beyond!");
+            var data1 = ByteString.FromString("To infinity") + ByteString.FromString(" and beyond!");
             var data2 = ByteString.FromString("All your datagram belong to us");
             ConnectUdp(clientAddress, serverAddress, TestActor).Tell(UdpConnected.Send.Create(data1));
 
@@ -101,6 +102,43 @@ namespace Akka.Tests.IO
             server.Tell(Udp.Send.Create(data2, clientAddress));
 
             ExpectMsg<UdpConnected.Received>(x => x.Data.ShouldBe(data2));
+        }
+
+        [Fact]
+        public void The_UDP_connection_oriented_implementation_must_to_send_batch_writes_and_reads()
+        {
+            var serverAddress = _addresses[0];
+            var clientAddress = _addresses[1];
+            var udpConnection = UdpConnected.Instance.Apply(Sys);
+            var server = CreateTestProbe();
+            udpConnection.Manager.Tell(new UdpConnected.Connect(server, clientAddress, serverAddress), server);
+            server.ExpectMsg<UdpConnected.Connected>();
+            var serverEp = server.LastSender;
+
+            var client = CreateTestProbe();
+            udpConnection.Manager.Tell(new UdpConnected.Connect(client, serverAddress, clientAddress), client);
+            client.ExpectMsg<UdpConnected.Connected>();
+            var clientEp = client.LastSender;
+            var data = ByteString.FromString("Fly little packet!");
+
+            // queue 3 writes
+            clientEp.Tell(UdpConnected.Send.Create(data));
+            clientEp.Tell(UdpConnected.Send.Create(data));
+            clientEp.Tell(UdpConnected.Send.Create(data));
+
+            var raw = server.ReceiveN(3);
+            var msgs = raw.Cast<UdpConnected.Received>();
+            msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
+            server.ExpectNoMsg(100.Milliseconds());
+
+            // repeat in the other direction
+            serverEp.Tell(UdpConnected.Send.Create(data));
+            serverEp.Tell(UdpConnected.Send.Create(data));
+            serverEp.Tell(UdpConnected.Send.Create(data));
+
+            raw = client.ReceiveN(3);
+            msgs = raw.Cast<UdpConnected.Received>();
+            msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
     }
 }

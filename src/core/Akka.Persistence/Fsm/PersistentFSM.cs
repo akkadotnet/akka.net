@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Serialization;
 using static Akka.Persistence.Fsm.PersistentFSM;
 
 namespace Akka.Persistence.Fsm
@@ -171,9 +172,8 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// Persisted on state change
-        /// TODO: should implement IMessage
         /// </summary>
-        public class StateChangeEvent
+        public class StateChangeEvent : IMessage
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="StateChangeEvent"/> class.
@@ -199,9 +199,8 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// FSM state and data snapshot
-        /// TODO: should implement IMessage
         /// </summary>
-        public class PersistentFSMSnapshot<TD>
+        public class PersistentFSMSnapshot<TD> : IMessage
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PersistentFSMSnapshot{TD}"/> class.
