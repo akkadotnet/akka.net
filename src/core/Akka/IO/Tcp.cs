@@ -22,7 +22,7 @@ using Akka.IO.Buffers;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// The set of TCP capabilities for Akka.IO are exposed via this extension.
     /// </summary>
     public class Tcp : ExtensionIdProvider<TcpExt>
     {
@@ -843,14 +843,14 @@ namespace Akka.IO
         public class Bound : Event
         {
             /// <summary>
-            /// TBD
+            /// The local listening endpoint of the bound socket.
             /// </summary>
             public EndPoint LocalAddress { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates a new bound message.
             /// </summary>
-            /// <param name="localAddress">TBD</param>
+            /// <param name="localAddress">The local listening endpoint of the bound socket.</param>
             public Bound(EndPoint localAddress)
             {
                 LocalAddress = localAddress;
@@ -867,7 +867,7 @@ namespace Akka.IO
         public class Unbound : Event
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance
             /// </summary>
             public static Unbound Instance = new Unbound();
         }
