@@ -172,7 +172,6 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// Persisted on state change
-        /// TODO: should implement IMessage
         /// </summary>
         public class StateChangeEvent : IMessage
         {
@@ -200,7 +199,6 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// FSM state and data snapshot
-        /// TODO: should implement IMessage
         /// </summary>
         public class PersistentFSMSnapshot<TD> : IMessage
         {
