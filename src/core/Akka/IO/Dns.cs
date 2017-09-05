@@ -143,8 +143,15 @@ namespace Akka.IO
             /// <returns>TBD</returns>
             public static Resolved Create(string name, IEnumerable<IPAddress> addresses)
             {
-                var ipv4 = addresses.Where(x => x.AddressFamily == AddressFamily.InterNetwork);
-                var ipv6 = addresses.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+                /*
+                 * Materialize addresses into a list here so we can avoid multiple enumeration.
+                 * 
+                 * Yes, allocates a list but the results of this operation are cached anyway.
+                 * The cost of missing the correct DNS entry carries a much higher performance cost.
+                 */
+                var addressM = addresses.ToList();
+                var ipv4 = addressM.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToList();
+                var ipv6 = addressM.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToList();
                 return new Resolved(name, ipv4, ipv6);
             }
         }

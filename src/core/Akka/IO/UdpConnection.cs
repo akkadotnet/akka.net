@@ -90,7 +90,6 @@ namespace Akka.IO
                     v2.AfterConnect(_socket);
                 }
 
-                Log.Debug("Sending UdpConnected.Connected back to [{0}]", _commander);
                 _commander.Tell(UdpConnected.Connected.Instance);
 
                 ReceiveAsync();
@@ -228,7 +227,7 @@ namespace Akka.IO
             }
             catch (Exception e)
             {
-                Log.Debug("Failure while connecting UDP channel to remote address [{0}] local address [{1}]: {2}", _connect.RemoteAddress, _connect.LocalAddress, e);
+                Log.Error(e, "Failure while connecting UDP channel to remote address [{0}] local address [{1}]", _connect.RemoteAddress, _connect.LocalAddress);
                 _commander.Tell(new CommandFailed(_connect));
                 Context.Stop(Self);
             }
