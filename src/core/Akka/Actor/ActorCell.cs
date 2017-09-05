@@ -191,6 +191,7 @@ namespace Akka.Actor
              * this is processed before anything else.
              */
             var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            _scope = _props.CreateScope(SystemImpl);
 
             Create createMessage;
             /*

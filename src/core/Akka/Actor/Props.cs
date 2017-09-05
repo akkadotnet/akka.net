@@ -120,7 +120,7 @@ namespace Akka.Actor
         }
 
         public RouterConfig RouterConfig => Deploy.RouterConfig;
-        public string Dispatcher => Deploy.Dispatcher;
+        public string Dispatcher => Deploy.Dispatcher == Actor.Deploy.NoDispatcherGiven ? Dispatchers.DefaultDispatcherId : Deploy.Dispatcher;
         public string Mailbox => Deploy.Mailbox;
 
         /// <summary>
@@ -381,7 +381,16 @@ namespace Akka.Actor
 
             public void Dispose() => _inner.Dispose();
 
-            public ActorBase Create() => (ActorBase)_inner.ServiceProvider.GetService(_props.Type);
+            public ActorBase Create()
+            {
+                var result = _inner.ServiceProvider.GetService(_props.Type);
+                if (result == null)
+                {
+                    // fallback to activator to retain backward compatibility
+                    result = Activator.CreateInstance(_props.Type);
+                }
+                return (ActorBase)result;
+            }
         }
 
         #endregion
