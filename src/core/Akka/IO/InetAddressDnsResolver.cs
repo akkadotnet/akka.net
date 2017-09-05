@@ -50,7 +50,8 @@ namespace Akka.IO
                     try
                     {
                         //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork));
+                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork 
+                        || x.AddressFamily == AddressFamily.InterNetworkV6));
                         _cache.Put(answer, _positiveTtl);
                     }
                     catch (SocketException ex)

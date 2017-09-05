@@ -28,7 +28,7 @@ namespace Akka.IO
     /// from whom data can be received. For "unconnected" UDP mode see <see cref="Udp"/>.
     ///
     /// For a full description of the design and philosophy behind this IO
-    /// implementation please refer to <see href="http://doc.akka.io/">the Akka online documentation</see>.
+    /// implementation please refer to <see href="http://getakka.net/">the Akka online documentation</see>.
     /// </summary>
     public class UdpConnected : ExtensionIdProvider<UdpConnectedExt>
     {
@@ -152,44 +152,48 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="payload">TBD</param>
-            /// <param name="ack">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
-            public Send(IEnumerator<ByteBuffer> payload, object ack)
+            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
+            public Send(IEnumerator<ByteBuffer> payload, Event ack)
+                : this(ByteString.FromBuffers(payload), ack)
             {
-                if(ack == null)
-                    throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
-
-                Payload = payload;
-                Ack = ack;
             }
 
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to an endpoint known by the connected UDP actor.
+            /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
+            /// object.
             /// </summary>
-            public IEnumerator<ByteBuffer> Payload { get; }
+            /// <param name="payload">Binary payload to be send.</param>
+            /// <param name="ack">Acknowledgement send back to the sender, once <paramref name="payload"/> has been send through a socket.</param>
+            public Send(ByteString payload, object ack)
+            {
+                Payload = payload;
+                Ack = ack ?? throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
+            }
+
             /// <summary>
-            /// TBD
+            /// A binary payload to be send to an endpoint known by connected UDP actor. It must fit into a single UDP datagram.
+            /// </summary>
+            public ByteString Payload { get; }
+
+            /// <summary>
+            /// Acknowledgement send back to the sender, once <see cref="Payload"/> has been send through a socket.
+            /// If it's <see cref="NoAck"/>, then no acknowledgement will be send.
             /// </summary>
             public object Ack { get; }
 
             /// <summary>
-            /// TBD
+            /// Flag determining is a message sender is interested in receving send acknowledgement.
             /// </summary>
             public bool WantsAck => !(Ack is NoAck);
 
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to an endpoint known by the connected UDP actor.
+            /// Once send completes, this request will not be acknowledged on by the sender side.
+            /// object.
             /// </summary>
-            /// <param name="data">TBD</param>
-            /// <returns>TBD</returns>
-            public static Send Create(ByteString data)
-            {
-                return new Send(data.Buffers.GetEnumerator(), NoAck.Instance);
-            }
+            /// <param name="payload">Binary payload to be send.</param>
+            public static Send Create(ByteString payload) => new Send(payload, NoAck.Instance);
         }
 
         /// <summary>

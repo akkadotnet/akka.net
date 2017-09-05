@@ -39,10 +39,5 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
                     }
                 }");
         }
-
-        [Fact(Skip = "Sql plugin does not support SerializerWithStringManifest")]
-        public override void SnapshotStore_should_serialize_Payload_with_string_manifest()
-        {
-        }
     }
 }

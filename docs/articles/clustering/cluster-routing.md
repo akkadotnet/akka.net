@@ -90,7 +90,7 @@ Here's an example of what the HOCON for a clustered `Group` router looks like, [
 ```xml
 akka {
    actor{
-      provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+      provider = cluster
       deployment {
         /api/myClusterGroupRouter {
           router = broadcast-group # routing strategy
@@ -119,7 +119,7 @@ Here's an example of what the HOCON for a clustered `Pool` router looks like:
 ```xml
 akka {
    actor{
-      provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+      provider = cluster
       deployment {
         /api/myClusterPoolRouter {
           router = round-robin-pool # routing strategy

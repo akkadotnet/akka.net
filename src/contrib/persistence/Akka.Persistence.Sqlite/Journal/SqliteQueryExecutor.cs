@@ -37,6 +37,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     {configuration.TimestampColumnName} INTEGER NOT NULL,
                     {configuration.PayloadColumnName} BLOB NOT NULL,
                     {configuration.TagsColumnName} VARCHAR(2000) NULL,
+                    {configuration.SerializerIdColumnName} INTEGER(4),
                     UNIQUE ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
 

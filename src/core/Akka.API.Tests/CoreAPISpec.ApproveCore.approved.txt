@@ -364,9 +364,10 @@ namespace Akka.Actor
             where T :  class, Akka.Actor.IExtension
             where TI : Akka.Actor.IExtensionId { }
     }
-    public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IEquatable<Akka.Actor.Address>
+    public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
     {
         public static readonly Akka.Actor.Address AllSystems;
+        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> Comparer;
         public Address(string protocol, string system, string host = null, System.Nullable<int> port = null) { }
         public bool HasGlobalScope { get; }
         public bool HasLocalScope { get; }
@@ -375,6 +376,7 @@ namespace Akka.Actor
         public string Protocol { get; }
         public string System { get; }
         public object Clone() { }
+        public int CompareTo(Akka.Actor.Address other) { }
         public bool Equals(Akka.Actor.Address other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -3510,7 +3512,7 @@ namespace Akka.IO
         {
             protected Message() { }
         }
-        public class NoAck : Akka.IO.Udp.Event
+        public sealed class NoAck : Akka.IO.Udp.Event
         {
             public static readonly Akka.IO.Udp.NoAck Instance;
             public NoAck(object token) { }
@@ -3524,21 +3526,24 @@ namespace Akka.IO
             public System.Net.EndPoint Sender { get; }
             public override string ToString() { }
         }
-        public class ResumeReading : Akka.IO.Udp.Command
+        public sealed class ResumeReading : Akka.IO.Udp.Command
         {
             public static readonly Akka.IO.Udp.ResumeReading Instance;
         }
         public sealed class Send : Akka.IO.Udp.Command
         {
+            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
+                "eString, EndPoint, Event)` instead.")]
             public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
+            public Send(Akka.IO.ByteString payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Akka.IO.Udp.Event Ack { get; }
-            public System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> Payload { get; }
+            public Akka.IO.ByteString Payload { get; }
             public System.Net.EndPoint Target { get; }
             public bool WantsAck { get; }
             public static Akka.IO.Udp.Send Create(Akka.IO.ByteString data, System.Net.EndPoint target) { }
             public override string ToString() { }
         }
-        public class SimpleSender : Akka.IO.Udp.Command
+        public sealed class SimpleSender : Akka.IO.Udp.Command
         {
             public static readonly Akka.IO.Udp.SimpleSender Instance;
             public SimpleSender(System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null) { }
@@ -3548,7 +3553,7 @@ namespace Akka.IO
         {
             public static readonly Akka.IO.Udp.SimpleSenderReady Instance;
         }
-        public class SO : Akka.IO.Inet.SoForwarders
+        public sealed class SO : Akka.IO.Inet.SoForwarders
         {
             public SO() { }
             public sealed class Broadcast : Akka.IO.Inet.SocketOption
@@ -3558,15 +3563,15 @@ namespace Akka.IO
                 public override void BeforeDatagramBind(System.Net.Sockets.Socket s) { }
             }
         }
-        public class SuspendReading : Akka.IO.Udp.Command
+        public sealed class SuspendReading : Akka.IO.Udp.Command
         {
             public static readonly Akka.IO.Udp.SuspendReading Instance;
         }
-        public class Unbind : Akka.IO.Udp.Command
+        public sealed class Unbind : Akka.IO.Udp.Command
         {
             public static readonly Akka.IO.Udp.Unbind Instance;
         }
-        public class Unbound
+        public sealed class Unbound
         {
             public static readonly Akka.IO.Udp.Unbound Instance;
         }
@@ -3631,11 +3636,14 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.UdpConnected.Command
         {
-            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, object ack) { }
+            [System.ObsoleteAttribute("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(Byt" +
+                "eString, EndPoint, Event)` instead.")]
+            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, Akka.IO.UdpConnected.Event ack) { }
+            public Send(Akka.IO.ByteString payload, object ack) { }
             public object Ack { get; }
-            public System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> Payload { get; }
+            public Akka.IO.ByteString Payload { get; }
             public bool WantsAck { get; }
-            public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString data) { }
+            public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString payload) { }
         }
         public class SuspendReading : Akka.IO.UdpConnected.Command
         {
