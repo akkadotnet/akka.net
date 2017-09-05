@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Fsm;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -201,45 +200,6 @@ akka {
                 ExpectMsg("p.a.");
                 ExpectMsg("p.b.");
             });
-        }
-
-        [Fact]
-        public void MessageSerializer_should_serialize_manifest_provided_by_EventAdapter()
-        {
-            var p1 = new Persistent(new MyPayload("a"), sender: TestActor).WithManifest("manifest");
-            var serializer = _serialization.FindSerializerFor(p1);
-            var bytes = serializer.ToBinary(p1);
-            var back = (Persistent)serializer.FromBinary(bytes, typeof (Persistent));
-
-            back.Manifest.ShouldBe(p1.Manifest);
-        }
-
-        [Fact]
-        public void MessageSerializer_should_serialize_state_change_event()
-        {
-            var p1 = new Persistent(new PersistentFSM.StateChangeEvent("a", TimeSpan.FromSeconds(10)), sender: TestActor);
-            var serializer = _serialization.FindSerializerFor(p1);
-            var bytes = serializer.ToBinary(p1);
-            var back = (Persistent)serializer.FromBinary(bytes, typeof (Persistent));
-            var payload = back.Payload as PersistentFSM.StateChangeEvent;
-            payload.ShouldNotBe(null);
-            payload.StateIdentifier.ShouldBe("a");
-            payload.Timeout.ShouldBeEquivalentTo(TimeSpan.FromSeconds(10));
-        }
-
-        [Fact]
-        public void MessageSerializer_should_serialize_fsm_snapshot()
-        {
-            var snapshot = new PersistentFSM.PersistentFSMSnapshot<MyPayload>("a", new MyPayload("b"), TimeSpan.FromSeconds(10));
-            var p1 = new Persistent(snapshot, sender: TestActor);
-            var serializer = _serialization.FindSerializerFor(p1);
-            var bytes = serializer.ToBinary(p1);
-            var back = (Persistent)serializer.FromBinary(bytes, typeof (Persistent));
-            var backSnapshot = back.Payload as PersistentFSM.PersistentFSMSnapshot<MyPayload>;
-            backSnapshot.ShouldNotBe(null);
-            backSnapshot.StateIdentifier.ShouldBe("a");
-            backSnapshot.Data.Data.ShouldBe(".b.");    // custom MyPayload serializer prepends and appends .
-            backSnapshot.Timeout.ShouldBeEquivalentTo(TimeSpan.FromSeconds(10));
         }
     }
 }
