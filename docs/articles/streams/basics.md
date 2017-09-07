@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-basics
 title: Basics and working with Flows
 ---
 

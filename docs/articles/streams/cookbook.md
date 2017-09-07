@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-cookbook
 title: Streams Cookbook
 ---
 

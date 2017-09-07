@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-dynamic-handling
 title: Dynamic stream handling
 ---
 

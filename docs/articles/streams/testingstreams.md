@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-testing
 title: Testing streams
 ---
 

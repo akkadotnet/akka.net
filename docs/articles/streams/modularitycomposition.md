@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-modularity
 title: Modularity, Composition and Hierarchy
 ---
 

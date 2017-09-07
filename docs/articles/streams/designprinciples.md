@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-design-principles
 title: Design Principles behind Akka Streams
 ---
 

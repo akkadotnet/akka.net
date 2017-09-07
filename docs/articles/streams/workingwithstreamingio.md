@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-io
 title: Working with streaming IO
 ---
 

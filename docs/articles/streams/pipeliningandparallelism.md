@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-pipelining
 title: Pipelining and Parallelism
 ---
 
