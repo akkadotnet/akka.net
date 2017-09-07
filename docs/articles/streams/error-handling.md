@@ -117,7 +117,7 @@ Decider decider = cause => cause is DivideByZeroException
 var settings = ActorMaterializerSettings.Create(system).WithSupervisionStrategy(decider);
 var materializer = system.Materializer(settings);
 
-var source = Source.From(Enumerable.Range(0, 5)).Select(x => 100/x);
+var source = Source.From(Enumerable.Range(0, 6)).Select(x => 100/x);
 var result = source.RunWith(Sink.Aggregate<int, int>(0, (sum, i) => sum + i), materializer);
 // the element causing division by zero will be dropped
 // result here will be a Task completed with Success(228)
@@ -140,7 +140,7 @@ var flow = Flow.Create<int>()
     .Where(x => 100 / x < 50)
     .Select(x => 100 / (5 - x))
     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider));
-var source = Source.From(Enumerable.Range(0, 5)).Via(flow);
+var source = Source.From(Enumerable.Range(0, 6)).Via(flow);
 var result = source.RunWith(Sink.Aggregate<int, int>(0, (sum, i) => sum + i), materializer);
 // the elements causing division by zero will be dropped
 // result here will be a Future completed with Success(150)
