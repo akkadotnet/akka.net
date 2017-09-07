@@ -120,7 +120,7 @@ zeroes.RunWith(Sink.Aggregate<int,int>(0, (agg, i) => agg + i), materializer); /
 > Also it allows for greater flexibility on *how exactly* to handle the multicast scenarios, 
 by providing named fan-out elements such as broadcast (signals all down-stream elements) or balance (signals one of available down-stream elements).  
 
-In the above example we used the ``runWith`` method, which both materializes the stream and returns the materialized value
+In the above example we used the ``RunWith`` method, which both materializes the stream and returns the materialized value
 of the given sink or source.
 
 Since a stream can be materialized multiple times, the materialized value will also be calculated new for each such
@@ -337,7 +337,7 @@ IRunnableGraph<TaskCompletionSource<int>> r1 = source.Via(flow).To(sink);
 IRunnableGraph<ICancelable> r2 = source.ViaMaterialized(flow, Keep.Right).To(sink);
 IRunnableGraph<Task<int>> r3 = source.Via(flow).ToMaterialized(sink, Keep.Right);
 
-//Using runWith will always give the materialized values of the stages added
+//Using RunWith will always give the materialized values of the stages added
 //by RunWith() itself
 Task<int> r4 = source.Via(flow).RunWith(sink, materializer);
 TaskCompletionSource<int> r5 = flow.To(sink).RunWith(source, materializer);
