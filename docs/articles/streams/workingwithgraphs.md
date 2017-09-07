@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: working-with-graphs
 title: Working with Graphs
 ---
 
