@@ -66,6 +66,10 @@ namespace Akka.Actor
                     // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
                     
                     failedActor.AroundPreRestart(cause, optionalMessage);
+                    if (failedActor is IActorStash stashed)
+                    {
+                        stashed.Stash.UnstashAll();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -279,6 +283,11 @@ namespace Akka.Actor
             try
             {
                 a?.AroundPostStop();
+
+                if (a is IActorStash stashed)
+                {
+                    stashed.Stash.UnstashAll();
+                }
             }
             catch (Exception x)
             {
@@ -303,7 +312,7 @@ namespace Akka.Actor
                                     Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
                                 ClearActor(a);
-                                Dispose();
+                                ClearActorCell();
 
                                 _actor = null;
 

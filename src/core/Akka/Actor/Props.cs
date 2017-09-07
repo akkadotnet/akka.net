@@ -42,25 +42,98 @@ namespace Akka.Actor
     /// </code>
     /// </example>
     /// </summary>
-    public abstract class Props : IEquatable<Props>, ISurrogated
+    public class Props : IEquatable<Props>, ISurrogated
     {
         #region internal classes
 
-        private sealed class EmptyActor : UntypedActor
+        internal sealed class EmptyActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
             }
         }
 
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="Props"/> configuration object.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
+        public sealed class PropsSurrogate : ISurrogate
+        {
+            /// <summary>
+            /// The type of actor to create
+            /// </summary>
+            public Type Type { get; set; }
+            /// <summary>
+            /// The configuration used to deploy the actor.
+            /// </summary>
+            public Deploy Deploy { get; set; }
+            /// <summary>
+            /// The arguments used to create the actor.
+            /// </summary>
+            public object[] Arguments { get; set; }
+
+            /// <summary>
+            /// Creates a <see cref="Props"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="Props"/> encapsulated by this surrogate.</returns>
+            public ISurrogated FromSurrogate(ActorSystem system) => new Props(Type, Arguments, Deploy, null);
+        }
+
+        internal sealed class StaticScope : IScope
+        {
+            private readonly Props _props;
+            private bool _disposed = false;
+
+            public StaticScope(Props props)
+            {
+                _props = props;
+            }
+
+            public ActorBase Create() => (ActorBase)Activator.CreateInstance(_props.Type, _props.Arguments);
+
+            public void Dispose()
+            {
+                if (!_disposed) _disposed = true;
+                else
+                    throw new ObjectDisposedException(
+                        $"Actor {_props.Type.Name} has been terminated. Scope is already disposed.");
+            }
+        }
+
+        internal sealed class DynamicScope : IScope
+        {
+            private readonly Props _props;
+            private readonly IServiceScope _inner;
+
+            public DynamicScope(Props props, IServiceScope inner)
+            {
+                _props = props;
+                _inner = inner;
+            }
+
+            public void Dispose() => _inner.Dispose();
+
+            public ActorBase Create()
+            {
+                var result = _inner.ServiceProvider.GetService(_props.Type);
+                if (result == null)
+                {
+                    // fallback to activator to retain backward compatibility
+                    result = Activator.CreateInstance(_props.Type);
+                }
+                return (ActorBase)result;
+            }
+        }
+
         #endregion
 
-        private static readonly object[] noArgs = { };
+        private static readonly object[] NoArgs = { };
 
         /// <summary>
         /// A pre-configured <see cref="Akka.Actor.Props"/> that creates an actor that doesn't respond to messages.
         /// </summary>
-        public static Props Empty { get; } = Props.Create(() => new EmptyActor());
+        public static Props Empty { get; } = Create(() => new EmptyActor());
 
         /// <summary>
         /// A pre-configured <see cref="Akka.Actor.Props"/> that doesn't create actors.
@@ -70,12 +143,20 @@ namespace Akka.Actor
         /// </note>
         /// </summary>
         public static Props None { get; } = null;
+        
+        public Props(Type type, object[] args) : this(type, args, Deploy.None, null) { }
+
+        public Props(Type type) : this(type, NoArgs, Deploy.None, null) { }
+        public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args) : this(type, args.ToArray(), Deploy.None, supervisorStrategy) { }
+        public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args) : this(type, args, Deploy.None, supervisorStrategy) { }
+        public Props(Deploy deploy, Type type, IEnumerable<object> args) : this(type, args.ToArray(), deploy, null) { }
+        public Props(Deploy deploy, Type type, params object[] args) : this(type, args, deploy, null) { }
 
         protected Props(Type type, object[] args, Deploy deploy, SupervisorStrategy supervisorStrategy)
         {
-            Type = type ?? throw new ArgumentException("Props must be instantiated with an actor type.", nameof(type));
+            Type = type ?? throw new ArgumentNullException(nameof(type), "Props must be instantiated with an actor type.");
             Deploy = deploy ?? Deploy.None;
-            Arguments = args;
+            Arguments = args ?? NoArgs;
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -116,11 +197,11 @@ namespace Akka.Actor
 
             var args = newExpression.GetArguments().ToArray();
 
-            return new StaticProps(typeof(TActor), args, Deploy.None, supervisorStrategy);
+            return new Props(typeof(TActor), args, Deploy.None, supervisorStrategy);
         }
 
         public RouterConfig RouterConfig => Deploy.RouterConfig;
-        public string Dispatcher => Deploy.Dispatcher == Actor.Deploy.NoDispatcherGiven ? Dispatchers.DefaultDispatcherId : Deploy.Dispatcher;
+        public string Dispatcher => Deploy.Dispatcher == Deploy.NoDispatcherGiven ? Dispatchers.DefaultDispatcherId : Deploy.Dispatcher;
         public string Mailbox => Deploy.Mailbox;
 
         /// <summary>
@@ -129,7 +210,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(object[] args) where TActor : ActorBase => new StaticProps(typeof(TActor), args, Deploy.None, null);
+        public static Props Create<TActor>(params object[] args) where TActor : ActorBase => new Props(typeof(TActor), args, Deploy.None, null);
 
         /// <summary>
         /// Creates an actor using a specified supervisor strategy.
@@ -137,7 +218,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase, new() => new DynamicProps(typeof(TActor), Deploy.None, supervisorStrategy);
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase, new() => new Props(typeof(TActor), NoArgs, Deploy.None, supervisorStrategy);
 
         /// <summary>
         /// Creates an actor of a specified type.
@@ -146,7 +227,7 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
-        public static Props Create(Type type, params object[] args) => new StaticProps(type, args, Deploy.None, null);
+        public static Props Create(Type type, params object[] args) => new Props(type, args, Deploy.None, null);
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Props" /> with a given <paramref name="mailbox" />.
@@ -207,9 +288,21 @@ namespace Akka.Actor
         /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="supervisorStrategy" />.</returns>
         public Props WithSupervisorStrategy(SupervisorStrategy supervisorStrategy) => Copy(supervisorStrategy: supervisorStrategy);
 
-        internal abstract IScope CreateScope(ExtendedActorSystem system);
+        internal virtual IScope CreateScope(ExtendedActorSystem system)
+        {
+            if (Arguments.Length == 0)
+                return new DynamicScope(this, system.ServiceProvider.CreateScope());
+            else return new StaticScope(this);
+        }
 
-        internal abstract Props Copy(Type type = null, object[] args = null, Deploy deploy = null, SupervisorStrategy supervisorStrategy = null);
+        internal virtual Props Copy(Type type = null, object[] args = null, Deploy deploy = null,
+            SupervisorStrategy supervisorStrategy = null) => new Props(
+            type: type ?? Type,
+            args: args ?? Arguments,
+            deploy: deploy ?? Deploy,
+            supervisorStrategy: supervisorStrategy ?? SupervisorStrategy);
+
+        public override string ToString() => $"Props({Type.Name})";
 
         #region surrogates
 
@@ -218,7 +311,12 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
         /// <returns>The surrogate representation of the current <see cref="Props"/>.</returns>
-        public abstract ISurrogate ToSurrogate(ActorSystem system);
+        public ISurrogate ToSurrogate(ActorSystem system) => new PropsSurrogate
+        {
+            Arguments = Arguments,
+            Deploy = Deploy,
+            Type = Type
+        };
 
         #endregion
 
@@ -273,142 +371,18 @@ namespace Akka.Actor
 
         #endregion
     }
-
-    internal sealed class StaticProps : Props
+    internal sealed class TerminatedProps : Props
     {
-        #region internal classes
+        public static readonly TerminatedProps Instance = new TerminatedProps();
 
-        /// <summary>
-        /// This class represents a surrogate of a <see cref="Props"/> configuration object.
-        /// Its main use is to help during the serialization process.
-        /// </summary>
-        public sealed class StaticPropsSurrogate : ISurrogate
-        {
-            /// <summary>
-            /// The type of actor to create
-            /// </summary>
-            public Type Type { get; set; }
-            /// <summary>
-            /// The configuration used to deploy the actor.
-            /// </summary>
-            public Deploy Deploy { get; set; }
-            /// <summary>
-            /// The arguments used to create the actor.
-            /// </summary>
-            public object[] Arguments { get; set; }
-
-            /// <summary>
-            /// Creates a <see cref="Props"/> encapsulated by this surrogate.
-            /// </summary>
-            /// <param name="system">The actor system that owns this router.</param>
-            /// <returns>The <see cref="Props"/> encapsulated by this surrogate.</returns>
-            public ISurrogated FromSurrogate(ActorSystem system) => new StaticProps(Type, Arguments, Deploy, null);
-        }
-
-        public sealed class StaticScope : IScope
-        {
-            private readonly StaticProps _props;
-
-            public StaticScope(StaticProps props)
-            {
-                _props = props;
-            }
-
-            public ActorBase Create() => (ActorBase)Activator.CreateInstance(_props.Type, _props.Arguments);
-
-            public void Dispose() { }
-        }
-
-        #endregion
-
-        private readonly IScope _scope;
-
-        public StaticProps(Type type, object[] args, Deploy deploy, SupervisorStrategy supervisorStrategy) : base(type, args, deploy, supervisorStrategy)
-        {
-            _scope = new StaticScope(this);
-        }
-
-        internal override IScope CreateScope(ExtendedActorSystem system) => _scope;
-
-        internal override Props Copy(Type type = null, object[] args = null, Deploy deploy = null, SupervisorStrategy supervisorStrategy = null) => new StaticProps(
-            type: type ?? Type,
-            args: args ?? Arguments,
-            deploy: deploy ?? Deploy,
-            supervisorStrategy: supervisorStrategy ?? SupervisorStrategy);
-
-        public override ISurrogate ToSurrogate(ActorSystem system) => new StaticPropsSurrogate
-        {
-            Type = Type,
-            Arguments = Arguments,
-            Deploy = Deploy
-        };
-    }
-
-    internal sealed class DynamicProps : Props
-    {
-        #region internal classes
-
-        public sealed class DynamicPropsSurrogate : ISurrogate
-        {
-            /// <summary>
-            /// The type of actor to create
-            /// </summary>
-            public Type Type { get; set; }
-
-            /// <summary>
-            /// The configuration used to deploy the actor.
-            /// </summary>
-            public Deploy Deploy { get; set; }
-
-            /// <summary>
-            /// Creates a <see cref="Props"/> encapsulated by this surrogate.
-            /// </summary>
-            /// <param name="system">The actor system that owns this router.</param>
-            /// <returns>The <see cref="Props"/> encapsulated by this surrogate.</returns>
-            public ISurrogated FromSurrogate(ActorSystem system) => new DynamicProps(Type, Deploy, null);
-        }
-
-        public sealed class DynamicScope : IScope
-        {
-            private readonly DynamicProps _props;
-            private readonly IServiceScope _inner;
-
-            public DynamicScope(DynamicProps props, IServiceScope inner)
-            {
-                _props = props;
-                _inner = inner;
-            }
-
-            public void Dispose() => _inner.Dispose();
-
-            public ActorBase Create()
-            {
-                var result = _inner.ServiceProvider.GetService(_props.Type);
-                if (result == null)
-                {
-                    // fallback to activator to retain backward compatibility
-                    result = Activator.CreateInstance(_props.Type);
-                }
-                return (ActorBase)result;
-            }
-        }
-
-        #endregion
-
-        public DynamicProps(Type type, Deploy deploy, SupervisorStrategy supervisorStrategy) : base(type, null, deploy, supervisorStrategy)
+        public TerminatedProps() : base(typeof(EmptyActor), null, Deploy.None, null)
         {
         }
 
-        internal override IScope CreateScope(ExtendedActorSystem system) => new DynamicScope(this, system.ServiceProvider.CreateScope());
-
-        internal override Props Copy(Type type = null, object[] args = null, Deploy deploy = null, SupervisorStrategy supervisorStrategy = null) =>
-            new DynamicProps(type: type ?? Type, deploy: deploy ?? Deploy, supervisorStrategy: supervisorStrategy ?? SupervisorStrategy);
-
-        public override ISurrogate ToSurrogate(ActorSystem system) => new DynamicPropsSurrogate
+        internal override IScope CreateScope(ExtendedActorSystem system)
         {
-            Type = Type,
-            Deploy = Deploy
-        };
+            throw new InvalidOperationException("This actor has been terminated");
+        }
     }
 }
 

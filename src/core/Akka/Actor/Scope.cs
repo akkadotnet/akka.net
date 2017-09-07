@@ -40,11 +40,14 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public virtual bool Equals(Scope other)
         {
-            if (other == null) return false;
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
 
             //we don't do equality checks on fallbacks
             return GetType() == other.GetType();
         }
+
+        public override bool Equals(object obj) => obj is Scope scope && Equals(scope);
     }
 
     /// <summary>

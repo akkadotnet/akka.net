@@ -23,7 +23,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    public partial class ActorCell : IUntypedActorContext, ICell, IDisposable
+    public partial class ActorCell : IUntypedActorContext, ICell
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
@@ -354,9 +354,9 @@ namespace Akka.Actor
         {
             var actor = _scope.Create();
 
-            if (actor is IWithUnboundedStash stashed)
+            if (actor is IActorStash stashed)
             {
-                stashed.Stash = this.CreateStash(_props.Type);
+                stashed.Stash = this.CreateStash(stashed);
             }
             
             if (actor is IInitializableActor initializable)
@@ -426,10 +426,11 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public void Dispose()
+        protected void ClearActorCell()
         {
             UnstashAll();
             _scope.Dispose();
+            _props = TerminatedProps.Instance;
         }
 
         /// <summary>

@@ -96,7 +96,9 @@ namespace Akka.Remote.Serialization
                 );
             }
 
-            return Props.Create(actorClass, args).WithDeploy(DeployFromProto(protoProps.Deploy));
+            // we don't want to break proto contract, thankfully DynamicProps
+            // are using fallback to Activator instantiation anyway
+            return new Props(DeployFromProto(protoProps.Deploy), actorClass, args);
         }
 
         //
