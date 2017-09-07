@@ -102,7 +102,7 @@ There are three ways to handle exceptions from application code:
 By default the stopping strategy is used for all exceptions, i.e. the stream will be completed with failure when an exception is thrown.
 
 ```C#
-var source = Source.From(Enumerable.Range(0, 5)).Select(x => 100/x);
+var source = Source.From(Enumerable.Range(0, 6)).Select(x => 100/x);
 var result = source.RunWith(Sink.Aggregate<int, int>(0, (sum, i) => sum + i), materializer);
 // division by zero will fail the stream and the
 // result here will be a Task completed with Failure(DivideByZeroException)
