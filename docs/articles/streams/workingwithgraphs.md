@@ -509,7 +509,7 @@ public static IMessage FromBytes(ByteString bytes)
 
 In this way you could easily integrate any other serialization library that turns an object into a sequence of bytes.
 
-The other stage that we talked about is a little more involved since reversing a framing protocol means that any received chunk of bytes may correspond to zero or more messages. This is best implemented using a `GraphStage` (see also [Custom processing with GraphStage](customstreamprocessing.md#custom-processing-with-graphstage)).
+The other stage that we talked about is a little more involved since reversing a framing protocol means that any received chunk of bytes may correspond to zero or more messages. This is best implemented using a `GraphStage` (see also [Custom processing with GraphStage](xref:custom-stream-processing#custom-processing-with-graphstage)).
 
 ```csharp
 public static ByteString AddLengthHeader(ByteString bytes, ByteOrder order)
