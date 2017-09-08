@@ -26,7 +26,6 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <DefineConstants>$(DefineConstants);SERIALIZABLE</DefineConstants>
     <DefineConstants>$(DefineConstants);SERIALIZABLE;FSCHECK;</DefineConstants>
   </PropertyGroup>
 
