@@ -518,7 +518,7 @@ Please note that a factory is necessary to achieve reusability of the resulting 
 
 As described above any Akka Streams ``Source`` can be exposed as a Reactive Streams ``Publisher`` 
 and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
-implement Reactive Streams integrations with built-in stages or [custom stages](customstreamprocessing.md).
+implement Reactive Streams integrations with built-in stages or [custom stages](xref:custom-stream-processing).
 
 For historical reasons the `ActorPublisher` and `ActorSubscriber`  are
 provided to support implementing Reactive Streams `Publisher` class and `Subscriber` class with
