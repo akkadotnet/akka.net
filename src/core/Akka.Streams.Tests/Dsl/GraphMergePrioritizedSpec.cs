@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -32,9 +31,9 @@ namespace Akka.Streams.Tests.Dsl
             public MergePrioritizedFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                 var mergePrioritized = builder.Add(new MergePrioritized<int>(new List<int> { 2, 8 }));
-                Left = mergePrioritized .In(0);
-                Right = mergePrioritized .In(1);
-                Out = mergePrioritized .Out;
+                Left = mergePrioritized.In(0);
+                Right = mergePrioritized.In(1);
+                Out = mergePrioritized.Out;
             }
 
             public override Inlet<int> Left { get; }
@@ -54,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
 
-            ThreeSourceMerge<int>(source1, source2, source3, priorities, probe).Run(this.Materializer());
+            ThreeSourceMerge(source1, source2, source3, priorities, probe).Run(Materializer);
 
             var subscription = probe.ExpectSubscription();
 
@@ -80,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
 
-            ThreeSourceMerge<int>(source1, source2, source3, priorities, probe).Run(this.Materializer());
+            ThreeSourceMerge(source1, source2, source3, priorities, probe).Run(Materializer);
 
             var subscription = probe.ExpectSubscription();
 
@@ -100,17 +99,79 @@ namespace Akka.Streams.Tests.Dsl
             Math.Round(twos / threes).Should().Be(3);
         }
 
+        [Fact]
+        public void MergePrioritized_must_stream_data_when_only_one_source_produces()
+        {
+            var elementCount = 10;
+            var source1 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 1).GetEnumerator());
+            var source2 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
+            var source3 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
+
+            var priorities = new List<int> { 6, 3, 1 };
+            var probe = this.CreateManualSubscriberProbe<int>();
+
+            ThreeSourceMerge(source1, source2, source3, priorities, probe).Run(Materializer);
+
+            var subscription = probe.ExpectSubscription();
+
+            var collected = new HashSet<int>();
+            for (int i = 1; i <= elementCount; i++)
+            {
+                subscription.Request(1);
+                collected.Add(probe.ExpectNext());
+            }
+
+            int ones = collected.Count(x => x == 1);
+            int twos = collected.Count(x => x == 2);
+            int threes = collected.Count(x => x == 3);
+
+            ones.Should().Be(elementCount);
+            twos.Should().Be(0);
+            threes.Should().Be(0);
+        }
+
+        [Fact]
+        public void MergePrioritized_must_stream_data_with_priority_when_only_two_sources_produce()
+        {
+            var elementCount = 20000;
+            var source1 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 1).GetEnumerator());
+            var source2 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 2).GetEnumerator());
+            var source3 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
+
+            var priorities = new List<int> { 6, 3, 1 };
+            var probe = this.CreateManualSubscriberProbe<int>();
+
+            ThreeSourceMerge(source1, source2, source3, priorities, probe).Run(Materializer);
+
+            var subscription = probe.ExpectSubscription();
+
+            var collected = new HashSet<int>();
+            for (int i = 1; i <= elementCount; i++)
+            {
+                subscription.Request(1);
+                collected.Add(probe.ExpectNext());
+            }
+
+            double ones = collected.Count(x => x == 1);
+            double twos = collected.Count(x => x == 2);
+            int threes = collected.Count(x => x == 3);
+
+            threes.Should().Be(0);
+            Math.Round(ones / twos).Should().Be(2);
+        }
+
         private RunnableGraph<T> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
             Source<T, NotUsed> source3, List<int> priorities, TestSubscriber.ManualProbe<T> probe)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, (p1, p2, p3) => { }, (builder, s1, s2, s3) =>
+            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, (p1, p2, p3) => default(T), (builder, s1, s2, s3) =>
             {
                 var merge = builder.Add(new MergePrioritized<T>(priorities));
+                var sink = builder.Add(Sink.FromSubscriber(probe));
                 builder.From(s1.Outlet).To(merge.In(0));
                 builder.From(s2.Outlet).To(merge.In(1));
                 builder.From(s3.Outlet).To(merge.In(2));
 
-                builder.From(merge.Out).To(Sink.FromSubscriber(probe));
+                builder.From(merge.Out).To(sink);
 
                 return ClosedShape.Instance;
             }));

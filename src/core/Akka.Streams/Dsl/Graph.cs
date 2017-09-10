@@ -444,11 +444,12 @@ namespace Akka.Streams.Dsl
         public int InputPorts { get; }
 
         #region internal classes
-        internal sealed class MergePrioritizedLogic : GraphStageLogic
+        internal sealed class MergePrioritizedLogic : OutGraphStageLogic
         {
             private readonly MergePrioritized<T> _stage;
             private List<FixedSizeBuffer<Inlet<T>>> allBuffers;
-            public int runningUpstreams;
+            private int runningUpstreams;
+            private Random randomGen = new Random();
 
             public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
             {
@@ -461,14 +462,21 @@ namespace Akka.Streams.Dsl
 
                 runningUpstreams = stage.InputPorts;
 
-                stage.In.Zip(allBuffers, (inlet, buffer) =>
+                for (int i = 0; i < stage.In.Count; i++)
                 {
+                    var inlet = stage.In[i];
+                    var buffer = allBuffers[i];
+
                     SetHandler(inlet, onPush: () =>
                     {
                         if (IsAvailable(_stage.Out) && !HasPending)
                         {
                             Push(_stage.Out, Grab(inlet));
                             TryPull(inlet);
+                        }
+                        else
+                        {
+                            buffer.Enqueue(inlet);
                         }
                     }, onUpstreamFinish: () =>
                     {
@@ -484,14 +492,9 @@ namespace Akka.Streams.Dsl
                             if (UpstreamsClosed && !HasPending) CompleteStage();
                         }
                     });
-                    return true;
-                });
+                }
 
-                SetHandler(_stage.Out, () =>
-                {
-                    if (!HasPending)
-                        DequeueAndDispatch();
-                });
+                SetHandler(_stage.Out, this);
             }
 
             public override void PreStart()
@@ -500,6 +503,12 @@ namespace Akka.Streams.Dsl
                 {
                     TryPull(input);
                 }
+            }
+
+            public override void OnPull()
+            {
+                if (!HasPending)
+                    DequeueAndDispatch();
             }
 
             public bool HasPending => allBuffers.Any(c => c.NonEmpty);
@@ -530,7 +539,7 @@ namespace Akka.Streams.Dsl
                     ix += 1;
                 }
 
-                int r = 4; // TODO: use random number generator
+                int r = randomGen.Next(tp);
                 Inlet<T> next = null;
                 ix = 0;
 
@@ -548,10 +557,7 @@ namespace Akka.Streams.Dsl
                 return next;
             }
 
-            public override string ToString()
-            {
-                return "MergePrioritized";
-            }
+            public override string ToString() => "MergePrioritized";
         }
         #endregion
 
