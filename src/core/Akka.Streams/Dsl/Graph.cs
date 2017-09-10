@@ -423,7 +423,7 @@ namespace Akka.Streams.Dsl
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
     }
 
-   /// <summary>
+    /// <summary>
     /// Merge several streams, taking elements as they arrive from input streams
     /// (picking from prioritized once when several have elements ready).
     /// A <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> has one <see cref="P:Akka.Streams.Dsl.MergePrioritized`1.Out" /> port, one or more input port with their priorities.
@@ -555,11 +555,29 @@ namespace Akka.Streams.Dsl
         }
         #endregion
 
+        /// <summary>
+        /// Create a new <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> with specified number of input ports.
+        /// </summary>
+        /// <param name="priorities">Priorities of the input ports</param>
+        public MergePrioritized(IList<int> priorities)
+            :this(priorities, false)
+        {
+            
+        }
+
+        /// <summary>
+        /// Create a new <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> with specified number of input ports.
+        /// </summary>
+        /// <param name="priorities">Priorities of the input ports</param>
+        /// <param name="eagerComplete">If true, the merge will complete as soon as one of its inputs completes</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="priorities"/> is less or equal zero.
+        /// </exception>
         public MergePrioritized(IList<int> priorities, bool eagerComplete)
         {
             Priorities = priorities;
             EagerComplete = eagerComplete;
-            InputPorts = priorities.Count();
+            InputPorts = priorities.Count;
             if (InputPorts <= 0)
                 throw new ArgumentException("A Merge must have one or more input ports");
             if (!priorities.All(x => x > 0))
