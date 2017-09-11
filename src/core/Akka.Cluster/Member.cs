@@ -407,32 +407,32 @@ namespace Akka.Cluster
         /// <summary>
         /// Indicates that a new node is joining the cluster.
         /// </summary>
-        Joining,
+        Joining = 0,
         /// <summary>
         /// Indicates that a node is a current member of the cluster.
         /// </summary>
-        Up,
+        Up = 1,
         /// <summary>
         /// Indicates that a node is beginning to leave the cluster.
         /// </summary>
-        Leaving,
+        Leaving = 2,
         /// <summary>
         /// Indicates that all nodes are aware that this node is leaving the cluster.
         /// </summary>
-        Exiting,
+        Exiting = 3,
         /// <summary>
         /// Node was forcefully removed from the cluster by means of <see cref="Cluster.Down"/>
         /// </summary>
-        Down,
+        Down = 4,
         /// <summary>
         /// Node was removed as a member from the cluster.
         /// </summary>
-        Removed,
+        Removed = 5,
         /// <summary>
         /// Indicates that new node has already joined, but it cannot be set to <see cref="Up"/>
         /// because cluster convergence cannot be reached i.e. because of unreachable nodes.
         /// </summary>
-        WeaklyUp,
+        WeaklyUp = 6,
     }
 
     /// <summary>
