@@ -248,6 +248,8 @@ namespace Akka.Cluster
                 if (@bs == MemberStatus.Exiting) return -1;
                 if (@as == MemberStatus.Joining) return 1;
                 if (@bs == MemberStatus.Joining) return -1;
+                if (@as == MemberStatus.WeaklyUp) return 1;
+                if (@bs == MemberStatus.WeaklyUp) return -1;
                 return Ordering.Compare(a, b);
             }
         }
@@ -373,6 +375,8 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
+            if (m1Status == MemberStatus.WeaklyUp) return m2;
+            if (m2Status == MemberStatus.WeaklyUp) return m1;
             return m1;
         }
 
@@ -382,7 +386,8 @@ namespace Akka.Cluster
         internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
-                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed) },
                 {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Leaving, ImmutableHashSet.Create(MemberStatus.Exiting, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Down, ImmutableHashSet.Create(MemberStatus.Removed)},
@@ -422,7 +427,12 @@ namespace Akka.Cluster
         /// <summary>
         /// Node was removed as a member from the cluster.
         /// </summary>
-        Removed
+        Removed,
+        /// <summary>
+        /// Indicates that new node has already joined, but it cannot be set to <see cref="Up"/>
+        /// because cluster convergence cannot be reached i.e. because of unreachable nodes.
+        /// </summary>
+        WeaklyUp,
     }
 
     /// <summary>

@@ -89,31 +89,26 @@ namespace Akka.Cluster
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            var state = message as ClusterEvent.CurrentClusterState;
-            if (state != null)
+            switch (message)
             {
-                _clusterNodes =
-                    state.Members.Select(m => m.Address).Where(a => a != _cluster.SelfAddress).ToImmutableHashSet();
-                foreach (var node in _clusterNodes) TakeOverResponsibility(node);
-                Unreachable.ExceptWith(_clusterNodes);
-                return;
+                case ClusterEvent.CurrentClusterState state:
+                    _clusterNodes =
+                        state.Members.Select(m => m.Address).Where(a => a != _cluster.SelfAddress).ToImmutableHashSet();
+                    foreach (var node in _clusterNodes) TakeOverResponsibility(node);
+                    Unreachable.ExceptWith(_clusterNodes);
+                    return;
+                case ClusterEvent.MemberUp up:
+                    MemberUp(up.Member);
+                    return;
+                case ClusterEvent.MemberWeaklyUp weaklyUp:
+                    MemberUp(weaklyUp.Member);
+                    return;
+                case ClusterEvent.MemberRemoved removed:
+                    MemberRemoved(removed.Member, removed.PreviousStatus);
+                    return;
+                case ClusterEvent.IMemberEvent _:
+                    return; // not interesting
             }
-
-            var memberUp = message as ClusterEvent.MemberUp;
-            if (memberUp != null)
-            {
-                MemberUp(memberUp.Member);
-                return;
-            }
-
-            var memberRemoved = message as ClusterEvent.MemberRemoved;
-            if (memberRemoved != null)
-            {
-                MemberRemoved(memberRemoved.Member, memberRemoved.PreviousStatus);
-                return;
-            }
-
-            if (message is ClusterEvent.IMemberEvent) return; // not interesting
 
             base.OnReceive(message);
         }
