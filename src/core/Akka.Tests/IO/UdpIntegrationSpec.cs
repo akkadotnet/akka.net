@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Tests.IO
 {
@@ -28,7 +29,7 @@ namespace Akka.Tests.IO
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024
-                    #akka.io.udp.trace-logging = on
+                    akka.io.udp.trace-logging = on
                     akka.loglevel = DEBUG", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
@@ -73,6 +74,35 @@ namespace Akka.Tests.IO
             SimpleSender().Tell(Udp.Send.Create(data, serverAddress));
 
             ExpectMsg<Udp.Received>(x => x.Data.ShouldBe(data));
+        }
+
+        [Fact]
+        public void BugFix_UDP_fire_and_forget_must_handle_batch_writes_when_bound()
+        {
+            var serverAddress = _addresses[0];
+            var clientAddress = _addresses[1];
+            var server = BindUdp(serverAddress, TestActor);
+            var client = BindUdp(clientAddress, TestActor);
+            var data = ByteString.FromString("Fly little packet!");
+
+            // queue 3 writes
+            client.Tell(Udp.Send.Create(data, serverAddress));
+            client.Tell(Udp.Send.Create(data, serverAddress));
+            client.Tell(Udp.Send.Create(data, serverAddress));
+
+            var raw = ReceiveN(3);
+            var msgs = raw.Cast<Udp.Received>();
+            msgs.Sum(x => x.Data.Count).Should().Be(data.Count*3);
+            ExpectNoMsg(100.Milliseconds()); 
+
+            // repeat in the other direction
+            server.Tell(Udp.Send.Create(data, clientAddress));
+            server.Tell(Udp.Send.Create(data, clientAddress));
+            server.Tell(Udp.Send.Create(data, clientAddress));
+
+            raw = ReceiveN(3);
+            msgs = raw.Cast<Udp.Received>();
+            msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
 
         [Fact]

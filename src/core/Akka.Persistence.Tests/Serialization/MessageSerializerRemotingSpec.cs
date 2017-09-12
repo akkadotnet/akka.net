@@ -201,16 +201,5 @@ akka {
                 ExpectMsg("p.b.");
             });
         }
-
-        [Fact]
-        public void MessageSerializer_should_serialize_manifest_provided_by_EventAdapter()
-        {
-            var p1 = new Persistent(new MyPayload("a"), sender: TestActor).WithManifest("manifest");
-            var serializer = _serialization.FindSerializerFor(p1);
-            var bytes = serializer.ToBinary(p1);
-            var back = (Persistent)serializer.FromBinary(bytes, typeof (Persistent));
-
-            back.Manifest.ShouldBe(p1.Manifest);
-        }
     }
 }

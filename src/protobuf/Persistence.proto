@@ -36,3 +36,14 @@ message AtLeastOnceDeliverySnapshot {
   int64 currentDeliveryId = 1;
   repeated UnconfirmedDelivery unconfirmedDeliveries = 2;
 }
+
+message PersistentStateChangeEvent {
+  string stateIdentifier = 1;
+  int64 timeoutMillis = 2;
+}
+
+message PersistentFSMSnapshot {
+  string stateIdentifier = 1;
+  PersistentPayload data = 2;
+  int64 timeoutMillis = 3;
+}

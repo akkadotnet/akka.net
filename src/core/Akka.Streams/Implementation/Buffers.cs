@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Streams.Implementation
 {
@@ -216,6 +217,7 @@ namespace Akka.Streams.Implementation
         /// <param name="index">TBD</param>
         /// <param name="element">TBD</param>
         /// <param name="maintenance">TBD</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Put(long index, T element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
         /// <summary>
