@@ -10,6 +10,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.3.0-beta5-*</XunitVersion>
+    <TestSdkVersion>15.3.0</TestSdkVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
