@@ -23,7 +23,49 @@ namespace ClusterSharding.Node
     {
         static void Main(string[] args)
         {
-            using (var system = ActorSystem.Create("sharded-cluster-system", ConfigurationFactory.Load().WithFallback(ClusterSingletonManager.DefaultConfig())))
+            Config config = @"
+            akka {
+              actor {
+                provider = cluster
+                serializers {
+                  hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                }
+                serialization-bindings {
+                  ""System.Object"" = hyperion
+                }
+              }
+              remote {
+                dot-netty.tcp {
+                  public-hostname = ""localhost""
+                  hostname = ""localhost""
+                  port = 0
+                }
+              }
+              cluster {
+                auto-down-unreachable-after = 5s
+                sharding {
+                  least-shard-allocation-strategy.rebalance-threshold = 3
+                }
+              }
+              persistence {
+                journal {
+                  plugin = ""akka.persistence.journal.sqlite""
+                  sqlite {
+                    connection-string = ""Datasource=store.db""
+                    auto-initialize = true
+                  }
+                }
+                snapshot-store {
+                  plugin = ""akka.persistence.snapshot-store.sqlite""
+                  sqlite {
+                    connection-string = ""Datasource=store.db""
+                    auto-initialize = true
+                  }
+                }
+              }
+            }";
+
+            using (var system = ActorSystem.Create("sharded-cluster-system", config.WithFallback(ClusterSingletonManager.DefaultConfig())))
             {
                 var automaticCluster = new AutomaticCluster(system);
                 try
