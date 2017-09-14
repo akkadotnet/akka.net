@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
@@ -1606,6 +1607,7 @@ namespace Akka.Streams.Stage
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
+        [InternalApi]
         protected class SubSinkInlet<T>
         {
             private readonly string _name;
@@ -1741,6 +1743,7 @@ namespace Akka.Streams.Stage
         /// given time limit, see e.g. ActorMaterializerSettings.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
+        [InternalApi]
         protected class SubSourceOutlet<T>
         {
             private readonly string _name;

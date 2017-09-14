@@ -8,13 +8,15 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public interface ICell
     {
         /// <summary>Gets the "self" reference which this Cell is attached to.</summary>

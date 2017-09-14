@@ -9,6 +9,7 @@ using System;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
@@ -93,6 +94,7 @@ namespace Akka.Streams.Implementation
     /// Subscription timeout which does not start any scheduled events and always returns `true`.
     /// This specialized implementation is to be used for "noop" timeout mode.
     /// </summary>
+    [InternalApi]
     public sealed class NoopSubscriptionTimeout : ICancelable
     {
         /// <summary>

@@ -7,13 +7,17 @@
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 
 namespace Akka.IO
 {
     using ByteBuffer = ArraySegment<byte>;
 
-    // INTERNAL API
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     class UdpConnectedManager : ActorBase
     {
         private readonly UdpConnectedExt _udpConn;

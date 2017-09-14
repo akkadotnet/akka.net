@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 
 namespace Akka.Dispatch
 {
@@ -47,6 +48,7 @@ namespace Akka.Dispatch
     /// 
     /// Used to produce <see cref="ExecutorServiceFactory"/> instances for use inside <see cref="Dispatcher"/>s
     /// </summary>
+    [InternalApi]
     public abstract class ExecutorServiceFactory
     {
         /// <summary>

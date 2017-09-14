@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 
 namespace Akka.Persistence.Journal
 {
@@ -44,6 +45,7 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// INTERNAL API
         /// </summary>
+        [InternalApi]
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)
         {
             return _eventAdapters.Get(representation.Payload.GetType())

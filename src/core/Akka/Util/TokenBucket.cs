@@ -7,12 +7,14 @@
 
 
 using System;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public abstract class TokenBucket
     {
         private readonly long _capacity;

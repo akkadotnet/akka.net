@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -228,6 +229,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
     {
         private readonly IActorRef _connection;

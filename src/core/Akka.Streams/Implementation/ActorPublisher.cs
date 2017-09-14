@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
@@ -154,7 +155,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
     }
-    
+
     /// <summary>
     /// INTERNAL API
     /// 
@@ -162,6 +163,7 @@ namespace Akka.Streams.Implementation
     /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         /// <summary>

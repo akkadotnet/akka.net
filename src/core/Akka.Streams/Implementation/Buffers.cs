@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Akka.Annotations;
 
 namespace Akka.Streams.Implementation
 {
@@ -134,6 +135,7 @@ namespace Akka.Streams.Implementation
         /// This exception is thrown when the specified <paramref name="size"/> is less than 1.
         /// </exception>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static FixedSizeBuffer<T> Create<T>(int size)
         {
             if (size < 1)
