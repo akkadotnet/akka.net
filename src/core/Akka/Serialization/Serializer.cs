@@ -149,12 +149,9 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API.
     /// </summary>
-    internal static class SerializerIdentifierHelper
+    public static class SerializerIdentifierHelper
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
+        internal const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
         /// <summary>
         /// TBD

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -174,6 +174,14 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemotePingPong", "benchmark\RemotePingPong\RemotePingPong.csproj", "{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{D3AF8295-AEB5-4324-AA82-FCC0014AC310}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusterSharding.Node", "ClusterSharding.Node", "{820CFBF7-E165-4ADA-B821-E6A0A81DFE84}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusterSharding.Node", "examples\Cluster\ClusterSharding\ClusterSharding.Node\ClusterSharding.Node.csproj", "{3C6EB4EF-3726-432F-812E-07828876418B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -702,6 +710,18 @@ Global
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x64.Build.0 = Release|Any CPU
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x86.Build.0 = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|x64.Build.0 = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Debug|x86.Build.0 = Debug|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x64.ActiveCfg = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x64.Build.0 = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x86.ActiveCfg = Release|Any CPU
+		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -774,5 +794,11 @@ Global
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D} = {73108242-625A-4D7B-AA09-63375DBAE464}
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF} = {73108242-625A-4D7B-AA09-63375DBAE464}
+		{C50E1A9E-820C-4E75-AE39-6F96A99AC4A7} = {D3AF8295-AEB5-4324-AA82-FCC0014AC310}
+		{820CFBF7-E165-4ADA-B821-E6A0A81DFE84} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
+		{3C6EB4EF-3726-432F-812E-07828876418B} = {820CFBF7-E165-4ADA-B821-E6A0A81DFE84}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
 	EndGlobalSection
 EndGlobal

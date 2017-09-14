@@ -4470,6 +4470,10 @@ namespace Akka.Serialization
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
     }
+    public class static SerializerIdentifierHelper
+    {
+        public static int GetSerializerIdentifierFromConfig(System.Type type, Akka.Actor.ExtendedActorSystem system) { }
+    }
     public abstract class SerializerWithStringManifest : Akka.Serialization.Serializer
     {
         protected SerializerWithStringManifest(Akka.Actor.ExtendedActorSystem system) { }

@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
-using System.Data.SQLite;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Persistence.Sqlite;
+using Microsoft.Data.Sqlite;
 
 namespace ClusterSharding.Node.AutomaticJoin
 {
@@ -32,7 +32,7 @@ namespace ClusterSharding.Node.AutomaticJoin
             _dbHelper = new DbHelper(() =>
             {
                 var str = _system.Settings.Config.GetString("akka.persistence.journal.sqlite.connection-string");
-                var conn = new SQLiteConnection(str);
+                var conn = new SqliteConnection(str);
                 conn.Open();
                 return conn;
             });
