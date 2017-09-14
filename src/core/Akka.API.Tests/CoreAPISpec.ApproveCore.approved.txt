@@ -2016,7 +2016,12 @@ namespace Akka.Actor.Internal
 namespace Akka.Annotations
 {
     [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
-    public class InternalApiAttribute : System.Attribute
+    public sealed class ApiMayChangeAttribute : System.Attribute
+    {
+        public ApiMayChangeAttribute() { }
+    }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class InternalApiAttribute : System.Attribute
     {
         public InternalApiAttribute() { }
     }

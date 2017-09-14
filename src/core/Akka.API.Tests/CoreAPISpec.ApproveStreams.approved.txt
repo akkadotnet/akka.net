@@ -4092,6 +4092,7 @@ namespace Akka.Streams.Stage
         protected System.Action GetAsyncCallback(System.Action handler) { }
         protected Akka.Streams.Stage.IInHandler GetHandler(Akka.Streams.Inlet inlet) { }
         protected Akka.Streams.Stage.IOutHandler GetHandler(Akka.Streams.Outlet outlet) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
         protected Akka.Streams.Stage.StageActorRef GetStageActorRef(Akka.Streams.Stage.StageActorRef.Receive receive) { }
         protected internal T Grab<T>(Akka.Streams.Inlet inlet) { }
         protected internal T Grab<T>(Akka.Streams.Inlet<T> inlet) { }

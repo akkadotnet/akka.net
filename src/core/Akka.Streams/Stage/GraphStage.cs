@@ -1556,6 +1556,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="receive">Callback that will be called upon receiving of a message by this special Actor</param>
         /// <returns>Minimal actor with watch method</returns>
+        [ApiMayChange]
         protected StageActorRef GetStageActorRef(StageActorRef.Receive receive)
         {
             if (_stageActorRef == null)
