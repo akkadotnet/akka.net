@@ -177,26 +177,27 @@ namespace Akka.Cluster.Sharding.Tests
 
         public static readonly ExtractEntityId ExtractEntityId = message =>
         {
-            if (message is EntityEnvelope)
+            switch (message)
             {
-                var env = (EntityEnvelope)message;
-                return Tuple.Create(env.Id.ToString(), env.Payload);
-            }
-            if (message is Get)
-            {
-                return Tuple.Create(((Get)message).CounterId.ToString(), message);
+                case EntityEnvelope env:
+                    return Tuple.Create(env.Id.ToString(), env.Payload);
+                case Get msg:
+                    return Tuple.Create(msg.CounterId.ToString(), message);
             }
             return null;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>
         {
-            if (message is EntityEnvelope)
-                return (((EntityEnvelope)message).Id % NumberOfShards).ToString();
-            if (message is Get)
-                return (((Get)message).CounterId % NumberOfShards).ToString();
-            if (message is ShardRegion.StartEntity)
-                return (long.Parse(((ShardRegion.StartEntity)message).EntityId) % NumberOfShards).ToString();
+            switch (message)
+            {
+                case EntityEnvelope msg:
+                    return (msg.Id % NumberOfShards).ToString();
+                case Get msg:
+                    return (msg.CounterId % NumberOfShards).ToString();
+                case ShardRegion.StartEntity msg:
+                    return (long.Parse(msg.EntityId) % NumberOfShards).ToString();
+            }
             return null;
         };
 
@@ -219,20 +220,36 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected override bool ReceiveRecover(object message)
         {
-            return message.Match()
-                .With<CounterChanged>(UpdateState)
-                .WasHandled;
+            switch (message)
+            {
+                case CounterChanged cc:
+                    UpdateState(cc);
+                    return true;
+            }
+            return false;
         }
 
         protected override bool ReceiveCommand(object message)
         {
-            return message.Match()
-                .With<Increment>(_ => Persist(new CounterChanged(1), UpdateState))
-                .With<Decrement>(_ => Persist(new CounterChanged(-1), UpdateState))
-                .With<Get>(_ => Sender.Tell(_count))
-                .With<ReceiveTimeout>(_ => Context.Parent.Tell(new Passivate(Stop.Instance)))
-                .With<Stop>(_ => Context.Stop(Self))
-                .WasHandled;
+            switch (message)
+            {
+                case Increment _:
+                    Persist(new CounterChanged(1), UpdateState);
+                    return true;
+                case Decrement _:
+                    Persist(new CounterChanged(-1), UpdateState);
+                    return true;
+                case Get _:
+                    Sender.Tell(_count);
+                    return true;
+                case ReceiveTimeout _:
+                    Context.Parent.Tell(new Passivate(Stop.Instance));
+                    return true;
+                case Stop _:
+                    Context.Stop(Self);
+                    return true;
+            }
+            return false;
         }
 
         private void UpdateState(CounterChanged e)
