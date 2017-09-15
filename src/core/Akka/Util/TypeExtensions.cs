@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
@@ -50,6 +51,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="type">TBD</param>
         /// <returns>Returns the type qualified name including namespace and assembly, but not assembly version.</returns>
+        [InternalApi]
         public static string TypeQualifiedName(this Type type)
         {
             string shortened;

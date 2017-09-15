@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
@@ -81,6 +82,7 @@ namespace Akka.Actor
     /// 
     /// Mailbox for dead letters.
     /// </summary>
+    [InternalApi]
     public sealed class DeadLetterMailbox : Mailbox
     {
         private readonly IActorRef _deadLetters;

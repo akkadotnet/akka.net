@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Google.Protobuf;
@@ -25,6 +26,7 @@ namespace Akka.Remote.Transport.Helios
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener _listener;
@@ -214,6 +216,7 @@ namespace Akka.Remote.Transport.Helios
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     class TcpAssociationHandle : AssociationHandle
     {
         private readonly IChannel _channel;

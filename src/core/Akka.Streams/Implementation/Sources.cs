@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
@@ -22,6 +23,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
     {
         #region internal classes
@@ -394,6 +396,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TSource">TBD</typeparam>
+    [InternalApi]
     public sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
@@ -533,6 +536,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TSource">TBD</typeparam>
+    [InternalApi]
     public sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
@@ -751,6 +755,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class LazySource<TOut, TMat> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<TMat>>
     {
         #region Logic
@@ -874,6 +879,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TEventArgs"></typeparam>
     /// <typeparam name="TDelegate">Delegate</typeparam>
+    [InternalApi]
     public sealed class EventSourceStage<TDelegate, TEventArgs> : GraphStage<SourceShape<TEventArgs>>
     {
         #region logic

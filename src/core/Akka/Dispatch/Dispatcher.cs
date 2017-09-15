@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Util;
 
@@ -96,6 +97,7 @@ namespace Akka.Dispatch
         /// <remarks>
         /// MUST BE IDEMPOTENT
         /// </remarks>
+        [InternalApi]
         protected override void Shutdown()
         {
             var newDelegate = _executorService.Clone();

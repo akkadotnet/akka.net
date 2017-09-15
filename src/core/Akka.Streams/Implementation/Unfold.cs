@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Annotations;
 using Akka.Streams.Stage;
 using Akka.Util;
 
@@ -17,6 +18,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TState">TBD</typeparam>
     /// <typeparam name="TElement">TBD</typeparam>
+    [InternalApi]
     public class Unfold<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region internal classes
@@ -90,6 +92,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TState">TBD</typeparam>
     /// <typeparam name="TElement">TBD</typeparam>
+    [InternalApi]
     public class UnfoldAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region stage logic

@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -18,7 +19,10 @@ namespace Akka.IO
     using static Udp;
     using ByteBuffer = ArraySegment<byte>;
 
-    // INTERNAL API
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     class UdpListener : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly IActorRef _bindCommander;

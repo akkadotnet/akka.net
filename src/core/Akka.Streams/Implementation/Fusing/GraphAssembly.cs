@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
@@ -49,6 +50,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// In addition, it is also assumed by the infrastructure that the order of exposed inputs and outputs in the
     /// corresponding segments of these arrays matches the exact same order of the ports in the <see cref="Shape"/>.
     /// </summary>
+    [InternalApi]
     public sealed class GraphAssembly
     {
         /// <summary>

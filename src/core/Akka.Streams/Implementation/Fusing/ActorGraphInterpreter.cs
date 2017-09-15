@@ -11,10 +11,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Stage;
-using Akka.Util.Internal;
 using Reactive.Streams;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
@@ -24,6 +24,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class GraphModule : AtomicModule
     {
         /// <summary>
@@ -104,6 +105,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class GraphInterpreterShell
     {
         private readonly GraphAssembly _assembly;
@@ -441,6 +443,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class ActorGraphInterpreter : ActorBase
     {
         #region messages

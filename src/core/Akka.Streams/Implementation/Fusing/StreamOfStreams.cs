@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -1148,6 +1149,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="s">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
+        [InternalApi]
         public static void Kill<T, TMat>(Source<T, TMat> s)
         {
             var module = s.Module as GraphStageModule;
