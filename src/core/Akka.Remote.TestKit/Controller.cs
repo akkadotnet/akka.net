@@ -146,58 +146,44 @@ namespace Akka.Remote.TestKit
             NodeInfo Node { get; }
         }
 
-        internal sealed class NodeInfo
+        internal sealed class NodeInfo : IEquatable<NodeInfo>
         {
-            readonly RoleName _name;
-            readonly Address _addr;
-            readonly IActorRef _fsm;
-
             public NodeInfo(RoleName name, Address addr, IActorRef fsm)
             {
-                _name = name;
-                _addr = addr;
-                _fsm = fsm;
+                Name = name;
+                Addr = addr;
+                FSM = fsm;
             }
 
-            public RoleName Name
-            {
-                get { return _name; }
-            }
+            public RoleName Name { get; }
 
-            public Address Addr
-            {
-                get { return _addr; }
-            }
+            public Address Addr { get; }
 
-            public IActorRef FSM
-            {
-                get { return _fsm; }
-            }
+            public IActorRef FSM { get; }
 
-            bool Equals(NodeInfo other)
+            public bool Equals(NodeInfo other)
             {
-                return Equals(_name, other._name) && Equals(_addr, other._addr) && Equals(_fsm, other._fsm);
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Equals(Name, other.Name) && Equals(Addr, other.Addr) && Equals(FSM, other.FSM);
             }
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is NodeInfo && Equals((NodeInfo) obj);
-            }
+            public override bool Equals(object obj) => obj is NodeInfo node && Equals(node);
 
             /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
                 {
-                    int hashCode = (_name != null ? _name.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (_addr != null ? _addr.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (_fsm != null ? _fsm.GetHashCode() : 0);
+                    int hashCode = (Name != null ? Name.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ (Addr != null ? Addr.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ (FSM != null ? FSM.GetHashCode() : 0);
                     return hashCode;
                 }
             }
+
+            public override string ToString() => $"NodeInfo({Name}, {Addr})";
 
             /// <summary>
             /// Compares two specified <see cref="NodeInfo"/> for equality.
@@ -205,10 +191,7 @@ namespace Akka.Remote.TestKit
             /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
             /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
             /// <returns><c>true</c> if both <see cref="NodeInfo"/> are equal; otherwise <c>false</c></returns>
-            public static bool operator ==(NodeInfo left, NodeInfo right)
-            {
-                return Equals(left, right);
-            }
+            public static bool operator ==(NodeInfo left, NodeInfo right) => Equals(left, right);
 
             /// <summary>
             /// Compares two specified <see cref="NodeInfo"/> for inequality.
@@ -216,10 +199,7 @@ namespace Akka.Remote.TestKit
             /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
             /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
             /// <returns><c>true</c> if both <see cref="NodeInfo"/> are not equal; otherwise <c>false</c></returns>
-            public static bool operator !=(NodeInfo left, NodeInfo right)
-            {
-                return !Equals(left, right);
-            }
+            public static bool operator !=(NodeInfo left, NodeInfo right) => !Equals(left, right);
         }
 
         public sealed class CreateServerFSM : INoSerializationVerificationNeeded
@@ -270,23 +250,23 @@ namespace Akka.Remote.TestKit
         {
             return new OneForOneStrategy(e =>
             {
-                var barrierTimeout = e as BarrierCoordinator.BarrierTimeoutException;
-                if (barrierTimeout != null) return FailBarrier(barrierTimeout.BarrierData);
-                var failedBarrier = e as BarrierCoordinator.FailedBarrierException;
-                if (failedBarrier != null) return FailBarrier(failedBarrier.BarrierData);
-                var barrierEmpty = e as BarrierCoordinator.BarrierEmptyException;
-                if(barrierEmpty != null) return Directive.Resume;
-                var wrongBarrier = e as BarrierCoordinator.WrongBarrierException;
-                if (wrongBarrier != null)
+                switch (e)
                 {
-                    wrongBarrier.Client.Tell(new ToClient<BarrierResult>(new BarrierResult(wrongBarrier.Barrier, false)));
-                    return FailBarrier(wrongBarrier.BarrierData);
+                    case BarrierCoordinator.BarrierTimeoutException barrierTimeout:
+                        return FailBarrier(barrierTimeout.BarrierData);
+                    case BarrierCoordinator.FailedBarrierException failedBarrier:
+                        return FailBarrier(failedBarrier.BarrierData);
+                    case BarrierCoordinator.BarrierEmptyException barrierEmpty:
+                        return Directive.Resume;
+                    case BarrierCoordinator.WrongBarrierException wrongBarrier:
+                        wrongBarrier.Client.Tell(new ToClient<BarrierResult>(new BarrierResult(wrongBarrier.Barrier, false)));
+                        return FailBarrier(wrongBarrier.BarrierData);
+                    case BarrierCoordinator.ClientLostException clientLost:
+                        return FailBarrier(clientLost.BarrierData);
+                    case BarrierCoordinator.DuplicateNodeException duplicateNode:
+                        return FailBarrier(duplicateNode.BarrierData);
+                    default: throw new InvalidOperationException($"Cannot process exception of type {e.GetType()}");
                 }
-                var clientLost = e as BarrierCoordinator.ClientLostException;
-                if (clientLost != null) return FailBarrier(clientLost.BarrierData);
-                var duplicateNode = e as BarrierCoordinator.DuplicateNodeException;
-                if (duplicateNode != null) return FailBarrier(duplicateNode.BarrierData);
-                throw new InvalidOperationException($"Cannot process exception of type {e.GetType()}");
             });
         }
 
@@ -351,63 +331,59 @@ namespace Akka.Remote.TestKit
             }
             if (message is IServerOp)
             {
-                if (message is EnterBarrier)
+                switch (message)
                 {
-                    _barrier.Forward(message);
-                    return;
-                }
-                if (message is FailBarrier)
-                {
-                    _barrier.Forward(message);
-                    return;                    
-                }
-                var getAddress = message as GetAddress;
-                if (getAddress != null)
-                {
-                    var node = getAddress.Node;
-                    if (_nodes.TryGetValue(node, out var replyNodeInfo))
-                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
-                    else
-                    {
-                        _addrInterest = _addrInterest.SetItem(node,
-                            (_addrInterest.TryGetValue(node, out var existing)
-                                ? existing
-                                : ImmutableHashSet.Create<IActorRef>()
+                    case EnterBarrier _: _barrier.Forward(message); return;
+                    case FailBarrier _: _barrier.Forward(message); return;
+                    case GetAddress getAddress:
+                        var node = getAddress.Node;
+                        if (_nodes.TryGetValue(node, out var replyNodeInfo))
+                            Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
+                        else
+                        {
+                            _addrInterest = _addrInterest.SetItem(node,
+                                (_addrInterest.TryGetValue(node, out var existing)
+                                    ? existing
+                                    : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));
-                    }
-                    return;
+                        }
+                        return;
+                    case Done _: return; //FIXME what should happen?
                 }
-                if (message is Done) return; //FIXME what should happen?
             }
             if (message is ICommandOp)
             {
-                var throttle = message as Throttle;
-                if (throttle != null)
+                switch (message)
                 {
-                    var t = _nodes[throttle.Target];
-                   _nodes[throttle.Node].FSM.Forward(new ToClient<ThrottleMsg>(new ThrottleMsg(t.Addr, throttle.Direction, throttle.RateMBit)));
-                    return;
-                }
-                var disconnect = message as Disconnect;
-                if (disconnect != null)
-                {
-                    var t = _nodes[disconnect.Target];
-                    _nodes[disconnect.Node].FSM.Forward((new ToClient<DisconnectMsg>(new DisconnectMsg(t.Addr, disconnect.Abort))));
-                    return;
-                }
-                var terminate = message as Terminate;
-                if (terminate != null)
-                {
-                    _barrier.Tell(new BarrierCoordinator.RemoveClient(terminate.Node));
-                    _nodes[terminate.Node].FSM.Forward(new ToClient<TerminateMsg>(new TerminateMsg(terminate.ShutdownOrExit)));
-                    _nodes = _nodes.Remove(terminate.Node);
-                    return;
-                }
-                var remove = message as Remove;
-                if (remove != null)
-                {
-                    _barrier.Tell(new BarrierCoordinator.RemoveClient(remove.Node));
-                    return;
+                    case Throttle throttle:
+                    {
+                        if (!_nodes.TryGetValue(throttle.Target, out var target)) throw new IllegalActorStateException($"Throttle target {throttle.Target} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
+                        if (!_nodes.TryGetValue(throttle.Node, out var source)) throw new IllegalActorStateException($"Throttle source {throttle.Node} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
+                        
+                        source.FSM.Forward(new ToClient<ThrottleMsg>(new ThrottleMsg(target.Addr, throttle.Direction, throttle.RateMBit)));
+                        return;
+                    }
+                    case Disconnect disconnect:
+                    {
+                        if (!_nodes.TryGetValue(disconnect.Target, out var target)) throw new IllegalActorStateException($"Disconnect target {disconnect.Target} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
+                        if (!_nodes.TryGetValue(disconnect.Node, out var source)) throw new IllegalActorStateException($"Disconnect source {disconnect.Node} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
+
+                        source.FSM.Forward((new ToClient<DisconnectMsg>(new DisconnectMsg(target.Addr, disconnect.Abort))));
+                        return;
+                    }
+                    case Terminate terminate:
+                    {
+                        _barrier.Tell(new BarrierCoordinator.RemoveClient(terminate.Node));
+
+                        if (!_nodes.TryGetValue(terminate.Node, out var node)) throw new IllegalActorStateException($"Terminate target {terminate.Node} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
+
+                        node.FSM.Forward(new ToClient<TerminateMsg>(new TerminateMsg(terminate.ShutdownOrExit)));
+                        _nodes = _nodes.Remove(terminate.Node);
+                        return;
+                        }
+                    case Remove remove:
+                        _barrier.Tell(new BarrierCoordinator.RemoveClient(remove.Node));
+                        return;
                 }
             }
             if (message is GetNodes)

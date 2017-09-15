@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Specialized;
+using Akka.Configuration;
 
 namespace Akka.Remote.TestKit
 {   
@@ -33,7 +34,15 @@ namespace Akka.Remote.TestKit
             {
                 if (!arg.StartsWith("-D")) continue;
                 var tokens = arg.Substring(2).Split('=');
-                dictionary.Add(tokens[0], tokens[1]);
+
+                if (tokens.Length == 2)
+                {
+                    dictionary.Add(tokens[0], tokens[1]);
+                }
+                else
+                {
+                    throw new ConfigurationException($"Command line parameter '{arg}' should follow the pattern [-Dmultinode.<key>=<value>].");
+                }
             }
             return dictionary;
         });

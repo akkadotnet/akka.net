@@ -18,40 +18,41 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class MemberWeaklyUpConfig : MultiNodeConfig
     {
-        public RoleName First { get; } = new RoleName("first");
-        public RoleName Second { get; } = new RoleName("second");
-        public RoleName Third { get; } = new RoleName("third");
-        public RoleName Fourth { get; } = new RoleName("fourth");
-        public RoleName Fifth { get; } = new RoleName("fifth");
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
 
         public MemberWeaklyUpConfig()
         {
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+
             CommonConfig = DebugConfig(on: false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.remote.retry-gate-closed-for = 3 s
+                    akka.remote.retry-gate-closed-for = 3s
                     akka.cluster.allow-weakly-up-members = on"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             TestTransport = true;
         }
     }
-    public class MemberWeaklyUpMultiNode1 : MemberWeaklyUpSpec { }
-    public class MemberWeaklyUpMultiNode2 : MemberWeaklyUpSpec { }
-    public class MemberWeaklyUpMultiNode3 : MemberWeaklyUpSpec { }
-    public class MemberWeaklyUpMultiNode4 : MemberWeaklyUpSpec { }
-    public class MemberWeaklyUpMultiNode5 : MemberWeaklyUpSpec { }
 
-    public abstract class MemberWeaklyUpSpec : MultiNodeClusterSpec
+    public class MemberWeaklyUpSpec : MultiNodeClusterSpec
     {
         private readonly MemberWeaklyUpConfig _config;
         private readonly ImmutableArray<RoleName> _side1;
         private readonly ImmutableArray<RoleName> _side2;
 
-        protected MemberWeaklyUpSpec() : this(new MemberWeaklyUpConfig())
+        public MemberWeaklyUpSpec() : this(new MemberWeaklyUpConfig())
         {
         }
 
-        protected MemberWeaklyUpSpec(MemberWeaklyUpConfig config) : base(config, typeof(MemberWeaklyUpSpec))
+        private MemberWeaklyUpSpec(MemberWeaklyUpConfig config) : base(config, typeof(MemberWeaklyUpSpec))
         {
             _config = config;
             _side1 = ImmutableArray.CreateRange(new[] { config.First, config.Second });
@@ -139,9 +140,14 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                foreach (var role1 in _side1)
-                    foreach (var role2 in _side2)
-                        TestConductor.PassThrough(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(3));
+                RunOn(() =>
+                {
+                    foreach (var role1 in _side1)
+                        foreach (var role2 in _side2)
+                        {
+                            TestConductor.PassThrough(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(3));
+                        }
+                }, _config.First);
 
                 EnterBarrier("after-passThrough");
 
