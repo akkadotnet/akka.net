@@ -111,33 +111,35 @@ namespace Akka.Cluster.Sharding.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            if (obj is PersistentShardCoordinator.State) return CoordinatorStateToProto((PersistentShardCoordinator.State)obj).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardRegionRegistered) return ActorRefMessageToProto(((PersistentShardCoordinator.ShardRegionRegistered)obj).Region).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardRegionProxyRegistered) return ActorRefMessageToProto(((PersistentShardCoordinator.ShardRegionProxyRegistered)obj).RegionProxy).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardRegionTerminated) return ActorRefMessageToProto(((PersistentShardCoordinator.ShardRegionTerminated)obj).Region).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardRegionProxyTerminated) return ActorRefMessageToProto(((PersistentShardCoordinator.ShardRegionProxyTerminated)obj).RegionProxy).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardHomeAllocated) return ShardHomeAllocatedToProto((PersistentShardCoordinator.ShardHomeAllocated)obj).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardHomeDeallocated) return ShardIdMessageToProto(((PersistentShardCoordinator.ShardHomeDeallocated)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.Register) return ActorRefMessageToProto(((PersistentShardCoordinator.Register)obj).ShardRegion).ToByteArray();
-            if (obj is PersistentShardCoordinator.RegisterProxy) return ActorRefMessageToProto(((PersistentShardCoordinator.RegisterProxy)obj).ShardRegionProxy).ToByteArray();
-            if (obj is PersistentShardCoordinator.RegisterAck) return ActorRefMessageToProto(((PersistentShardCoordinator.RegisterAck)obj).Coordinator).ToByteArray();
-            if (obj is PersistentShardCoordinator.GetShardHome) return ShardIdMessageToProto(((PersistentShardCoordinator.GetShardHome)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardHome) return ShardHomeToProto((PersistentShardCoordinator.ShardHome)obj).ToByteArray();
-            if (obj is PersistentShardCoordinator.HostShard) return ShardIdMessageToProto(((PersistentShardCoordinator.HostShard)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardStarted) return ShardIdMessageToProto(((PersistentShardCoordinator.ShardStarted)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.BeginHandOff) return ShardIdMessageToProto(((PersistentShardCoordinator.BeginHandOff)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.BeginHandOffAck) return ShardIdMessageToProto(((PersistentShardCoordinator.BeginHandOffAck)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.HandOff) return ShardIdMessageToProto(((PersistentShardCoordinator.HandOff)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.ShardStopped) return ShardIdMessageToProto(((PersistentShardCoordinator.ShardStopped)obj).Shard).ToByteArray();
-            if (obj is PersistentShardCoordinator.GracefulShutdownRequest) return ActorRefMessageToProto(((PersistentShardCoordinator.GracefulShutdownRequest)obj).ShardRegion).ToByteArray();
-            if (obj is Shard.ShardState) return EntityStateToProto((Shard.ShardState)obj).ToByteArray();
-            if (obj is Shard.EntityStarted) return EntityStartedToProto((Shard.EntityStarted)obj).ToByteArray();
-            if (obj is Shard.EntityStopped) return EntityStoppedToProto((Shard.EntityStopped)obj).ToByteArray();
-            if (obj is ShardRegion.StartEntity) return StartEntityToProto((ShardRegion.StartEntity)obj).ToByteArray();
-            if (obj is ShardRegion.StartEntityAck) return StartEntityAckToProto((ShardRegion.StartEntityAck)obj).ToByteArray();
-            if (obj is Shard.GetShardStats) return new byte[0];
-            if (obj is Shard.ShardStats) return ShardStatsToProto((Shard.ShardStats)obj).ToByteArray();
-
+            switch (obj)
+            {
+                case PersistentShardCoordinator.State o: return CoordinatorStateToProto(o).ToByteArray();
+                case PersistentShardCoordinator.ShardRegionRegistered o: return ActorRefMessageToProto(o.Region).ToByteArray();
+                case PersistentShardCoordinator.ShardRegionProxyRegistered o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
+                case PersistentShardCoordinator.ShardRegionTerminated o: return ActorRefMessageToProto(o.Region).ToByteArray();
+                case PersistentShardCoordinator.ShardRegionProxyTerminated o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
+                case PersistentShardCoordinator.ShardHomeAllocated o: return ShardHomeAllocatedToProto(o).ToByteArray();
+                case PersistentShardCoordinator.ShardHomeDeallocated o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.Register o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
+                case PersistentShardCoordinator.RegisterProxy o: return ActorRefMessageToProto(o.ShardRegionProxy).ToByteArray();
+                case PersistentShardCoordinator.RegisterAck o: return ActorRefMessageToProto(o.Coordinator).ToByteArray();
+                case PersistentShardCoordinator.GetShardHome o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.ShardHome o: return ShardHomeToProto(o).ToByteArray();
+                case PersistentShardCoordinator.HostShard o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.ShardStarted o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.BeginHandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.BeginHandOffAck o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.HandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.ShardStopped o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case PersistentShardCoordinator.GracefulShutdownRequest o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
+                case Shard.ShardState o: return EntityStateToProto(o).ToByteArray();
+                case Shard.EntityStarted o: return EntityStartedToProto(o).ToByteArray();
+                case Shard.EntityStopped o: return EntityStoppedToProto(o).ToByteArray();
+                case ShardRegion.StartEntity o: return StartEntityToProto(o).ToByteArray();
+                case ShardRegion.StartEntityAck o: return StartEntityAckToProto(o).ToByteArray();
+                case Shard.GetShardStats o: return new byte[0];
+                case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
+            }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
 
@@ -171,33 +173,35 @@ namespace Akka.Cluster.Sharding.Serialization
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
-            if (o is Shard.ShardState) return EntityStateManifest;
-            if (o is Shard.EntityStarted) return EntityStartedManifest;
-            if (o is Shard.EntityStopped) return EntityStoppedManifest;
-            if (o is PersistentShardCoordinator.State) return CoordinatorStateManifest;
-            if (o is PersistentShardCoordinator.ShardRegionRegistered) return ShardRegionRegisteredManifest;
-            if (o is PersistentShardCoordinator.ShardRegionProxyRegistered) return ShardRegionProxyRegisteredManifest;
-            if (o is PersistentShardCoordinator.ShardRegionTerminated) return ShardRegionTerminatedManifest;
-            if (o is PersistentShardCoordinator.ShardRegionProxyTerminated) return ShardRegionProxyTerminatedManifest;
-            if (o is PersistentShardCoordinator.ShardHomeAllocated) return ShardHomeAllocatedManifest;
-            if (o is PersistentShardCoordinator.ShardHomeDeallocated) return ShardHomeDeallocatedManifest;
-            if (o is PersistentShardCoordinator.Register) return RegisterManifest;
-            if (o is PersistentShardCoordinator.RegisterProxy) return RegisterProxyManifest;
-            if (o is PersistentShardCoordinator.RegisterAck) return RegisterAckManifest;
-            if (o is PersistentShardCoordinator.GetShardHome) return GetShardHomeManifest;
-            if (o is PersistentShardCoordinator.ShardHome) return ShardHomeManifest;
-            if (o is PersistentShardCoordinator.HostShard) return HostShardManifest;
-            if (o is PersistentShardCoordinator.ShardStarted) return ShardStartedManifest;
-            if (o is PersistentShardCoordinator.BeginHandOff) return BeginHandOffManifest;
-            if (o is PersistentShardCoordinator.BeginHandOffAck) return BeginHandOffAckManifest;
-            if (o is PersistentShardCoordinator.HandOff) return HandOffManifest;
-            if (o is PersistentShardCoordinator.ShardStopped) return ShardStoppedManifest;
-            if (o is PersistentShardCoordinator.GracefulShutdownRequest) return GracefulShutdownReqManifest;
-            if (o is ShardRegion.StartEntity) return StartEntityManifest;
-            if (o is ShardRegion.StartEntityAck) return StartEntityAckManifest;
-            if (o is Shard.GetShardStats) return GetShardStatsManifest;
-            if (o is Shard.ShardStats) return ShardStatsManifest;
-
+            switch (o)
+            {
+                case Shard.ShardState _: return EntityStateManifest;
+                case Shard.EntityStarted _: return EntityStartedManifest;
+                case Shard.EntityStopped _: return EntityStoppedManifest;
+                case PersistentShardCoordinator.State _: return CoordinatorStateManifest;
+                case PersistentShardCoordinator.ShardRegionRegistered _: return ShardRegionRegisteredManifest;
+                case PersistentShardCoordinator.ShardRegionProxyRegistered _: return ShardRegionProxyRegisteredManifest;
+                case PersistentShardCoordinator.ShardRegionTerminated _: return ShardRegionTerminatedManifest;
+                case PersistentShardCoordinator.ShardRegionProxyTerminated _: return ShardRegionProxyTerminatedManifest;
+                case PersistentShardCoordinator.ShardHomeAllocated _: return ShardHomeAllocatedManifest;
+                case PersistentShardCoordinator.ShardHomeDeallocated _: return ShardHomeDeallocatedManifest;
+                case PersistentShardCoordinator.Register _: return RegisterManifest;
+                case PersistentShardCoordinator.RegisterProxy _: return RegisterProxyManifest;
+                case PersistentShardCoordinator.RegisterAck _: return RegisterAckManifest;
+                case PersistentShardCoordinator.GetShardHome _: return GetShardHomeManifest;
+                case PersistentShardCoordinator.ShardHome _: return ShardHomeManifest;
+                case PersistentShardCoordinator.HostShard _: return HostShardManifest;
+                case PersistentShardCoordinator.ShardStarted _: return ShardStartedManifest;
+                case PersistentShardCoordinator.BeginHandOff _: return BeginHandOffManifest;
+                case PersistentShardCoordinator.BeginHandOffAck _: return BeginHandOffAckManifest;
+                case PersistentShardCoordinator.HandOff _: return HandOffManifest;
+                case PersistentShardCoordinator.ShardStopped _: return ShardStoppedManifest;
+                case PersistentShardCoordinator.GracefulShutdownRequest _: return GracefulShutdownReqManifest;
+                case ShardRegion.StartEntity _: return StartEntityManifest;
+                case ShardRegion.StartEntityAck _: return StartEntityAckManifest;
+                case Shard.GetShardStats _: return GetShardStatsManifest;
+                case Shard.ShardStats _: return ShardStatsManifest;
+            }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
 

@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public abstract class StateChange: IClusterShardingSerializable
+        public abstract class StateChange : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -217,7 +217,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IImmutableSet< string> EntityIds;
+            public readonly IImmutableSet<string> EntityIds;
 
             /// <summary>
             /// TBD
@@ -454,7 +454,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="handOffStopMessage">TBD</param>
         public Shard(
             IActorContext context,
-            Action <object> unhandled,
+            Action<object> unhandled,
             string typeName,
             string shardId,
             Props entityProps,
@@ -520,22 +520,47 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public bool HandleCommand(object message)
         {
-            if (message is Terminated) HandleTerminated(((Terminated) message).ActorRef);
-            else if (message is PersistentShardCoordinator.ICoordinatorMessage) HandleCoordinatorMessage(message as PersistentShardCoordinator.ICoordinatorMessage);
-            else if (message is IShardCommand) HandleShardCommand(message as IShardCommand);
-            else if (message is ShardRegion.StartEntity) HandleStartEntity(message as ShardRegion.StartEntity);
-            else if (message is ShardRegion.StartEntityAck) HandleStartEntityAck(message as ShardRegion.StartEntityAck);
-            else if (message is IShardRegionCommand) HandleShardRegionCommand(message as IShardRegionCommand);
-            else if (message is IShardQuery) HandleShardRegionQuery(message as IShardQuery);
-            else if (ExtractEntityId(message) != null) DeliverMessage(message, _context.Sender);
-            else return false;
-            return true;
+            switch (message)
+            {
+                case Terminated t:
+                    HandleTerminated(t.ActorRef);
+                    return true;
+                case PersistentShardCoordinator.ICoordinatorMessage cm:
+                    HandleCoordinatorMessage(cm);
+                    return true;
+                case IShardCommand sc:
+                    HandleShardCommand(sc);
+                    return true;
+                case ShardRegion.StartEntity se:
+                    HandleStartEntity(se);
+                    return true;
+                case ShardRegion.StartEntityAck sea:
+                    HandleStartEntityAck(sea);
+                    return true;
+                case IShardRegionCommand src:
+                    HandleShardRegionCommand(src);
+                    return true;
+                case IShardQuery sq:
+                    HandleShardRegionQuery(sq);
+                    return true;
+                case var _ when ExtractEntityId(message) != null:
+                    DeliverMessage(message, _context.Sender);
+                    return true;
+            }
+            return false;
         }
 
         private void HandleShardRegionQuery(IShardQuery query)
         {
-            if(query is GetCurrentShardState) _context.Sender.Tell(new CurrentShardState(ShardId, RefById.Keys.ToImmutableHashSet()));
-            else if (query is GetShardStats) _context.Sender.Tell(new ShardStats(ShardId, State.Entries.Count));
+            switch (query)
+            {
+                case GetCurrentShardState _:
+                    _context.Sender.Tell(new CurrentShardState(ShardId, RefById.Keys.ToImmutableHashSet()));
+                    break;
+                case GetShardStats _:
+                    _context.Sender.Tell(new ShardStats(ShardId, State.Entries.Count));
+                    break;
+            }
         }
 
         /// <summary>
@@ -563,9 +588,15 @@ namespace Akka.Cluster.Sharding
 
         private void HandleShardCommand(IShardCommand message)
         {
-            message.Match()
-                .With<RestartEntity>(restartEntity => GetEntity(restartEntity.EntityId))
-                .With<RestartEntities>(restartEntities => HandleRestartEntities(restartEntities.Entries));
+            switch (message)
+            {
+                case RestartEntity restartEntity:
+                    GetEntity(restartEntity.EntityId);
+                    break;
+                case RestartEntities restartEntities:
+                    HandleRestartEntities(restartEntities.Entries);
+                    break;
+            }
         }
 
         private void HandleStartEntity(ShardRegion.StartEntity start)
@@ -596,8 +627,7 @@ namespace Akka.Cluster.Sharding
 
         private void HandleShardRegionCommand(IShardRegionCommand message)
         {
-            var passivate = message as Passivate;
-            if (passivate != null)
+            if (message is Passivate passivate)
                 Passivate(_context.Sender, passivate.StopMessage);
             else
                 _unhandled(message);
@@ -605,13 +635,18 @@ namespace Akka.Cluster.Sharding
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
         {
-            var handOff = message as PersistentShardCoordinator.HandOff;
-            if (handOff != null)
+            switch (message)
             {
-                if (handOff.Shard == ShardId) HandOff(_context.Sender);
-                else Log.Warning("Shard [{0}] can not hand off for another Shard [{1}]", ShardId, handOff.Shard);
+                case PersistentShardCoordinator.HandOff handOff when handOff.Shard == ShardId:
+                    HandOff(_context.Sender);
+                    break;
+                case PersistentShardCoordinator.HandOff handOff:
+                    Log.Warning("Shard [{0}] can not hand off for another Shard [{1}]", ShardId, handOff.Shard);
+                    break;
+                default:
+                    _unhandled(message);
+                    break;
             }
-            else _unhandled(message);
         }
 
         private void HandOff(IActorRef replyTo)
@@ -629,8 +664,7 @@ namespace Akka.Cluster.Sharding
                     //During hand off we only care about watching for termination of the hand off stopper
                     _context.Become(message =>
                     {
-                        var terminated = message as Terminated;
-                        if (terminated != null)
+                        if (message is Terminated terminated)
                         {
                             HandleTerminated(terminated.ActorRef);
                             return true;
@@ -853,7 +887,7 @@ namespace Akka.Cluster.Sharding
 
         private void SendStart(IImmutableSet<EntityId> ids)
         {
-            foreach(var id in ids)
+            foreach (var id in ids)
             {
                 _region.Tell(new ShardRegion.StartEntity(id));
             }
