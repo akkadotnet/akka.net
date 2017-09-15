@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Akka.Pattern;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -310,11 +311,11 @@ namespace Akka.Streams.Dsl
         protected Inlet In { get; }
         protected Outlet Out { get; }
 
-        private int restartCount = 0;
-        private int resetDeadline;
+        private int _restartCount = 0;
+        private Deadline _resetDeadline;
         // This is effectively only used for flows, if either the main inlet or outlet of this stage finishes, then we
         // don't want to restart the sub inlet when it finishes, we just finish normally.
-        private bool finishing = false;
+        private bool _finishing = false;
 
         protected RestartWithBackoffLogic(
             string name,
@@ -328,6 +329,8 @@ namespace Akka.Streams.Dsl
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
             _randomFactor = randomFactor;
+
+            _resetDeadline = minBackoff.FromNow();
 
             In = shape.Inlets.FirstOrDefault();
             Out = shape.Outlets.FirstOrDefault();
@@ -347,7 +350,7 @@ namespace Akka.Streams.Dsl
                 },
                 onUpstreamFinish: () =>
                 {
-                    if (finishing)
+                    if (_finishing)
                     {
                         Complete(Out);
                     }
@@ -359,7 +362,7 @@ namespace Akka.Streams.Dsl
                 },
                 onUpstreamFailure: ex =>
                 {
-                    if (finishing)
+                    if (_finishing)
                     {
                         Fail(_shape.Outlets.First(), ex);
                     }
@@ -374,7 +377,7 @@ namespace Akka.Streams.Dsl
                 onPull: () => sinkIn.Pull(),
                 onDownstreamFinish: () =>
                 {
-                    finishing = true;
+                    _finishing = true;
                     sinkIn.Cancel();
                 });
             
@@ -399,7 +402,7 @@ namespace Akka.Streams.Dsl
                 },
                 onDownstreamFinish: () =>
                 {
-                    if (finishing)
+                    if (_finishing)
                     {
                         Cancel(In);
                     }
@@ -419,32 +422,69 @@ namespace Akka.Streams.Dsl
                 },
                 onUpstreamFinish: () =>
                 {
-                    finishing = true;
+                    _finishing = true;
                     sourceOut.Complete();
                 },
                 onUpstreamFailure: ex =>
                 {
-                    finishing = true;
+                    _finishing = true;
                     sourceOut.Fail(ex);
                 });
 
             return sourceOut;
         }
 
-        // TODO: implement it
         internal void OnCompleteOrFailure()
         {
-            
+            // Check if the last start attempt was more than the minimum backoff
+            if (_resetDeadline.IsOverdue)
+            {
+                Log.Debug($"Last restart attempt was more than {_minBackoff} ago, resetting restart count");
+                _restartCount = 0;
+            }
+
+            var restartDelay = BackoffSupervisor.CalculateDelay(_restartCount, _minBackoff, _maxBackoff, _randomFactor);
+            Log.Debug($"Restarting graph in {restartDelay}");
+            ScheduleOnce("RestartTimer", restartDelay);
+            _restartCount += 1;
+            // And while we wait, we go into backoff mode
+            Backoff();
         }
 
-        // TODO: implement it
         protected internal override void OnTimer(object timerKey)
         {
             StartGraph();
-            // resetDeadline = minBackoff.fromNow
+            _resetDeadline = _minBackoff.FromNow();
         }
 
         // When the stage starts, start the source
         public override void PreStart() => StartGraph();
+    }
+
+    internal sealed class Deadline
+    {
+        public Deadline(TimeSpan time)
+        {
+            Time = time;
+        }
+
+        public TimeSpan Time { get; }
+
+        public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
+
+        public static Deadline Now => new Deadline(new TimeSpan(DateTime.UtcNow.Ticks));
+
+        public static Deadline operator +(Deadline deadline, TimeSpan duration)
+        {
+            return new Deadline(deadline.Time.Add(duration));
+        }
+    }
+
+    internal static class DeadlineExtensions
+    {
+        public static Deadline FromNow(this TimeSpan timespan)
+        {
+            return Deadline.Now + timespan;
+        }
     }
 }
