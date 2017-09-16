@@ -37,19 +37,19 @@ namespace Akka.Streams.Dsl
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        public static Source<T, NotUsed> WithBackoff<T>(Func<Source<T, NotUsed>> sourceFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) 
-            => Source.FromGraph(new RestartWithBackoffSource<T>(sourceFactory, minBackoff, maxBackoff, randomFactor));
+        public static Source<T, NotUsed> WithBackoff<T, TMat>(Func<Source<T, TMat>> sourceFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) 
+            => Source.FromGraph(new RestartWithBackoffSource<T, TMat>(sourceFactory, minBackoff, maxBackoff, randomFactor));
     }
 
-    internal sealed class RestartWithBackoffSource<T> : GraphStage<SourceShape<T>>
+    internal sealed class RestartWithBackoffSource<T, TMat> : GraphStage<SourceShape<T>>
     {
-        public Func<Source<T, NotUsed>> SourceFactory { get; }
+        public Func<Source<T, TMat>> SourceFactory { get; }
         public TimeSpan MinBackoff { get; }
         public TimeSpan MaxBackoff { get; }
         public double RandomFactor { get; }
 
         public RestartWithBackoffSource(
-            Func<Source<T, NotUsed>> sourceFactory,
+            Func<Source<T, TMat>> sourceFactory,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             double randomFactor)
@@ -71,9 +71,9 @@ namespace Akka.Streams.Dsl
 
         private class Logic : RestartWithBackoffLogic<SourceShape<T>>
         {
-            private readonly RestartWithBackoffSource<T> _stage;
+            private readonly RestartWithBackoffSource<T, TMat> _stage;
 
-            public Logic(RestartWithBackoffSource<T> stage, string name) 
+            public Logic(RestartWithBackoffSource<T, TMat> stage, string name) 
                 : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
@@ -125,19 +125,19 @@ namespace Akka.Streams.Dsl
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        public static Sink<T, NotUsed> WithBackoff<T>(Func<Sink<T, NotUsed>> sinkFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) 
-            => Sink.FromGraph(new RestartWithBackoffSink<T>(sinkFactory, minBackoff, maxBackoff, randomFactor));
+        public static Sink<T, NotUsed> WithBackoff<T, TMat>(Func<Sink<T, TMat>> sinkFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) 
+            => Sink.FromGraph(new RestartWithBackoffSink<T, TMat>(sinkFactory, minBackoff, maxBackoff, randomFactor));
     }
 
-    internal sealed class RestartWithBackoffSink<T> : GraphStage<SinkShape<T>>
+    internal sealed class RestartWithBackoffSink<T, TMat> : GraphStage<SinkShape<T>>
     {
-        public Func<Sink<T, NotUsed>> SinkFactory { get; }
+        public Func<Sink<T, TMat>> SinkFactory { get; }
         public TimeSpan MinBackoff { get; }
         public TimeSpan MaxBackoff { get; }
         public double RandomFactor { get; }
 
         public RestartWithBackoffSink(
-            Func<Sink<T, NotUsed>> sinkFactory,
+            Func<Sink<T, TMat>> sinkFactory,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             double randomFactor)
@@ -159,9 +159,9 @@ namespace Akka.Streams.Dsl
 
         private class Logic : RestartWithBackoffLogic<SinkShape<T>>
         {
-            private readonly RestartWithBackoffSink<T> _stage;
+            private readonly RestartWithBackoffSink<T, TMat> _stage;
 
-            public Logic(RestartWithBackoffSink<T> stage, string name)
+            public Logic(RestartWithBackoffSink<T, TMat> stage, string name)
                 : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
@@ -208,19 +208,19 @@ namespace Akka.Streams.Dsl
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut>(Func<Flow<TIn, TOut, NotUsed>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
-            => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut>(flowFactory, minBackoff, maxBackoff, randomFactor));
+        public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
+            => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, minBackoff, maxBackoff, randomFactor));
     }
 
-    internal sealed class RestartWithBackoffFlow<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class RestartWithBackoffFlow<TIn, TOut, TMat> : GraphStage<FlowShape<TIn, TOut>>
     {
-        public Func<Flow<TIn, TOut, NotUsed>> FlowFactory { get; }
+        public Func<Flow<TIn, TOut, TMat>> FlowFactory { get; }
         public TimeSpan MinBackoff { get; }
         public TimeSpan MaxBackoff { get; }
         public double RandomFactor { get; }
 
         public RestartWithBackoffFlow(
-            Func<Flow<TIn, TOut, NotUsed>> flowFactory,
+            Func<Flow<TIn, TOut, TMat>> flowFactory,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             double randomFactor)
@@ -244,10 +244,10 @@ namespace Akka.Streams.Dsl
 
         private class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>>
         {
-            private readonly RestartWithBackoffFlow<TIn, TOut> _stage;
+            private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
             private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> activeOutIn = null;
 
-            public Logic(RestartWithBackoffFlow<TIn, TOut> stage, string name)
+            public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
                 : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
