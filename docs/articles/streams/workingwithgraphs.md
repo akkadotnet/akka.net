@@ -1,9 +1,5 @@
 ---
-<<<<<<< HEAD
-uid: working-with-graphs
-=======
 uid: streams-working-with-graphs
->>>>>>> Added Uids
 title: Working with Graphs
 ---
 
