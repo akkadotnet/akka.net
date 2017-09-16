@@ -237,8 +237,8 @@ namespace Akka.Streams.Tests.Dsl
                     created.IncrementAndGet();
                     return Sink.Seq<string>().MapMaterializedValue(task =>
                     {
-                        var result = task.Result;
-                        return tcs.TrySetResult(result);
+                        task.ContinueWith(c => tcs.SetResult(c.Result));
+                        return Done.Instance;
                     });
                 }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0), Keep.Left).Run(Materializer);
 
@@ -411,6 +411,8 @@ namespace Akka.Streams.Tests.Dsl
             var flowOutProbe = probe2.Item1;
             var flowOutSource = probe2.Item2;
 
+            // We can't just use ordinary probes here because we're expecting them to get started/restarted. Instead, we
+            // simply use the probes as a message bus for feeding and capturing events.
             var probe3 = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
