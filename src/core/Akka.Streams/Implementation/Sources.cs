@@ -1079,7 +1079,7 @@ namespace Akka.Streams.Implementation
         /// <param name="addHandler">Action which attaches given event handler to the underlying .NET event.</param>
         /// <param name="removeHandler">Action which detaches given event handler to the underlying .NET event.</param>
         /// <param name="maxBuffer">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
-        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBuffer"/>) has been overflown.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when b{uffer (size specified by <paramref name="maxBuffer"/>) has been overflown.</param>
         public EventSourceStage(Action<TDelegate> addHandler, Action<TDelegate> removeHandler, Func<Action<TEventArgs>, TDelegate> conversion, int maxBuffer, OverflowStrategy overflowStrategy)
         {
             _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
@@ -1093,5 +1093,4 @@ namespace Akka.Streams.Implementation
         public override SourceShape<TEventArgs> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
-
 }
