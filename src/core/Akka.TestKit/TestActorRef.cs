@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -30,43 +30,52 @@ namespace Akka.TestKit
         {
         }
 
+        /// <summary>
+        /// Compares a specified <see cref="TestActorRef{TActor}"/> to an <see cref="IActorRef"/> for equality.
+        /// </summary>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// Compares a specified <see cref="TestActorRef{TActor}"/> to an <see cref="IActorRef"/> for inequality.
+        /// </summary>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRef{TActor}"/> for equality.
+        /// </summary>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
         public static bool operator ==(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRef{TActor}"/> for inequality.
+        /// </summary>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
-
-        //Here to suppress CS0660, 'class' defines operator == or operator != but does not override Object.Equals(object o)
-        public override bool Equals(object obj)
-        {
-            //We have correct implementations in TestActorRefBase, so it's perfectly fine to delegate
-            return base.Equals(obj);
-        }
-
-        //Here to suppress CS0661, 'class' defines operator == or operator != but does not override Object.GetHashCode()
-        public override int GetHashCode()
-        {
-            //We have correct implementations in TestActorRefBase, so it's perfectly fine to delegate
-            return base.GetHashCode();
-        }
     }
 }
-

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SystemGuardianTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,20 +8,21 @@
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
     public class SystemGuardianTests : AkkaSpec
     {
-        readonly IActorRef _userGuardian;
-        readonly IActorRef _systemGuardian;
+        readonly IInternalActorRef _userGuardian;
+        readonly IInternalActorRef _systemGuardian;
 
         public SystemGuardianTests()
         {
-            _userGuardian = Sys.ActorOf(Props.Create<GuardianActor>());
-            _systemGuardian = Sys.ActorOf(Props.Create(() => new SystemGuardianActor(_userGuardian)));
-            _systemGuardian.Tell(new Watch(_userGuardian, _systemGuardian));            
+            _userGuardian = Sys.ActorOf(Props.Create<GuardianActor>()).AsInstanceOf<IInternalActorRef>();
+            _systemGuardian = Sys.ActorOf(Props.Create(() => new SystemGuardianActor(_userGuardian))).AsInstanceOf<IInternalActorRef>();
+            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian));            
         }
 
         [Fact]

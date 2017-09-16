@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,81 +14,124 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
-    //TODO: Keep an eye on concurrency / immutability
-    //TODO: Comments
     /// <summary>
     /// Represents the address, current status, and roles of a cluster member node.
-    /// 
-    /// Note: `hashCode` and `equals` are solely based on the underlying `Address`, not its `MemberStatus`
-    /// and roles.
     /// </summary>
-    public class Member : IComparable<Member>
+    /// <remarks>
+    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
+    /// not its <see cref="MemberStatus"/> and roles.
+    /// </remarks>
+    public class Member : IComparable<Member>, IComparable
     {
-        public readonly static ImmutableHashSet<Member> None = ImmutableHashSet.Create<Member>();
-                
-        public static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="uniqueAddress">TBD</param>
+        /// <param name="roles">TBD</param>
+        /// <returns>TBD</returns>
+        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
         {
             return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles);
         }
 
-        public static Member Removed(UniqueAddress node)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
+        internal static Member Removed(UniqueAddress node)
         {
             return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>());
         }
 
-        readonly UniqueAddress _uniqueAddress;
-        public UniqueAddress UniqueAddress { get { return _uniqueAddress; } }
-
-        readonly int _upNumber;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UniqueAddress UniqueAddress { get; }
 
         /// <summary>
-        /// TODO: explain what this does
+        /// TBD
         /// </summary>
-        internal int UpNumber { get { return _upNumber; } }
+        internal int UpNumber { get; }
 
-        readonly MemberStatus _status;
-        public MemberStatus Status { get { return _status; } }
+        /// <summary>
+        /// The status of the current member.
+        /// </summary>
+        public MemberStatus Status { get; }
 
-        readonly ImmutableHashSet<string> _roles;
-        public ImmutableHashSet<string> Roles { get { return _roles; } }
+        /// <summary>
+        /// The set of roles for the current member. Can be empty.
+        /// </summary>
+        public ImmutableHashSet<string> Roles { get; }
 
-        public static Member Create(UniqueAddress uniqueAddress, MemberStatus status, ImmutableHashSet<string> roles)
+        /// <summary>
+        /// Creates a new <see cref="Member"/>.
+        /// </summary>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <returns>A new member instance.</returns>
+        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
-            return new Member(uniqueAddress, 0, status, roles);
+            return new Member(uniqueAddress, upNumber, status, roles);
         }
 
-        Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        /// <summary>
+        /// Creates a new <see cref="Member"/>.
+        /// </summary>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
-            _uniqueAddress = uniqueAddress;
-            _upNumber = upNumber;
-            _status = status;
-            _roles = roles;
+            UniqueAddress = uniqueAddress;
+            UpNumber = upNumber;
+            Status = status;
+            Roles = roles;
         }
 
+        /// <summary>
+        /// The <see cref="Address"/> for this member.
+        /// </summary>
         public Address Address { get { return UniqueAddress.Address; } }
 
+        /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
         {
-            return _uniqueAddress.GetHashCode();
+            return UniqueAddress.GetHashCode();
         }
 
+        /// <inheritdoc cref="object.Equals(object)"/>
         public override bool Equals(object obj)
         {
             var m = obj as Member;
             if (m == null) return false;
-            return _uniqueAddress.Equals(m.UniqueAddress);
+            return UniqueAddress.Equals(m.UniqueAddress);
         }
 
-        public int CompareTo(Member other)
+        /// <inheritdoc cref="IComparable.CompareTo"/>
+        public int CompareTo(Member other) => Ordering.Compare(this, other);
+
+        int IComparable.CompareTo(object obj)
         {
-            return Ordering.Compare(this, other);
+            if (obj is Member member) return CompareTo(member);
+
+            throw new ArgumentException($"Cannot compare {nameof(Member)} to an instance of type '{obj?.GetType().FullName ?? "null"}'");
         }
 
+        /// <inheritdoc cref="object.ToString"/>
         public override string ToString()
         {
-            return String.Format("Member(address = {0}, status = {1}", Address, Status);
+            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
         }
 
+        /// <summary>
+        /// Checks to see if a member supports a particular role.
+        /// </summary>
+        /// <param name="role">The rolename to check.</param>
+        /// <returns><c>true</c> if this member supports the role. <c>false</c> otherwise.</returns>
         public bool HasRole(string role)
         {
             return Roles.Contains(role);
@@ -100,40 +143,85 @@ namespace Akka.Cluster
         /// cluster. A member that joined after removal of another member may be
         /// considered older than the removed member.
         /// </summary>
+        /// <param name="other">The other member to check.</param>
+        /// <returns><c>true</c> if this member is older than the other member. <c>false</c> otherwise.</returns>
         public bool IsOlderThan(Member other)
         {
+            if (UpNumber.Equals(other.UpNumber))
+            {
+                return Member.AddressOrdering.Compare(Address, other.Address) < 0;
+            }
+
             return UpNumber < other.UpNumber;
         }
 
+        /// <summary>
+        /// Creates a copy of this member with the status provided.
+        /// </summary>
+        /// <param name="status">The new status of this member.</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>A new copy of this member with the provided status.</returns>
         public Member Copy(MemberStatus status)
         {
-            var oldStatus = _status;
+            var oldStatus = Status;
             if (status == oldStatus) return this;
 
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
-                throw new InvalidOperationException(String.Format("Invalid member status transition {0} -> {1}", Status, status));
+                throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
             
-            return new Member(_uniqueAddress, _upNumber, status, _roles);
-        }
-
-        public Member CopyUp(int upNumber)
-        {
-            return new Member(_uniqueAddress, upNumber, _status, _roles).Copy(status: MemberStatus.Up);
+            return new Member(UniqueAddress, UpNumber, status, Roles);
         }
 
         /// <summary>
-        ///  `Address` ordering type class, sorts addresses by host and port.
+        /// Creates a copy of this member with the provided upNumber.
         /// </summary>
-        public static readonly AddressComparer AddressOrdering = new AddressComparer();
-        public class AddressComparer : IComparer<Address>
+        /// <param name="upNumber">The new upNumber for this member.</param>
+        /// <returns>A new copy of this member with the provided upNumber.</returns>
+        public Member CopyUp(int upNumber)
         {
+            return new Member(UniqueAddress, upNumber, Status, Roles).Copy(status: MemberStatus.Up);
+        }
+
+        /// <summary>
+        ///  <see cref="Address"/> ordering type class, sorts addresses by host and port.
+        /// </summary>
+        public static readonly IComparer<Address> AddressOrdering = new AddressComparer();
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal class AddressComparer : IComparer<Address>
+        {
+            /// <inheritdoc cref="IComparer{Address}.Compare"/>
             public int Compare(Address x, Address y)
             {
-                if (x.Equals(y)) return 0;
-                if (!x.Host.Equals(y.Host)) return String.Compare(x.Host.GetOrElse(""), y.Host.GetOrElse(""), StringComparison.Ordinal);
-                if (!x.Port.Equals(y.Port)) return Nullable.Compare(x.Port.GetOrElse(0), (y.Port.GetOrElse(0)));
-                return 0;
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                if (ReferenceEquals(x, y)) return 0;
+                var result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                if (result != 0) return result;
+                return Nullable.Compare(x.Port, y.Port);
+            }
+        }
+
+        /// <summary>
+        /// Compares members by their upNumber to determine which is oldest / youngest.
+        /// </summary>
+        internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+
+        /// <summary>
+        ///  INTERNAL API
+        /// </summary>
+        internal class AgeComparer : IComparer<Member>
+        {
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
+            public int Compare(Member a, Member b)
+            {
+                if (a.Equals(b)) return 0;
+                if (a.IsOlderThan(b)) return -1;
+                return 1;
             }
         }
 
@@ -141,9 +229,14 @@ namespace Akka.Cluster
         /// Orders the members by their address except that members with status
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
-        public static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
-        public class LeaderStatusMemberComparer : IComparer<Member>
+        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal class LeaderStatusMemberComparer : IComparer<Member>
         {
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member a, Member b)
             {
                 var @as = a.Status;
@@ -160,17 +253,82 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// `Member` ordering type class, sorts members by host and port.
+        /// <see cref="Member"/> ordering type class, sorts members by host and port.
         /// </summary>
-        public static readonly MemberComparer Ordering = new MemberComparer();
-        public class MemberComparer : IComparer<Member>
+        internal static readonly MemberComparer Ordering = new MemberComparer();
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal class MemberComparer : IComparer<Member>
         {
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member x, Member y)
             {
-                return x.UniqueAddress.CompareTo(y.UniqueAddress);
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                return x.UniqueAddress.CompareTo(y.UniqueAddress, AddressOrdering);
             }
         }
 
+        /// <summary>
+        /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by Member's valid transitions
+        /// </summary>
+        /// <param name="a">The first collection of members.</param>
+        /// <param name="b">The second collection of members.</param>
+        /// <returns>An immutable hash set containing the members with the next logical transition.</returns>
+        public static ImmutableSortedSet<Member> PickNextTransition(IEnumerable<Member> a, IEnumerable<Member> b)
+        {
+            // group all members by Address => Seq[Member]
+            var groupedByAddress = (a.Concat(b)).GroupBy(x => x.UniqueAddress);
+
+            var acc = new HashSet<Member>();
+
+            foreach (var g in groupedByAddress)
+            {
+                if (g.Count() == 2) acc.Add(PickNextTransition(g.First(), g.Skip(1).First()));
+                else
+                {
+                    var m = g.First();
+                    acc.Add(m);
+                }
+            }
+
+            return acc.ToImmutableSortedSet();
+        }
+
+        /// <summary>
+        /// Compares two copies OF THE SAME MEMBER and returns whichever one is a valid transition of the other.
+        /// </summary>
+        /// <param name="a">First member instance.</param>
+        /// <param name="b">Second member instance.</param>
+        /// <returns>If a and b are different members, this method will return <c>null</c>. 
+        /// Otherwise, will return a or b depending on which one is a valid transition of the other.
+        /// If neither are a valid transition, we return <c>null</c></returns>
+        public static Member PickNextTransition(Member a, Member b)
+        {
+            if (a == null || b == null || !a.Equals(b))
+                return null;
+
+            // if the member statuses are equal, then it doesn't matter which one we return
+            if (a.Status.Equals(b.Status))
+                return a;
+
+            if (Member.AllowedTransitions[a.Status].Contains(b.Status))
+                return b;
+            if(Member.AllowedTransitions[b.Status].Contains(a.Status))
+                return a;
+
+            return null; // illegal transition
+        }
+
+        /// <summary>
+        /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by highest prioirity
+        /// </summary>
+        /// <param name="a">The first collection of members.</param>
+        /// <param name="b">The second collection of members.</param>
+        /// <returns>An immutable hash set containing the members with the highest priority.</returns>
         public static ImmutableHashSet<Member> PickHighestPriority(IEnumerable<Member> a, IEnumerable<Member> b)
         {
             // group all members by Address => Seq[Member]
@@ -193,8 +351,16 @@ namespace Akka.Cluster
         /// <summary>
         /// Picks the Member with the highest "priority" MemberStatus.
         /// </summary>
+        /// <param name="m1">The first member to compare.</param>
+        /// <param name="m2">The second member to compare.</param>
+        /// <returns>The higher priority of the two members.</returns>
         public static Member HighestPriorityOf(Member m1, Member m2)
         {
+            if (m1.Status.Equals(m2.Status))
+            {
+                return m1.IsOlderThan(m2) ? m1 : m2;
+            }
+
             var m1Status = m1.Status;
             var m2Status = m2.Status;
             if (m1Status == MemberStatus.Removed) return m1;
@@ -207,10 +373,13 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
-            return m1; //case (Up, Up)     ⇒ m1
+            return m1;
         }
 
-        public static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
+        /// <summary>
+        /// All of the legal state transitions for a cluster member
+        /// </summary>
+        internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
                 {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
@@ -222,6 +391,7 @@ namespace Akka.Cluster
             }.ToImmutableDictionary();
     }
 
+
     /// <summary>
     /// Defines the current status of a cluster member node
     /// 
@@ -229,11 +399,29 @@ namespace Akka.Cluster
     /// </summary>
     public enum MemberStatus
     {
+        /// <summary>
+        /// Indicates that a new node is joining the cluster.
+        /// </summary>
         Joining,
+        /// <summary>
+        /// Indicates that a node is a current member of the cluster.
+        /// </summary>
         Up,
+        /// <summary>
+        /// Indicates that a node is beginning to leave the cluster.
+        /// </summary>
         Leaving,
+        /// <summary>
+        /// Indicates that all nodes are aware that this node is leaving the cluster.
+        /// </summary>
         Exiting,
+        /// <summary>
+        /// Node was forcefully removed from the cluster by means of <see cref="Cluster.Down"/>
+        /// </summary>
         Down,
+        /// <summary>
+        /// Node was removed as a member from the cluster.
+        /// </summary>
         Removed
     }
 
@@ -242,54 +430,95 @@ namespace Akka.Cluster
     /// The `uid` is needed to be able to distinguish different
     /// incarnations of a member with same hostname and port.
     /// </summary>
-    public class UniqueAddress : IComparable<UniqueAddress>
+    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>, IComparable
     {
-        readonly Address _address;
-        public Address Address { get { return _address;} }
-        
-        readonly int _uid;
-        public int Uid { get { return _uid; } }
+        /// <summary>
+        /// The bound listening address for Akka.Remote.
+        /// </summary>
+        public Address Address { get; }
 
+        /// <summary>
+        /// A random long integer used to signal the incarnation of this cluster instance.
+        /// </summary>
+        public int Uid { get; }
+
+        /// <summary>
+        /// Creates a new unique address instance.
+        /// </summary>
+        /// <param name="address">The original Akka <see cref="Address"/></param>
+        /// <param name="uid">The UID for the cluster instance.</param>
         public UniqueAddress(Address address, int uid)
         {
-            _uid = uid;
-            _address = address;
+            Uid = uid;
+            Address = address;
         }
 
-        public override bool Equals(object obj)
+        /// <summary>
+        /// Compares two unique address instances to each other.
+        /// </summary>
+        /// <param name="other">The other address to compare to.</param>
+        /// <returns><c>true</c> if equal, <c>false</c> otherwise.</returns>
+        public bool Equals(UniqueAddress other)
         {
-            var u = obj as UniqueAddress;
-            if (u == null) return false;
-            return Uid.Equals(u.Uid) && Address.Equals(u.Address);
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Uid == other.Uid && Address.Equals(other.Address);
         }
 
+        /// <inheritdoc cref="object.Equals(object)"/>
+        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
+
+        /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
         {
-            return _uid;
+            return Uid;
         }
 
-        public int CompareTo(UniqueAddress that)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="uniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
+        public int CompareTo(UniqueAddress uniqueAddress) => CompareTo(uniqueAddress, Address.Comparer);
+
+        int IComparable.CompareTo(object obj)
         {
-            var result = Member.AddressOrdering.Compare(Address, that.Address);
-            if (result == 0)
-                if (Uid < that.Uid) return -1;
-                else if (Uid == that.Uid) return 0;
-                else return 1;
-            return result;
+            if (obj is UniqueAddress address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(UniqueAddress)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
         }
 
-        public override string ToString()
+        internal int CompareTo(UniqueAddress uniqueAddress, IComparer<Address> addresComparer)
         {
-            return string.Format("UniqueAddress: ({0}, {1})", Address, _uid);
+            if (uniqueAddress == null) throw new ArgumentNullException(nameof(uniqueAddress));
+
+            var result = addresComparer.Compare(Address, uniqueAddress.Address);
+            return result == 0 ? Uid.CompareTo(uniqueAddress.Uid) : result;
         }
+
+        /// <inheritdoc cref="object.ToString"/>
+        public override string ToString() => $"UniqueAddress: ({Address}, {Uid})";
 
         #region operator overloads
 
+        /// <summary>
+        /// Compares two specified unique addresses for equality.
+        /// </summary>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(UniqueAddress left, UniqueAddress right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified unique addresses for inequality.
+        /// </summary>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(UniqueAddress left, UniqueAddress right)
         {
             return !Equals(left, right);

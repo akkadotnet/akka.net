@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,6 +12,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
+
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -19,7 +23,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util.Internal;
-using Helios.Topology;
 
 namespace Akka.Remote.TestKit
 {
@@ -28,7 +31,11 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public abstract class MultiNodeConfig
     {
-        Config _commonConf = null;
+        // allows us to avoid NullReferenceExceptions if we make this empty rather than null
+        // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
+        // it will remain safe by defaut
+        Config _commonConf = Akka.Configuration.Config.Empty;
+
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
         ImmutableDictionary<RoleName, ImmutableList<string>> _deployments = ImmutableDictionary.Create<RoleName, ImmutableList<string>>();
@@ -85,8 +92,7 @@ namespace Akka.Remote.TestKit
 
         public void DeployOn(RoleName role, string deployment)
         {
-            ImmutableList<string> roleDeployments;
-            _deployments.TryGetValue(role, out roleDeployments);
+            _deployments.TryGetValue(role, out var roleDeployments);
             _deployments = _deployments.SetItem(role,
                 roleDeployments == null ? ImmutableList.Create(deployment) : roleDeployments.Add(deployment));
         }
@@ -110,11 +116,25 @@ namespace Akka.Remote.TestKit
 
         protected MultiNodeConfig()
         {
-            _myself = new Lazy<RoleName>(() =>
+            var roleName = CommandLine.GetPropertyOrDefault("multinode.role", null);
+
+            if (String.IsNullOrEmpty(roleName))
             {
-                if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
-                return _roles[MultiNodeSpec.SelfIndex];
-            });
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
+                    return _roles[MultiNodeSpec.SelfIndex];
+                });
+            }
+            else
+            {
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    var myself = _roles.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                    if (myself == default(RoleName)) throw new ArgumentException($"cannot find {roleName} among configured roles");
+                    return myself;
+                });
+            }
         }
 
         public RoleName Myself
@@ -126,14 +146,13 @@ namespace Akka.Remote.TestKit
         {
             get
             {
-                //TODO: Equivalent in Helios?
                 var transportConfig = _testTransport ?
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = []")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
-                Config nodeConfig;
-                if (_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
+                if (_nodeConf.TryGetValue(Myself, out var nodeConfig)) 
+                    builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
                 builder.Add(MultiNodeSpec.NodeConfig);
@@ -145,8 +164,7 @@ namespace Akka.Remote.TestKit
 
         internal ImmutableList<string> Deployments(RoleName node)
         {
-            ImmutableList<string> deployments;
-            _deployments.TryGetValue(node, out deployments);
+            _deployments.TryGetValue(node, out var deployments);
             return deployments == null ? _allDeploy : deployments.AddRange(_allDeploy);
         }
 
@@ -165,7 +183,7 @@ namespace Akka.Remote.TestKit
     /// `AskTimeoutException: sending to terminated ref breaks promises`. Using lazy
     /// val is fine.
     /// </summary>
-    public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks
+    public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDisposable
     {
         //TODO: Sort out references to Java classes in 
 
@@ -307,7 +325,7 @@ namespace Akka.Remote.TestKit
 
         /// <summary>
         /// Index of this node in the roles sequence. The TestConductor
-        /// is started in “controller” mode on selfIndex 0, i.e. there you can inject
+        /// is started in "controller" mode on selfIndex 0, i.e. there you can inject
         /// failures and shutdown other nodes etc.
         /// </summary>
         public static int SelfIndex
@@ -330,8 +348,8 @@ namespace Akka.Remote.TestKit
             {
                 const string config = @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.helios.tcp.hostname = ""{0}""
-                akka.remote.helios.tcp.port = {1}";
+                akka.remote.dot-netty.tcp.hostname = ""{0}""
+                akka.remote.dot-netty.tcp.port = {1}";
 
                 return ConfigurationFactory.ParseString(String.Format(config, SelfName, SelfPort));
             }
@@ -359,32 +377,17 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        private static string GetCallerName()
-        {
-            var @this = typeof(MultiNodeSpec).Name;
-            var trace = new StackTrace();
-            var frames = trace.GetFrames();
-            if (frames != null)
-            {
-                for (var i = 1; i < frames.Length; i++)
-                {
-                    var t = frames[i].GetMethod().DeclaringType;
-                    if (t != null && t.Name != @this) return t.Name;
-                }
-            }
-            throw new InvalidOperationException("Unable to find calling type");
-        }
-
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
         readonly ILoggingAdapter _log;
+        private bool _isDisposed; //Automatically initialized to false;
         readonly ImmutableList<RoleName> _roles;
         readonly Func<RoleName, ImmutableList<string>> _deployments;
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         readonly Address _myAddress;
 
-        protected MultiNodeSpec(MultiNodeConfig config) :
-            this(config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
+        protected MultiNodeSpec(MultiNodeConfig config, Type type) :
+            this(config.Myself, ActorSystem.Create(type.Name, config.Config), config.Roles, config.Deployments)
         {
         }
 
@@ -399,11 +402,14 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
-            var node = new Node()
-            {
-                Host = Dns.GetHostEntry(ServerName).AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork),
-                Port = ServerPort
-            };
+
+#if CORECLR
+            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
+            dnsTask.Wait();
+            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
+#else
+            var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
+#endif
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));
@@ -415,6 +421,7 @@ namespace Akka.Remote.TestKit
             _myAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
 
             Log.Info("Role [{0}] started with address [{1}]", myself.Name, _myAddress);
+            MultiNodeSpecBeforeAll();
         }
 
         public void MultiNodeSpecBeforeAll()
@@ -428,9 +435,9 @@ namespace Akka.Remote.TestKit
             if (SelfIndex == 0)
             {
                 TestConductor.RemoveNode(_myself);
-                Within(TestConductor.Settings.BarrierTimeout, () => 
-                    AwaitCondition(() => TestConductor.GetNodes().Result.Any(n => !n.Equals(_myself))));
-              
+                Within(TestConductor.Settings.BarrierTimeout, () =>
+                    AwaitCondition(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))));
+
             }
             Shutdown(Sys);
             AfterTermination();
@@ -544,7 +551,7 @@ namespace Akka.Remote.TestKit
         * Implementation (i.e. wait for start etc.)
         */
 
-        readonly INode _controllerAddr;
+        readonly IPEndPoint _controllerAddr;
 
         protected void AttachConductor(TestConductor tc)
         {
@@ -585,7 +592,7 @@ namespace Akka.Remote.TestKit
 
         protected void InjectDeployments(ActorSystem system, RoleName role)
         {
-            var deployer = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
+            var deployer = system.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
             foreach (var str in _deployments(role))
             {
                 var deployString = _replacements.Values.Aggregate(str, (@base, r) =>
@@ -603,7 +610,7 @@ namespace Akka.Remote.TestKit
                         // controller node is finished/exited before r.addr is run
                         // on the other nodes
                         var unresolved = "akka://unresolved-replacement-" + r.Role.Name;
-		         Log.Warning(unresolved + " due to: {0}", e.ToString());
+                        Log.Warning(unresolved + " due to: {0}", e.ToString());
                         replaceWith = unresolved;
                     }
                     return @base.Replace(r.Tag, replaceWith);
@@ -627,17 +634,54 @@ namespace Akka.Remote.TestKit
 
         protected ActorSystem StartNewSystem()
         {
+            var sb =
+                new StringBuilder("akka.remote.dot-netty.tcp{").AppendLine()
+                    .AppendFormat("port={0}", _myAddress.Port)
+                    .AppendLine()
+                    .AppendFormat(@"hostname=""{0}""", _myAddress.Host)
+                    .AppendLine("}");
             var config =
                 ConfigurationFactory
-                .ParseString(String.Format(@"helios.tcp{port={0}\nhostname=""{1}""",
-                    _myAddress.Host,
-                    _myAddress.Port))
+                .ParseString(sb.ToString())
                 .WithFallback(Sys.Settings.Config);
 
             var system = ActorSystem.Create(Sys.Name, config);
             InjectDeployments(system, _myself);
             AttachConductor(new TestConductor(system));
             return system;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            //Take this object off the finalization queue and prevent finalization code for this object
+            //from executing a second time.
+            GC.SuppressFinalize(this);
+        }
+
+
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
+        protected void Dispose(bool disposing)
+        {
+            // If disposing equals false, the method has been called by the
+            // runtime from inside the finalizer and you should not reference
+            // other objects. Only unmanaged resources can be disposed.
+
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if (!_isDisposed)
+            {
+                if (disposing)
+                {
+                    Console.WriteLine("---------------DISPOSING--------------------");
+                    MultiNodeSpecAfterAll();
+                }
+            }
+            _isDisposed = true;
         }
     }
 

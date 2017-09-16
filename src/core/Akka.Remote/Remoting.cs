@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,10 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -29,9 +28,11 @@ namespace Akka.Remote
         /// URL-encodes an actor <see cref="Address"/>. Used when generating the names
         /// of some system remote actors.
         /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public static string Encode(Address address)
         {
-            return HttpUtility.UrlEncode(address.ToString(), Encoding.UTF8);
+            return WebUtility.UrlEncode(address.ToString());
         }
     }
 
@@ -56,16 +57,29 @@ namespace Akka.Remote
             _provider = provider;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <returns>TBD</returns>
         public Props ConfigureDispatcher(Props props)
         {
             return _provider.RemoteSettings.ConfigureDispatcher(props);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
             return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteActorRefProvider Provider
         {
             get { return _provider; }
@@ -73,6 +87,11 @@ namespace Akka.Remote
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static RARP For(ActorSystem system)
         {
             return system.WithExtension<RARP, RARP>();
@@ -109,6 +128,11 @@ namespace Akka.Remote
         private IActorRef _transportSupervisor;
         private readonly EventPublisher _eventPublisher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="provider">TBD</param>
         public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
@@ -119,11 +143,17 @@ namespace Akka.Remote
 
         #region RemoteTransport overrides
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ISet<Address> Addresses
         {
             get { return _addresses; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Address DefaultAddress
         {
             get { return _defaultAddress; }
@@ -132,6 +162,18 @@ namespace Akka.Remote
         /// <summary>
         /// Start assumes that it cannot be followed by another Start() without having a Shutdown() first
         /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when no transports are enabled under the "akka.remote.enabled-transports" configuration setting.
+        /// </exception>
+        /// <exception cref="TaskCanceledException">
+        /// This exception is thrown when startup is canceled due to a timeout.
+        /// </exception>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when startup times out.
+        /// </exception>
+        /// <exception cref="Exception">
+        /// This exception is thrown when a general error occurs during startup.
+        /// </exception>
         public override void Start()
         {
             if (_endpointManager == null)
@@ -176,7 +218,7 @@ namespace Akka.Remote
                 }
                 catch (TaskCanceledException ex)
                 {
-                    NotifyError("Startup was cancelled due to timeout", ex);
+                    NotifyError("Startup was canceled due to timeout", ex);
                     throw;
                 }
                 catch (TimeoutException ex)
@@ -196,6 +238,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override Task Shutdown()
         {
             if (_endpointManager == null)
@@ -232,6 +278,13 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
         public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
             if (_endpointManager == null)
@@ -242,6 +295,12 @@ namespace Akka.Remote
             _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cmd">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
+        /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object cmd)
         {
             if (_endpointManager == null)
@@ -260,16 +319,30 @@ namespace Akka.Remote
                     }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remote">TBD</param>
+        /// <returns>TBD</returns>
         public override Address LocalAddressForRemote(Address remote)
         {
             return Remoting.LocalAddressForRemote(_transportMapping, remote);
         }
 
+        /// <summary>
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
+        /// </summary>
+        /// <param name="address">The address of the remote system to be quarantined</param>
+        /// <param name="uid">The UID of the remote system; if the uid is not defined it will not be a strong quarantine but the current
+        /// endpoint writer will be stopped (dropping system messages) and the address will be gated.</param>
+        /// <exception cref="RemoteTransportException">
+        /// This exception is thrown when trying to quarantine a system but remoting is not running.
+        /// </exception>
         public override void Quarantine(Address address, int? uid)
         {
             if (_endpointManager == null)
             {
-                throw new RemoteTransportException(string.Format("Attempted to quarantine address {0} with uid {1} but Remoting is not running", address, uid), null);
+                throw new RemoteTransportException($"Attempted to quarantine address {address} with uid {uid} but Remoting is not running");
             }
 
             _endpointManager.Tell(new EndpointManager.Quarantine(address, uid));
@@ -288,29 +361,35 @@ namespace Akka.Remote
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string EndpointManagerName = "endpointManager";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="transportMapping">TBD</param>
+        /// <param name="remote">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
+        /// <returns>TBD</returns>
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            HashSet<ProtocolTransportAddressPair> transports;
-
-            if (transportMapping.TryGetValue(remote.Protocol, out transports))
+            if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
                     transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
-                {
                     throw new RemoteTransportException(
                         "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol +
                         "] is available." +
                         " Make sure at least one transport is configured to be responsible for the address.",
                         null);
-                }
+
                 if (responsibleTransports.Length == 1)
-                {
                     return responsibleTransports.First().Address;
-                }
+
                 throw new RemoteTransportException(
                     "Multiple transports are available for [" + remote + ": " +
                     string.Join(",", responsibleTransports.Select(t => t.ToString())) + "] " +
@@ -332,14 +411,25 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
         public RegisterTransportActor(Props props, string name)
         {
             Props = props;
             Name = name;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props Props { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Name { get; private set; }
     }
 
@@ -349,11 +439,18 @@ namespace Akka.Remote
     internal class TransportSupervisor : ReceiveActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(exception => Directive.Restart);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _strategy;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransportSupervisor()
         {
             Receive<RegisterTransportActor>(

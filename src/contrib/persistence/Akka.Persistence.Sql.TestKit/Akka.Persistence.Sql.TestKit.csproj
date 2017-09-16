@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\common.props" />
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Persistence.Sql.TestKit</AssemblyTitle>
+    <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
+    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);persistence;testkit;eventsource;sql;reactive;streams</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
+    <PackageReference Include="FluentAssertions" Version="4.14.0" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>

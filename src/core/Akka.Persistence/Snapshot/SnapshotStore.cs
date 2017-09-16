@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,111 +8,244 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Pattern;
 
 namespace Akka.Persistence.Snapshot
 {
+    /// <summary>
+    /// Abstract snapshot store.
+    /// </summary>
     public abstract class SnapshotStore : ActorBase
     {
-        private readonly PersistenceExtension _extension;
+        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
+        private readonly CircuitBreaker _breaker;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SnapshotStore"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the associated Persistence extension has not been used in current actor system context.
+        /// </exception>
         protected SnapshotStore()
         {
-            _extension = Persistence.Instance.Apply(Context.System);
-            if (_extension == null)
+            var extension = Persistence.Instance.Apply(Context.System);
+            if (extension == null)
             {
                 throw new ArgumentException("Couldn't initialize SnapshotStore instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
-            _publish = _extension.Settings.Internal.PublishPluginCommands;
+            _publish = extension.Settings.Internal.PublishPluginCommands;
+            var config = extension.ConfigFor(Self);
+            _breaker = CircuitBreaker.Create(
+                config.GetInt("circuit-breaker.max-failures"),
+                config.GetTimeSpan("circuit-breaker.call-timeout"),
+                config.GetTimeSpan("circuit-breaker.reset-timeout"));
         }
 
-        protected override bool Receive(object message)
+        /// <inheritdoc/>
+        protected sealed override bool Receive(object message)
         {
-            if (message is LoadSnapshot)
-            {
-                var msg = (LoadSnapshot)message;
+            return ReceiveSnapshotStore(message) || ReceivePluginInternal(message);
+        }
 
-                LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr))
-                    .ContinueWith(t => !t.IsFaulted
-                    ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr)
-                    : new LoadSnapshotResult(null, msg.ToSequenceNr))
-                    .PipeTo(Sender);
+        private bool ReceiveSnapshotStore(object message)
+        {
+            var senderPersistentActor = Sender; // Sender is PersistentActor
+            var self = Self; //Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions
+
+            if (message is LoadSnapshot loadSnapshot)
+            {
+                _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                        ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
+                        : new LoadSnapshotFailed(t.IsFaulted
+                                ? TryUnwrapException(t.Exception)
+                                : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")), 
+						_continuationOptions)
+                    .PipeTo(senderPersistentActor);
             }
-            else if (message is SaveSnapshot)
+            else if (message is SaveSnapshot saveSnapshot)
             {
-                var msg = (SaveSnapshot)message;
-                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.UtcNow);
+                var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
 
-                SaveAsync(metadata, msg.Snapshot).ContinueWith(t => !t.IsFaulted
-                        ? (object)new SaveSnapshotSuccess(metadata)
-                        : new SaveSnapshotFailure(msg.Metadata, t.Exception))
-                        .PipeTo(Self, Sender);
-
+                _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                        ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
+                        : new SaveSnapshotFailure(saveSnapshot.Metadata,
+                            t.IsFaulted
+                                ? TryUnwrapException(t.Exception)
+                                : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.")),
+                        _continuationOptions)
+                    .PipeTo(self, senderPersistentActor);
             }
             else if (message is SaveSnapshotSuccess)
             {
-                var msg = (SaveSnapshotSuccess)message;
-                Saved(msg.Metadata);
-                Sender.Tell(message);       // Sender is PersistentActor
-            }
-            else if (message is SaveSnapshotFailure)
-            {
-                var msg = (SaveSnapshotFailure)message;
-                DeleteAsync(msg.Metadata)
-                    .ContinueWith(t => msg)
-                    .PipeTo(Sender);        // Sender is PersistentActor
-            }
-            else if (message is DeleteSnapshot)
-            {
-                var msg = (DeleteSnapshot)message;
-                var eventStream = Context.System.EventStream;
-                DeleteAsync(msg.Metadata).ContinueWith(t =>
+                try
                 {
-                    if (_publish) eventStream.Publish(message);
-                },
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
-
-            }
-            else if (message is DeleteSnapshots)
-            {
-                var msg = (DeleteSnapshots)message;
-                var eventStream = Context.System.EventStream;
-                DeleteAsync(msg.PersistenceId, msg.Criteria).ContinueWith(t =>
+                    ReceivePluginInternal(message);
+                }
+                finally
                 {
-                    if (_publish) eventStream.Publish(message);
-                },
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
-
+                    senderPersistentActor.Tell(message);
+                }
+            }
+            else if (message is SaveSnapshotFailure saveSnapshotFailure)
+            {
+                try
+                {
+                    ReceivePluginInternal(message);
+                    _breaker.WithCircuitBreaker(() => DeleteAsync(saveSnapshotFailure.Metadata));
+                }
+                finally
+                {
+                    senderPersistentActor.Tell(message);
+                }
+            }
+            else if (message is DeleteSnapshot deleteSnapshot)
+            {
+                var eventStream = Context.System.EventStream;
+                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
+                                : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
+                                    t.IsFaulted
+                                        ? TryUnwrapException(t.Exception)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                                _continuationOptions)
+                    .PipeTo(self, senderPersistentActor)
+                    .ContinueWith(t =>
+                    {
+                        if (_publish)
+                            eventStream.Publish(message);
+                    }, _continuationOptions);
+            }
+            else if (message is DeleteSnapshotSuccess)
+            {
+                try
+                {
+                    ReceivePluginInternal(message);
+                }
+                finally
+                {
+                    senderPersistentActor.Tell(message);
+                }
+            }
+            else if (message is DeleteSnapshotFailure)
+            {
+                try
+                {
+                    ReceivePluginInternal(message);
+                }
+                finally
+                {
+                    senderPersistentActor.Tell(message);
+                }
+            }
+            else if (message is DeleteSnapshots deleteSnapshots)
+            {
+                var eventStream = Context.System.EventStream;
+                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
+                                : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
+                                    t.IsFaulted
+                                        ? TryUnwrapException(t.Exception)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                                _continuationOptions)
+                    .PipeTo(self, senderPersistentActor)
+                    .ContinueWith(t =>
+                    {
+                        if (_publish)
+                            eventStream.Publish(message);
+                    }, _continuationOptions);
+            }
+            else if (message is DeleteSnapshotsSuccess)
+            {
+                try
+                {
+                    ReceivePluginInternal(message);
+                }
+                finally
+                {
+                    senderPersistentActor.Tell(message);
+                }
+            }
+            else if (message is DeleteSnapshotsFailure)
+            {
+                try
+                {
+                    ReceivePluginInternal(message);
+                }
+                finally
+                {
+                    senderPersistentActor.Tell(message);
+                }
             }
             else return false;
             return true;
         }
 
+        private Exception TryUnwrapException(Exception e)
+        {
+            var aggregateException = e as AggregateException;
+            if (aggregateException != null)
+            {
+                aggregateException = aggregateException.Flatten();
+                if (aggregateException.InnerExceptions.Count == 1)
+                    return aggregateException.InnerExceptions[0];
+            }
+            return e;
+        }
+
         /// <summary>
-        /// Asynchronously loads a snapshot.
+        /// Plugin API: Asynchronously loads a snapshot.
+        /// 
+        /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="persistenceId">Id of the persistent actor.</param>
+        /// <param name="criteria">Selection criteria for loading.</param>
+        /// <returns>TBD</returns>
         protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
-        /// Asynchronously saves a snapshot.
+        /// Plugin API: Asynchronously saves a snapshot.
+        /// 
+        /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
+        /// <returns>TBD</returns>
         protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
 
         /// <summary>
-        /// Called after successful saving a snapshot.
+        /// Plugin API: Deletes the snapshot identified by <paramref name="metadata"/>.
+        /// 
+        /// This call is protected with a circuit-breaker
         /// </summary>
-        protected abstract void Saved(SnapshotMetadata metadata);
-
-        /// <summary>
-        /// Deletes the snapshot identified by <paramref name="metadata"/>.
-        /// </summary>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(SnapshotMetadata metadata);
 
         /// <summary>
-        /// Deletes all snapshots matching provided <paramref name="criteria"/>.
+        /// Plugin API: Deletes all snapshots matching provided <paramref name="criteria"/>.
+        /// 
+        /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="persistenceId">Id of the persistent actor.</param>
+        /// <param name="criteria">Selection criteria for deleting.</param>
+        /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+
+        /// <summary>
+        /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
+        /// and handle additional messages for implementing advanced features
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        protected virtual bool ReceivePluginInternal(object message)
+        {
+            return false;
+        }
     }
 }
-

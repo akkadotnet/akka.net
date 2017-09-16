@@ -1,69 +1,168 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChildrenContainerBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
-        private readonly IImmutableMap<string, IChildStats> _children;
+        private class LazyReadOnlyCollection<T> : IReadOnlyCollection<T>
+        {
+            private readonly IEnumerable<T> _enumerable;
+            private int _lazyCount;
 
-        protected ChildrenContainerBase(IImmutableMap<string, IChildStats> children)
+            public int Count
+            {
+                get
+                {
+                    int count = _lazyCount;
+
+                    if (count == -1)
+                        _lazyCount = count = _enumerable.Count();
+
+                    return count;
+                }
+            }
+
+            public LazyReadOnlyCollection(IEnumerable<T> enumerable)
+            {
+                _enumerable = enumerable;
+                _lazyCount = -1;
+            }
+
+            /// <inheritdoc/>
+            public IEnumerator<T> GetEnumerator()
+            {
+                return _enumerable.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+
+        private readonly IImmutableDictionary<string, IChildStats> _children;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="children">TBD</param>
+        protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
         {
             _children = children;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual bool IsTerminating { get { return false; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual bool IsNormal { get { return true; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Add(string name, ChildRestartStats stats);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Remove(IActorRef child);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Reserve(string name);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer ShallDie(IActorRef actor);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Unreserve(string name);
 
-        public IReadOnlyList<IInternalActorRef> Children
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IReadOnlyCollection<IInternalActorRef> Children
         {
             get
             {
-                return (from stat in InternalChildren.AllValuesMinToMax
-                        let childRestartStats = stat as ChildRestartStats
-                        where childRestartStats != null
-                        select childRestartStats.Child).ToList();
+                var children = InternalChildren.Values
+                    .OfType<ChildRestartStats>()
+                    .Select(item => item.Child);
+
+                // The children collection must stay lazy evaluated
+                return new LazyReadOnlyCollection<IInternalActorRef>(children);
             }
         }
 
-        public IReadOnlyList<ChildRestartStats> Stats
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IReadOnlyCollection<ChildRestartStats> Stats
         {
             get
             {
-                return (from stat in InternalChildren.AllValuesMinToMax
-                        let childRestartStats = stat as ChildRestartStats
-                        where childRestartStats != null
-                        select childRestartStats).ToList();
+                var children = InternalChildren.Values.OfType<ChildRestartStats>();
+
+                return new LazyReadOnlyCollection<ChildRestartStats>(children);
             }
         }
 
-        protected IImmutableMap<string, IChildStats> InternalChildren { get { return _children; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
-            if (InternalChildren.TryGet(name, out stats)) return true;
+            if (InternalChildren.TryGetValue(name, out stats))
+                return true;
             stats = null;
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="childRestartStats">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
-            IChildStats stats;
-            if (InternalChildren.TryGet(actor.Path.Name, out stats))
+            if (InternalChildren.TryGetValue(actor.Path.Name, out var stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
                 var crStats = stats as ChildRestartStats;
@@ -77,13 +176,24 @@ namespace Akka.Actor.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public bool Contains(IActorRef actor)
         {
             ChildRestartStats stats;
             return TryGetByRef(actor, out stats);
         }
 
-        protected void ChildStatsAppender(StringBuilder sb, IKeyValuePair<string, IChildStats> kvp, int index)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sb">TBD</param>
+        /// <param name="kvp">TBD</param>
+        /// <param name="index">TBD</param>
+        protected void ChildStatsAppender(StringBuilder sb, KeyValuePair<string, IChildStats> kvp, int index)
         {
             sb.Append('<');
             var childStats = kvp.Value;

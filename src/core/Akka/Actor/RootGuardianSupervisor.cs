@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RootGuardianSupervisor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,9 +22,18 @@ namespace Akka.Actor
         private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
-        private readonly Switch _stopped=new Switch(false);
+        private readonly Switch _stopped = new Switch(false);
         private readonly IActorRefProvider _provider;
 
+        private bool IsWalking => !_terminationPromise.Task.IsCompleted;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="root">TBD</param>
+        /// <param name="provider">TBD</param>
+        /// <param name="terminationPromise">TBD</param>
+        /// <param name="log">TBD</param>
         public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
             _log = log;
@@ -33,69 +42,77 @@ namespace Akka.Actor
             _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as ISystemMessage;
-            if(systemMessage!=null)
+            if (IsWalking)
             {
-                SendSystemMessage(systemMessage);
-            }
-            else
-            {
-                _stopped.IfOff(() =>
-                {
-                    if(message == null) throw new InvalidMessageException();
-                    _log.Error("{0} received unexpected message [{1}]", _path, message);
-                });
+                if (message == null) throw new InvalidMessageException("Message is null");
+                _log.Error("{0} received unexpected message [{1}]", _path, message);
             }
         }
 
-        private void SendSystemMessage(ISystemMessage systemMessage)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemMessage">TBD</param>
+        public override void SendSystemMessage(ISystemMessage systemMessage)
         {
-            _stopped.IfOff(() =>
+            var failed = systemMessage as Failed;
+            if (failed != null)
             {
-                var failed = systemMessage as Failed;
-                if(failed != null)
-                {
-                    var cause = failed.Cause;
-                    var child = failed.Child;
-                    _log.Error(cause, "guardian {0} failed, shutting down!", child);
-                    CauseOfTermination = cause;
-                    ((IInternalActorRef) child).Stop();
-                    return;
-                }
-                var supervise = systemMessage as Supervise;
-                if(supervise != null)
-                {
-                    // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
-                    return;
-                }
-                var deathWatchNotification = systemMessage as DeathWatchNotification;
-                if(deathWatchNotification != null)
-                {
-                    Stop();
-                    return;
-                }
-                _log.Error("{0} received unexpected system message [{1}]",_path,systemMessage);
-            });
+                var cause = failed.Cause;
+                var child = failed.Child;
+                _log.Error(cause, "guardian {0} failed, shutting down!", child);
+                CauseOfTermination = cause;
+                ((IInternalActorRef)child).Stop();
+                return;
+            }
+            var supervise = systemMessage as Supervise;
+            if (supervise != null)
+            {
+                // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
+                return;
+            }
+            var deathWatchNotification = systemMessage as DeathWatchNotification;
+            if (deathWatchNotification != null)
+            {
+                Stop();
+                return;
+            }
+            _log.Error("{0} received unexpected system message [{1}]", _path, systemMessage);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Exception CauseOfTermination { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop()
         {
-            _stopped.SwitchOn(() =>
-            {
-                var causeOfTermination = CauseOfTermination;
-                var status = causeOfTermination == null ? (Status) new Status.Success(null) : new Status.Failure(causeOfTermination);
-                _terminationPromise.SetResult(status);
-            });
+            var causeOfTermination = CauseOfTermination;
+            var status = causeOfTermination == null ? (Status)new Status.Success(null) : new Status.Failure(causeOfTermination);
+            _terminationPromise.SetResult(status);
         }
-       
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider
         {
             get { return _provider; }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeaderLeavingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
@@ -49,35 +50,23 @@ akka.cluster.publish-stats-interval = 25 s")
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
 
-        public class ALeaderLeavingMultiNode1 : LeaderLeavingSpec
-        {
-        }
-
-        public class ALeaderLeavingMultiNode2 : LeaderLeavingSpec
-        {
-        }
-
-        public class ALeaderLeavingMultiNode3 : LeaderLeavingSpec
-        {
-        }
-
-        public abstract class LeaderLeavingSpec : MultiNodeClusterSpec
+        public class LeaderLeavingSpec : MultiNodeClusterSpec
         {
             private readonly LeaderLeavingSpecConfig _config;
 
-            protected LeaderLeavingSpec()
+            public LeaderLeavingSpec()
                 : this(new LeaderLeavingSpecConfig())
             {
             }
 
-            private LeaderLeavingSpec(LeaderLeavingSpecConfig config) : base(config)
+            private LeaderLeavingSpec(LeaderLeavingSpecConfig config) : base(config, typeof(LeaderLeavingSpec))
             {
                 _config = config;
             }
 
             [MultiNodeFact]
             public void
-                ALeaderThatIsLeavingMustBeMovedToLeavingThenExitingThenRemovedThenBeShutDownAndThenANewLeaderShouldBeElected
+                A_leader_that_is_leaving_must_be_moved_to_leaving_then_exiting_then_removed_then_be_shut_down_and_then_a_new_leader_should_be_elected
                 ()
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third);
@@ -110,7 +99,7 @@ akka.cluster.publish-stats-interval = 25 s")
                         EnterBarrier("leader-left");
 
                         // verify that the LEADER is EXITING
-                        exitingLatch.Ready(TestLatch.DefaultTimeout);
+                        exitingLatch.Ready(TestKitSettings.DefaultTimeout);
 
                         EnterBarrier("leader-shutdown");
                         MarkNodeAsUnavailable(oldLeaderAddress);

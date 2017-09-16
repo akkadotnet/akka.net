@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="VisualizerRuntimeTemplate.Tree.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -62,7 +62,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
             var groups = spec.NodeFacts
                 .Select(
                     nf =>
-                        string.Format("{{ id:{0}, content:'Node {0}' }}", nf.Value.NodeIndex))
+                        string.Format("{{ id:{0}, content:'Node {0}:{1}' }}", nf.Value.NodeIndex, nf.Value.NodeRole))
                 .Concat(@"{ id:-1, content:'Misc' }");
 
             return string.Join(",\r\n", groups);

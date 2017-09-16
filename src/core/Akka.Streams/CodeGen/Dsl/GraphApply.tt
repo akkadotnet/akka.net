@@ -1,0 +1,125 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+//-----------------------------------------------------------------------
+// <copyright file="GraphApply.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using Akka.Streams.Dsl.Internal;
+<# var count = 6; #>
+
+namespace Akka.Streams.Dsl
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public partial class GraphDsl
+    {
+        /// <summary>
+        /// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
+        /// </summary>
+        /// <typeparam name="TShape">TBD</typeparam>
+        /// <param name="buildBlock">TBD</param>
+        /// <returns>TBD</returns>
+        public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape: Shape
+        {
+            var builder = new Builder<NotUsed>();
+            var shape = buildBlock(builder);
+            var module = builder.Module.ReplaceShape(shape);
+
+            return new GraphImpl<TShape, NotUsed>(shape, module);
+        }
+        
+        /// <summary>
+        /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graph <paramref name="g1"/> 
+        /// and passing its <see cref="Shape"/> along with the <see cref="Builder{TMat}"/> to the given create function.
+        /// </summary>
+        /// <typeparam name="TShapeOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TShape1">TBD</typeparam>
+        /// <param name="g1">TBD</param>
+        /// <param name="buildBlock">TBD</param>
+        /// <returns>TBD</returns>
+        public static IGraph<TShapeOut, TMat> Create<TShapeOut, TMat, TShape1>(IGraph<TShape1, TMat> g1, Func<Builder<TMat>, TShape1, TShapeOut> buildBlock) 
+            where TShapeOut: Shape
+            where TShape1: Shape
+        {
+            var builder = new Builder<TMat>();
+            var shape1 = builder.Add<TShape1, object, TMat, TMat>(g1, Keep.Right);
+            var shape = buildBlock(builder, shape1);
+            var module = builder.Module.ReplaceShape(shape);
+
+            return new GraphImpl<TShapeOut, TMat>(shape, module);
+        }
+        
+<# for (int i = 2; i < count; i++) { 
+    var matTypes = string.Join(", ", Enumerable.Range(0, i).Select(x => "TMat"+x));
+    var shapeTypes = string.Join(", ", Enumerable.Range(0, i).Select(x => "TShape"+x));
+    var graphParams = string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("IGraph<TShape{0}, TMat{0}> g{0}", x)));
+#>
+        /// <summary>
+        /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graphs and passing their <see cref="Shape"/>s 
+        /// along with the <see cref="Builder{TMat}"/> to the given create function.
+        /// </summary>
+        /// <typeparam name="TShapeOut">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
+<# for (var t = 0; t < i; t++) { #>
+        /// <typeparam name="TMat<#= t #>">TBD</typeparam>
+<# } #>
+<# for (var t = 0; t < i; t++) { #>
+        /// <typeparam name="TShape<#= t #>">TBD</typeparam>
+<# } #>
+<# for (var t = 0; t < i; t++) { #>
+        /// <param name="g<#= t #>">TBD</param>
+<# } #>
+        /// <param name="combineMaterializers">TBD</param>
+        /// <param name="buildBlock">TBD</param>
+        /// <returns>TBD</returns>
+        public static IGraph<TShapeOut, TMatOut> Create<TShapeOut, TMatOut, <#= matTypes #>, <#= shapeTypes #>>(
+            <#= graphParams #>, 
+            Func<<#= matTypes #>, TMatOut> combineMaterializers,
+            Func<Builder<TMatOut>, <#= shapeTypes #>, TShapeOut> buildBlock) 
+            where TShapeOut: Shape
+<# for (var t = 0; t < i; t++) { #>
+            where TShape<#= t #>: Shape
+<# } #>
+        {
+            var builder = new Builder<TMatOut>();
+            
+            var shape0 = builder.Add<TShape0, TMat0, <#= CurriedSig(1, i) #>>(g0, m0 => <#= CurriedMat(1, i) #>);
+<# for (var t = 1; t < i; t++) { #>
+            var shape<#= t #> = builder.Add<TShape<#= t #>, <#= CurriedSig(t, i) #>, TMat<#= t #>, <#= CurriedSig(t+1, i) #>>(g<#= t #>, (f, m<#= t #>) => f(m<#= t #>));
+<# } #>
+
+            var shape = buildBlock(builder, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "shape"+x)) #>);
+            var module = builder.Module.ReplaceShape(shape);
+
+            return new GraphImpl<TShapeOut, TMatOut>(shape, module);
+        }
+<# } #>
+    }
+}
+<#+
+   public string CurriedSig(int from, int to)
+   {
+      if (from < to)
+         return string.Format("Func<TMat{0}, {1}>", from, CurriedSig(from+1, to));
+      else
+         return "TMatOut";
+   }
+
+   public string CurriedMat(int from, int to)
+   {
+      if (from < to)
+         return string.Format("(m{0} => {1})", from, CurriedMat(from+1, to));
+      else
+         return string.Format("combineMaterializers({0})", string.Join(", ", Enumerable.Range(0, to).Select(x => "m"+x)));
+   }
+#>

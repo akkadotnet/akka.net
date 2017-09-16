@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TerminatedChildrenContainer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,22 +22,47 @@ namespace Akka.Actor.Internal
         {
             //Intentionally left blank
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static IChildrenContainer Instance { get { return _instance; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return this;
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
+        /// <exception cref="InvalidOperationException">This exception is automatically thrown since the name belongs to an actor that is already terminated.</exception>
         public override IChildrenContainer Reserve(string name)
         {
-            throw new InvalidOperationException("Cannot reserve actor name '" + name + "': already terminated");
+            throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsTerminating { get { return true; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsNormal { get { return false; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "Terminated";

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PublicApiGenerator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -17,6 +17,7 @@ using Microsoft.CSharp;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using TypeAttributes = System.Reflection.TypeAttributes;
+using System.Globalization;
 
 // ReSharper disable CheckNamespace
 // ReSharper disable BitwiseOperatorOnEnumWithoutFlags
@@ -63,7 +64,7 @@ namespace ApiApprover
 
                 var publicTypes = assembly.Modules.SelectMany(m => m.GetTypes())
                     .Where(t => !t.IsNested && ShouldIncludeType(t) && shouldIncludeType(t))
-                    .OrderBy(t => t.FullName);
+                    .OrderBy(t => t.FullName, StringComparer.InvariantCulture);
                 foreach (var publicType in publicTypes)
                 {
                     var @namespace = compileUnit.Namespaces.Cast<CodeNamespace>()
@@ -219,20 +220,20 @@ namespace ApiApprover
                 else
                     declaration.BaseTypes.Add(CreateCodeTypeReference(publicType.BaseType));
             }
-            foreach (var @interface in publicType.Interfaces.OrderBy(i => i.FullName))
+            foreach (var @interface in publicType.Interfaces.OrderBy(i => i.FullName, StringComparer.InvariantCulture))
                 declaration.BaseTypes.Add(CreateCodeTypeReference(@interface));
 
-            foreach (var memberInfo in publicType.GetMembers().Where(ShouldIncludeMember).OrderBy(m => m.Name))
+            foreach (var memberInfo in publicType.GetMembers().Where(ShouldIncludeMember).OrderBy(m => m.Name, StringComparer.InvariantCulture))
                 AddMemberToTypeDeclaration(declaration, memberInfo);
 
             // Fields should be in defined order for an enum
             var fields = !publicType.IsEnum
-                ? publicType.Fields.OrderBy(f => f.Name)
+                ? publicType.Fields.OrderBy(f => f.Name, StringComparer.InvariantCulture)
                 : (IEnumerable<FieldDefinition>)publicType.Fields;
             foreach (var field in fields)
                 AddMemberToTypeDeclaration(declaration, field);
 
-            foreach (var nestedType in publicType.NestedTypes.Where(ShouldIncludeType).OrderBy(t => t.FullName))
+            foreach (var nestedType in publicType.NestedTypes.Where(ShouldIncludeType).OrderBy(t => t.FullName, StringComparer.InvariantCulture))
             {
                 var nestedTypeDeclaration = CreateTypeDeclaration(nestedType);
                 declaration.Members.Add(nestedTypeDeclaration);
@@ -324,7 +325,7 @@ namespace ApiApprover
         private static void PopulateCustomAttributes(ICustomAttributeProvider type,
             CodeAttributeDeclarationCollection attributes, Func<CodeTypeReference, CodeTypeReference> codeTypeModifier)
         {
-            foreach (var customAttribute in type.CustomAttributes.Where(ShouldIncludeAttribute).OrderBy(a => a.AttributeType.FullName).ThenBy(a => ConvertAttrbuteToCode(codeTypeModifier, a)))
+            foreach (var customAttribute in type.CustomAttributes.Where(ShouldIncludeAttribute).OrderBy(a => a.AttributeType.FullName, StringComparer.InvariantCulture).ThenBy(a => ConvertAttrbuteToCode(codeTypeModifier, a)))
             {
                 var attribute = GenerateCodeAttributeDeclaration(codeTypeModifier, customAttribute);
                 attributes.Add(attribute);
@@ -338,11 +339,11 @@ namespace ApiApprover
             {
                 attribute.Arguments.Add(new CodeAttributeArgument(CreateInitialiserExpression(arg)));
             }
-            foreach (var field in customAttribute.Fields.OrderBy(f => f.Name))
+            foreach (var field in customAttribute.Fields.OrderBy(f => f.Name, StringComparer.InvariantCulture))
             {
                 attribute.Arguments.Add(new CodeAttributeArgument(field.Name, CreateInitialiserExpression(field.Argument)));
             }
-            foreach (var property in customAttribute.Properties.OrderBy(p => p.Name))
+            foreach (var property in customAttribute.Properties.OrderBy(p => p.Name, StringComparer.InvariantCulture))
             {
                 attribute.Arguments.Add(new CodeAttributeArgument(property.Name, CreateInitialiserExpression(property.Argument)));
             }
@@ -378,6 +379,7 @@ namespace ApiApprover
             "System.CodeDom.Compiler.GeneratedCodeAttribute",
             "System.ComponentModel.EditorBrowsableAttribute",
             "System.Runtime.CompilerServices.AsyncStateMachineAttribute",
+            "System.Runtime.CompilerServices.IteratorStateMachineAttribute",
             "System.Runtime.CompilerServices.CompilerGeneratedAttribute",
             "System.Runtime.CompilerServices.CompilationRelaxationsAttribute",
             "System.Runtime.CompilerServices.ExtensionAttribute",
@@ -537,7 +539,7 @@ namespace ApiApprover
                 }
 
                 var name = parameter.HasConstant
-                    ? string.Format("{0} = {1}", parameter.Name, FormatParameterConstant(parameter))
+                    ? string.Format(CultureInfo.InvariantCulture, "{0} = {1}", parameter.Name, FormatParameterConstant(parameter))
                     : parameter.Name;
                 var expression = new CodeParameterDeclarationExpression(type, name)
                 {

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -38,7 +38,7 @@ namespace Samples.Cluster.ConsistentHashRouting
         {
             var port = args.Length > 0 ? args[0] : "0";
             var config =
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + port)
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
                     .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [backend]"))
                         .WithFallback(_clusterConfig);
 
@@ -50,7 +50,7 @@ namespace Samples.Cluster.ConsistentHashRouting
         {
             var port = args.Length > 0 ? args[0] : "0";
             var config =
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + port)
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
                     .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [frontend]"))
                         .WithFallback(_clusterConfig);
 

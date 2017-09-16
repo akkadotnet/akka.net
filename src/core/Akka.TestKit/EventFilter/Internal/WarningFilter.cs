@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WarningFilter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -15,10 +15,21 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class WarningFilter : EventFilterBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
         public WarningFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
             : base(messageMatcher, sourceMatcher)
         {
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var warning = evt as Warning;
@@ -29,7 +40,9 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName { get { return "Warning"; } }
     }
 }
-

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -15,12 +15,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public abstract class MultiNodeMessage : IComparable<MultiNodeMessage>, IEquatable<MultiNodeMessage>
     {
-        protected MultiNodeMessage(long timeStamp, string message, int nodeIndex)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        protected MultiNodeMessage(long timeStamp, string message, int nodeIndex, string nodeRole)
         {
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
             Message = message;
             TimeStamp = timeStamp;
         }
+
 
         /// <summary>
         /// The absolute time this message occurred represented as <see cref="DateTime.Ticks"/>
@@ -37,16 +46,24 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         public int NodeIndex { get; private set; }
 
+        /// <summary>
+        /// The Role of the node in question.
+        /// </summary>
+        public string NodeRole { get; private set; }
+
         #region Comparisons
 
+        /// <inheritdoc/>
         public virtual int CompareTo(MultiNodeMessage other)
         {
             var tc = TimeStamp.CompareTo(other.TimeStamp);
             if(tc != 0) return tc;
-            var m = String.Compare(Message, other.Message, StringComparison.Ordinal);
+            var m = string.Compare(Message, other.Message, StringComparison.Ordinal);
             if (m != 0) return m;
             var ni = NodeIndex.CompareTo(other.NodeIndex);
             if (ni != 0) return ni;
+            var nr = string.Compare(NodeRole, other.NodeRole, StringComparison.Ordinal);
+            if (nr != 0) return nr;
             return 0;
         }
 
@@ -54,6 +71,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -62,10 +80,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 hashCode = (hashCode * 397) ^ TimeStamp.GetHashCode();
                 hashCode = (hashCode * 397) ^ NodeIndex;
                 hashCode = (hashCode * 397) ^ Message.GetHashCode();
+                hashCode = (hashCode * 397) ^ NodeRole.GetHashCode();
                 return hashCode;
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -75,10 +95,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return msg != null && Equals(msg);
         }
 
+        /// <inheritdoc/>
         public virtual bool Equals(MultiNodeMessage other)
         {
             return other != null &&
                    NodeIndex == other.NodeIndex &&
+                   string.Equals(NodeRole, other.NodeRole, StringComparison.Ordinal) &&
                    TimeStamp == other.TimeStamp &&
                    string.Equals(Message, other.Message);
 
@@ -92,8 +114,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeResultMessage : MultiNodeMessage
     {
-        public MultiNodeResultMessage(long timeStamp, string message, int nodeIndex, bool passed)
-            : base(timeStamp, message, nodeIndex)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeResultMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        /// <param name="passed">The flag used to determine if the test passed. <c>true</c> if successful; otherwise <c>false</c>.</param>
+        public MultiNodeResultMessage(long timeStamp, string message, int nodeIndex, string nodeRole, bool passed)
+            : base(timeStamp, message, nodeIndex, nodeRole)
         {
             Passed = passed;
         }
@@ -105,6 +135,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -115,6 +146,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherResultMessage = other as MultiNodeResultMessage;
@@ -131,8 +163,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeTestRunnerMessage : MultiNodeMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeTestRunnerMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="actorPath">The path to the remote node where the message occurred</param>
+        /// <param name="logLevel">The log level of the message</param>
         public MultiNodeTestRunnerMessage(long timeStamp, string message, string actorPath, LogLevel logLevel)
-            : base(timeStamp, message, -1)
+            : base(timeStamp, message, -1, string.Empty)
         {
             ActorPath = actorPath;
             LogLevel = logLevel;
@@ -152,6 +191,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -163,6 +203,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherLogMessage = other as MultiNodeTestRunnerMessage;
@@ -181,7 +222,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeLogMessageFragment : MultiNodeMessage
     {
-        public MultiNodeLogMessageFragment(long timeStamp, string message, int nodeIndex) : base(timeStamp, message, nodeIndex)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeLogMessageFragment"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        public MultiNodeLogMessageFragment(long timeStamp, string message, int nodeIndex, string nodeRole) 
+            : base(timeStamp, message, nodeIndex, nodeRole)
         {
         }
     }
@@ -191,8 +240,17 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeLogMessage : MultiNodeMessage
     {
-        public MultiNodeLogMessage(long timeStamp, string message, int nodeIndex, string actorPath, LogLevel logLevel)
-            : base(timeStamp, message, nodeIndex)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeLogMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message.</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        /// <param name="actorPath">The path to the remote node where the message occurred</param>
+        /// <param name="logLevel">The log level of the message</param>
+        public MultiNodeLogMessage(long timeStamp, string message, int nodeIndex, string nodeRole, string actorPath, LogLevel logLevel)
+            : base(timeStamp, message, nodeIndex, nodeRole)
         {
             ActorPath = actorPath;
             LogLevel = logLevel;
@@ -212,6 +270,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -223,6 +282,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherLogMessage = other as MultiNodeLogMessage;

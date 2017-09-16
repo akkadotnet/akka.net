@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JoinSeedNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System.Collections.Immutable;
 using System.Threading;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
@@ -44,19 +45,13 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class JoinSeedNodeMultiNode1 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode2 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode3 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode4 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode5 : JoinSeedNodeSpec { }
-
-    public abstract class JoinSeedNodeSpec : MultiNodeClusterSpec
+    public class JoinSeedNodeSpec : MultiNodeClusterSpec
     {
         private readonly JoinSeedNodeConfig _config;
 
-        protected JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
+        public JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
 
-        protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config)
+        protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config, typeof(JoinSeedNodeSpec))
         {
             _config = config;
         }
@@ -68,11 +63,11 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             _seedNodes = ImmutableList.Create(GetAddress(_config.Seed1), GetAddress(_config.Seed2),
                 GetAddress(_config.Seed3));
-            AClusterWithSeedNodesMustBeAbleToStartTheSeedNodesConcurrently();
-            AClusterWithSeedNodesMustBeAbleToJoinTheSeedNodes();
+            A_cluster_with_seed_nodes_must_be_able_to_start_the_seed_nodes_concurrently();
+            A_cluster_with_seed_nodes_must_be_able_to_join_the_seed_nodes();
         }
 
-        public void AClusterWithSeedNodesMustBeAbleToStartTheSeedNodesConcurrently()
+        public void A_cluster_with_seed_nodes_must_be_able_to_start_the_seed_nodes_concurrently()
         {
             
 
@@ -96,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
-        public void AClusterWithSeedNodesMustBeAbleToJoinTheSeedNodes()
+        public void A_cluster_with_seed_nodes_must_be_able_to_join_the_seed_nodes()
         {
             RunOn(() =>
             {

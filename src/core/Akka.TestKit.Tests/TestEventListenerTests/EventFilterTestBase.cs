@@ -1,15 +1,15 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+﻿// <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Event;
+using Akka.Testkit.Tests.TestEventListenerTests;
 
-namespace Akka.Testkit.Tests.TestEventListenerTests
+namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit
+    public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
     {
         /// <summary>
         /// Used to signal that the test was successful and that we should ensure no more messages were logged

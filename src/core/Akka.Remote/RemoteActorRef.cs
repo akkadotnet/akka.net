@@ -1,14 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 
 namespace Akka.Remote
 {
@@ -89,14 +92,21 @@ namespace Akka.Remote
             get { return Remote.Provider; }
         }
 
+        private RemoteActorRefProvider RemoteProvider => Provider as RemoteActorRefProvider;
+
+        /// <summary>
+        /// Obsolete. Use <see cref="Akka.Actor.UntypedActor.Context.Watch(IActorRef)"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
+        /// </summary>
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
+
 
         /// <summary>
         /// Gets the child.
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             throw new NotImplementedException();
@@ -116,7 +126,7 @@ namespace Akka.Remote
         /// </summary>
         public override void Stop()
         {
-            SendSystemMessage(Terminate.Instance);
+            SendSystemMessage(new Terminate());
         }
 
         /// <summary>
@@ -133,27 +143,62 @@ namespace Akka.Remote
         /// </summary>
         public override void Suspend()
         {
-            SendSystemMessage(Akka.Dispatch.SysMsg.Suspend.Instance);
+            SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsLocal
         {
             get { return false; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
+        }
+
+        private void HandleException(Exception ex)
+        {
+            Remote.System.EventStream.Publish(new Error(ex, Path.ToString(), GetType(), "swallowing exception during message send"));
         }
 
         /// <summary>
         /// Sends the system message.
         /// </summary>
         /// <param name="message">The message.</param>
-        private void SendSystemMessage(ISystemMessage message)
+        public override void SendSystemMessage(ISystemMessage message)
         {
-            Remote.Send(message, null, this);
-            Remote.Provider.AfterSendSystemMessage(message);
+            try
+            {
+                //send to remote, unless watch message is intercepted by the remoteWatcher
+                var watch = message as Watch;
+                if (watch != null && IsWatchIntercepted(watch.Watchee, watch.Watcher))
+                {
+                    RemoteProvider.RemoteWatcher.Tell(new RemoteWatcher.WatchRemote(watch.Watchee, watch.Watcher));
+                }
+                else
+                {
+                    var unwatch = message as Unwatch;
+                    if (unwatch != null && IsWatchIntercepted(unwatch.Watchee, unwatch.Watcher))
+                    {
+                        RemoteProvider.RemoteWatcher.Tell(new RemoteWatcher.UnwatchRemote(unwatch.Watchee,
+                            unwatch.Watcher));
+                    }
+                    else
+                    {
+                        Remote.Send(message, null, this);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+            }
         }
 
         /// <summary>
@@ -161,11 +206,23 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
+        /// <exception cref="InvalidMessageException">TBD</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            Remote.Send(message, sender, this);
-            var systemMessage = message as ISystemMessage;
-            if (systemMessage != null) Remote.Provider.AfterSendSystemMessage(systemMessage);
+            if(message == null) throw new InvalidMessageException("Message is null.");
+            try { Remote.Send(message, sender, this);}catch(Exception ex) {  HandleException(ex);}
+        }
+
+        /// <summary>
+        /// Determine if a <see cref="Watch"/>/<see cref="Unwatch"/> message must be handled by the <see cref="RemoteWatcher"/>
+        /// actor, or sent to this <see cref="RemoteActorRef"/>.
+        /// </summary>
+        /// <param name="watchee">The actor being watched.</param>
+        /// <param name="watcher">The actor watching.</param>
+        /// <returns>TBD</returns>
+        public bool IsWatchIntercepted(IActorRef watchee, IActorRef watcher)
+        {
+            return !watcher.Equals(RemoteProvider.RemoteWatcher) && watchee.Equals(this);
         }
 
         /// <summary>

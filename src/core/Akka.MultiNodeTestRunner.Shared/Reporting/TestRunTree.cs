@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestRunTree.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -90,6 +90,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(TestRunTree other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -101,6 +102,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -109,6 +111,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((TestRunTree) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -240,6 +243,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(FactData other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -252,6 +256,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -260,6 +265,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((FactData) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -278,10 +284,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     {
         private readonly SortedSet<MultiNodeMessage> _eventTimeLine;
 
-        public NodeData(int nodeIndex) : this(nodeIndex, DateTime.UtcNow.Ticks, new List<MultiNodeMessage>()) { }
+        public NodeData(int nodeIndex, string nodeRole) : this(nodeIndex, nodeRole, DateTime.UtcNow.Ticks, new List<MultiNodeMessage>()) { }
 
-        public NodeData(int nodeIndex, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine) 
-            : this(nodeIndex, startTime, eventTimeLine, null, null)
+        public NodeData(int nodeIndex, string nodeRole, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine) 
+            : this(nodeIndex, nodeRole, startTime, eventTimeLine, null, null)
         {
           
         }
@@ -290,10 +296,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// Copy constructor
         /// </summary>
         [JsonConstructor]
-        public NodeData(int nodeIndex, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine, long? endTime,
+        public NodeData(int nodeIndex, string nodeRole, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine, long? endTime,
             bool? passed)
         {
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
             StartTime = startTime;
             _eventTimeLine = new SortedSet<MultiNodeMessage>(eventTimeLine ?? new List<MultiNodeMessage>());
             EndTime = endTime;
@@ -304,6 +311,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// The position of this node in the 0...N index of all nodes in the set.
         /// </summary>
         public int NodeIndex { get; private set; }
+
+        /// <summary>
+        /// The Role of this node.
+        /// </summary>
+        public string NodeRole { get; private set; }
 
         /// <summary>
         /// The absolute time tests began for this individual node
@@ -348,7 +360,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         /// <summary>
-        /// Push a new message onto the <see cref="EventStream"/> for this node.
+        /// Pushes a new message onto the <see cref="EventStream"/> for this node.
         /// </summary>
         public void Put(MultiNodeMessage message)
         {
@@ -364,29 +376,32 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         /// <summary>
-        /// Does a deep copy of the current <see cref="NodeData"/> object
+        /// Creates a deep copy of the current <see cref="NodeData"/> object
         /// </summary>
         public NodeData Copy()
         {
             var events = new MultiNodeMessage[_eventTimeLine.Count];
             _eventTimeLine.CopyTo(events);
 
-            return new NodeData(NodeIndex, StartTime, events, EndTime, Passed);
+            return new NodeData(NodeIndex, NodeRole, StartTime, events, EndTime, Passed);
         }
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(NodeData other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return _eventTimeLine.SetEquals(other._eventTimeLine)
                 && NodeIndex == other.NodeIndex 
+                && String.Equals(NodeRole, other.NodeRole, StringComparison.Ordinal)
                 && StartTime == other.StartTime 
                 && EndTime == other.EndTime 
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -395,16 +410,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((NodeData) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
-                return (NodeIndex * 397) ^ StartTime.GetHashCode();
+                return (NodeIndex * 397) ^ (NodeRole.GetHashCode() * 397) ^ StartTime.GetHashCode();
             }
         }
 
         #endregion
-
    
     }
 }

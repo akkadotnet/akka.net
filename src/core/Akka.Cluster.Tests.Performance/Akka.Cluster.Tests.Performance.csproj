@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Cluster.Tests.Performance</AssemblyTitle>
+    <TargetFrameworks>net452</TargetFrameworks>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="App.config" />
+    <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NBench" Version="1.0.1" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>

@@ -1,19 +1,25 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Dispatch;
 
 namespace Akka.Event
 {
     /// <summary>
     /// Default logger implementation that outputs logs to the Console.
     /// </summary>
-    public class DefaultLogger : ActorBase
+    public class DefaultLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if(message is InitializeLogger)

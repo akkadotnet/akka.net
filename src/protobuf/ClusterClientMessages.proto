@@ -1,0 +1,10 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Cluster.Tools.Client.Serialization.Proto.Msg;
+
+message Contacts {
+  repeated string contactPoints = 1;
+}

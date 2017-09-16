@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpSender.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,72 +16,71 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    using static Udp;
+    
     class UdpSender : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly UdpExt _udp;
         private readonly IActorRef _commander;
         private readonly IEnumerable<Inet.SocketOption> _options;
 
-        private readonly DatagramChannel _channel;
+        private readonly Socket _socket;
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public UdpSender(UdpExt udp, IChannelRegistry channelRegistry, IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        
+        public UdpSender(UdpExt udp, IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
             _udp = udp;
             _commander = commander;
             _options = options;
 
-            _channel = new Func<DatagramChannel>(() =>
+            _socket = new Func<Socket>(() =>
             {
-                var datagramChannel = DatagramChannel.Open();
-                datagramChannel.ConfigureBlocking(false);
-                var socket = datagramChannel.Socket;
+                var socket = new Socket(SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
                 _options.ForEach(x => x.BeforeDatagramBind(socket));
-
-                return datagramChannel;
+                return socket;
             })();
-
-            channelRegistry.Register(_channel, SocketAsyncOperation.None, Self);
         }
 
-        protected override UdpExt Udp
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override UdpExt Udp => _udp;
+
+        protected override Socket Socket => _socket;
+
+        public override void AroundPreStart()
         {
-            get { return _udp; }
-        }
-        protected override DatagramChannel Channel
-        {
-            get { return _channel; }
+            _options
+                .OfType<Inet.SocketOptionV2>()
+                .ForEach(x => x.AfterConnect(Socket));
+            _commander.Tell(SimpleSenderReady.Instance);
+            Context.Become(SendHandlers);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var registration = message as ChannelRegistration;
-            if (registration != null)
-            {
-                _options
-                    .OfType<Inet.SocketOptionV2>()
-                    .ForEach(x => x.AfterConnect(Channel.Socket));
-                _commander.Tell(IO.Udp.SimpleSenderReady.Instance);
-                Context.Become(SendHandlers(registration));
-                return true;
-            }
-            return false;
+            throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
-            if (Channel.IsOpen())
+            _log.Debug("Closing Socket after being stopped");
+            try
             {
-                _log.Debug("Closing DatagramChannel after being stopped");
-                try
-                {
-                    Channel.Close();
-                }
-                catch (Exception e)
-                {
-                    _log.Debug("Error closing DatagramChannel: {0}", e);
-                }
+                Socket.Dispose();
+            }
+            catch (Exception e)
+            {
+                _log.Debug("Error closing Socket: {0}", e);
             }
         }
     }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -25,8 +25,14 @@ namespace Akka.Cluster
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
-    public class ClusterActorRefProvider : RemoteActorRefProvider
+    internal class ClusterActorRefProvider : RemoteActorRefProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)
         {
@@ -35,6 +41,10 @@ namespace Akka.Cluster
             Deployer = new ClusterDeployer(settings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public override void Init(ActorSystemImpl system)
         {
             //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
@@ -44,6 +54,11 @@ namespace Akka.Cluster
             Cluster.Get(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread
@@ -56,23 +71,43 @@ namespace Akka.Cluster
                 RemoteSettings.WatchUnreachableReaperInterval,
                 RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
         }
-
-        
     }
 
     /// <summary>
-    /// Cluster-aware scope of a <see cref="Deploy"/>
+    /// This class represents a binding of an actor deployment to a cluster-aware system.
     /// </summary>
     public class ClusterScope : Scope
     {
         private ClusterScope() { }
 
+        /// <summary>
+        /// The singleton instance of this scope.
+        /// </summary>
         public static readonly ClusterScope Instance = new ClusterScope();
+
+        /// <summary>
+        /// Creates a new <see cref="Akka.Actor.Scope" /> from this scope using another <see cref="Akka.Actor.Scope" />
+        /// to backfill options that might be missing from this scope.
+        ///
+        /// <note>
+        /// This method ignores the given scope and returns the singleton instance of this scope.
+        /// </note>
+        /// </summary>
+        /// <param name="other">The <see cref="Akka.Actor.Scope" /> used for fallback configuration.</param>
+        /// <returns>The singleton instance of this scope</returns>
         public override Scope WithFallback(Scope other)
         {
             return Instance;
         }
 
+        /// <summary>
+        /// Creates a copy of the current instance.
+        /// 
+        /// <note>
+        /// This method returns the singleton instance of this scope.
+        /// </note>
+        /// </summary>
+        /// <returns>The singleton instance of this scope</returns>
         public override Scope Copy()
         {
             return Instance;
@@ -86,47 +121,80 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterDeployer : RemoteDeployer
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterDeployer"/> class.
+        /// </summary>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public ClusterDeployer(Settings settings)
             : base(settings)
         {
         }
 
+        /// <summary>
+        /// Creates an actor deployment to the supplied path, <paramref name="key" />, using the supplied configuration, <paramref name="config" />.
+        /// </summary>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <returns>A configured actor deployment to the given path.</returns>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the deployment has a scope defined in the configuration
+        /// or the router is configured as a <see cref="RemoteRouterConfig"/>.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the router is not configured as either a <see cref="Pool"/> or a <see cref="Group"/>.
+        /// </exception>
         public override Deploy ParseConfig(string key, Config config)
         {
-            var deploy = base.ParseConfig(key, config);
-            if (deploy == null) return null;
-
-            if (deploy.Config.GetBoolean("cluster.enabled"))
+            Config config2 = config;
+            if (config.HasPath("cluster.enabled")
+                && config.GetBoolean("cluster.enabled")
+                && !config.HasPath("nr-of-instances"))
             {
-                if(deploy.Scope != Deploy.NoScopeGiven)
-                    throw new ConfigurationException(string.Format("Cluster deployment can't be combined with scope [{0}]", deploy.Scope));
-                if(deploy.RouterConfig is RemoteRouterConfig)
-                    throw new ConfigurationException(string.Format("Cluster deployment can't be combined with [{0}]", deploy.Config));
+                var maxTotalNrOfInstances = config
+                    .WithFallback(Default)
+                    .GetInt("cluster.max-total-nr-of-instances");
+                config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
+                    .WithFallback(config);
+            }
 
-                if (deploy.RouterConfig is Pool)
+            var deploy = base.ParseConfig(key, config2);
+            if (deploy != null)
+            {
+                if (deploy.Config.GetBoolean("cluster.enabled"))
                 {
-                    return
-                        deploy.WithScope(scope: ClusterScope.Instance)
-                            .WithRouterConfig(new ClusterRouterPool(deploy.RouterConfig as Pool,
-                                ClusterRouterPoolSettings.FromConfig(deploy.Config)));
-                }
-                else if (deploy.RouterConfig is Group)
-                {
-                    return
-                        deploy.WithScope(scope: ClusterScope.Instance)
-                            .WithRouterConfig(new ClusterRouterGroup(deploy.RouterConfig as Group,
-                                ClusterRouterGroupSettings.FromConfig(deploy.Config)));
+                    if (deploy.Scope != Deploy.NoScopeGiven)
+                        throw new ConfigurationException($"Cluster deployment can't be combined with scope [{deploy.Scope}]");
+                    if (deploy.RouterConfig is RemoteRouterConfig)
+                        throw new ConfigurationException($"Cluster deployment can't be combined with [{deploy.Config}]");
+
+                    if (deploy.RouterConfig is Pool)
+                    {
+                        return
+                            deploy.WithScope(scope: ClusterScope.Instance)
+                                .WithRouterConfig(new ClusterRouterPool(deploy.RouterConfig as Pool,
+                                    ClusterRouterPoolSettings.FromConfig(deploy.Config)));
+                    }
+                    else if (deploy.RouterConfig is Group)
+                    {
+                        return
+                            deploy.WithScope(scope: ClusterScope.Instance)
+                                .WithRouterConfig(new ClusterRouterGroup(deploy.RouterConfig as Group,
+                                    ClusterRouterGroupSettings.FromConfig(deploy.Config)));
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Cluster-aware router can only wrap Pool or Group, got [{deploy.RouterConfig.GetType()}]");
+                    }
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("Cluster-aware router can only wrap Pool or Group, got [{0}]", deploy.RouterConfig.GetType()));
+                    return deploy;
                 }
             }
             else
             {
-                return deploy;
+                return null;
             }
         }
     }
 }
-

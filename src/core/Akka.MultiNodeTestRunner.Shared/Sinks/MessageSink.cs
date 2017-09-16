@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageSink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -88,7 +88,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         };
 
         private const string NodePassStatusRegexString =
-            @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<status>(PASS|FAIL))\]{1}\s(?<test>.*)";
+            @"\[(\w){4}(?<node>[0-9]{1,2})(?<role>:\w+)?\]\[(?<status>(PASS|FAIL))\]{1}\s(?<test>.*)";
         protected static readonly Regex NodePassStatusRegex = new Regex(NodePassStatusRegexString);
 
         private const string NodePassed = "PASS";
@@ -96,26 +96,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         private const string NodeFailed = "FAIL";
 
         private const string NodeFailureReasonRegexString =
-            @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<status>(FAIL-EXCEPTION))\]{1}\s(?<message>.*)";
+            @"\[(\w){4}(?<node>[0-9]{1,2})(?<role>:\w+)?\]\[(?<status>(FAIL-EXCEPTION))\]{1}\s(?<message>.*)";
         protected static readonly Regex NodeFailureReasonRegex = new Regex(NodeFailureReasonRegexString);
 
         /*
          * Regular expressions - go big or go home. [Aaronontheweb]
          */
-        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@|\(|\))*)";
-        protected static readonly Regex NodeLogMessageRegex = new Regex(NodeLogMessageRegexString);
-
-        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
+        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|#|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex RunnerLogMessageRegex = new Regex(RunnerLogMessageRegexString);
 
-        private const string NodeLogFragmentRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\](?<message>(.)*)";
+        private const string NodeLogFragmentRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})(?<role>:\w+)?\](?<message>(.)*)";
         protected static readonly Regex NodeLogFragmentRegex = new Regex(NodeLogFragmentRegexString);
 
         public static MultiNodeTestRunnerMessageType DetermineMessageType(string messageStr)
         {
-            var matchLog = NodeLogMessageRegex.Match(messageStr);
-            if(matchLog.Success) return MultiNodeTestRunnerMessageType.NodeLogMessage;
-
             var matchRunnerLog = RunnerLogMessageRegex.Match(messageStr);
             if (matchRunnerLog.Success) return MultiNodeTestRunnerMessageType.RunnerLogMessage;
 
@@ -134,26 +128,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             return MultiNodeTestRunnerMessageType.Unknown;
         }
 
-        public static bool TryParseLogMessage(string messageStr, out LogMessageForNode logMessage)
-        {
-            var matchLog = NodeLogMessageRegex.Match(messageStr);
-            if (!matchLog.Success)
-            {
-                logMessage = null;
-                return false;
-            }
-            
-            LogLevel logLevel;
-            Enum.TryParse(matchLog.Groups["level"].Value, true, out logLevel);
-
-            var logSource = matchLog.Groups["logsource"].Value;
-            var message = matchLog.Groups["message"].Value;
-            var nodeIndex = Int32.Parse(matchLog.Groups["node"].Value);
-            logMessage = new LogMessageForNode(nodeIndex, message, logLevel, DateTime.UtcNow, logSource);
-
-            return true;
-        }
-
         public static bool TryParseLogMessage(string messageStr, out LogMessageFragmentForNode logMessage)
         {
             var matchLog = NodeLogFragmentRegex.Match(messageStr);
@@ -165,7 +139,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             var message = matchLog.Groups["message"].Value;
             var nodeIndex = Int32.Parse(matchLog.Groups["node"].Value);
-            logMessage = new LogMessageFragmentForNode(nodeIndex, message, DateTime.UtcNow);
+            var nodeRoleGroup = matchLog.Groups["role"];
+            var nodeRole = nodeRoleGroup.Success ? nodeRoleGroup.Value.Substring(1) : String.Empty;
+            logMessage = new LogMessageFragmentForNode(nodeIndex, nodeRole, message, DateTime.UtcNow);
 
             return true;
         }
@@ -198,7 +174,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             var nodeIndex = Int32.Parse(matchStatus.Groups["node"].Value);
             var passMessage = matchStatus.Groups["test"].Value + " " + matchStatus.Groups["status"].Value;
-            message = new NodeCompletedSpecWithSuccess(nodeIndex, passMessage);
+            var nodeRoleGroup = matchStatus.Groups["role"];
+            var nodeRole = nodeRoleGroup.Success ? nodeRoleGroup.Value.Substring(1) : String.Empty;
+            message = new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, passMessage);
 
             return true;
         }
@@ -212,7 +190,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             var nodeIndex = Int32.Parse(matchStatus.Groups["node"].Value);
             var passMessage = matchStatus.Groups["test"].Value + " " + matchStatus.Groups["status"].Value;
-            message = new NodeCompletedSpecWithFail(nodeIndex, passMessage);
+            var nodeRoleGroup = matchStatus.Groups["role"];
+            var nodeRole = nodeRoleGroup.Success ? nodeRoleGroup.Value.Substring(1) : String.Empty;
+            message = new NodeCompletedSpecWithFail(nodeIndex, nodeRole, passMessage);
 
             return true;
         }
@@ -225,7 +205,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             var nodeIndex = Int32.Parse(matchStatus.Groups["node"].Value);
             var failureMessage = matchStatus.Groups["message"].Value;
-            message = new NodeCompletedSpecWithFail(nodeIndex, failureMessage);
+            var nodeRoleGroup = matchStatus.Groups["role"];
+            var nodeRole = nodeRoleGroup.Success ? nodeRoleGroup.Value.Substring(1) : String.Empty;
+            message = new NodeCompletedSpecWithFail(nodeIndex, nodeRole, failureMessage);
 
             return true;
         }
@@ -240,35 +222,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             MessageSinkActorRef.Tell(new BeginNewSpec(className, methodName, nodes));
         }
 
-        public void EndTest()
+        public void EndTest(string className, string methodName)
         {
             //end the current spec
-            MessageSinkActorRef.Tell(new EndSpec());
+            MessageSinkActorRef.Tell(new EndSpec(className, methodName));
         }
-
-        public void Success(int nodeIndex)
+        
+        public void Success(int nodeIndex, string nodeRole, string message)
         {
-            Success(nodeIndex, NoMessage);
-        }
-
-        public void Success(int nodeIndex, string message)
-        {
-            MessageSinkActorRef.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, message ?? NoMessage));
-        }
-
-        public void Fail(int nodeIndex)
-        {
-            Fail(nodeIndex, NoMessage);
-        }
-
-        public void Fail(int nodeIndex, string message)
-        {
-            MessageSinkActorRef.Tell(new NodeCompletedSpecWithFail(nodeIndex, message ?? NoMessage));
-        }
-
-        public void Log(int nodeIndex, string message, string logSource, LogLevel level)
-        {
-            MessageSinkActorRef.Tell(new LogMessageForNode(nodeIndex, message, level, DateTime.UtcNow, logSource));
+            MessageSinkActorRef.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, message ?? NoMessage));
         }
 
         public void LogRunnerMessage(string message, string logSource, LogLevel level)
@@ -285,13 +247,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return;
             }
 
-            if (messageType == MultiNodeTestRunnerMessageType.NodeLogMessage)
-            {
-                LogMessageForNode log;
-                if (!TryParseLogMessage(messageStr, out log)) throw new InvalidOperationException("could not parse log message: " + messageStr);
-                MessageSinkActorRef.Tell(log);
-            }
-            else if (messageType == MultiNodeTestRunnerMessageType.RunnerLogMessage)
+            if (messageType == MultiNodeTestRunnerMessageType.RunnerLogMessage)
             {
                 LogMessageForTestRunner runnerLog;
                 if (!TryParseLogMessage(messageStr, out runnerLog)) throw new InvalidOperationException("could not parse test runner log message: " + messageStr);

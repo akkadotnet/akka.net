@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRemoteWatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -27,6 +27,10 @@ namespace Akka.Cluster
         /// <summary>
         /// Factory method for <see cref="Akka.Remote.RemoteWatcher"/>
         /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
         public static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -42,9 +46,16 @@ namespace Akka.Cluster
             }).WithDeploy(Deploy.Local);
         }
 
-        readonly Cluster _cluster;
-        ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
+        private readonly Cluster _cluster;
+        private ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
         public ClusterRemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -54,59 +65,89 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
             _cluster.Subscribe(Self, new []{typeof(ClusterEvent.IMemberEvent)});
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             _cluster.Unsubscribe(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            var watchRemote = message as WatchRemote;
-            if (watchRemote != null && _clusterNodes.Contains(watchRemote.Watchee.Path.Address))
-                return; // cluster managed node, don't propagate to super;
             var state = message as ClusterEvent.CurrentClusterState;
             if (state != null)
             {
                 _clusterNodes =
                     state.Members.Select(m => m.Address).Where(a => a != _cluster.SelfAddress).ToImmutableHashSet();
-                foreach(var node in _clusterNodes) TakeOverResponsibility(node);
+                foreach (var node in _clusterNodes) TakeOverResponsibility(node);
                 Unreachable.ExceptWith(_clusterNodes);
                 return;
             }
+
             var memberUp = message as ClusterEvent.MemberUp;
             if (memberUp != null)
             {
-                if (memberUp.Member.Address != _cluster.SelfAddress)
-                {
-                    _clusterNodes = _clusterNodes.Add(memberUp.Member.Address);
-                    TakeOverResponsibility(memberUp.Member.Address);
-                    Unreachable.Remove(memberUp.Member.Address);
-                }
+                MemberUp(memberUp.Member);
                 return;
             }
+
             var memberRemoved = message as ClusterEvent.MemberRemoved;
             if (memberRemoved != null)
             {
-                if (memberRemoved.Member.Address != _cluster.SelfAddress)
-                {
-                    _clusterNodes = _clusterNodes.Remove(memberRemoved.Member.Address);
-                    if (memberRemoved.PreviousStatus == MemberStatus.Down)
-                    {
-                        Quarantine(memberRemoved.Member.Address, memberRemoved.Member.UniqueAddress.Uid);
-                    }
-                    PublishAddressTerminated(memberRemoved.Member.Address);
-                }
+                MemberRemoved(memberRemoved.Member, memberRemoved.PreviousStatus);
                 return;
             }
+
             if (message is ClusterEvent.IMemberEvent) return; // not interesting
+
             base.OnReceive(message);
+        }
+
+        private void MemberUp(Member member)
+        {
+            if (!member.Address.Equals(_cluster.SelfAddress))
+            {
+                _clusterNodes = _clusterNodes.Add(member.Address);
+                TakeOverResponsibility(member.Address);
+                Unreachable.Remove(member.Address);
+            }
+        }
+
+        private void MemberRemoved(Member member, MemberStatus previousStatus)
+        {
+            if (!member.Address.Equals(_cluster.SelfAddress))
+            {
+                _clusterNodes = _clusterNodes.Remove(member.Address);
+                if (previousStatus == MemberStatus.Down)
+                {
+                    Quarantine(member.Address, member.UniqueAddress.Uid);
+                }
+                PublishAddressTerminated(member.Address);
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
+        protected override void WatchNode(IInternalActorRef watchee)
+        {
+            if (!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
         }
 
         /// <summary>
@@ -116,11 +157,10 @@ namespace Akka.Cluster
         /// </summary>
         private void TakeOverResponsibility(Address address)
         {
-            foreach (var watching in Watching.Where(x => x.Item1.Path.Address.Equals(address)).ToList())
+            if (WatchingNodes.Contains(address))
             {
-                var watchee = watching.Item1;
-                var watcher = watching.Item2;
-                ProcessUnwatchRemote(watchee, watcher);
+                Log.Debug("Cluster is taking over responsibility of node: {0}", address);
+                UnwatchNode(address);
             }
         }
     }

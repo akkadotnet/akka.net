@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteArraySerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -26,34 +26,25 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Completely unique value to identify this implementation of the <see cref="Serializer"/> used to optimize network traffic
-        /// </summary>
-        public override int Identifier
-        {
-            get { return 4; }
-        }
-
-        /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        public override bool IncludeManifest => false;
 
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>
         /// <param name="obj">The object to serialize </param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if the given <paramref name="obj"/> is not a byte array.
+        /// </exception>
         /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="NotSupportedException"></exception>
         public override byte[] ToBinary(object obj)
         {
             if (obj == null)
                 return null;
             if (obj is byte[])
                 return (byte[]) obj;
-            throw new NotSupportedException();
+            throw new NotSupportedException("The object to convert is not a byte array.");
         }
 
         /// <summary>

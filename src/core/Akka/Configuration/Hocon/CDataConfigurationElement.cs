@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CDataConfigurationElement.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if CONFIGURATION
 using System.Configuration;
 using System.Xml;
 
@@ -33,13 +33,16 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public abstract class CDataConfigurationElement : ConfigurationElement
     {
+        /// <summary>
+        /// The name of the property that contains the content to deserialize.
+        /// </summary>
         protected const string ContentPropertyName = "content";
 
         /// <summary>
         /// Deserializes the text located in a CDATA node of the configuration file.
         /// </summary>
-        /// <param name="reader">The <see cref="T:System.Xml.XmlReader" /> that reads from the configuration file.</param>
-        /// <param name="serializeCollectionKey">true to serialize only the collection key properties; otherwise, false.</param>
+        /// <param name="reader">The <see cref="System.Xml.XmlReader" /> that reads from the configuration file.</param>
+        /// <param name="serializeCollectionKey"><c>true</c> to serialize only the collection key properties; otherwise, <c>false</c>.</param>
         protected override void DeserializeElement(XmlReader reader, bool serializeCollectionKey)
         {
             foreach (ConfigurationProperty configurationProperty in Properties)
@@ -60,3 +63,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+#endif

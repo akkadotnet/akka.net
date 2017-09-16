@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,7 +14,7 @@ akka {
     actor {
         provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
     }    
-    remote.helios.tcp {
+    remote.dot-netty.tcp {
         transport-protocol = tcp
         port = 0                    # get first available port
         hostname = 0.0.0.0          

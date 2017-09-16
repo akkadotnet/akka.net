@@ -1,63 +1,102 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Configuration;
+using System;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 using Akka.Persistence.Snapshot;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
     /// Abstract snapshot store implementation, customized to work with SQL-based persistence providers.
     /// </summary>
-    public abstract class SqlSnapshotStore : SnapshotStore
+    public abstract class SqlSnapshotStore : SnapshotStore, IWithUnboundedStash
     {
+        #region messages
+        
+        private sealed class Initialized
+        {
+            public static readonly Initialized Instance = new Initialized();
+            private Initialized() { }
+        }
+            
+        #endregion
+
         /// <summary>
         /// List of cancellation tokens for all pending asynchronous database operations.
         /// </summary>
         private readonly CancellationTokenSource _pendingRequestsCancellation;
 
-        protected SqlSnapshotStore()
+        private readonly SnapshotStoreSettings _settings;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
+        /// </summary>
+        /// <param name="config">The configuration used to configure the snapshot store.</param>
+        protected SqlSnapshotStore(Config config)
         {
-            QueryMapper = new DefaultSnapshotQueryMapper(Context.System.Serialization);
+            _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
         /// <summary>
+        /// TBD
+        /// </summary>
+        protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
+        private ILoggingAdapter _log;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        /// Query executor used to convert snapshot store related operations into corresponding SQL queries.
+        /// </summary>
+        public abstract ISnapshotQueryExecutor QueryExecutor { get; }
+
+        /// <summary>
         /// Returns a new instance of database connection.
         /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract DbConnection CreateDbConnection(string connectionString);
 
         /// <summary>
         /// Returns a new instance of database connection.
         /// </summary>
+        /// <returns>TBD</returns>
         public DbConnection CreateDbConnection()
         {
             return CreateDbConnection(GetConnectionString());
         }
 
         /// <summary>
-        /// Gets settings for the current snapshot store.
+        /// TBD
         /// </summary>
-        protected abstract SnapshotStoreSettings Settings { get; }
+        protected override void PreStart()
+        {
+            base.PreStart();
+            if (_settings.AutoInitialize)
+            {
+                Initialize().PipeTo(Self);
+                BecomeStacked(WaitingForInitialization);
+            }
+        }
 
         /// <summary>
-        /// Query builder used to convert snapshot store related operations into corresponding SQL queries.
+        /// TBD
         /// </summary>
-        public ISnapshotQueryBuilder QueryBuilder { get; set; }
-
-        /// <summary>
-        /// Query mapper used to map SQL query results into snapshots.
-        /// </summary>
-        public ISnapshotQueryMapper QueryMapper { get; set; }
-
         protected override void PostStop()
         {
             base.PostStop();
@@ -66,91 +105,119 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             _pendingRequestsCancellation.Cancel();
         }
 
+        private async Task<object> Initialize()
+        {
+            try
+            {
+                using (var connection = CreateDbConnection())
+                {
+                    await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                    await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                    return Initialized.Instance;
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
+            }
+        }
+
+        private bool WaitingForInitialization(object message) => message.Match()
+            .With<Initialized>(_ =>
+            {
+                UnbecomeStacked();
+                Stash.UnstashAll();
+            })
+            .With<Failure>(failure =>
+            {
+                Log.Error(failure.Exception, "Error during snapshot store initialization");
+                Context.Stop(Self);
+            })
+            .Default(_ => Stash.Stash())
+            .WasHandled;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual string GetConnectionString()
         {
-            var connectionString = Settings.ConnectionString;
-            return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString
-                : connectionString;
+            var connectionString = _settings.ConnectionString;
+
+#if CONFIGURATION
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+            }
+#endif
+
+            return connectionString;
         }
 
         /// <summary>
         /// Asynchronously loads snapshot with the highest sequence number for a persistent actor/view matching specified criteria.
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
-
-                var sqlCommand = QueryBuilder.SelectSnapshot(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
-                
-                var reader = await sqlCommand.ExecuteReaderAsync(_pendingRequestsCancellation.Token);
-                try
-                {
-                    return reader.Read() ? QueryMapper.Map(reader) : null;
-                }
-                finally
-                {
-                    reader.Close();
-                }
+                await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                return await QueryExecutor.SelectSnapshotAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
 
         /// <summary>
         /// Asynchronously stores a snapshot with metadata as record in SQL table.
         /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="snapshot">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-
-                var entry = ToSnapshotEntry(metadata, snapshot);
-                var sqlCommand = QueryBuilder.InsertSnapshot(entry);
-                CompleteCommand(sqlCommand, connection);
-                
-                await sqlCommand.ExecuteNonQueryAsync(_pendingRequestsCancellation.Token);
+                await QueryExecutor.InsertAsync(connection, _pendingRequestsCancellation.Token, snapshot, metadata);
             }
         }
 
-        protected override void Saved(SnapshotMetadata metadata) { }
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteOne(metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp);
-                CompleteCommand(sqlCommand, connection);
-
-                await sqlCommand.ExecuteNonQueryAsync();
+                DateTime? timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
+                await QueryExecutor.DeleteAsync(connection, _pendingRequestsCancellation.Token, metadata.PersistenceId, metadata.SequenceNr, timestamp);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteMany(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
-
-                await sqlCommand.ExecuteNonQueryAsync();
+                await QueryExecutor.DeleteBatchAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
-
-        private void CompleteCommand(DbCommand command, DbConnection connection)
-        {
-            command.Connection = connection;
-            command.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
-        }
-
+        
         private SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Context.System.Serialization.FindSerializerForType(snapshotType);
+            var serializer = Context.System.Serialization.FindSerializerForType(snapshotType, _settings.DefaultSerializer);
 
             var binary = serializer.ToBinary(snapshot);
 
@@ -158,8 +225,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
-                snapshotType: snapshotType.QualifiedTypeName(),
-                snapshot: binary);
+                manifest: snapshotType.TypeQualifiedName(),
+                payload: binary);
         }
     }
 }

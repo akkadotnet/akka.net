@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OpenCircuitException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -40,6 +40,7 @@ namespace Akka.Pattern
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -49,5 +50,6 @@ namespace Akka.Pattern
             : base(info, context)
         {
         }
+#endif
     }
 }

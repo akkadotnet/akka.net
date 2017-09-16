@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPathSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using NBench;
 
@@ -32,7 +33,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ParseLocalThroughput(BenchmarkContext context)
+        public void Parse_local_throughput(BenchmarkContext context)
         {
             ActorPath.Parse("akka://Sys/user/foo");
             _parseThroughput.Increment();
@@ -44,7 +45,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ParseRemoteThroughput(BenchmarkContext context)
+        public void Parse_remote_throughput(BenchmarkContext context)
         {
             ActorPath.Parse("akka.tcp://Sys@localhost:9091/user/foo");
             _parseThroughput.Increment();
@@ -56,7 +57,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void TryParseLocalThroughput(BenchmarkContext context)
+        public void TryParse_local_throughput(BenchmarkContext context)
         {
             ActorPath target;
             ActorPath.TryParse("akka://Sys/user/foo", out target);
@@ -69,7 +70,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void TryParseRemoteThroughput(BenchmarkContext context)
+        public void TryParse_remote_throughput(BenchmarkContext context)
         {
             ActorPath target;
             ActorPath.TryParse("akka.tcp://Sys@localhost:9091/user/foo", out target);
@@ -82,7 +83,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, 
             MinimumAcceptableOperationsPerSecond)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void TryParseAddressLocalThroughput(BenchmarkContext context)
+        public void TryParse_address_local_throughput(BenchmarkContext context)
         {
             Address target;
             ActorPath.TryParseAddress("akka://Sys/user/foo", out target);
@@ -95,7 +96,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void TryParseAddressRemoteThroughput(BenchmarkContext context)
+        public void TryParse_address_remote_throughput(BenchmarkContext context)
         {
             Address target;
             ActorPath.TryParseAddress("akka.tcp://Sys@locahost:9101/user/foo", out target);
@@ -108,7 +109,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ActorPath1ConcatenateThroughput(BenchmarkContext context)
+        public void ActorPath1_concatenate_throughput(BenchmarkContext context)
         {
             var newPath = RootAddress/"user";
             _parseThroughput.Increment();
@@ -122,7 +123,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
             )]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ActorPath2ConcatenateThroughput(BenchmarkContext context)
+        public void ActorPath2_concatenate_throughput(BenchmarkContext context)
         {
             var newPath = RootAddress/"user"/"foo";
             _parseThroughput.Increment();
@@ -134,7 +135,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterMeasurement(ParseThroughputCounterName)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void MemoryFootprint(BenchmarkContext context)
+        public void Memory_footprint(BenchmarkContext context)
         {
             var actorPaths = new ActorPath[100000];
             for (var i = 0; i < 100000;)

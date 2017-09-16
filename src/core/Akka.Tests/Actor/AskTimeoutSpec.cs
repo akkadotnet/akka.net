@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AskTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -48,6 +48,34 @@ namespace Akka.Tests.Actor
             {
                 Assert.True(e is TaskCanceledException);
             }
+        }
+
+        [Fact]
+        public async Task TimedOut_ask_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SleepyActor>();
+
+            var actorCell = actor as ActorRefWithCell;
+            Assert.NotNull(actorCell);
+
+            var container = actorCell.Provider.TempContainer as VirtualPathContainer;
+            Assert.NotNull(container);
+            try
+            {
+                await actor.Ask<string>("should time out");
+            }
+            catch (Exception)
+            {
+                // Need to spin here, since the continuation function may not execute immediately
+                AwaitAssert(() =>
+                {
+                    var childCounter = 0;
+                    container.ForEachChild(x => childCounter++);
+                    Assert.True(childCounter == 0, "Number of children in temp container should be 0.");
+                });
+                
+            }
+
         }
 
     }

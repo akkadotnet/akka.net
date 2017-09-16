@@ -1,0 +1,102 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+//-----------------------------------------------------------------------
+// <copyright file="PartialHandlerArgumentsCapture.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Collections.Generic;
+<# var count = 15; #>
+
+namespace Akka.Tools.MatchHandler
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    internal interface IPartialHandlerArgumentsCapture<T>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
+        /// <returns>TBD</returns>
+        void Initialize(Delegate handler, IReadOnlyList<object> arguments);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        bool Handle(T message);
+    }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    internal sealed class PartialHandlerArgumentsCapture<T> : IPartialHandlerArgumentsCapture<T>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
+        public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
+        {
+            _handler = (Func<object, bool>)handler;
+        }
+
+        private Func<object, bool> _handler;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
+        public bool Handle(T value) { return _handler(value); }
+    }
+<# for (int i = 1; i <= count; i++) {
+    var types = string.Join(", ", Enumerable.Range(1, i).Select(x => "T" + x));
+    var arguments = string.Join(", ", Enumerable.Range(1, i).Select(x => "_" + x));
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+<# for (var t = 1; t <= i; t++) { #>
+    /// <typeparam name="T<#= t #>">TBD</typeparam>
+<# } #>
+    internal sealed class PartialHandlerArgumentsCapture<T, <#= types #>> : IPartialHandlerArgumentsCapture<T>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
+        public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
+        {
+            _handler = (Func<object, <#= types #>, bool>)handler;
+<# for (var t = 1; t <= i; t++) { #>
+            <#= "_" + t #> = <#= "(T" + t + ")" #>arguments[<#= t - 1 #>];
+<# } #>
+        }
+        private Func<object, <#= types #>, bool> _handler;
+<# for (var t = 1; t <= i; t++) { #>
+        private <#= "T" + t #> _<#= t #>;
+<# } #>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
+        public bool Handle(T value) { return _handler(value, <#= arguments #>); }
+    }
+<# } #>
+}

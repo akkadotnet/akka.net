@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Akka.Streams.Tests</AssemblyName>
+    <TargetFrameworks>net452</TargetFrameworks>
+  </PropertyGroup>
+ 
+  <ItemGroup>
+    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
+    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Streams.TestKit.Tests\Akka.Streams.TestKit.Tests.csproj" />
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
+    <PackageReference Include="NUnit" Version="3.6.1" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <DefineConstants>$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+</Project>

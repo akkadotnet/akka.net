@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\common.props" />
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Remote.Transport.Helios</AssemblyTitle>
+    <Description>(Legacy) Akka.NET remote transport layer based on Helios.</Description>
+    <TargetFrameworks>net45</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);transport;helios</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="remote.conf" />
+    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Helios" Version="2.1.3" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeMessageHelpers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,13 +19,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
     /// </summary>
     public static class NodeMessageHelpers
     {
+        internal const string DummyRoleFor = "Dummy_role_for_";
+        internal static readonly Random Random = new Random();
+
         public static IList<NodeTest> BuildNodeTests(IEnumerable<int> nodeIndicies)
         {
-            var methodName = Faker.Generators.Strings.GenerateAlphaNumericString();
-            var className = Faker.Generators.Strings.GenerateAlphaNumericString();
-            var testName = Faker.Generators.Strings.GenerateAlphaNumericString();
+            var methodName = AlphaNumericString();
+            var className = AlphaNumericString();
+            var testName = AlphaNumericString();
 
-            return nodeIndicies.Select(i => new NodeTest() {MethodName = methodName, Node = i, TestName = testName, TypeName = className}).ToList();
+            return nodeIndicies.Select(i => new NodeTest() {MethodName = methodName, Node = i, Role = DummyRoleFor+i, TestName = testName, TypeName = className}).ToList();
         }
 
         /// <summary>
@@ -61,7 +64,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             {
                 nodeIterator.MoveNext();
                 var node = nodeIterator.Current;
-                var added = Faker.Generators.Numbers.Int(1, Math.Max(1, remainingMessages / 2));
+                var added = Random.Next(1, Math.Max(1, remainingMessages / 2));
 
                 //Don't go over the message count
                 if (added > remainingMessages)
@@ -89,7 +92,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             foreach (var i in Enumerable.Range(0, count))
             {
-                messages.Add(new MultiNodeLogMessage(Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i), nodeIndex,
+                messages.Add(new MultiNodeLogMessage(
+                    GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), 
+                    String.Format("Message {0}", i), nodeIndex, DummyRoleFor + nodeIndex,
                     "/foo", LogLevel.InfoLevel));
             }
             return messages;
@@ -106,7 +111,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             foreach (var i in Enumerable.Range(0, count))
             {
-                messages.Add(new MultiNodeLogMessageFragment(Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i), nodeIndex));
+                messages.Add(new MultiNodeLogMessageFragment(
+                    GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)),
+                    String.Format("Message {0}", i), nodeIndex, DummyRoleFor + nodeIndex));
             }
             return messages;
         }
@@ -117,7 +124,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             foreach (var i in Enumerable.Range(0, count))
             {
-                messages.Add(new MultiNodeTestRunnerMessage(Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i),
+                messages.Add(new MultiNodeTestRunnerMessage(GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i),
                     "/foo", LogLevel.InfoLevel));
             }
             return messages;
@@ -137,10 +144,52 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             messages.Add(
                 new MultiNodeResultMessage(
-                    Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(30)),
-                    String.Format("Test passed? {0}", pass), nodeIndex, pass));
+                    GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(30)),
+                    String.Format("Test passed? {0}", pass), nodeIndex, DummyRoleFor + nodeIndex, pass));
             return messages;
         }
+
+        #region Faker functions
+        private static DateTime GetDateTime(DateTime from, DateTime to)
+        {
+            TimeSpan timeSpan = new TimeSpan(to.Ticks - from.Ticks);
+            return from + new TimeSpan((long)(timeSpan.Ticks * Random.NextDouble()));
+        }
+
+        private static DateTime GetDateTime()
+        {
+            return GetDateTime(DateTime.Now.AddYears(-70), DateTime.Now.AddYears(70));
+        }
+
+        private static long GetTimeStamp(DateTime when)
+        {
+            return (long)(when - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToUniversalTime()).TotalSeconds;
+        }
+
+        private static long GetTimeStamp(DateTime from, DateTime to)
+        {
+            return GetTimeStamp(GetDateTime(from, to));
+        }
+
+        private static long GetTimeStamp()
+        {
+            return GetTimeStamp(GetDateTime());
+        }
+
+        private static string AlphaNumericString(int minLength = 10, int maxLength = 40)
+        {
+            return new string(
+                Enumerable.Repeat<string>("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                        Random.Next(minLength, maxLength))
+                    .Select(x => x[Random.Next(x.Length)])
+                    .ToArray());
+        }
+
+        private static int Range(int min = 0, int max = 2147483647)
+        {
+            return Random.Next(min, max);
+        }
+        #endregion
     }
 }
 

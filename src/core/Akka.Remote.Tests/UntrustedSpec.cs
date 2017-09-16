@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UntrustedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,6 +12,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -24,21 +25,21 @@ namespace Akka.Remote.Tests
         private readonly Lazy<IActorRef> _target2;
 
 
-        public UntrustedSpec()
+        public UntrustedSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.remote.untrusted-mode = on
             akka.remote.trusted-selection-paths = [""/user/receptionist"", ]    
-            akka.remote.helios.tcp = {
+            akka.remote.dot-netty.tcp = {
                 port = 0
                 hostname = localhost
             }
             akka.loglevel = DEBUG
-            ")
+            ", output)
         {
             _client = ActorSystem.Create("UntrustedSpec-client", ConfigurationFactory.ParseString(@"
                 akka.actor.provider =  ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                 akka.remote.helios.tcp = {
+                 akka.remote.dot-netty.tcp = {
                     port = 0
                     hostname = localhost
                 }                
@@ -77,7 +78,7 @@ namespace Akka.Remote.Tests
 
 
         [Fact]
-        public void UntrustedModeMustAllowActorSelectionToConfiguredWhiteList()
+        public void Untrusted_mode_must_allow_actor_selection_to_configured_white_list()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell("hello");
@@ -85,7 +86,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardHarmfulMessagesToSlashRemote()
+        public void Untrusted_mode_must_discard_harmful_messages_to_slash_remote()
         {
             var logProbe = CreateTestProbe();
             // but instead install our own listener
@@ -98,7 +99,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardHarmfulMessagesToTestActor()
+        public void Untrusted_mode_must_discard_harmful_messages_to_test_actor()
         {
             var target2 = _target2.Value;
 
@@ -110,7 +111,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardWatchMessages()
+        public void Untrusted_mode_must_discard_watch_messages()
         {
             var target2 = _target2.Value;
             _client.ActorOf(Props.Create(() => new Target2Watch(target2, TestActor)).WithDeploy(Deploy.Local));
@@ -121,7 +122,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardActorSelection()
+        public void Untrusted_mode_must_discard_actor_selection()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/TestActor.Path.Elements);
             sel.Tell("hello");
@@ -129,7 +130,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardActorSelectionToChildOfMatchingWhiteList()
+        public void Untrusted_mode_must_discard_actor_selection_to_child_of_matching_white_list()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"child1");
             sel.Tell("hello");
@@ -137,7 +138,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardActorSelectionWithWildcard()
+        public void Untrusted_mode_must_discard_actor_selection_with_wildcard()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"*");
             sel.Tell("hello");
@@ -145,7 +146,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void UntrustedModeMustDiscardActorSelectionContainingHarmfulMessage()
+        public void Untrusted_mode_must_discard_actor_selection_containing_harmful_message()
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell(PoisonPill.Instance);
@@ -154,7 +155,7 @@ namespace Akka.Remote.Tests
 
 
         [Fact]
-        public void UntrustedModeMustDiscardActorSelectionWithNonRootAnchor()
+        public void Untrusted_mode_must_discard_actor_selection_with_non_root_anchor()
         {
             var p = CreateTestProbe(_client);
             _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements).Tell(

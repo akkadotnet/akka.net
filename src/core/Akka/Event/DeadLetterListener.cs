@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Actor responsible for listening to DeadLetter messages and logging them using the EventStream.
+    /// This class represents an actor responsible for listening to <see cref="DeadLetter"/> messages and logging them using the <see cref="EventStream"/>.
     /// </summary>
     public class DeadLetterListener : ActorBase
     {
@@ -19,20 +19,35 @@ namespace Akka.Event
         private readonly int _maxCount = Context.System.Settings.LogDeadLetters;
         private int _count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
         protected override void PostRestart(Exception reason)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             _eventStream.Subscribe(Self, typeof (DeadLetter));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             _eventStream.Unsubscribe(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var deadLetter = (DeadLetter)message;

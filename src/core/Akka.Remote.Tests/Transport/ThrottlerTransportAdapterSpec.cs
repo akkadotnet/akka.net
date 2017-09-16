@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottlerTransportAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -17,6 +17,7 @@ using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -34,13 +35,13 @@ namespace Akka.Remote.Tests.Transport
                   stdout-loglevel = ""DEBUG""
                   test.single-expect-default = 6s #to help overcome issues with gated connections
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                  remote.helios.tcp.hostname = ""localhost""
+                  remote.dot-netty.tcp.hostname = ""localhost""
                   remote.log-remote-lifecycle-events = off
                   remote.retry-gate-closed-for = 1 s
                   remote.transport-failure-detector.heartbeat-interval = 1 s
                   remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
-                  remote.helios.tcp.applied-adapters = [""trttl""]
-                  remote.helios.tcp.port = 0
+                  remote.dot-netty.tcp.applied-adapters = [""trttl""]
+                  remote.dot-netty.tcp.port = 0
                 }");
             }
         }
@@ -171,8 +172,8 @@ namespace Akka.Remote.Tests.Transport
 
         #endregion
 
-        public ThrottlerTransportAdapterSpec()
-            : base(ThrottlerTransportAdapterSpecConfig)
+        public ThrottlerTransportAdapterSpec(ITestOutputHelper output)
+            : base(ThrottlerTransportAdapterSpecConfig, output)
         {
             systemB = ActorSystem.Create("systemB", Sys.Settings.Config);
             remote = systemB.ActorOf(Props.Create<Echo>(), "echo");
@@ -183,7 +184,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public void ThrottlerTransportAdapter_must_maintain_average_message_rate()
         {
-            Throttle(ThrottleTransportAdapter.Direction.Send, new TokenBucket(PingPacketSize*4, BytesPerSecond, 0, 0)).ShouldBeTrue();
+            Throttle(ThrottleTransportAdapter.Direction.Send, new Remote.Transport.TokenBucket(PingPacketSize*4, BytesPerSecond, 0, 0)).ShouldBeTrue();
             var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(Here, TestActor)));
             tester.Tell("start");
 

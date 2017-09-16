@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -36,30 +36,38 @@ namespace Akka.Cluster.Tools.Singleton
     /// Note that this is a best effort implementation: messages can always be lost due to the distributed nature of the actors involved.
     /// </remarks>
     /// </summary>
-    public sealed class ClusterSingletonProxy : UntypedActor
+    public sealed class ClusterSingletonProxy : ReceiveActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class TryToIdentifySingleton
         {
-            public static readonly TryToIdentifySingleton Instance = new TryToIdentifySingleton();
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static TryToIdentifySingleton Instance { get; } = new TryToIdentifySingleton();
             private TryToIdentifySingleton() { }
         }
+
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
         }
 
-
         /// <summary>
-        /// Faactory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
+        /// Factory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
         /// </summary>
         /// <param name="singletonManagerPath">
-        /// The logical path of the singleton manager, e.g. `/user/singletonManager`, 
+        /// The logical path of the singleton manager, e.g. `/user/singletonManager`,
         /// which ends with the name you defined in `actorOf` when creating the <see cref="ClusterSingletonManager"/>.
         /// </param>
         /// <param name="settings">Cluster singleton proxy settings.</param>
+        /// <returns>TBD</returns>
         public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
@@ -76,23 +84,32 @@ namespace Akka.Cluster.Tools.Singleton
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonManagerPath">TBD</param>
+        /// <param name="settings">TBD</param>
         public ClusterSingletonProxy(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
-        }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
-
-        protected override void OnReceive(object message)
-        {
-            message.Match()
-                .With<ClusterEvent.CurrentClusterState>(HandleInitial)
-                .With<ClusterEvent.MemberUp>(m => Add(m.Member))
-                .With<ClusterEvent.MemberExited>(m => Remove(m.Member))
-                .With<ClusterEvent.MemberRemoved>(m => Remove(m.Member))
-                .With<ActorIdentity>(identity =>
+            Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
+            Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
+            Receive<ClusterEvent.MemberExited>(m => Remove(m.Member));
+            Receive<ClusterEvent.MemberRemoved>(m =>
+            {
+                if (m.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                    Context.Stop(Self);
+                else
+                    Remove(m.Member);
+            });
+            Receive<ClusterEvent.IMemberEvent>(m =>
+            {
+                /* do nothing */
+            });
+            Receive<ActorIdentity>(identity =>
                 {
                     if (identity.Subject != null)
                     {
@@ -104,26 +121,26 @@ namespace Akka.Cluster.Tools.Singleton
                         CancelTimer();
                         SendBuffered();
                     }
-                })
-                .With<TryToIdentifySingleton>(() =>
-                {
-                    var oldest = _membersByAge.FirstOrDefault();
-                    if (oldest != null && _identityTimer != null)
-                    {
-                        var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
-                        Log.Debug("Trying to identify singleton at [{0}]", singletonAddress);
-                        Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
-                    }
-                })
-                .With<Terminated>(terminated =>
+                });
+            Receive<TryToIdentifySingleton>(_ =>
+                 {
+                     var oldest = _membersByAge.FirstOrDefault();
+                     if (oldest != null && _identityTimer != null)
+                     {
+                         var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
+                         Log.Debug("Trying to identify singleton at [{0}]", singletonAddress);
+                         Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
+                     }
+                 });
+            Receive<Terminated>(terminated =>
                 {
                     if (Equals(_singleton, terminated.ActorRef))
                     {
                         // buffering mode, identification of new will start when old node is removed
                         _singleton = null;
                     }
-                })
-                .Default(msg =>
+                });
+            ReceiveAny(msg =>
                 {
                     if (_singleton != null)
                     {
@@ -136,12 +153,20 @@ namespace Akka.Cluster.Tools.Singleton
                 });
         }
 
+        private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             CancelTimer();
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             CancelTimer();
@@ -164,6 +189,15 @@ namespace Akka.Cluster.Tools.Singleton
             return member.HasRole(_settings.Role);
         }
 
+        private void HandleInitial(ClusterEvent.CurrentClusterState state)
+        {
+            TrackChanges(() =>
+                _membersByAge = state.Members
+                    .Where(m => m.Status == MemberStatus.Up && MatchingRole(m))
+                    .ToImmutableSortedSet(MemberAgeOrdering.Descending));
+        }
+
+        // Discard old singleton ActorRef and send a periodic message to self to identify the singleton.
         private void IdentifySingleton()
         {
             Log.Debug("Creating singleton identification timer...");
@@ -172,7 +206,7 @@ namespace Akka.Cluster.Tools.Singleton
             _singleton = null;
             CancelTimer();
             _identityTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                initialDelay: TimeSpan.FromMilliseconds(1), //TODO: this should be TimeSpan.Zero
+                initialDelay: TimeSpan.Zero,
                 interval: _settings.SingletonIdentificationInterval,
                 receiver: Self,
                 message: TryToIdentifySingleton.Instance,
@@ -189,15 +223,14 @@ namespace Akka.Cluster.Tools.Singleton
             if (!Equals(before, after)) IdentifySingleton();
         }
 
-        private void HandleInitial(ClusterEvent.CurrentClusterState state)
-        {
-            TrackChanges(() => _membersByAge = state.Members.Where(m => m.Status == MemberStatus.Up && MatchingRole(m)).ToImmutableSortedSet(MemberAgeOrdering.Descending));
-        }
-
         private void Add(Member member)
         {
             if (MatchingRole(member))
-                TrackChanges(() => _membersByAge = _membersByAge.Add(member));
+                TrackChanges(() =>
+                {
+                    _membersByAge = _membersByAge.Remove(member); //replace
+                    _membersByAge = _membersByAge.Add(member);
+                });
         }
 
         private void Remove(Member member)

@@ -1,0 +1,166 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+//-----------------------------------------------------------------------
+// <copyright file="ZipWith.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using Akka.Streams.Stage;
+<# var count = 10; #>
+
+namespace Akka.Streams.Dsl
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public partial class ZipWith
+    {
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TIn" + x));
+#>
+        /// <summary>
+        /// Create a new <see cref="ZipWith{<#= typeParams #>, TOut}"/> specialized for 1 inputs.
+        /// </summary>
+<# for (int t = 0; t < i; t++) {  #>
+        /// <typeparam name="TIn<#= t #>">TBD</typeparam>
+<# } #>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="zipper">zipping-function from the input values to the output value</param>
+        /// <returns>TBD</returns>
+        public static ZipWith<<#= typeParams #>, TOut> Apply<<#= typeParams #>, TOut>(Func<<#= typeParams #>, TOut> zipper)
+        {
+            return new ZipWith<<#= typeParams #>, TOut>(zipper);
+        }
+<# } #>
+    }
+    
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TIn" + x));
+    var fanInShape = "FanInShape<" + typeParams + ", TOut>";
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+<# for (int t = 0; t < i; t++) {  #>
+    /// <typeparam name="TIn<#= t #>">TBD</typeparam>
+<# } #>
+    /// <typeparam name="TOut">TBD</typeparam>
+    public class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
+    {
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly ZipWith<<#= typeParams #>, TOut> _stage;
+            // Without this field the completion signaling would take one extra pull
+            private bool _willShutDown;
+            private int _pending;
+            public Logic(Shape shape, ZipWith<<#= typeParams #>, TOut> stage) : base(shape)
+            {
+                _stage = stage;
+                <# for (var t = 0; t < i; t++) { #>
+
+                SetHandler(_stage.In<#= t #>, onPush: () => {
+                    _pending--;
+                    if (_pending == 0) PushAll();
+                },
+                onUpstreamFinish: () =>{
+                    if (!IsAvailable(_stage.In<#= t #>)) CompleteStage();
+                    _willShutDown = true;
+                });
+                <# } #>
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                _pending += _stage.Shape.Inlets.Length;
+                if (_pending == 0) PushAll();
+            }
+
+            private void PushAll()
+            {
+                Push(_stage.Out, _stage.Zipper(<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "Grab(_stage.In" + x + ")")) #>));
+                if (_willShutDown) CompleteStage();
+                else {
+<# for (var t = 0; t < i; t++) { #>
+                    Pull(_stage.In<#= t #>);
+<# } #>
+                }
+            }
+
+            public override void PreStart()
+            {
+<# for (var t = 0; t < i; t++) { #>
+                Pull(_stage.In<#= t #>);
+<# } #>
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith<#= i #>";
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zipper">TBD</param>
+        public ZipWith(Func<<#= typeParams #>, TOut> zipper)
+        {
+            Zipper = zipper;
+            InitialAttributes = Attributes.CreateName("ZipWith");
+            Shape = new <#= fanInShape #>("ZipWith");
+            Out = Shape.Out;
+            
+<# for (int t = 0; t < i; t++) { #>
+            In<#= t #> = Shape.In<#= t #>;
+<# } #>
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; }
+
+<# for (int t = 0; t < i; t++) { #>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<TIn<#= t #>> In<#= t #> { get; }
+<# } #>
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected sealed override Attributes InitialAttributes { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public sealed override <#= fanInShape #> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Func<<#= typeParams #>, TOut> Zipper { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        {
+            return new Logic(Shape, this);
+        }
+    }
+<# } #>
+}

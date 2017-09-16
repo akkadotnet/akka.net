@@ -1,18 +1,19 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventStream.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
+
 
 namespace Akka.Event
 {
@@ -26,14 +27,11 @@ namespace Akka.Event
     /// </summary>
     public class EventStream : LoggingBus
     {
-        /// <summary>
-        /// Determines if subscription logging is enabled.
-        /// </summary>
         private readonly bool _debug;
-
 
         private readonly AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>> _initiallySubscribedOrUnsubscriber =
             new AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStream"/> class.
         /// </summary>
@@ -48,19 +46,22 @@ namespace Akka.Event
         /// </summary>
         /// <param name="subscriber">The subscriber.</param>
         /// <param name="channel">The channel.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="subscriber"/> is undefined.
+        /// </exception>
         /// <returns><c>true</c> if subscription was successful, <c>false</c> otherwise.</returns>
-        /// <exception cref="System.ArgumentNullException">subscriber</exception>
         public override bool Subscribe(IActorRef subscriber, Type channel)
         {
             if (subscriber == null)
-                throw new ArgumentNullException("subscriber");
+                throw new ArgumentNullException(nameof(subscriber), "The subscriber cannot be a null actor.");
 
+            RegisterWithUnsubscriber(subscriber);
+            var res = base.Subscribe(subscriber, channel);
             if (_debug)
             {
                 Publish(new Debug(SimpleName(this), GetType(), "subscribing " + subscriber + " to channel " + channel));
             }
-            RegisterWithUnsubscriber(subscriber);
-            return base.Subscribe(subscriber, channel);
+            return res;
         }
 
         /// <summary>
@@ -68,12 +69,14 @@ namespace Akka.Event
         /// </summary>
         /// <param name="subscriber">The subscriber.</param>
         /// <param name="channel">The channel.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="subscriber"/> is undefined.
+        /// </exception>
         /// <returns><c>true</c> if unsubscription was successful, <c>false</c> otherwise.</returns>
-        /// <exception cref="System.ArgumentNullException">subscriber</exception>
         public override bool Unsubscribe(IActorRef subscriber, Type channel)
         {
             if (subscriber == null)
-                throw new ArgumentNullException("subscriber");
+                throw new ArgumentNullException(nameof(subscriber), "The subscriber cannot be a null actor.");
 
             if (_debug)
             {
@@ -87,12 +90,14 @@ namespace Akka.Event
         /// Unsubscribes the specified subscriber.
         /// </summary>
         /// <param name="subscriber">The subscriber.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="subscriber"/> is undefined.
+        /// </exception>
         /// <returns><c>true</c> if unsubscription was successful, <c>false</c> otherwise.</returns>
-        /// <exception cref="System.ArgumentNullException">subscriber</exception>
         public override bool Unsubscribe(IActorRef subscriber)
         {
             if (subscriber == null)
-                throw new ArgumentNullException("subscriber");
+                throw new ArgumentNullException(nameof(subscriber), "The subscriber cannot be a null actor.");
 
             if (_debug)
             {
@@ -102,11 +107,21 @@ namespace Akka.Event
             return base.Unsubscribe(subscriber);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public void StartUnsubscriber(ActorSystemImpl system)
         {
             EventStreamUnsubscribersProvider.Instance.Start(system, this, _debug);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unsubscriber">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public bool InitUnsubscriber(IActorRef unsubscriber, ActorSystem system)
         {
             if (system == null)
@@ -177,4 +192,3 @@ namespace Akka.Event
         }
     }
 }
-

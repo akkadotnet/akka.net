@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
@@ -14,18 +15,16 @@ using Akka.Routing;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Settings are the overall ActorSystem Settings which also provides a convenient access to the Config object.
-    ///     For more detailed information about the different possible configuration options, look in the Akka .NET
-    ///     Documentation under "Configuration"
+    /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
+    /// access to the <see cref="Akka.Configuration.Config"/> object. For more detailed information about the
+    /// different possible configuration options, look in the Akka.NET Documentation under Configuration
+    /// (http://getakka.net/docs/concepts/configuration).
     /// </summary>
     public class Settings
     {
         private readonly Config _userConfig;
         private Config _fallbackConfig;
 
-        /// <summary>
-        /// Combines the user config and the fallback chain of configs
-        /// </summary>
         private void RebuildConfig()
         {
             Config = _userConfig.SafeWithFallback(_fallbackConfig);
@@ -33,12 +32,14 @@ namespace Akka.Actor
             //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
             if(System != null && System.Dispatchers != null)
                 System.Dispatchers.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
+            if (System is Internal.ISupportSerializationConfigReload rs)
+                rs.ReloadSerialization();
         }
 
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">TBD</param>
         public void InjectTopLevelFallback(Config config)
         {
             _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
@@ -46,25 +47,28 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Settings" /> class.
+        /// Initializes a new instance of the <see cref="Settings" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="config">The configuration.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
+        /// </exception>
         public Settings(ActorSystem system, Config config)
         {
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();            
+            _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;
             
             ConfigVersion = Config.GetString("akka.version");
-            ProviderClass = Config.GetString("akka.actor.provider");
+            ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider"));
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
@@ -78,7 +82,7 @@ namespace Akka.Actor
             LogLevel = Config.GetString("akka.loglevel");
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
             Loggers = Config.GetStringList("akka.loggers");
-
+            LoggersDispatcher = Config.GetString("akka.loggers-dispatcher");
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
 
             //handled
@@ -110,12 +114,24 @@ namespace Akka.Actor
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation");
-            //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
+            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
+            //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
                 final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
                 final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
              */
+        }
+
+        private static string GetProviderClass(string provider)
+        {
+            switch (provider)
+            {
+                case "local": return typeof(LocalActorRefProvider).FullName;
+                case "remote": return "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
+                case "cluster": return "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
+                default: return provider;
+            }
         }
 
         /// <summary>
@@ -197,6 +213,12 @@ namespace Akka.Actor
         public IList<string> Loggers { get; private set; }
 
         /// <summary>
+        ///     Gets the default loggers dispatcher.
+        /// </summary>
+        /// <value>The loggers dispatcher.</value>
+        public string LoggersDispatcher { get; private set; }
+
+        /// <summary>
         ///     Gets the logger start timeout.
         /// </summary>
         /// <value>The logger start timeout.</value>
@@ -262,6 +284,9 @@ namespace Akka.Actor
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool FsmDebugEvent { get; private set; }
 
         /// <summary>
@@ -275,13 +300,14 @@ namespace Akka.Actor
         public string SchedulerClass { get; private set; }
 
         /// <summary>
-        ///     Returns a <see cref="string" /> that represents this instance.
+        /// TBD
         /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
+        public TimeSpan SchedulerShutdownTimeout { get; private set; }
+
+        /// <inheritdoc/>
         public override string ToString()
         {
             return Config.ToString();
         }
     }
 }
-

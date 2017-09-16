@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -65,6 +65,22 @@ namespace Akka.Tests.Actor
             }
         }
 
+        private class ResumerAsync : TestReceiveActor
+        {
+            public ResumerAsync()
+            {
+                ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
+                ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
+                ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
+                ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
+            }
+
+            protected override SupervisorStrategy SupervisorStrategy()
+            {
+                return new OneForOneStrategy(_ => Directive.Resume);
+            }
+        }
+
         private class Failure : Exception
         {
             public Directive Directive { get; set; }
@@ -87,7 +103,6 @@ namespace Akka.Tests.Actor
                 StopKids = stopKids;
             }
         }
-
 
         public SupervisorHierarchySpec()
             : base(FullDebugConfig)
@@ -156,8 +171,8 @@ namespace Akka.Tests.Actor
             countDownMax.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
         }
 
-        [Fact]
-        public void A_supervisor_hierarchy_must_resume_children_after_Resume()
+        private void Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 
+            where T : ActorBase, new()
         {
             //Build this hierarchy:
             //     boss
@@ -165,7 +180,8 @@ namespace Akka.Tests.Actor
             //    middle
             //      |
             //    worker
-            var boss = ActorOf<Resumer>("resumer");
+            var name = typeof(T).Name;
+            var boss = ActorOf<T>(name);
             boss.Tell("spawn:middle");
             var middle = ExpectMsg<IActorRef>();
             middle.Tell("spawn:worker");
@@ -186,8 +202,15 @@ namespace Akka.Tests.Actor
             //verify worker (child to middle) is up
             worker.Tell("ping");
             ExpectMsg("pong");
-
         }
+
+        [Fact]
+        public void A_supervisor_hierarchy_must_resume_children_after_Resume()
+        {
+            Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<Resumer>();
+            Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<ResumerAsync>();
+        }
+
         [Fact]
         public void A_supervisor_hierarchy_must_suspend_children_while_failing()
         {
@@ -221,7 +244,7 @@ namespace Akka.Tests.Actor
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended);
+                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping
@@ -234,7 +257,7 @@ namespace Akka.Tests.Actor
             });
 
             //Check that all children, and especially worker is resumed. It should receive the ping and respond with a pong
-            ExpectMsg("pong");
+            ExpectMsg("pong", TimeSpan.FromMinutes(10));
         }
 
         [Fact]
@@ -282,7 +305,6 @@ namespace Akka.Tests.Actor
             preStartCalled.Current.ShouldBe(1);
             postRestartCalled.Current.ShouldBe(0);
         }
-
     }
 }
 

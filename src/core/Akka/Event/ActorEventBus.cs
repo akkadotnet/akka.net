@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorEventBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,12 +10,11 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents an EventBus where the Subscriber type is ActorRef.
+    /// This class represents an <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/> where the subscriber type is an <see cref="IActorRef"/>.
     /// </summary>
-    /// <typeparam name="TEvent">The event type.</typeparam>
-    /// <typeparam name="TClassifier">The classifier type.</typeparam>
+    /// <typeparam name="TEvent">The type of event published to the bus.</typeparam>
+    /// <typeparam name="TClassifier">The type of classifier used to classify events.</typeparam>
     public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, IActorRef>
     {
     }
 }
-

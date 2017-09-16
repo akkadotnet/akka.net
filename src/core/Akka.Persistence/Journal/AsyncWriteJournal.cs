@@ -1,131 +1,325 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Pattern;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// Abstract journal, optimized for asynchronous, non-blocking writes.
+    /// </summary>
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
-        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
+        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         protected readonly bool CanPublish;
-        private readonly PersistenceExtension _extension;
+        private readonly CircuitBreaker _breaker;
+        private readonly ReplayFilterMode _replayFilterMode;
+        private readonly bool _isReplayFilterEnabled;
+        private readonly int _replayFilterWindowSize;
+        private readonly int _replayFilterMaxOldWriters;
+        private readonly bool _replayDebugEnabled;
         private readonly IActorRef _resequencer;
 
         private long _resequencerCounter = 1L;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncWriteJournal"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> context.
+        /// </exception>
+        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
+        /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
+        /// </exception>
         protected AsyncWriteJournal()
         {
-            _extension = Persistence.Instance.Apply(Context.System);
-            if (_extension == null)
+            var extension = Persistence.Instance.Apply(Context.System);
+            if (extension == null)
             {
                 throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
-            CanPublish = _extension.Settings.Internal.PublishPluginCommands;
+            CanPublish = extension.Settings.Internal.PublishPluginCommands;
+            var config = extension.ConfigFor(Self);
+            _breaker = new CircuitBreaker(
+                config.GetInt("circuit-breaker.max-failures"),
+                config.GetTimeSpan("circuit-breaker.call-timeout"),
+                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+
+            var replayFilterMode = config.GetString("replay-filter.mode").ToLower();
+            switch (replayFilterMode)
+            {
+                case "off":
+                    _replayFilterMode = ReplayFilterMode.Disabled;
+                    break;
+                case "repair-by-discard-old":
+                    _replayFilterMode = ReplayFilterMode.RepairByDiscardOld;
+                    break;
+                case "fail":
+                    _replayFilterMode = ReplayFilterMode.Fail;
+                    break;
+                case "warn":
+                    _replayFilterMode = ReplayFilterMode.Warn;
+                    break;
+                default:
+                    throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
+            }
+            _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
+            _replayFilterWindowSize = config.GetInt("replay-filter.window-size");
+            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers");
+            _replayDebugEnabled = config.GetBoolean("replay-filter.debug");
+
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }
 
-        public abstract Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback);
+        /// <inheritdoc/>
+        public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
+        /// <inheritdoc/>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <summary>
-        /// Asynchronously writes a batch of a persistent messages to the journal. The batch must be atomic,
-        /// i.e. all persistent messages in batch are written at once or none of them.
+        /// Plugin API: asynchronously writes a batch of persistent messages to the
+        /// journal.
+        /// 
+        /// The batch is only for performance reasons, i.e. all messages don't have to be written
+        /// atomically. Higher throughput can typically be achieved by using batch inserts of many
+        /// records compared to inserting records one-by-one, but this aspect depends on the
+        /// underlying data store and a journal implementation can implement it as efficient as
+        /// possible. Journals should aim to persist events in-order for a given `persistenceId`
+        /// as otherwise in case of a failure, the persistent state may be end up being inconsistent.
+        /// 
+        /// Each <see cref="AtomicWrite"/> message contains the single <see cref="Persistent"/>
+        /// that corresponds to the event that was passed to the 
+        /// <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
+        /// <see cref="PersistentActor" />, or it contains several <see cref="Persistent"/>
+        /// that correspond to the events that were passed to the
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
+        /// method of the <see cref="PersistentActor"/>. All <see cref="Persistent"/> of the
+        /// <see cref="AtomicWrite"/> must be written to the data store atomically, i.e. all or none must
+        /// be stored. If the journal (data store) cannot support atomic writes of multiple
+        /// events it should reject such writes with a <see cref="NotSupportedException"/>
+        /// describing the issue. This limitation should also be documented by the journal plugin.
+        /// 
+        /// If there are failures when storing any of the messages in the batch the returned
+        /// <see cref="Task"/> must be completed with failure. The <see cref="Task"/> must only be completed with
+        /// success when all messages in the batch have been confirmed to be stored successfully,
+        /// i.e. they will be readable, and visible, in a subsequent replay. If there is
+        /// uncertainty about if the messages were stored or not the <see cref="Task"/> must be completed
+        /// with failure.
+        /// 
+        /// Data store connection problems must be signaled by completing the <see cref="Task"/> with
+        /// failure.
+        /// 
+        /// The journal can also signal that it rejects individual messages (<see cref="AtomicWrite"/>) by
+        /// the returned <see cref="Task"/>. It is possible but not mandatory to reduce
+        /// number of allocations by returning null for the happy path,
+        /// i.e. when no messages are rejected. Otherwise the returned list must have as many elements
+        /// as the input <paramref name="messages"/>. Each result element signals if the corresponding
+        /// <see cref="AtomicWrite"/> is rejected or not, with an exception describing the problem. Rejecting
+        /// a message means it was not stored, i.e. it must not be included in a later replay.
+        /// Rejecting a message is typically done before attempting to store it, e.g. because of
+        /// serialization error.
+        /// 
+        /// Data store connection problems must not be signaled as rejections.
+        /// 
+        /// It is possible but not mandatory to reduce number of allocations by returning
+        /// null for the happy path, i.e. when no messages are rejected.
+        /// 
+        /// Calls to this method are serialized by the enclosing journal actor. If you spawn
+        /// work in asynchronous tasks it is alright that they complete the futures in any order,
+        /// but the actual writes for a specific persistenceId should be serialized to avoid
+        /// issues such as events of a later write are visible to consumers (query side, or replay)
+        /// before the events of an earlier write are visible.
+        /// A <see cref="PersistentActor"/> will not send a new <see cref="WriteMessages"/> request before
+        /// the previous one has been completed.
+        /// 
+        /// Please not that the <see cref="IPersistentRepresentation.Sender"/> of the contained
+        /// <see cref="Persistent"/> objects has been nulled out (i.e. set to <see cref="ActorRefs.NoSender"/>
+        /// in order to not use space in the journal for a sender reference that will likely be obsolete
+        /// during replay.
+        /// 
+        /// Please also note that requests for the highest sequence number may be made concurrently
+        /// to this call executing for the same `persistenceId`, in particular it is possible that
+        /// a restarting actor tries to recover before its outstanding writes have completed.
+        /// In the latter case it is highly desirable to defer reading the highest sequence number
+        /// until all outstanding writes have completed, otherwise the <see cref="PersistentActor"/>
+        /// may reuse sequence numbers.
+        /// 
+        /// This call is protected with a circuit-breaker.
         /// </summary>
-        protected abstract Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages);
+        /// <param name="messages">TBD</param>
+        /// <returns>TBD</returns>
+        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages);
 
         /// <summary>
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
-        /// bound. If <paramref name="isPermanent"/> flag is clear, the persistent messages are marked as
-        /// deleted, otherwise they're permanently deleted.
+        /// bound.
         /// </summary>
-        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent);
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
+        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr);
 
-        protected override bool Receive(object message)
+        /// <summary>
+        /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
+        /// and handle additional messages for implementing advanced features
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        protected virtual bool ReceivePluginInternal(object message)
         {
-            if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
-            else if (message is ReplayMessages) HandleReplayMessages((ReplayMessages)message);
-            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
-            else if (message is DeleteMessagesTo) HandleDeleteMessagesTo((DeleteMessagesTo)message);
-            else return false;
-            return true;
+            return false;
+        }
+
+        /// <inheritdoc/>
+        protected sealed override bool Receive(object message)
+        {
+            return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        protected bool ReceiveWriteJournal(object message)
+        {
+            switch (message)
+            {
+                case WriteMessages writeMessages:
+                    HandleWriteMessages(writeMessages);
+                    return true;
+                case ReplayMessages replayMessages:
+                    HandleReplayMessages(replayMessages);
+                    return true;
+                case DeleteMessagesTo deleteMessagesTo:
+                    HandleDeleteMessagesTo(deleteMessagesTo);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void HandleDeleteMessagesTo(DeleteMessagesTo message)
         {
             var eventStream = Context.System.EventStream;
-            DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr, message.IsPermanent)
+            _breaker.WithCircuitBreaker(() => DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr))
+                .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
+                        ? new DeleteMessagesSuccess(message.ToSequenceNr) as object
+                        : new DeleteMessagesFailure(
+                            t.IsFaulted
+                                ? TryUnwrapException(t.Exception)
+                                : new OperationCanceledException(
+                                    "DeleteMessagesToAsync canceled, possibly due to timing out."),
+                            message.ToSequenceNr),
+                    _continuationOptions)
+                .PipeTo(message.PersistentActor)
+                .ContinueWith(t =>
+                {
+                    if (!t.IsFaulted && !t.IsCanceled && CanPublish)
+                        eventStream.Publish(message);
+                }, _continuationOptions);
+        }
+
+        private void HandleReplayMessages(ReplayMessages message)
+        {
+            var replyTo = _isReplayFilterEnabled
+                ? Context.ActorOf(ReplayFilter.Props(message.PersistentActor, _replayFilterMode, _replayFilterWindowSize,
+                    _replayFilterMaxOldWriters, _replayDebugEnabled))
+                : message.PersistentActor;
+
+            var context = Context;
+            var eventStream = Context.System.EventStream;
+
+            var readHighestSequenceNrFrom = Math.Max(0L, message.FromSequenceNr - 1);
+            var promise = new TaskCompletionSource<long>();
+            _breaker.WithCircuitBreaker(() => ReadHighestSequenceNrAsync(message.PersistenceId, readHighestSequenceNrFrom))
+                .ContinueWith(t =>
+                {
+                    if (!t.IsFaulted && !t.IsCanceled)
+                    {
+                        var highSequenceNr = t.Result;
+                        var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
+                        if (highSequenceNr == 0L || message.FromSequenceNr > toSequenceNr)
+                        {
+                            promise.SetResult(highSequenceNr);
+                        }
+                        else
+                        {
+                            // Send replayed messages and replay result to persistentActor directly. No need
+                            // to resequence replayed messages relative to written and looped messages.
+                            // not possible to use circuit breaker here
+                            ReplayMessagesAsync(context, message.PersistenceId, message.FromSequenceNr, toSequenceNr, message.Max, p =>
+                            {
+                                if (!p.IsDeleted) // old records from pre 1.0.7 may still have the IsDeleted flag
+                                {
+                                    foreach (var adaptedRepresentation in AdaptFromJournal(p))
+                                    {
+                                        replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
+                                    }
+                                }
+                            })
+                            .ContinueWith(replayTask =>
+                            {
+                                if (!replayTask.IsFaulted && !replayTask.IsCanceled)
+                                    promise.SetResult(highSequenceNr);
+                                else
+                                    promise.SetException(replayTask.IsFaulted
+                                        ? TryUnwrapException(replayTask.Exception)
+                                        : new OperationCanceledException("ReplayMessagesAsync canceled, possibly due to timing out."));
+                            }, _continuationOptions);
+                        }
+                    }
+                    else
+                    {
+                        promise.SetException(t.IsFaulted
+                            ? TryUnwrapException(t.Exception)
+                            : new OperationCanceledException("ReadHighestSequenceNrAsync canceled, possibly due to timing out."));
+                    }
+                }, _continuationOptions);
+            promise.Task
+                .ContinueWith(t => !t.IsFaulted
+                    ? new RecoverySuccess(t.Result) as IJournalResponse
+                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception)), _continuationOptions)
+                .PipeTo(replyTo)
                 .ContinueWith(t =>
                 {
                     if (!t.IsFaulted && CanPublish) eventStream.Publish(message);
                 }, _continuationOptions);
         }
 
-        private void HandleReadHighestSequenceNr(ReadHighestSequenceNr message)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
+        /// <returns>TBD</returns>
+        protected Exception TryUnwrapException(Exception e)
         {
-            // Send read highest sequence number to persistentActor directly. No need
-            // to resequence the result relative to written and looped messages.
-            ReadHighestSequenceNrAsync(message.PersistenceId, message.FromSequenceNr)
-                .ContinueWith(t => t.IsFaulted
-                    ? (object)new ReadHighestSequenceNrFailure(t.Exception)
-                    : new ReadHighestSequenceNrSuccess(t.Result))
-                .PipeTo(message.PersistentActor);
-        }
-
-        private void HandleReplayMessages(ReplayMessages message)
-        {
-            var context = Context;
-            // Send replayed messages and replay result to persistentActor directly. No need
-            // to resequence replayed messages relative to written and looped messages.
-            ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
+            var aggregateException = e as AggregateException;
+            if (aggregateException != null)
             {
-                if (!p.IsDeleted || message.ReplayDeleted)
-                {
-                    foreach (var adaptedRepresentation in AdaptFromJournal(p))
-                    {
-                        message.PersistentActor.Tell(new ReplayedMessage(adaptedRepresentation), p.Sender);
-                    }
-                }
-            })
-            .NotifyAboutReplayCompletion(message.PersistentActor)
-            .ContinueWith(t =>
-            {
-                if (!t.IsFaulted && CanPublish) context.System.EventStream.Publish(message);
-            }, _continuationOptions);
+                aggregateException = aggregateException.Flatten();
+                if (aggregateException.InnerExceptions.Count == 1)
+                    return aggregateException.InnerExceptions[0];
+            }
+            return e;
         }
 
         private void HandleWriteMessages(WriteMessages message)
         {
             var counter = _resequencerCounter;
-            Action<Func<IPersistentRepresentation, object>> resequence = (mapper) =>
-            {
-                var i = 0;
-                foreach (var resequencable in message.Messages)
-                {
-                    if (resequencable is IPersistentRepresentation)
-                    {
-                        var p = resequencable as IPersistentRepresentation;
-                        _resequencer.Tell(new Desequenced(mapper(p), counter + i + 1, message.PersistentActor, p.Sender));
-                    }
-                    else
-                    {
-                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor,
-                            resequencable.Sender));
-                    }
-                    i++;
-                }
-            };
 
             /*
              * Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions which may result
@@ -133,20 +327,85 @@ namespace Akka.Persistence.Journal
              * execution context.
              */
             var self = Self;
-            var resequencablesLength = message.Messages.Count();
-            _resequencerCounter += resequencablesLength + 1;
-            WriteMessagesAsync(CreatePersistentBatch(message.Messages).ToArray())
-                .ContinueWith(t =>
+            _resequencerCounter += message.Messages.Aggregate(1, (acc, m) => acc + m.Size);
+            var atomicWriteCount = message.Messages.OfType<AtomicWrite>().Count();
+            AtomicWrite[] prepared;
+            Task<IImmutableList<Exception>> writeResult;
+            Exception writeMessagesAsyncException = null;
+            try
+            {
+                prepared = PreparePersistentBatch(message.Messages).ToArray();
+                // try in case AsyncWriteMessages throws
+                try
                 {
-                    if (!t.IsFaulted)
+                    writeResult = _breaker.WithCircuitBreaker(() => WriteMessagesAsync(prepared));
+                }
+                catch (Exception e)
+                {
+                    writeResult = Task.FromResult((IImmutableList<Exception>) null);
+                    writeMessagesAsyncException = e;
+                }
+            }
+            catch (Exception e)
+            {
+                // exception from PreparePersistentBatch => rejected
+                writeResult = Task.FromResult((IImmutableList<Exception>)Enumerable.Repeat(e, atomicWriteCount).ToImmutableList());
+            }
+
+            Action<Func<IPersistentRepresentation, Exception, object>, IImmutableList<Exception>> resequence = (mapper, results) =>
+            {
+                var i = 0;
+                var enumerator = results != null ? results.GetEnumerator() : null;
+                foreach (var resequencable in message.Messages)
+                {
+                    if (resequencable is AtomicWrite)
                     {
-                        _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
-                        resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
+                        var aw = resequencable as AtomicWrite;
+                        Exception exception = null;
+                        if (enumerator != null)
+                        {
+                            enumerator.MoveNext();
+                            exception = enumerator.Current;
+                        }
+                        foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
+                        {
+                            _resequencer.Tell(new Desequenced(mapper(p, exception), counter + i + 1, message.PersistentActor, p.Sender));
+                            i++;
+                        }
                     }
                     else
                     {
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, self));
-                        resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
+                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
+                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor,
+                            resequencable.Sender));
+                        i++;
+                    }
+                }
+            };
+
+            writeResult
+                .ContinueWith(t =>
+                {
+                    if (!t.IsFaulted && !t.IsCanceled && writeMessagesAsyncException == null)
+                    {
+                        if (t.Result != null && t.Result.Count != atomicWriteCount)
+                            throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. Expected [{atomicWriteCount}], but got [{t.Result.Count}].");
+
+                        _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
+                        resequence((x, exception) => exception == null
+                            ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
+                            : new WriteMessageRejected(x, exception, message.ActorInstanceId), t.Result);
+                    }
+                    else
+                    {
+                        var exception = writeMessagesAsyncException != null
+                            ? writeMessagesAsyncException
+                            : (t.IsFaulted
+                                ? TryUnwrapException(t.Exception)
+                                : new OperationCanceledException(
+                                    "WriteMessagesAsync canceled, possibly due to timing out."));
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception), counter, message.PersistentActor, self));
+                        resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
                     }
                 }, _continuationOptions);
         }
@@ -161,10 +420,13 @@ namespace Akka.Persistence.Journal
                 Sender = sender;
             }
 
-            public readonly object Message;
-            public readonly long SequenceNr;
-            public readonly IActorRef Target;
-            public readonly IActorRef Sender;
+            public object Message { get; }
+
+            public long SequenceNr { get; }
+
+            public IActorRef Target { get; }
+
+            public IActorRef Sender { get; }
         }
 
         internal class Resequencer : ActorBase
@@ -198,9 +460,8 @@ namespace Akka.Persistence.Journal
                     _delayed.Add(desequenced.SequenceNr, desequenced);
                 }
 
-                Desequenced d;
                 var delivered = _delivered + 1;
-                if (_delayed.TryGetValue(delivered, out d))
+                if (_delayed.TryGetValue(delivered, out Desequenced d))
                 {
                     _delayed.Remove(delivered);
                     return d;
@@ -211,4 +472,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

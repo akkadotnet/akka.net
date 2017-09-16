@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -82,6 +82,9 @@ namespace Akka.Remote.TestKit
         }
     }
 
+    /// <summary>
+    /// Settings used to operate the <see cref="TestConductor"/>.
+    /// </summary>
     public class TestConductorSettings
     {
         readonly TimeSpan _connectTimeout;

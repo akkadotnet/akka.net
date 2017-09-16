@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CachedMatchCompiler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,14 +14,27 @@ using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {
-    public class CachedMatchCompiler<T> : IMatchCompiler<T>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    internal class CachedMatchCompiler<T> : IMatchCompiler<T>
     {
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
         private readonly ILambdaExpressionCompiler _expressionCompiler;
         private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new ConcurrentDictionary<MatchBuilderSignature, Delegate>();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly CachedMatchCompiler<T> Instance = new CachedMatchCompiler<T>(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expressionBuilder">TBD</param>
+        /// <param name="actionBuilder">TBD</param>
+        /// <param name="expressionCompiler">TBD</param>
         public CachedMatchCompiler(IMatchExpressionBuilder expressionBuilder, IPartialActionBuilder actionBuilder, ILambdaExpressionCompiler expressionCompiler)
         {
             _expressionBuilder = expressionBuilder;
@@ -29,6 +42,13 @@ namespace Akka.Tools.MatchHandler
             _expressionCompiler = expressionCompiler;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handlers">TBD</param>
+        /// <param name="capturedArguments">TBD</param>
+        /// <param name="signature">TBD</param>
+        /// <returns>TBD</returns>
         public PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature)
         {
             object[] delegateArguments = null;
@@ -52,6 +72,17 @@ namespace Akka.Tools.MatchHandler
             return compiledLambda;
         }
 
+#if !CORECLR
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handlers">TBD</param>
+        /// <param name="capturedArguments">TBD</param>
+        /// <param name="signature">TBD</param>
+        /// <param name="typeBuilder">TBD</param>
+        /// <param name="methodName">TBD</param>
+        /// <param name="methodAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public void CompileToMethod(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature, TypeBuilder typeBuilder, string methodName, MethodAttributes methodAttributes = MethodAttributes.Public | MethodAttributes.Static)
         {
             var result = _expressionBuilder.BuildLambdaExpression(handlers);
@@ -60,6 +91,7 @@ namespace Akka.Tools.MatchHandler
             var method = typeBuilder.DefineMethod(methodName, methodAttributes, typeof(bool), parameterTypes);
             _expressionCompiler.CompileToMethod(lambdaExpression, method);
         }
+#endif
     }
 }
 

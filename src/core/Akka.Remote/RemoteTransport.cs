@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 
 namespace Akka.Remote
@@ -23,15 +24,27 @@ namespace Akka.Remote
     /// be available (i.e. fully initialized) by the time the first message is received or when the Start() method
     /// returns, whichever happens first.
     /// </summary>
+    [InternalApi]
     public abstract class RemoteTransport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="provider">TBD</param>
         protected RemoteTransport(ExtendedActorSystem system, RemoteActorRefProvider provider)
         {
             System = system;
             Provider = provider;
         }
 
-        protected ExtendedActorSystem System { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ExtendedActorSystem System { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteActorRefProvider Provider { get; private set; }
 
         /// <summary>
@@ -49,6 +62,9 @@ namespace Akka.Remote
         /// When true, some functionality will be turned off for security purposes
         /// </summary>
         protected bool UseUntrustedMode { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool logRemoteLifeCycleEvents { get; protected set; }
 
         /// <summary>
@@ -70,6 +86,9 @@ namespace Akka.Remote
         /// <summary>
         /// Sends the given message to the recipient, supplying <paramref name="sender"/> if any.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
         public abstract void Send(object message, IActorRef sender, RemoteActorRef recipient);
 
         /// <summary>
@@ -112,6 +131,7 @@ namespace Akka.Remote
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteTransportException"/> class.
         /// </summary>
@@ -121,6 +141,7 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
+#endif
     }
 }
 

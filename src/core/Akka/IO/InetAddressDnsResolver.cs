@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InetAddressDnsResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -13,12 +13,20 @@ using Akka.Configuration;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class InetAddressDnsResolver : ActorBase
     {
         private readonly SimpleDnsCache _cache;
         private readonly long _positiveTtl;
         private readonly long _negativeTtl;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cache">TBD</param>
+        /// <param name="config">TBD</param>
         public InetAddressDnsResolver(SimpleDnsCache cache, Config config)
         {
             _cache = cache;
@@ -26,6 +34,11 @@ namespace Akka.IO
             _negativeTtl = (long) config.GetTimeSpan("negative-ttl").TotalMilliseconds;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var resolve = message as Dns.Resolve;
@@ -37,7 +50,8 @@ namespace Akka.IO
                     try
                     {
                         //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntry(resolve.Name).AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork));
+                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork 
+                        || x.AddressFamily == AddressFamily.InterNetworkV6));
                         _cache.Put(answer, _positiveTtl);
                     }
                     catch (SocketException ex)

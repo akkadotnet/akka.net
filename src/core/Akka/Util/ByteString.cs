@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteString.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,347 +8,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
+using Akka.IO.Buffers;
 using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.IO
 {
     // TODO: Move to Akka.Util namespace - this will require changes as name clashes with ProtoBuf class
-
-    partial /*object*/ class ByteString
-    {
-        private static ByteString Create(ByteString1 b, ByteStrings bs)
-        {
-            switch (Compare(b, bs))
-            {
-                case 3:
-                    return new ByteStrings(new LinkedList<ByteString1>(bs.Items).AddFirst(b).List.ToArray(),
-                        bs.Count + b.Count);
-                case 2:
-                    return bs;
-                case 1:
-                    return b;
-                case 0:
-                    return Empty;
-            }
-            throw new ArgumentOutOfRangeException();
-        }
-
-        private static int Compare(ByteString b1, ByteString b2)
-        {
-            if (b1.IsEmpty)
-                return b2.IsEmpty ? 0 : 2;
-            return b2.IsEmpty ? 1 : 3;
-        }
-
-        /// <summary>
-        /// Creates a new ByteString by copying a byte array.
-        /// </summary>
-        public ByteString FromArray(byte[] array)
-        {
-            return new ByteString1C((byte[]) array.Clone());
-        }
-
-        /// <summary>
-        /// Creates a new ByteString by copying length bytes starting at offset from
-        /// an Array.
-        /// </summary>
-        public ByteString FromArray(byte[] array, int offset, int length)
-        {
-            return CompactByteString.FromArray(array, offset, length);
-        }
-
-        /// <summary>
-        /// Creates a new ByteString which will contain the UTF-8 representation of the given String
-        /// </summary>
-        public static ByteString FromString(string str)
-        {
-            return FromString(str, Encoding.UTF8);
-        }
-
-        /// <summary>
-        /// Creates a new ByteString which will contain the representation of the given String in the given charset
-        /// </summary>
-        public static ByteString FromString(string str, Encoding encoding)
-        {
-            return CompactByteString.FromString(str, encoding);
-        }
-
-        public static ByteString FromByteBuffer(ByteBuffer buffer)
-        {
-            return Create(buffer);
-        }
-
-        public static readonly ByteString Empty = CompactByteString.EmptyCompactByteString;
-
-        public static ByteStringBuilder NewBuilder()
-        {
-            return new ByteStringBuilder();
-        }
-
-        internal class ByteString1C : CompactByteString
-        {
-            private readonly byte[] _bytes;
-
-            public ByteString1C(byte[] bytes)
-            {
-                _bytes = bytes;
-            }
-
-            public override byte this[int idx]
-            {
-                get { return _bytes[idx]; }
-            }
-
-            public override int Count
-            {
-                get { return _bytes.Length; }
-            }
-
-            public override ByteIterator Iterator()
-            {
-                return new ByteIterator.ByteArrayIterator(_bytes, 0, _bytes.Length);
-            }
-
-            public override IEnumerator<byte> GetEnumerator()
-            {
-                return ((IEnumerable<byte>) _bytes).GetEnumerator();
-            }
-
-            internal ByteString1 ToByteString1()
-            {
-                return new ByteString1(_bytes);
-            }
-
-            public override ByteString Concat(ByteString that)
-            {
-                if (that.IsEmpty) return this;
-                if (this.IsEmpty) return that;
-                return ToByteString1() + that;
-            }
-
-            public override ByteString Slice(int from, int until)
-            {
-                return (from != 0 || until != Count)
-                    ? ToByteString1().Slice(from, until)
-                    : this;
-            }
-
-            public override string DecodeString(Encoding charset)
-            {
-                return IsEmpty ? string.Empty : charset.GetString(_bytes);
-
-            }
-        }
-
-        internal class ByteString1 : ByteString
-        {
-            private readonly byte[] _bytes;
-            private readonly int _startIndex;
-            private readonly int _length;
-
-            public ByteString1(byte[] bytes, int startIndex, int length)
-            {
-                _bytes = bytes;
-                _startIndex = startIndex;
-                _length = length;
-            }
-
-            public ByteString1(byte[] bytes)
-                : this(bytes, 0, bytes.Length)
-            {
-            }
-
-            public override byte this[int idx]
-            {
-                get { return _bytes[checkRangeConvert(idx)]; }
-            }
-
-            public override ByteIterator Iterator()
-            {
-                return new ByteIterator.ByteArrayIterator(_bytes, _startIndex, _startIndex + _length);
-            }
-
-            private int checkRangeConvert(int index)
-            {
-                if (0 <= index && _length > index)
-                    return index + _startIndex;
-                throw new IndexOutOfRangeException(index.ToString());
-            }
-
-            public override bool IsCompact()
-            {
-                return _length == _bytes.Length;
-            }
-
-            public override CompactByteString Compact()
-            {
-                return IsCompact()
-                    ? new ByteString1C(_bytes)
-                    : new ByteString1C(ToArray());
-            }
-
-            public override int Count
-            {
-                get { return _length; }
-            }
-
-            public override ByteString Concat(ByteString that)
-            {
-                if (that.IsEmpty) return this;
-                if (this.IsEmpty) return that;
-
-                var b1C = that as ByteString1C;
-                if (b1C != null)
-                    return new ByteStrings(this, b1C.ToByteString1());
-
-                var b1 = that as ByteString1;
-                if (b1 != null)
-                {
-                    if (_bytes == b1._bytes && (_startIndex + _length == b1._startIndex))
-                        return new ByteString1(_bytes, _startIndex, _length + b1._length);
-                    return new ByteStrings(this, b1);
-                }
-
-                var bs = that as ByteStrings;
-                if (bs != null)
-                {
-                    return Create(this, bs);
-                }
-
-                throw new InvalidOperationException();
-            }
-
-            public override string DecodeString(Encoding charset)
-            {
-                return charset.GetString(_length == _bytes.Length ? _bytes : ToArray());
-            }
-
-            public override IEnumerator<byte> GetEnumerator()
-            {
-                return _bytes.Skip(_startIndex).Take(_length).GetEnumerator();
-            }
-        }
-
-        internal class ByteStrings : ByteString
-        {
-            private readonly ByteString1[] _byteStrings;
-            private readonly int _length;
-
-            public ByteStrings(params ByteString1[] byteStrings)
-                : this(byteStrings, byteStrings.Sum(x => x.Count))
-            {
-            }
-
-            public ByteStrings(ByteString1[] byteStrings, int length)
-            {
-                _byteStrings = byteStrings;
-                _length = length;
-            }
-
-            public override byte this[int idx]
-            {
-                get
-                {
-                    if (0 <= idx && idx < Count)
-                    {
-                        var pos = 0;
-                        var seen = 0;
-                        while (idx >= seen + _byteStrings[pos].Count)
-                        {
-                            seen += _byteStrings[pos].Count;
-                            pos += 1;
-                        }
-                        return _byteStrings[pos][idx - seen];
-                    }
-                    throw new IndexOutOfRangeException();
-                }
-            }
-
-            public override ByteIterator Iterator()
-            {
-                return new ByteIterator.MultiByteIterator(
-                        _byteStrings.Select(x => (ByteIterator.ByteArrayIterator) x.Iterator()).ToArray());
-            }
-
-			public override IEnumerator<byte> GetEnumerator()
-			{
-				return _byteStrings.SelectMany(byteString => byteString).GetEnumerator();
-			}
-
-			public override ByteString Concat(ByteString that)
-            {
-                if (that.IsEmpty)
-                {
-                    return this;
-                }
-                else if (this.IsEmpty)
-                {
-                    return that;
-                }
-                else
-                {
-                    var b1c = that as ByteString1C;
-                    if (b1c != null)
-                    {
-                        return new ByteStrings(Items.Concat(b1c.ToByteString1()).ToArray());
-                    }
-
-                    var b1 = that as ByteString1;
-                    if (b1 != null)
-                    {
-                        return new ByteStrings(Items.Concat(b1).ToArray());
-                    }
-
-                    var bs = that as ByteStrings;
-                    if (bs != null)
-                    {
-                        return new ByteStrings(Items.Concat(bs.Items).ToArray());
-                    }
-
-                    throw new InvalidOperationException("No suitable implementation found for concatenating ByteString of type " + that.GetType());
-                }
-            }
-
-            public override bool IsCompact()
-            {
-                return _byteStrings.Length == 1 && _byteStrings.Head().IsCompact();
-            }
-
-            public override CompactByteString Compact()
-            {
-                if (IsCompact())
-                {
-                    return _byteStrings.Head().Compact();
-                }
-
-                var bb = ByteBuffer.Allocate(Count);
-                foreach (var item in Items)
-                {
-                    bb.Put(item.ToArray());
-                }
-
-                return new ByteString1C(bb.Array());
-            }
-
-            public override int Count
-            {
-                get { return _length; }
-            }
-
-            internal ByteString1[] Items
-            {
-                get { return _byteStrings; }
-            }
-
-            public override string DecodeString(Encoding charset)
-            {
-                return Compact().DecodeString(charset);
-            }
-        }
-    }
+    using ByteBuffer = ArraySegment<byte>;
 
     /// <summary>
     /// A rope-like immutable data structure containing bytes.
@@ -356,368 +29,597 @@ namespace Akka.IO
     /// when concatenating and slicing sequences of bytes,
     /// and also providing a thread safe way of working with bytes.
     /// </summary>
-    public abstract partial class ByteString : IReadOnlyList<byte>
+    [DebuggerDisplay("(Count = {_count}, Buffers = {_buffers})")]
+    public sealed class ByteString : IEquatable<ByteString>, IEnumerable<byte>
     {
-        public abstract byte this[int index] { get; }
+        #region creation methods
 
-        protected virtual ByteStringBuilder newBuilder()
+        /// <summary>
+        /// INTERNAL API: remove this method once <see cref="Udp.Send"/> public constructor will be removed.
+        /// </summary>
+        internal static ByteString FromBuffers(IEnumerator<ByteBuffer> buffers)
         {
-            return NewBuilder();
+            var cached = new List<ByteBuffer>();
+            while (buffers.MoveNext()) cached.Add(buffers.Current);
+            return FromBytes(cached);
         }
 
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a provided byte array.
+        /// </summary>
+        /// <param name="array">Array of bytes to copy</param>
+        /// <returns>A byte string representation of array of bytes.</returns>
+        public static ByteString CopyFrom(byte[] array) => CopyFrom(array, 0, array.Length);
 
-        public abstract ByteIterator Iterator();
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a byte array range from provided buffer.
+        /// </summary>
+        /// <param name="buffer">Buffer specifying a byte array range to copy.</param>
+        /// <returns>A byte string representation of array of bytes.</returns>
+        public static ByteString CopyFrom(ByteBuffer buffer) => CopyFrom(buffer.Array, buffer.Offset, buffer.Count);
 
-        public Byte Head
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a byte array.
+        /// </summary>
+        /// <param name="array">Array of bytes to copy</param>
+        /// <param name="offset">Index in provided <paramref name="array"/>, at which copy should start.</param>
+        /// <param name="count">Number of bytes to copy.</param>
+        /// <returns>TBD</returns>
+        public static ByteString CopyFrom(byte[] array, int offset, int count)
         {
-            get { return this[0]; }
-        }
-        public ByteString Tail()
-        {
-            return Drop(1);
-        }
-        public byte Last
-        {
-            get { return this[Count - 1]; }
-        }
-        public ByteString Init()
-        {
-            return DropRight(1);
-        }
+            if (array == null) throw new ArgumentNullException(nameof(array));
 
-        public virtual ByteString Slice(int @from, int until)
-        {
-            if (@from == 0 && until == Count) return this;
-            return Iterator().Slice(@from, until).ToByteString();
-        }
+            if (count == 0) return Empty;
 
-        public ByteString Take(int n)
-        {
-            return Slice(0, n);
-        }
-        public ByteString TakeRight(int n)
-        {
-            return Slice(Count - n, Count);
-        }
-        public ByteString Drop(int n)
-        {
-            return Slice(n, Count);
-        }
-        public ByteString DropRight(int n)
-        {
-            return Slice(0, Count - n);
+            if (offset < 0 || offset >= array.Length) throw new ArgumentOutOfRangeException(nameof(offset), $"Provided offset of [{offset}] is outside bounds of an array [{array.Length}]");
+            if (count > array.Length - offset) throw new ArgumentException($"Provided length [{count}] of array to copy doesn't fit array length [{array.Length}] within given offset [{offset}]", nameof(count));
+
+            var copy = new byte[count];
+            Array.Copy(array, offset, copy, 0, count);
+
+            return new ByteString(copy, 0, copy.Length);
         }
 
-        public ByteString TakeWhile(Func<byte, bool> p)
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying segments of bytes.
+        /// </summary>
+        /// <param name="buffers"></param>
+        /// <returns></returns>
+        public static ByteString CopyFrom(IEnumerable<ByteBuffer> buffers)
         {
-            return Iterator().TakeWhile(p).ToByteString();
-        }
+            if (buffers == null) throw new ArgumentNullException(nameof(buffers));
 
-        public ByteString DropWhile(Func<byte, bool> p)
-        {
-            return Iterator().DropWhile(p).ToByteString();
-        }
+            var array = (buffers as ByteBuffer[]) ?? buffers.ToArray();
+            var count = 0;
+            foreach (var buffer in array)
+                count += buffer.Count;
 
-        public Tuple<ByteString, ByteString> Span(Func<byte, bool> p)
-        {
-            var span = Iterator().Span(p);
-            return Tuple.Create(span.Item1.ToByteString(), span.Item2.ToByteString());
-        }
-
-        public Tuple<ByteString, ByteString> SplitAt(int n)
-        {
-            return Tuple.Create(Take(n), Drop(n));
-        }
-
-        public int IndexWhere(Func<byte, bool> p)
-        {
-            return Iterator().IndexWhere(p);
-        }
-
-        public int IndexOf(byte elem)
-        {
-            return Iterator().IndexOf(elem);
-        }
-
-        public byte[] ToArray()
-        {
-            return Iterator().ToArray();
-        }
-
-        public abstract CompactByteString Compact();
-        public abstract bool IsCompact();
-
-        public virtual IEnumerator<byte> GetEnumerator()
-        {
-            throw new NotSupportedException("Method iterator is not implemented in ByteString");
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public virtual bool IsEmpty
-        {
-            get { return Count == 0; }
-        }
-
-        public bool NonEmpty
-        {
-            get { return !IsEmpty; }
-        }
-
-        public abstract int Count { get; }
-        public abstract ByteString Concat(ByteString that);
-
-        public string DecodeString()
-        {
-            return DecodeString(Encoding.UTF8);
-        }
-        public abstract string DecodeString(Encoding charset);
-
-        public static ByteString operator +(ByteString lhs, ByteString rhs)
-        {
-            return lhs.Concat(rhs);
-        }
-
-        public int CopyToBuffer(ByteBuffer buffer)
-        {
-            return Iterator().CopyToBuffer(buffer);
-        }
-
-        public static ByteString Create(ByteBuffer buffer)
-        {
-            if (buffer.Remaining < 0) return Empty;
-            var ar = new byte[buffer.Remaining];
-            buffer.Get(ar);
-            return new ByteString1C(ar);
-        }
-
-        public static ByteString Create(byte[] buffer, int offset, int length)
-        {
-            if (length == 0) return Empty;
-            var ar = new byte[length];
-            Array.Copy(buffer, offset, ar, 0, length);
-            return new ByteString1C(ar);
-        }
-        public static ByteString Create(byte[] buffer)
-        {
-            return Create(buffer, 0, buffer.Length);
-        }
-    }
-
-    partial /*object*/ class CompactByteString
-    {
-        internal static readonly CompactByteString EmptyCompactByteString = new ByteString1C(new byte[0]);
-
-        public static CompactByteString FromString(string str, Encoding encoding)
-        {
-            return string.IsNullOrEmpty(str)
-                ? EmptyCompactByteString
-                : new ByteString1C(encoding.GetBytes(str));
-        }
-
-        public static ByteString FromArray(byte[] array, int offset, int length)
-        {
-            var copyOffset = Math.Max(offset, 0);
-            var copyLength = Math.Max(Math.Min(array.Length - copyOffset, length), 0);
-            if (copyLength == 0) return Empty;
-            var copyArray = new byte[copyLength];
-            Array.Copy(array, copyOffset, copyArray, 0, copyLength);
-            return new ByteString1C(copyArray);
-        }
-    }
-
-    [Serializable]
-    public abstract partial class CompactByteString : ByteString
-    {
-        public override bool IsCompact()
-        {
-            return true;
-        }
-
-        public override CompactByteString Compact()
-        {
-            return this;
-        }
-    }
-
-    public class ByteStringBuilder
-    {
-        private readonly List<ByteString.ByteString1> _builder = new List<ByteString.ByteString1>();
-        private int _length;
-        private byte[] _temp;
-        private int _tempLength;
-        private int _tempCapacity;
-
-        protected Func<Action<byte[], int>, ByteStringBuilder> FillArray(int len)
-        {
-            return fill =>
+            var copy = new byte[count];
+            var position = 0;
+            foreach (var buffer in array)
             {
-                EnsureTempSize(_tempLength + len);
-                fill(_temp, _tempLength);
-                _tempLength += len;
-                _length += len;
-                return this;
-            };
+                Array.Copy(buffer.Array, buffer.Offset, copy, position, buffer.Count);
+                position += buffer.Count;
+            }
+
+            return new ByteString(copy, 0, count);
         }
 
-        protected ByteStringBuilder FillByteBuffer(int len, ByteOrder byteOrder, Action<ByteBuffer> fill)
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by wrapping raw array of bytes.
+        /// WARNING: this method doesn't copy underlying array, but expects 
+        /// that it should not be modified once attached to byte string.
+        /// </summary>
+        /// <param name="array">TBD</param>
+        /// <returns>TBD</returns>
+        public static ByteString FromBytes(byte[] array) => FromBytes(array, 0, array.Length);
+
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by wrapping raw range over array of bytes. WARNING: 
+        /// this method doesn't copy underlying array, but expects that 
+        /// represented range should not be modified once attached to byte string.
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <returns>TBD</returns>
+        public static ByteString FromBytes(ArraySegment<byte> buffer) =>
+            FromBytes(buffer.Array, buffer.Offset, buffer.Count);
+
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by wrapping raw range over array of bytes. WARNING: 
+        /// this method doesn't copy underlying array, but expects that 
+        /// represented range should not be modified once attached to byte string.
+        /// </summary>
+        /// <param name="array">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <returns>TBD</returns>
+        public static ByteString FromBytes(byte[] array, int offset, int count)
         {
-            return FillArray(len)((array, start) =>
+            if (array == null) throw new ArgumentNullException(nameof(array));
+            if (offset < 0 || (offset != 0 && offset >= array.Length)) throw new ArgumentOutOfRangeException(nameof(offset), $"Provided offset [{offset}] is outside bounds of an array");
+            if (count > array.Length - offset) throw new ArgumentException($"Provided length of array to copy [{count}] doesn't fit array length [{array.Length}] and offset [{offset}].", nameof(count));
+
+            if (count == 0) return Empty;
+
+            return new ByteString(array, offset, count);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by wrapping raw collection of byte segements. 
+        /// WARNING: 
+        /// this method doesn't copy underlying arrays, but expects that 
+        /// represented range should not be modified once attached to byte string.
+        /// </summary>
+        public static ByteString FromBytes(IEnumerable<ByteBuffer> buffers)
+        {
+            if (buffers == null) throw new ArgumentNullException(nameof(buffers));
+
+            var array = (buffers as ByteBuffer[]) ?? buffers.ToArray();
+            var count = 0;
+            foreach (var buffer in array)
+                count += buffer.Count;
+
+            return new ByteString(array, count);
+        }
+
+        /// <summary>
+        /// Creates a new ByteString which will contain the UTF-8 representation of 
+        /// the given String
+        /// </summary>
+        /// <param name="str">TBD</param>
+        /// <returns>TBD</returns>
+        public static ByteString FromString(string str) => FromString(str, Encoding.UTF8);
+
+        /// <summary>
+        /// Creates a new ByteString which will contain the representation of 
+        /// the given String in the given charset encoding.
+        /// </summary>
+        /// <param name="str">TBD</param>
+        /// <param name="encoding">TBD</param>
+        /// <returns>TBD</returns>
+        public static ByteString FromString(string str, Encoding encoding)
+        {
+            if (string.IsNullOrEmpty(str)) return Empty;
+
+            var bytes = encoding.GetBytes(str);
+            return FromBytes(bytes);
+        }
+
+        /// <summary>
+        /// An empty <see cref="ByteString"/>.
+        /// </summary>
+        public static ByteString Empty { get; } = new ByteString(new ByteBuffer(new byte[0], 0, 0));
+
+        #endregion
+
+        private readonly int _count;
+        private readonly ByteBuffer[] _buffers;
+
+        private ByteString(ByteBuffer[] buffers, int count)
+        {
+            _buffers = buffers;
+            _count = count;
+        }
+
+        private ByteString(ByteBuffer buffer)
+        {
+            _buffers = new[] { buffer };
+            _count = buffer.Count;
+        }
+
+        private ByteString(byte[] array, int offset, int count)
+        {
+            _buffers = new[] { new ByteBuffer(array, offset, count) };
+            _count = count;
+        }
+
+        /// <summary>
+        /// Gets a total number of bytes stored inside this <see cref="ByteString"/>.
+        /// </summary>
+        public int Count => _count;
+
+        /// <summary>
+        /// Determines if current <see cref="ByteString"/> has compact representation.
+        /// Compact byte strings represent bytes stored inside single, continuous
+        /// block of memory.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public bool IsCompact => _buffers.Length == 1;
+
+        /// <summary>
+        /// Determines if current <see cref="ByteString"/> is empty.
+        /// </summary>
+        public bool IsEmpty => _count == 0;
+
+        /// <summary>
+        /// Gets sequence of the buffers used underneat.
+        /// </summary>
+        internal IList<ByteBuffer> Buffers => _buffers;
+
+        /// <summary>
+        /// Gets a byte stored under a provided <paramref name="index"/>.
+        /// </summary>
+        /// <param name="index">TBD</param>
+        public byte this[int index]
+        {
+            get
             {
-                var buffer = ByteBuffer.Wrap(array, start, len);
-                buffer.Order(byteOrder);
-                fill(buffer);
-            });
-        }
-
-        public int Length
-        {
-            get { return _length; }
-        }
-
-        public void SizeHint(int len)
-        {
-            ResizeTemp(len - (_length - _tempLength));
-        }
-
-        private void ClearTemp()
-        {
-            if (_tempLength > 0)
-            {
-                var arr = new byte[_tempLength];
-                Array.Copy(_temp, 0, arr, 0, _tempLength);
-                _builder.Add(new ByteString.ByteString1(arr));
-                _tempLength = 0;
+                if (index >= _count) throw new IndexOutOfRangeException("Requested index is outside of the bounds of the ByteString");
+                int j;
+                var i = GetBufferFittingIndex(index, out j);
+                var buffer = _buffers[i];
+                return buffer.Array[buffer.Offset + j];
             }
         }
 
-        private void ResizeTemp(int size)
+        /// <summary>
+        /// Compacts current <see cref="ByteString"/>, potentially copying its content underneat
+        /// into new byte array.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public ByteString Compact()
         {
-            var newTemp = new byte[size];
-            if (_tempLength > 0) Array.Copy(_temp, 0, newTemp, 0, _tempLength);
-            _temp = newTemp;
-            _tempCapacity = _temp.Length;
+            if (IsCompact) return this;
+
+            var copy = this.ToArray();
+            return new ByteString(copy, 0, copy.Length);
         }
 
-        private void EnsureTempSize(int size)
+        /// <summary>
+        /// Slices current <see cref="ByteString"/>, creating a new <see cref="ByteString"/>
+        /// which contains a specified range of data from the original. This is non-copying
+        /// operation.
+        /// </summary>
+        /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
+        public ByteString Slice(int index) => Slice(index, _count - index);
+
+        /// <summary>
+        /// Slices current <see cref="ByteString"/>, creating a new <see cref="ByteString"/>
+        /// which contains a specified range of data from the original. This is non-copying
+        /// operation.
+        /// </summary>
+        /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
+        /// <param name="count">Number of bytes to fit into new <see cref="ByteString"/>.</param>
+        /// <returns></returns>
+        public ByteString Slice(int index, int count)
         {
-            if (_tempCapacity < size || _tempCapacity == 0)
+            //TODO: this is really stupid, but previous impl didn't throw if arguments 
+            //      were out of range. We either have to round them to valid bounds or 
+            //      (future version, provide negative-arg slicing like i.e. Python).
+            if (index < 0) index = 0;
+            if (index >= _count) index = Math.Max(0, _count - 1);
+            if (count > _count - index) count = _count - index;
+            if (count <= 0) return Empty;
+
+            if (index == 0 && count == _count) return this;
+            
+            int j;
+            var i = GetBufferFittingIndex(index, out j);
+            var init = _buffers[i];
+
+            var copied = Math.Min(init.Count - j, count);
+            var newBuffers = new ByteBuffer[_buffers.Length - i];
+            newBuffers[0] = new ByteBuffer(init.Array, init.Offset + j, copied);
+
+            i++;
+            var k = 1;
+            for (; i < _buffers.Length; i++, k++)
             {
-                var newSize = _tempCapacity == 0 ? 16 : _tempCapacity*2;
-                while (newSize < size) newSize *= 2;
-                ResizeTemp(newSize);
+                if (copied >= count) break;
+
+                var buffer = _buffers[i];
+                var toCopy = Math.Min(buffer.Count, count - copied);
+                newBuffers[k] = new ByteBuffer(buffer.Array, buffer.Offset, toCopy);
+                copied += toCopy;
             }
+
+            if (k < newBuffers.Length)
+                newBuffers = newBuffers.Take(k).ToArray();
+
+            return new ByteString(newBuffers, count);
         }
 
-        public ByteStringBuilder Append(IEnumerable<byte> xs)
+        /// <summary>
+        /// Given an <paramref name="index"/> in current <see cref="ByteString"/> tries to 
+        /// find which buffer will be used to contain that index and return its range.
+        /// An offset within the buffer itself will be stored in <paramref name="indexWithinBuffer"/>.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="indexWithinBuffer"></param>
+        /// <returns></returns>
+        private int GetBufferFittingIndex(int index, out int indexWithinBuffer)
         {
-            var bs1C = xs as ByteString.ByteString1C;
-            if (bs1C != null)
+            if (index == 0)
             {
-                ClearTemp();
-                _builder.Add(bs1C.ToByteString1());
-                _length += bs1C.Count;
-                return this;
+                indexWithinBuffer = 0;
+                return 0;
             }
-            var bs1 = xs as ByteString.ByteString1;
-            if (bs1 != null)
-            {
-                ClearTemp();
-                _builder.Add(bs1);
-                _length += bs1.Count;
-                return this;
-            }
-            var bss = xs as ByteString.ByteStrings;
-            if (bss != null)
-            {
-                ClearTemp();
-                _builder.AddRange(bss.Items);
-                _length += bss.Count;
-                return this;
-            }
-            return xs.Aggregate(this, (a, x) => a.PutByte(x));
-        }
 
-        public ByteStringBuilder PutByte(byte x)
-        {
-            return this + x;
-        }
-
-        public ByteStringBuilder PutShort(int x, ByteOrder byteOrder)
-        {
-            if (byteOrder == ByteOrder.BigEndian)
+            var j = index;
+            for (var i = 0; i < _buffers.Length; i++)
             {
-                PutByte(Convert.ToByte(x >> 8));
-                PutByte(Convert.ToByte(x >> 0));
-            }
-            else
-            {
-                PutByte(Convert.ToByte(x >> 0));
-                PutByte(Convert.ToByte(x >> 8));
-            }
-            return this;
-        }
-
-        public ByteStringBuilder PutInt(int x, ByteOrder byteOrder)
-        {
-            return FillArray(4)((target, offset) =>
-            {
-                if (byteOrder == ByteOrder.BigEndian)
+                var buffer = _buffers[i];
+                if (j >= buffer.Count)
                 {
-                    target[offset + 0] = (byte) (x >> 24);
-                    target[offset + 1] = (byte) (x >> 16);
-                    target[offset + 2] = (byte) (x >>  8);
-                    target[offset + 3] = (byte) (x >>  0);
+                    j -= buffer.Count;
                 }
                 else
                 {
-                    target[offset + 0] = (byte)(x >>  0);
-                    target[offset + 1] = (byte)(x >>  8);
-                    target[offset + 2] = (byte)(x >> 16);
-                    target[offset + 3] = (byte)(x >> 24);
+                    indexWithinBuffer = j;
+                    return i;
                 }
-            });
+            }
+
+            throw new IndexOutOfRangeException($"Requested index [{index}] is outside of the bounds of current ByteString.");
         }
 
-        public ByteStringBuilder PutBytes(byte[] array)
+        /// <summary>
+        /// Returns an index of the first occurence of provided byte starting 
+        /// from the beginning of the <see cref="ByteString"/>.
+        /// </summary>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public int IndexOf(byte b)
         {
-            return PutBytes(array, 0, array.Length);
-        }
-        public ByteStringBuilder PutBytes(byte[] array, int start, int len)
-        {
-            return FillArray(len)((target, targetOffset) => Array.Copy(array, start, target, targetOffset, len));
+            var idx = 0;
+            foreach (var x in this)
+            {
+                if (x == b) return idx;
+                idx++;
+            }
+
+            return -1;
         }
 
-        public static ByteStringBuilder operator +(ByteStringBuilder lhs, byte rhs)
+        /// <summary>
+        /// Returns an index of the first occurence of provided byte starting 
+        /// from the provided index.
+        /// </summary>
+        /// <returns></returns>
+        public int IndexOf(byte b, int from)
         {
-            lhs.EnsureTempSize(lhs._tempLength + 1);
-            lhs._temp[lhs._tempLength] = rhs;
-            lhs._tempLength += 1;
-            lhs._length += 1;
-            return lhs;
+            if (from >= _count) return -1;
+
+            int j;
+            var i = GetBufferFittingIndex(from, out j);
+            var idx = from;
+            for (; i < _buffers.Length; i++)
+            {
+                var buffer = _buffers[i];
+                for (; j < buffer.Count; j++, idx++)
+                {
+                    if (buffer.Array[buffer.Offset + j] == b) return idx;
+                }
+                j = 0;
+            }
+
+            return -1;
         }
 
-        public ByteString Result()
+        /// <summary>
+        /// Checks if a subsequence determined by the <paramref name="other"/> 
+        /// byte string is can be found in current one, starting from provided 
+        /// <paramref name="index"/>.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool HasSubstring(ByteString other, int index)
         {
-            if (_length == 0) return ByteString.Empty;
-            ClearTemp();
-            var bytestrings = _builder;
-            return bytestrings.Count == 1
-                ? bytestrings[0] as ByteString
-                : new ByteString.ByteStrings(bytestrings.ToArray());
+            // quick check: if subsequence is longer than remaining size, return false
+            if (other.Count > _count - index) return false;
+
+            int thisIdx = 0, otherIdx = 0;
+            var i = GetBufferFittingIndex(index, out thisIdx);
+            var j = 0;
+            while (j < other._buffers.Length)
+            {
+                var buffer = _buffers[i];
+                var otherBuffer = other._buffers[j];
+
+                while (thisIdx < buffer.Count && otherIdx < otherBuffer.Count)
+                {
+                    if (buffer.Array[buffer.Offset + thisIdx] != otherBuffer.Array[otherBuffer.Offset + otherIdx])
+                        return false;
+
+                    thisIdx++;
+                    otherIdx++;
+                }
+
+                if (thisIdx >= buffer.Count)
+                {
+                    i++;
+                    thisIdx = 0;
+                }
+                if (otherIdx >= otherBuffer.Count)
+                {
+                    j++;
+                    otherIdx = 0;
+                }
+            }
+
+            return true;
         }
+
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a single byte array.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public byte[] ToArray()
+        {
+            var copy = new byte[_count];
+            this.CopyTo(copy, 0, _count);
+            return copy;
+        }
+
+        /// <summary>
+        /// Appends <paramref name="other"/> <see cref="ByteString"/> at the tail
+        /// of a current one, creating a new <see cref="ByteString"/> in result.
+        /// Contents of byte strings are NOT copied.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public ByteString Concat(ByteString other)
+        {
+            if (other == null) throw new ArgumentNullException(nameof(other), "Cannot append null to ByteString.");
+
+            if (other.IsEmpty) return this;
+            if (this.IsEmpty) return other;
+
+            var count = _count + other._count;
+            var len1 = _buffers.Length;
+            var len2 = other._buffers.Length;
+            var array = new ByteBuffer[len1 + len2];
+            Array.Copy(this._buffers, 0, array, 0, len1);
+            Array.Copy(other._buffers, 0, array, len1, len2);
+
+            return new ByteString(array, count);
+        }
+
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a provided
+        /// <paramref name="buffer"/> starting from <paramref name="index"/> in that
+        /// buffer and copying a <paramref name="count"/> number of bytes.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public int CopyTo(byte[] buffer, int index, int count)
+        {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
+            if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
+
+            count = Math.Min(count, _count);
+            var remaining = count;
+            var position = index;
+            foreach (var b in _buffers)
+            {
+                var toCopy = Math.Min(b.Count, remaining);
+                Array.Copy(b.Array, b.Offset, buffer, position, toCopy);
+                position += toCopy;
+                remaining -= toCopy;
+
+                if (remaining == 0) return count;
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Copies content of the current <see cref="ByteString"/> to a provided 
+        /// writeable <paramref name="stream"/>.
+        /// </summary>
+        /// <param name="stream"></param>
+        public void WriteTo(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            foreach (var buffer in _buffers)
+            {
+                stream.Write(buffer.Array, buffer.Offset, buffer.Count);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously copies content of the current <see cref="ByteString"/> 
+        /// to a provided writeable <paramref name="stream"/>.
+        /// </summary>
+        /// <param name="stream"></param>
+        public async Task WriteToAsync(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            foreach (var buffer in _buffers)
+            {
+                await stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count);
+            }
+        }
+
+        public override bool Equals(object obj) => Equals(obj as ByteString);
+
+        public override int GetHashCode()
+        {
+            var hashCode = 0;
+            foreach (var b in this)
+            {
+                hashCode = (hashCode * 397) ^ b.GetHashCode();
+            }
+            return hashCode;
+        }
+
+        public bool Equals(ByteString other)
+        {
+            if (ReferenceEquals(other, this)) return true;
+            if (ReferenceEquals(other, null)) return false;
+            if (_count != other._count) return false;
+
+            using (var thisEnum = this.GetEnumerator())
+            using (var otherEnum = other.GetEnumerator())
+            {
+                while (thisEnum.MoveNext() && otherEnum.MoveNext())
+                {
+                    if (thisEnum.Current != otherEnum.Current) return false;
+                }
+            }
+
+            return true;
+        }
+
+        public IEnumerator<byte> GetEnumerator()
+        {
+            foreach (var buffer in _buffers)
+            {
+                for (int i = buffer.Offset; i < buffer.Offset + buffer.Count; i++)
+                {
+                    yield return buffer.Array[i];
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString() => ToString(Encoding.UTF8);
+
+        public string ToString(Encoding encoding)
+        {
+            var builder = new StringBuilder(_count);
+            foreach (var buffer in _buffers)
+            {
+                var part = encoding.GetString(buffer.Array, buffer.Offset, buffer.Count);
+                builder.Append(part);
+            }
+            return builder.ToString();
+        }
+
+        public static bool operator ==(ByteString x, ByteString y) => Equals(x, y);
+
+        public static bool operator !=(ByteString x, ByteString y) => !Equals(x, y);
+
+        public static explicit operator ByteString(byte[] bytes) => ByteString.CopyFrom(bytes);
+        public static explicit operator byte[] (ByteString byteString) => byteString.ToArray();
+        public static ByteString operator +(ByteString x, ByteString y) => x.Concat(y);
+
+        #region Obsoleted
+
+        [Obsolete("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.FromBytes otherwise.")]
+        public static ByteString Create(byte[] array) => CopyFrom(array);
+
+        [Obsolete("Use ToString() method instead.")]
+        public string DecodeString() => ToString();
+
+        [Obsolete("Use ToString(Encoding) method instead.")]
+        public string DecodeString(Encoding encoding) => ToString(encoding);
+
+        [Obsolete("Use Slice(0, n) method instead.")]
+        public ByteString Take(int n) => Slice(0, n);
+
+        [Obsolete("Use Slice(n) method instead.")]
+        public ByteString Drop(int n) => Slice(n);
+
+        #endregion
     }
-
-    #region JVM
-
+    
     public enum ByteOrder
     {
         BigEndian,
         LittleEndian
     }
-
-    #endregion
 }

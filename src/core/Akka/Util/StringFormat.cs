@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StringFormat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -9,6 +9,9 @@ using System.Collections.Generic;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class StringFormat
     {
         /// <summary>
@@ -18,6 +21,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="separator">The separator.</param>
         /// <param name="args">The arguments.</param>
+        /// <returns>TBD</returns>
         public static string SafeJoin(string separator, params object[] args)
         {
             return string.Join(separator, ConvertValues(args));

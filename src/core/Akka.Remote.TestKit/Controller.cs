@@ -1,17 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Controller.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
+using System.Net;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Helios.Net;
-using Helios.Topology;
-using System.Runtime.Serialization;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -22,9 +23,9 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class Controller : UntypedActor
+    internal class Controller : UntypedActor, ILogReceive
     {
-        public sealed class ClientDisconnected
+        public sealed class ClientDisconnected : IDeadLetterSuppression
         {
             private readonly RoleName _name;
 
@@ -43,6 +44,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -50,24 +52,38 @@ namespace Akka.Remote.TestKit
                 return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_name != null ? _name.GetHashCode() : 0);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="ClientDisconnected"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="ClientDisconnected"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(ClientDisconnected left, ClientDisconnected right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="ClientDisconnected"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="ClientDisconnected"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(ClientDisconnected left, ClientDisconnected right)
             {
                 return !Equals(left, right);
             }
 
+            /// <inheritdoc/>
             public override string ToString()
             {
-                return string.Format("{0}: {1}", GetType(), Name);
+                return $"{GetType()}: {Name}";
             }
         }
 
@@ -82,6 +98,7 @@ namespace Akka.Remote.TestKit
             /// <param name="message">The message that describes the error.</param>
             public ClientDisconnectedException(string message) : base(message){}
 
+#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
             /// </summary>
@@ -90,6 +107,7 @@ namespace Akka.Remote.TestKit
             protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#endif
         }
 
         public class GetNodes
@@ -161,6 +179,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name) && Equals(_addr, other._addr) && Equals(_fsm, other._fsm);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -168,6 +187,7 @@ namespace Akka.Remote.TestKit
                 return obj is NodeInfo && Equals((NodeInfo) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -179,11 +199,23 @@ namespace Akka.Remote.TestKit
                 }
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="NodeInfo"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
+            /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="NodeInfo"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(NodeInfo left, NodeInfo right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="NodeInfo"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
+            /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="NodeInfo"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(NodeInfo left, NodeInfo right)
             {
                 return !Equals(left, right);
@@ -192,17 +224,21 @@ namespace Akka.Remote.TestKit
 
         public sealed class CreateServerFSM : INoSerializationVerificationNeeded
         {
-            public CreateServerFSM(RemoteConnection channel)
+            public CreateServerFSM(IChannel channel)
             {
                 Channel = channel;
             }
 
-            public RemoteConnection Channel { get; private set; }
+            public IChannel Channel { get; private set; }
         }
 
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
-        readonly IConnection _connection;
+
+        /// <summary>
+        /// Lazily load the result later
+        /// </summary>
+        private IChannel _connection;
         readonly IActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
@@ -210,11 +246,14 @@ namespace Akka.Remote.TestKit
         ImmutableDictionary<RoleName, ImmutableHashSet<IActorRef>> _addrInterest =
             ImmutableDictionary.Create<RoleName, ImmutableHashSet<IActorRef>>();
         int _generation = 1;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
-        public Controller(int initialParticipants, INode controllerPort)
+        public Controller(int initialParticipants, IPEndPoint controllerPort)
         {
+            _log.Debug("Opening connection");
             _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
-                new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler))));
+                new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler)))).Result;
+            _log.Debug("Connection bound");
             _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
             _initialParticipants = initialParticipants;
         }
@@ -247,7 +286,7 @@ namespace Akka.Remote.TestKit
                 if (clientLost != null) return FailBarrier(clientLost.BarrierData);
                 var duplicateNode = e as BarrierCoordinator.DuplicateNodeException;
                 if (duplicateNode != null) return FailBarrier(duplicateNode.BarrierData);
-                throw new InvalidOperationException(String.Format("Cannot process exception of type {0}", e.GetType()));
+                throw new InvalidOperationException($"Cannot process exception of type {e.GetType()}");
             });
         }
 
@@ -257,18 +296,18 @@ namespace Akka.Remote.TestKit
             return Directive.Restart;
         }
 
-        //TODO: Logging receive?
         protected override void OnReceive(object message)
         {
             var createServerFSM = message as CreateServerFSM;
             if (createServerFSM != null)
             {
                 var channel = createServerFSM.Channel;
-                var host = channel.RemoteHost;
-                var name = host.ToEndPoint() + ":" + host.Port + "-server" + _generation++;
-                Sender.Tell(
-                    Context.ActorOf(
-                        new Props(typeof (ServerFSM), new object[] {Self, channel}).WithDeploy(Deploy.Local), name));
+                var host = (IPEndPoint)channel.RemoteAddress;
+                var name = WebUtility.UrlEncode(host + ":" + host.Port + "-server" + _generation++);
+                var fsm = Context.ActorOf(
+                    Props.Create(() => new ServerFSM(Self, channel)).WithDeploy(Deploy.Local), name);
+                _log.Debug("Sending FSM {0} to {1}", fsm, Sender);
+                Sender.Tell(fsm);
                 return;
             }
             var nodeInfo = message as NodeInfo;
@@ -294,9 +333,11 @@ namespace Akka.Remote.TestKit
                         foreach (var ni in _nodes.Values) ni.FSM.Tell(new ToClient<Done>(Done.Instance));
                         _initialParticipants = 0;
                     }
-                    if (_addrInterest.ContainsKey(nodeInfo.Name))
+
+                    if (_addrInterest.TryGetValue(nodeInfo.Name, out var addr))
                     {
-                        foreach(var a in _addrInterest[nodeInfo.Name]) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
+                        foreach(var a in addr)
+                            a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
                         _addrInterest = _addrInterest.Remove(nodeInfo.Name);
                     }
                 }
@@ -324,13 +365,12 @@ namespace Akka.Remote.TestKit
                 if (getAddress != null)
                 {
                     var node = getAddress.Node;
-                    if (_nodes.ContainsKey(node))
-                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, _nodes[node].Addr)));
+                    if (_nodes.TryGetValue(node, out var replyNodeInfo))
+                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
                     else
                     {
-                        ImmutableHashSet<IActorRef> existing;
                         _addrInterest = _addrInterest.SetItem(node,
-                            (_addrInterest.TryGetValue(node, out existing)
+                            (_addrInterest.TryGetValue(node, out var existing)
                                 ? existing
                                 : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));
@@ -377,14 +417,22 @@ namespace Akka.Remote.TestKit
             }
             if (message is GetSockAddr)
             {
-                Sender.Tell(_connection.Local);
+                Sender.Tell(_connection.LocalAddress);
                 return;
             }
         }
 
         protected override void PostStop()
         {
-            RemoteConnection.Shutdown(_connection);
+            try
+            {
+                RemoteConnection.Shutdown(_connection);
+                RemoteConnection.ReleaseAll().Wait(_settings.ConnectTimeout);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error while terminating RemoteConnection.");
+            }
         }
     }
 }

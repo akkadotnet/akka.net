@@ -1,188 +1,46 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.TestKit</RootNamespace>
-    <AssemblyName>Akka.TestKit</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
+    <AssemblyTitle>Akka.TestKit</AssemblyTitle>
+    <Description>You need a Akka.TestKit.* package! Add the one appropriate for the test framework you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest. This package only contains base functionality for writing tests for the Akka.NET framework.</Description>
+    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags)</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Akka.TestKit.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
-    <OutputPath>bin\Release Mono\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\Debug Mono\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>809</NoWarn>
-    <WarningLevel>4</WarningLevel>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
+    <EmbeddedResource Include="Configs\TestScheduler.conf;Internal\Reference.conf" />
+    <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
-  <Choose>
-    <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
-      <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-      </ItemGroup>
-    </When>
-    <Otherwise />
-  </Choose>
+
   <ItemGroup>
-    <Compile Include="..\..\SharedAssemblyInfo.cs">
-      <Link>Properties\SharedAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="ActorCellKeepingSynchronizationContext.cs" />
-    <Compile Include="CallingThreadDispatcher.cs" />
-    <Compile Include="Configs\TestConfigs.cs" />
-    <Compile Include="EventFilter\IEventFilterApplier.cs" />
-    <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
-    <Compile Include="EventFilter\DeadLettersFilter.cs" />
-    <Compile Include="EventFilter\Internal\DebugFilter.cs" />
-    <Compile Include="EventFilter\Internal\ErrorFilter.cs" />
-    <Compile Include="EventFilter\IEventFilter.cs" />
-    <Compile Include="EventFilter\Internal\EventFilterApplier.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\ContainsString.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\EqualsString.cs" />
-    <Compile Include="EventFilter\Internal\EventFilterBase.cs" />
-    <Compile Include="EventFilter\EventFilterFactory_Generated.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>EventFilterFactory_Generated.tt</DependentUpon>
-    </Compile>
-    <Compile Include="EventFilter\EventFilterFactory.cs" />
-    <Compile Include="EventFilter\Internal\InfoFilter.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\EqualsStringAndPathMatcher.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\IStringMatcher.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\MatchesAll.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\PredicateMatcher.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\RegexMatcher.cs" />
-    <Compile Include="EventFilter\Internal\StringMatcher\StartsWithString.cs" />
-    <Compile Include="EventFilter\Internal\WarningFilter.cs" />
-    <Compile Include="EventFilter\TestEvent\Mute.cs" />
-    <Compile Include="EventFilter\TestEvent\Unmute.cs" />
-    <Compile Include="EventFilter\IUnmutableFilter.cs" />
-    <Compile Include="FSMSpecHelpers.cs" />
-    <Compile Include="AutoPilots.cs" />
-    <Compile Include="INoImplicitSender.cs" />
-    <Compile Include="Internal\BlockingCollectionTestActorQueue.cs" />
-    <Compile Include="Internal\InternalTestActor.cs" />
-    <Compile Include="Internal\InternalTestActorRef.cs" />
-    <Compile Include="Internal\ITestActorQueue.cs" />
-    <Compile Include="Internal\BlockingQueue.cs" />
-    <Compile Include="Internal\TimeSpanExtensions.cs" />
-    <Compile Include="TestActorRefBase.cs" />
-    <Compile Include="TestActors\BlackHoleActor.cs" />
-    <Compile Include="TestActors\EchoActor.cs" />
-    <Compile Include="TestBarrier.cs" />
-    <Compile Include="TestBreaker.cs" />
-    <Compile Include="TestFSMRef.cs" />
-    <Compile Include="ITestKitAssertions.cs" />
-    <Compile Include="MessageEnvelope.cs" />
-    <Compile Include="NullMessageEnvelope.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RealMessageEnvelope.cs" />
-    <Compile Include="TestActor.cs" />
-    <Compile Include="TestActorRef.cs" />
-    <Compile Include="EventFilter\TestEventListener.cs" />
-    <Compile Include="TestKitAssertionsExtension.cs" />
-    <Compile Include="TestKitAssertionsProvider.cs" />
-    <Compile Include="TestKitBase.cs" />
-    <Compile Include="TestKitBase_ActorOf.cs" />
-    <Compile Include="TestKitBase_AwaitAssert.cs" />
-    <Compile Include="TestKitBase_ExpectMsgFrom.cs" />
-    <Compile Include="TestKitBase_Expect.cs" />
-    <Compile Include="TestKitBase_Within.cs" />
-    <Compile Include="TestKitBase_Receive.cs" />
-    <Compile Include="TestKitBase_AwaitConditions.cs" />
-    <Compile Include="TestKitExtension.cs" />
-    <Compile Include="TestKitSettings.cs" />
-    <Compile Include="TestLatch.cs" />
-    <Compile Include="TestProbe.cs" />
-    <Compile Include="TestScheduler.cs" />
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Internal\Reference.conf" />
-  </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <None Include="EventFilter\EventFilterFactory_Generated.tt">
+    <None Update="EventFilter\EventFilterFactory_Generated.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>
     </None>
-    <EmbeddedResource Include="Configs\TestScheduler.conf" />
+    <Compile Update="EventFilter\EventFilterFactory_Generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>EventFilterFactory_Generated.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
-  <ItemGroup>
-    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
-  </ItemGroup>
-  <Choose>
-    <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
-      <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.CodedUITestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Extension, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITesting, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <DefineConstants>$(DefineConstants);UNSAFE_THREADING</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
 </Project>

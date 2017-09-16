@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,15 +8,20 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
-using Helios.Exceptions;
-using Helios.Net;
-using Helios.Topology;
+using Akka.Util;
+using Akka.Util.Internal;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -48,13 +53,12 @@ namespace Akka.Remote.TestKit
         /// this is a first barrier in itself). The number of expected participants is
         /// set in <see cref="TestConductor"/>`.startController()`.
         /// </summary>
-        public Task<Done> StartClient(RoleName name, INode controllerAddr)
+        public Task<Done> StartClient(RoleName name, IPEndPoint controllerAddr)
         {
             if(_client != null) throw new IllegalStateException("TestConductorClient already started");
-            _client =
-                _system.ActorOf(new Props(typeof (ClientFSM),
-                    new object[] {name, controllerAddr}), "TestConductorClient");
-            
+                _client =
+                _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
+
             //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
@@ -117,7 +121,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)
@@ -131,13 +135,18 @@ namespace Akka.Remote.TestKit
                 try
                 {
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
-                    //TODO: Wait?
-                    _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
+                    // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
+                    // of a failed operation
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
-                catch (OperationCanceledException)
+                catch (AggregateException)
                 {
                     _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name);
+                }
+                catch (OperationCanceledException)
+                {
+                   _system.Log.Debug("OperationCanceledException was thrown instead of AggregateException");
                 }
                 _system.Log.Debug("passed barrier {0}", name);
             }
@@ -145,8 +154,7 @@ namespace Akka.Remote.TestKit
 
         public Task<Address> GetAddressFor(RoleName name)
         {
-            //TODO: QueryTimeout implicit?
-            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)));
+            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)), Settings.QueryTimeout);
         }
     }
 
@@ -164,6 +172,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
+    [InternalApi]
     class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {
@@ -177,22 +186,24 @@ namespace Akka.Remote.TestKit
 
         internal class Data
         {
-            readonly RemoteConnection _channel;
-            public RemoteConnection Channel { get { return _channel; } }
+            readonly IChannel _channel;
+            public IChannel Channel { get { return _channel; } }
             readonly Tuple<string, IActorRef> _runningOp;
             public Tuple<string, IActorRef> RunningOp { get { return _runningOp; } }
             
-            public Data(RemoteConnection channel, Tuple<string, IActorRef> runningOp)
+            public Data(IChannel channel, Tuple<string, IActorRef> runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
             }
 
+            /// <inheritdoc/>
             protected bool Equals(Data other)
             {
                 return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -201,6 +212,7 @@ namespace Akka.Remote.TestKit
                 return Equals((Data) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -210,11 +222,23 @@ namespace Akka.Remote.TestKit
                 }
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Data left, Data right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Data left, Data right)
             {
                 return !Equals(left, right);
@@ -228,10 +252,10 @@ namespace Akka.Remote.TestKit
 
         internal class Connected : INoSerializationVerificationNeeded
         {
-            readonly RemoteConnection _channel;
-            public RemoteConnection Channel{get { return _channel; }}
+            readonly IChannel _channel;
+            public IChannel Channel{get { return _channel; }}
 
-            public Connected(RemoteConnection channel)
+            public Connected(IChannel channel)
             {
                 _channel = channel;
             }
@@ -241,6 +265,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_channel, other._channel);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -249,24 +274,44 @@ namespace Akka.Remote.TestKit
                 return Equals((Connected) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_channel != null ? _channel.GetHashCode() : 0);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Connected left, Connected right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Connected left, Connected right)
             {
                 return !Equals(left, right);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ConnectionFailure : Exception
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ConnectionFailure"/> class.
+            /// </summary>
+            /// <param name="message">The message that describes the error.</param>
             public ConnectionFailure(string message) : base(message)
             {
             }
@@ -291,7 +336,7 @@ namespace Akka.Remote.TestKit
         readonly PlayerHandler _handler;
         readonly RoleName _name;
 
-        public ClientFSM(RoleName name, INode controllerAddr)
+        public ClientFSM(RoleName name, IPEndPoint controllerAddr)
         {
             _settings = TestConductor.Get(Context.System).Settings;
             _handler = new PlayerHandler(controllerAddr, _settings.ClientReconnects, _settings.ReconnectBackoff,
@@ -315,7 +360,7 @@ namespace Akka.Remote.TestKit
                 var connected = @event.FsmEvent as Connected;
                 if (connected != null)
                 {
-                    connected.Channel.Write(new Hello(_name.Name, TestConductor.Get(Context.System).Address));
+                    connected.Channel.WriteAndFlushAsync(new Hello(_name.Name, TestConductor.Get(Context.System).Address));
                     return GoTo(State.AwaitDone).Using(new Data(connected.Channel, null));
                 }
                 if (@event.FsmEvent is ConnectionFailure)
@@ -324,7 +369,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    _log.Error("connect timeout to TestConductor");
+                    _log.Error($"Failed to connect to test conductor within {_settings.ConnectTimeout.TotalMilliseconds} ms.");
                     return GoTo(State.Failed);
                 }
 
@@ -362,16 +407,16 @@ namespace Akka.Remote.TestKit
                     _log.Info("disconnected from TestConductor");
                     throw new ConnectionFailure("disconnect");
                 }
-                if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null && @event.StateData.RunningOp == null)
+                if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null)
                 {
-                    @event.StateData.Channel.Write(Done.Instance);
+                    @event.StateData.Channel.WriteAndFlushAsync(Done.Instance);
                     return Stay();
                 }
                 var toServer = @event.FsmEvent as IToServer;
                 if (toServer != null && @event.StateData.Channel != null &&
                     @event.StateData.RunningOp == null)
                 {
-                    @event.StateData.Channel.Write(toServer.Msg);
+                    @event.StateData.Channel.WriteAndFlushAsync(toServer.Msg);
                     string token = null;
                     var enterBarrier = @event.FsmEvent as ToServer<EnterBarrier>;
                     if (enterBarrier != null) token = enterBarrier.Msg.Name;
@@ -395,7 +440,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            _log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
@@ -439,9 +484,8 @@ namespace Akka.Remote.TestKit
                     {
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
-                        else if (throttleMsg.RateMBit < 0.0f) mode = Blackhole.Instance;
-                        else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
-
+                        else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
+                        else mode = new Transport.TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
@@ -459,10 +503,10 @@ namespace Akka.Remote.TestKit
                     }
                     if (@event.FsmEvent is DisconnectMsg)
                         return Stay(); //FIXME is this the right EC for the future below?
-                    // FIXME: Currently ignoring, needs support from Remoting
                     var terminateMsg = @event.FsmEvent as TerminateMsg;
                     if (terminateMsg != null)
                     {
+                        _log.Info("Received TerminateMsg - shutting down...");
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == false)
                         {
                             Context.System.Terminate();
@@ -470,9 +514,7 @@ namespace Akka.Remote.TestKit
                         }
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
                         {
-                            //TODO: terminate more aggressively with Abort
-                            //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
-                            Context.System.Terminate();
+                            Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)
@@ -500,9 +542,17 @@ namespace Akka.Remote.TestKit
                 return null;
             });
 
-            OnTermination(@event =>
+            OnTermination(e =>
             {
-                if (@event.StateData.Channel != null) @event.StateData.Channel.Close();
+                _log.Info("Terminating connection to multi-node test controller due to [{0}]", e.Reason);
+                if (e.StateData.Channel != null)
+                {
+                    var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
+                    if (!e.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
+                    {
+                        _log.Warning("Failed to disconnect from conductor within {0}", disconnectTimeout);
+                    }
+                }
             });
 
             Initialize();            
@@ -514,9 +564,9 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class PlayerHandler : IHeliosConnectionHandler
+    internal class PlayerHandler : ChannelHandlerAdapter
     {
-        readonly INode _server;
+        readonly IPEndPoint _server;
         int _reconnects;
         readonly TimeSpan _backoff;
         readonly int _poolSize;
@@ -526,8 +576,13 @@ namespace Akka.Remote.TestKit
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
-        
-        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
+
+        /// <summary>
+        /// Shareable, since the handler may be added multiple times during reconnect
+        /// </summary>
+        public override bool IsSharable => true;
+
+        public PlayerHandler(IPEndPoint server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
             ILoggingAdapter log, IScheduler scheduler)
         {
             _server = server;
@@ -541,53 +596,99 @@ namespace Akka.Remote.TestKit
             Reconnect();
         }
 
-        public void OnException(Exception ex, IConnection erroredChannel)
+        private static string FormatConnectionFailure(IChannelHandlerContext context, Exception exception)
         {
-            _log.Debug("channel {0} exception {1}", erroredChannel, ex);
-            if (ex is HeliosConnectionException && _reconnects > 0)
+            var sb = new StringBuilder();
+            sb.AppendLine($"Connection between [Local: {context.Channel.LocalAddress}] and [Remote: {context.Channel.RemoteAddress}] has failed.");
+            sb.AppendLine($"Cause: {exception}");
+            sb.AppendLine($"Trace: {exception.StackTrace}");
+            return sb.ToString();
+        }
+
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
+        {
+            _log.Debug("channel {0} exception {1}", context.Channel, exception);
+            if (exception is ConnectException && _reconnects > 0)
             {
                 _reconnects -= 1;
-                _scheduler.Advanced.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
+                if (_nextAttempt.IsOverdue)
+                {
+                    Reconnect();
+                }
+                else
+                {
+                    _scheduler.Advanced.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
+                }
                 return;
             }
-            _fsm.Tell(new ClientFSM.ConnectionFailure(ex.ToString()));
+            _fsm.Tell(new ClientFSM.ConnectionFailure(FormatConnectionFailure(context, exception)));
         }
 
         private void Reconnect()
         {
+            _log.Debug("Connecting...");
             _nextAttempt = Deadline.Now + _backoff;
-            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this);
+            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(tr =>
+            {
+                _log.Debug("Failed to connect.... Retrying again in {0}s. {1} attempts left.", _nextAttempt.TimeLeft,_reconnects);
+                if (_reconnects > 0)
+                {
+                    _reconnects -= 1;
+                    if (_nextAttempt.IsOverdue)
+                    {
+                        Reconnect();
+                    }
+                    else
+                    {
+                        _scheduler.Advanced.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
+                    }
+                }
+            }, TaskContinuationOptions.NotOnRanToCompletion);
         }
 
-        public void OnConnect(INode remoteAddress, IConnection responseChannel)
+        public override void ChannelActive(IChannelHandlerContext context)
         {
-            _log.Debug("connected to {0}", responseChannel.RemoteHost);
-            _fsm.Tell(new ClientFSM.Connected(new RemoteConnection(responseChannel, this)));
+            _log.Debug("connected to {0}", context.Channel.RemoteAddress);
+            _fsm.Tell(new ClientFSM.Connected(context.Channel));
+            context.FireChannelActive();
         }
 
-        public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        public override void ChannelInactive(IChannelHandlerContext context)
         {
             if (!_loggedDisconnect) //added this to help mute log messages
             {
                 _loggedDisconnect = true;
-                _log.Debug("disconnected from {0}", closedChannel.RemoteHost);
-                
+                _log.Debug("disconnected from {0}", context.Channel.RemoteAddress);
+
             }
             _fsm.Tell(PoisonPill.Instance);
-            //TODO: Some logic here in JVM version to execute this on a different pool to the Netty IO pool
-            RemoteConnection.Shutdown(closedChannel);
+
+            // run outside of the Helios / DotNetty threadpool
+            Task.Factory.StartNew(() =>
+            {
+                RemoteConnection.Shutdown(context.Channel);
+                RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
+            }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+            context.FireChannelInactive();
         }
 
-        public void OnMessage(object message, IConnection responseChannel)
+        public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            _log.Debug("disconnected from {0}, {1}", responseChannel.RemoteHost, message);
+            var channel = context.Channel;
+            _log.Debug("message from {0}, {1}", channel.RemoteAddress, message);
             if (message is INetworkOp)
             {
                 _fsm.Tell(message);
                 return;
             }
-            _log.Info("server {0} sent garbage '{1}', disconnecting", responseChannel.RemoteHost, message);
-            responseChannel.Close();
+            _log.Info("server {0} sent garbage '{1}', disconnecting", channel.RemoteAddress, message);
+            channel.CloseAsync();
+        }
+
+        public override Task CloseAsync(IChannelHandlerContext context)
+        {
+            _log.Info("Client: disconnecting {0} from {1}", context.Channel.LocalAddress, context.Channel.RemoteAddress);
+            return base.CloseAsync(context);
         }
     }
 }

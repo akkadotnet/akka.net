@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InitialHeartbeatSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -56,35 +57,23 @@ namespace Akka.Cluster.Tests.MultiNode
             TestTransport = true;
         }
         
-        public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode2 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
-        {
-        }
-        
-        public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
+        public class InitialHeartbeatSpec : MultiNodeClusterSpec
         {
             private readonly InitialHeartbeatMultiNodeConfig _config;
 
-            protected InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
+            public InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
             {
             }
 
             private InitialHeartbeatSpec(InitialHeartbeatMultiNodeConfig config)
-                : base(config)
+                : base(config, typeof(InitialHeartbeatSpec))
             {
                 _config = config;
                 MuteMarkingAsUnreachable();
             }
 
-            //[MultiNodeFact] //currently bugged, due to issues with TestKit
-            public void AMemberMustDetectFailureEvenThoughNoHeartbeatsHaveBeenReceived()
+            [MultiNodeFact]
+            public void A_member_must_detect_failure_even_though_no_heartbeats_have_been_received()
             {
                 var firstAddress = GetAddress(_config.First);
                 var secondAddress = GetAddress(_config.Second);
@@ -115,10 +104,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(50));
                 }, _config.Second);
 
-                //TODO: Seem to be able to pass barriers once other node fails?
                 EnterBarrier("second-joined");
-
-                return;
 
                 // It is likely that second has not started heartbeating to first yet,
                 // and when it does the messages doesn't go through and the first extra heartbeat is triggered.

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Transport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -9,21 +9,46 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using System.Runtime.Serialization;
+using Akka.Event;
 
 namespace Akka.Remote.Transport
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class Transport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Config Config { get; protected set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystem System { get; protected set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual string SchemeIdentifier { get; protected set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual long MaximumPayloadBytes { get; protected set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remote">TBD</param>
+        /// <returns>TBD</returns>
         public abstract bool IsResponsibleFor(Address remote);
 
         /// <summary>
@@ -74,6 +99,7 @@ namespace Akka.Remote.Transport
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="InvalidAssociationException"/> class.
         /// </summary>
@@ -83,6 +109,7 @@ namespace Akka.Remote.Transport
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -95,23 +122,41 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class InboundPayload : IHandleEvent
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
         public InboundPayload(ByteString payload)
         {
             Payload = payload;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ByteString Payload { get; private set; }
 
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("InboundPayload(size = {0} bytes)", Payload.Length);
+            return $"InboundPayload(size = {Payload.Length} bytes)";
         }
     }
 
-    public sealed class Disassociated : IHandleEvent
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class Disassociated : IHandleEvent, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly DisassociateInfo Info;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
         public Disassociated(DisassociateInfo info)
         {
             Info = info;
@@ -123,9 +168,20 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class UnderlyingTransportError : IHandleEvent
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly Exception Cause;
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly string Message;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
         public UnderlyingTransportError(Exception cause, string message)
         {
             Cause = cause;
@@ -138,8 +194,17 @@ namespace Akka.Remote.Transport
     /// </summary>
     public enum DisassociateInfo
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         Unknown = 0,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Shutdown = 1,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Quarantined = 2
     }
 
@@ -190,7 +255,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker type for whenever new actors / endpoints are associated with this <see cref="ActorSystem"/> via remoting.
     /// </summary>
-    public interface IAssociationEvent
+    public interface IAssociationEvent : INoSerializationVerificationNeeded
     {
 
     }
@@ -201,11 +266,18 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class InboundAssociation : IAssociationEvent
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="association">TBD</param>
         public InboundAssociation(AssociationHandle association)
         {
             Association = association;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle Association { get; private set; }
     }
 
@@ -260,6 +332,11 @@ namespace Akka.Remote.Transport
     /// </summary>
     public abstract class AssociationHandle
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
         protected AssociationHandle(Address localAddress, Address remoteAddress)
         {
             LocalAddress = localAddress;
@@ -309,6 +386,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         public abstract void Disassociate();
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -317,11 +395,13 @@ namespace Akka.Remote.Transport
             return Equals((AssociationHandle) obj);
         }
 
+        /// <inheritdoc/>
         protected bool Equals(AssociationHandle other)
         {
             return Equals(LocalAddress, other.LocalAddress) && Equals(RemoteAddress, other.RemoteAddress);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

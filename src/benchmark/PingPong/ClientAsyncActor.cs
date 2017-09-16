@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClientAsyncActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,7 +19,7 @@ namespace PingPong
         {
             var received = 0L;
             var sent = 0L;
-            Receive<Messages.Msg>(async m =>
+            ReceiveAsync<Messages.Msg>(async m =>
             {
                 received++;
                 if (sent < repeat)

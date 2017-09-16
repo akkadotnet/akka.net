@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -62,9 +62,12 @@ namespace Akka.TestKit
         /// If no <paramref name="system"/> is passed in, a new system 
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
-        /// <param name="assertions"></param>
+        /// <param name="assertions">The framework-specific assertion tools.</param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
+        /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
             : this(assertions, system, _defaultConfig, null, testActorName)
         {
@@ -74,10 +77,13 @@ namespace Akka.TestKit
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// A new system with the specified configuration will be created.
         /// </summary>
+        /// <param name="assertions">TBD</param>
         /// <param name="config">The configuration to use for the system.</param>
+        /// <param name="actorSystemName">TBD</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
-        /// <param name="assertions"></param>
-        /// <param name="actorSystemName"></param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
+        /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
             : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
@@ -85,13 +91,20 @@ namespace Akka.TestKit
 
         private TestKitBase(ITestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
-            if(assertions == null) throw new ArgumentNullException("assertions");
+            if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
             _assertions = assertions;
             
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
+        /// <summary>
+        /// Initializes the <see cref="TestState"/> for a new spec.
+        /// </summary>
+        /// <param name="system">The actor system this test will use. Can be null.</param>
+        /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="testActorName">The name of the test actor. Can be null.</param>
         protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
@@ -145,13 +158,44 @@ namespace Akka.TestKit
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
 
+        /// <summary>
+        /// The <see cref="ActorSystem"/> that is recreated and used for each test.
+        /// </summary>
         public ActorSystem Sys { get { return _testState.System; } }
+
+        /// <summary>
+        /// The settings for the testkit.
+        /// </summary>
         public TestKitSettings TestKitSettings { get { return _testState.TestKitSettings; } }
+
+        /// <summary>
+        /// The last <see cref="IActorRef"/> to send a message to the <see cref="TestActor"/>.
+        /// </summary>
         public IActorRef LastSender { get { return _testState.LastMessage.Sender; } }
+
+        /// <summary>
+        /// The default TestKit configuration.
+        /// </summary>
         public static Config DefaultConfig { get { return _defaultConfig; } }
+
+        /// <summary>
+        /// A full debugging configuration with all log settings enabled.
+        /// </summary>
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
+
+        /// <summary>
+        /// The current time.
+        /// </summary>
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
+
+        /// <summary>
+        /// The built-in <see cref="ILoggingAdapter"/> used by <see cref="Sys"/>.
+        /// </summary>
         public ILoggingAdapter Log { get { return _testState.Log; } }
+
+        /// <summary>
+        /// The last message received by the <see cref="TestActor"/>.
+        /// </summary>
         public object LastMessage { get { return _testState.LastMessage.Message; } }
 
         /// <summary>
@@ -173,6 +217,15 @@ namespace Akka.TestKit
         /// </summary>
         public EventFilterFactory EventFilter { get { return _testState.EventFilterFactory; } }
 
+        /// <summary>
+        /// Creates a new event filter for the specified actor system.
+        /// </summary>
+        /// <param name="system">Actor system.</param>
+        /// <returns>A new instance of <see cref="EventFilterFactory"/>.</returns>
+        public EventFilterFactory CreateEventFilter(ActorSystem system)
+        {
+            return new EventFilterFactory(this, system);
+        }
 
         /// <summary>
         /// Returns <c>true</c> if messages are available.
@@ -195,7 +248,28 @@ namespace Akka.TestKit
         {
             _testState.TestActor.Tell(new TestActor.SetIgnore(m => shouldIgnoreMessage(m)));
         }
+        
+        /// <summary>
+        /// Ignore all messages in the test actor of the given TMsg type for which the given function 
+        /// returns <c>true</c>.
+        /// </summary>
+        /// <typeparam name="TMsg">The type of the message to ignore.</typeparam>
+        /// <param name="shouldIgnoreMessage">Given a message, if the function returns 
+        /// <c>true</c> the message will be ignored by <see cref="TestActor"/>.</param>
+        public void IgnoreMessages<TMsg>(Func<TMsg, bool> shouldIgnoreMessage)
+        {
+            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg && shouldIgnoreMessage((TMsg)m)));
+        }
 
+        /// <summary>
+        /// Ignore all messages in the test actor of the given TMsg type.
+        /// </summary>
+        /// <typeparam name="TMsg">The type of the message to ignore.</typeparam>
+        public void IgnoreMessages<TMsg>()
+        {
+            IgnoreMessages<TMsg>(_ => true);
+        }
+        
         /// <summary>Stop ignoring messages in the test actor.</summary>
         public void IgnoreNoMessages()
         {
@@ -226,11 +300,15 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// <para>
         /// Install an <see cref="AutoPilot" /> to drive the <see cref="TestActor" />.
         /// The <see cref="AutoPilot" /> will be run for each received message and can
         /// be used to send or forward messages, etc.
+        /// </para>
+        /// <para>
         /// Each invocation must return the AutoPilot for the next round. To reuse the
-        /// same <see cref="AutoPilot" /> return <see cref="AutoPilot.KeepRunning" />
+        /// same <see cref="AutoPilot" /> return <see cref="AutoPilot.KeepRunning" />.
+        /// </para>
         /// </summary>
         /// <param name="pilot">The pilot to install.</param>
         public void SetAutoPilot(AutoPilot pilot)
@@ -238,23 +316,30 @@ namespace Akka.TestKit
             _testState.TestActor.Tell(new TestActor.SetAutoPilot(pilot));
         }
 
-
-        /// <summary>Obtain time remaining for execution of the innermost enclosing `within`
-        /// block or missing that it returns the properly dilated default for this
-        /// case from settings (key "akka.test.single-expect-default"). <remarks>The returned value is always finite.</remarks>
+        /// <summary>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// If missing that, then it returns the properly dilated default for this
+        /// case from settings (key: "akka.test.single-expect-default").
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
         public TimeSpan RemainingOrDefault
         {
             get { return RemainingOr(Dilated(SingleExpectDefaultTimeout)); }
         }
 
-
         /// <summary>
-        /// Obtain time remaining for execution of the innermost enclosing <see cref="Within(System.TimeSpan,System.Action)">Within</see>
-        /// block or throw an <see cref="InvalidOperationException" /> if no `within` block surrounds this
-        /// call. <remarks>The returned value is always finite.</remarks>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">Thrown if this was called outside of within</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when called from outside of `within`.
+        /// </exception>
         public TimeSpan Remaining
         {
             get
@@ -269,6 +354,9 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
+        /// <param name="duration">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
             if (!_testState.End.HasValue) return duration;
@@ -287,7 +375,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
-        /// <exception cref="System.ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
@@ -300,6 +388,8 @@ namespace Akka.TestKit
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
         /// i.e. the config value "akka.test.timefactor"
         /// </summary>
+        /// <param name="duration">TBD</param>
+        /// <returns>TBD</returns>
         public TimeSpan Dilated(TimeSpan duration)
         {
             if(duration.IsPositiveFinite())
@@ -313,6 +403,8 @@ namespace Akka.TestKit
         /// If <paramref name="timeout"/> is defined it is returned; otherwise
         /// the config value "akka.test.single-expect-default" is returned.
         /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
         {
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
@@ -338,6 +430,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">TBD</exception>
         protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
             if (system == null) system = _testState.System;
@@ -364,7 +457,7 @@ namespace Akka.TestKit
         /// <para>The default test actor can be retrieved from the <see cref="TestActor"/> property</para>
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_testState.System, name);
@@ -374,7 +467,7 @@ namespace Akka.TestKit
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
-            var testActor = system.ActorOf(testActorProps, name);
+            var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
 
@@ -383,7 +476,7 @@ namespace Akka.TestKit
         /// Creates a new <see cref="TestProbe" />.
         /// </summary>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns></returns>
+        /// <returns>A new <see cref="TestProbe"/> instance.</returns>
         public virtual TestProbe CreateTestProbe(string name=null)
         {
             return CreateTestProbe(Sys, name);
@@ -394,7 +487,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="system">For multi-actor system tests, you can specify which system the node is for.</param>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public virtual TestProbe CreateTestProbe(ActorSystem system, string name = null)
         {
             return new TestProbe(system, _assertions, name);
@@ -419,12 +512,11 @@ namespace Akka.TestKit
         /// It always uses a timeout when waiting.
         /// Timeouts will always throw an exception. The default timeout is 5 seconds.
         /// </summary>
+        /// <param name="count">TBD</param>
+        /// <returns>TBD</returns>
         public TestBarrier CreateTestBarrier(int count)
         {
             return new TestBarrier(this, count, _testState.TestKitSettings.DefaultTimeout);
         }
-
     }
-
 }
-

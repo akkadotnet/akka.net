@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterlockedSpin.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,6 +22,9 @@ namespace Akka.Util.Internal
         /// Note that <paramref name="updater"/> may be called many times so it should be idempotent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="reference">TBD</param>
+        /// <param name="updater">TBD</param>
         /// <returns>The updated value.</returns>
         public static T Swap<T>(ref T reference, Func<T, T> updater) where T : class
         {
@@ -43,6 +46,10 @@ namespace Akka.Util.Internal
         /// Note that <paramref name="updateIfTrue"/> may be called many times so it should be idempotent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TReturn">TBD</typeparam>
+        /// <param name="reference">TBD</param>
+        /// <param name="updateIfTrue">TBD</param>
         /// <returns>The third value from the tuple return by <paramref name="updateIfTrue"/>.</returns>
         public static TReturn ConditionallySwap<T, TReturn>(ref T reference, Func<T, Tuple<bool, T, TReturn>> updateIfTrue) where T : class
         {

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -13,11 +13,11 @@ using System.Linq;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents the base event bus, internally manages subscriptions using the event type, classifier type and subscriber type.
+    /// This class provides base publish/subscribe functionality for working with events inside the system.
     /// </summary>
-    /// <typeparam name="TEvent">The type of the event.</typeparam>
-    /// <typeparam name="TClassifier">The type of the classifier.</typeparam>
-    /// <typeparam name="TSubscriber">The type of the subscriber.</typeparam>
+    /// <typeparam name="TEvent">The type of event published to the bus.</typeparam>
+    /// <typeparam name="TClassifier">The type of classifier used to classify events.</typeparam>
+    /// <typeparam name="TSubscriber">The type of the subscriber that listens for events.</typeparam>
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
         private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers =
@@ -27,37 +27,36 @@ namespace Akka.Event
             new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
 
         /// <summary>
-        /// Simples the name.
+        /// Retrieves the simplified type name (the class name without the namespace) of a given object.
         /// </summary>
-        /// <param name="source">The source.</param>
-        /// <returns>System.String.</returns>
+        /// <param name="source">The object that is being queried.</param>
+        /// <returns>The simplified type name of the given object.</returns>
         protected string SimpleName(object source)
         {
             return SimpleName(source.GetType());
         }
 
         /// <summary>
-        /// Simples the name.
+        /// Retrieves the simplified type name (the class name without the namespace) of a given type.
         /// </summary>
-        /// <param name="source">The source.</param>
-        /// <returns>System.String.</returns>
+        /// <param name="source">The object that is being queried.</param>
+        /// <returns>The simplified type name of the given type.</returns>
         protected string SimpleName(Type source)
         {
             return source.Name;
         }
 
         /// <summary>
-        /// Subscribes the specified subscriber.
+        /// Adds the specified subscriber to the list of subscribers that listen for particular events on the bus.
         /// </summary>
-        /// <param name="subscriber">The subscriber.</param>
-        /// <param name="classifier">The classifier.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="subscriber">The subscriber that is being added.</param>
+        /// <param name="classifier">The classifier of the event that the subscriber wants.</param>
+        /// <returns><c>true</c> if the subscription succeeds; otherwise <c>false</c>.</returns>
         public virtual bool Subscribe(TSubscriber subscriber, TClassifier classifier)
         {
             lock (_classifiers)
             {
-                List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (!_classifiers.TryGetValue(classifier, out subscribers))
+                if (!_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     subscribers = new List<Subscription<TSubscriber, TClassifier>>();
                     _classifiers.Add(classifier, subscribers);
@@ -76,10 +75,10 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Unsubscribes the specified subscriber.
+        /// Removes the specified subscriber from the list of subscribers that listen for particular events on the bus.
         /// </summary>
-        /// <param name="subscriber">The subscriber.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="subscriber">The subscriber that is being removed.</param>
+        /// <returns><c>true</c> if the subscription cancellation succeeds; otherwise <c>false</c>.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber)
         {
             lock (_classifiers)
@@ -88,8 +87,7 @@ namespace Akka.Event
 
                 foreach (var classifier in _classifiers.Keys)
                 {
-                    List<Subscription<TSubscriber, TClassifier>> subscribers;
-                    if (!_classifiers.TryGetValue(classifier, out subscribers)) 
+                    if (!_classifiers.TryGetValue(classifier, out var subscribers)) 
                         continue;
                     
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
@@ -102,33 +100,30 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Unsubscribes the specified subscriber.
+        /// Removes the specified subscriber from the list of subscribers that listen for particular events on the bus.
         /// </summary>
-        /// <param name="subscriber">The subscriber.</param>
-        /// <param name="classifier">The classifier.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="subscriber">The subscriber that is being removed.</param>
+        /// <param name="classifier">The classifier of the event that the subscriber wants.</param>
+        /// <returns><c>true</c> if the subscription cancellation succeeds; otherwise <c>false</c>.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber, TClassifier classifier)
         {
             lock (_classifiers)
             {
                 var res = false;
 
-                List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (_classifiers.TryGetValue(classifier, out subscribers))
+                if (_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
                 }
                 else
                 {
-                    foreach (var kvp in _classifiers)
-                    {
-                        if (!IsSubClassification(kvp.Key, classifier)) 
+                    foreach (var kvp in _classifiers) {
+                        if (!IsSubClassification(kvp.Key, classifier))
                             continue;
 
                         var subscriptions = kvp.Value.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
-                        foreach (var existingSubscriber in subscriptions)
-                        {
+                        foreach (var existingSubscriber in subscriptions) {
                             existingSubscriber.Unsubscriptions.Add(classifier);
                             res = true;
                         }
@@ -140,57 +135,51 @@ namespace Akka.Event
             }
         }
 
-        /// <summary>
-        /// Clears the cache.
-        /// </summary>
         private void ClearCache()
         {
             _cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
         }
 
         /// <summary>
-        /// Determines whether [is sub classification] [the specified parent].
+        /// Determines whether a specified classifier, <paramref name="child"/>, is a subclass of another classifier, <paramref name="parent"/>.
         /// </summary>
-        /// <param name="parent">The parent.</param>
-        /// <param name="child">The child.</param>
-        /// <returns><c>true</c> if [is sub classification] [the specified parent]; otherwise, <c>false</c>.</returns>
+        /// <param name="parent">The potential parent of the classifier that is being checked.</param>
+        /// <param name="child">The classifier that is being checked.</param>
+        /// <returns><c>true</c> if the <paramref name="child"/> classifier is a subclass of <paramref name="parent"/>; otherwise <c>false</c>.</returns>
         protected abstract bool IsSubClassification(TClassifier parent, TClassifier child);
 
         /// <summary>
-        /// Publishes the specified event.
+        /// Publishes the specified event directly to the specified subscriber.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="event">The event that is being published.</param>
+        /// <param name="subscriber">The subscriber that receives the event.</param>
         protected abstract void Publish(TEvent @event, TSubscriber subscriber);
 
         /// <summary>
-        /// Classifies the specified event.
+        /// Classifies the specified event using the specified classifier.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="classifier">The classifier.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="event">The event that is being classified.</param>
+        /// <param name="classifier">The classifier used to classify the event.</param>
+        /// <returns><c>true</c> if the classification succeeds; otherwise <c>false</c>.</returns>
         protected abstract bool Classify(TEvent @event, TClassifier classifier);
 
         /// <summary>
-        /// Gets the classifier.
+        /// Retrieves the classifier used to classify the specified event.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <returns>`1.</returns>
+        /// <param name="event">The event for which to retrieve the classifier.</param>
+        /// <returns>The classifier used to classify the event.</returns>
         protected abstract TClassifier GetClassifier(TEvent @event);
 
         /// <summary>
-        /// Publishes the specified event.
+        /// Publishes the specified event to the bus.
         /// </summary>
-        /// <param name="event">The event.</param>
+        /// <param name="event">The event that is being published.</param>
         public virtual void Publish(TEvent @event)
         {
             var eventClass = GetClassifier(@event);
 
-            List<TSubscriber> cachedSubscribers;
-            if (_cache.TryGetValue(eventClass, out cachedSubscribers))
-            {
+            if (_cache.TryGetValue(eventClass, out var cachedSubscribers))
                 PublishToSubscribers(@event, cachedSubscribers);
-            }
             else
             {
                 cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass);
@@ -198,11 +187,6 @@ namespace Akka.Event
             }
         }
 
-        /// <summary>
-        /// Publishes to subscribers.
-        /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="cachedSubscribers">The cached subscribers.</param>
         private void PublishToSubscribers(TEvent @event, List<TSubscriber> cachedSubscribers)
         {
             foreach (var subscriber in cachedSubscribers)
@@ -211,12 +195,6 @@ namespace Akka.Event
             }
         }
 
-        /// <summary>
-        /// Updates the cache for event classifier.
-        /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="eventClass">The event class.</param>
-        /// <returns>List{`2}.</returns>
         private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass)
         {
             lock (_classifiers)
@@ -249,4 +227,3 @@ namespace Akka.Event
         }
     }
 }
-

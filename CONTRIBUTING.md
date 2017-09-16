@@ -17,7 +17,7 @@ If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ o
 
 After reviewing a Pull request, we might ask you to fix some commits. After you've done that you need to force push to update your branch in your local fork.
 
-####Title and Description for the Pull Request####
+#### Title and Description for the Pull Request  
 Give the PR a descriptive title and in the description field describe what you have done in general terms and why. This will help the reviewers greatly, and provide a history for the future.
 
 Especially if you modify something existing, be very clear! Have you changed any algorithms, or did you just intend to reorder the code? Justify why the changes are needed.
@@ -129,6 +129,28 @@ git cherry-pick rev           #rev is the revisions you want to pick
 git cherry-pick rev           #repeat until you have picked all commits
 git branch -m dev old-dev     #rename dev
 git branch dev upstream/dev   #create a new dev
+```
+### What to do with feature branch after the pull request is merged and closed ? ###
+After a pull request has been merged and closed you can delete the feature branch.
+
+Get latest changes from the upstream
+
+```
+git checkout dev
+git fetch upstream
+git merge --ff-only upstream/dev
+git push origin dev
+```
+
+Remove the branch locally
+
+```
+git branch -d my-new-branch-123
+```
+Remove the branch on remote
+
+```
+git push origin --delete my-new-branch-123
 ```
 
 ## Code guidelines

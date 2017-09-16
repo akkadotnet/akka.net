@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BuiltInActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -21,6 +22,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return true;
@@ -30,8 +32,13 @@ namespace Akka.Actor
     /// <summary>
     ///     Class GuardianActor.
     /// </summary>
-    public class GuardianActor : ActorBase
+    public class GuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if(message is Terminated)
@@ -42,6 +49,14 @@ namespace Akka.Actor
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override void PreStart()
+        {
+            // guardian MUST NOT lose its children during restart
+        }
     }
 
     /// <summary>
@@ -49,11 +64,15 @@ namespace Akka.Actor
     /// 
     /// Root actor for all actors under the /system path.
     /// </summary>
-    public class SystemGuardianActor : ActorBase
+    public class SystemGuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly IActorRef _userGuardian;
         private readonly HashSet<IActorRef> _terminationHooks;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="userGuardian">TBD</param>
         public SystemGuardianActor(IActorRef userGuardian)
         {
             _userGuardian = userGuardian;
@@ -63,7 +82,8 @@ namespace Akka.Actor
         /// <summary>
         /// Processor for messages that are sent to the root system guardian
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var terminated = message as Terminated;
@@ -146,6 +166,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception reason, object message)
         {
             //Guardian MUST NOT lose its children during restart
@@ -160,28 +185,56 @@ namespace Akka.Actor
     {
         private readonly EventStream _eventStream;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public DeadLetterActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
             : base(provider, path, eventStream)
         {
             _eventStream = eventStream;
         }
 
-        //TODO: Since this isn't overriding SendUserMessage it doesn't handle all messages as Akka JVM does
-
-        protected override void HandleDeadLetter(DeadLetter deadLetter)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            if(!SpecialHandle(deadLetter.Message, deadLetter.Sender))
-                _eventStream.Publish(deadLetter);
+            if (message == null) throw new InvalidMessageException("Message is null");
+            var i = message as Identify;
+            if (i != null)
+            {
+                sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
+                return;
+            }
+            var d = message as DeadLetter;
+            if (d != null)
+            {
+                if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
+                return;
+            }
+            if (!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this)); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;
-            if(w != null)
+            if (w != null)
             {
-                if(w.Watchee != this && w.Watcher != this)
+                if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {
-                    w.Watcher.Tell(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                    w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
                 return true;
             }
