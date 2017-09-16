@@ -3,7 +3,9 @@ uid: streams-io
 title: Working with streaming IO
 ---
 
-# Streaming File IO
+# Working with streaming IO
+
+## Streaming File IO
 
 Akka Streams provide simple Sources and Sinks that can work with `ByteString` instances to perform IO operations on files.
 
