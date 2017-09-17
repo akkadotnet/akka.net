@@ -1,7 +1,9 @@
 ---
-layout: docs.hbs
+uid: streams-pipelining
 title: Pipelining and Parallelism
 ---
+
+# Pipelining and Parallelism
 
 Akka Streams processing stages (be it simple operators on Flows and Sources or graph junctions) are "fused" together
 and executed sequentially by default. This avoids the overhead of events crossing asynchronous boundaries but
@@ -17,7 +19,7 @@ like to make pancakes, but they need to produce sufficient amount in a cooking s
 happy. To increase their pancake production throughput they use two frying pans. How they organize their pancake
 processing is markedly different.
 
-# Pipelining
+## Pipelining
 
 Bartosz uses the two frying pans in an asymmetric fashion. The first pan is only used to fry one side of the
 pancake then the half-finished pancake is flipped into the second pan for the finishing fry on the other side.
@@ -55,9 +57,9 @@ not be able to operate at full capacity [*1](_).
 > [!NOTE]
 > Asynchronous stream processing stages have internal buffers to make communication between them more efficient.
 For more details about the behavior of these and how to add additional buffers refer to 
-[Buffers and working with rate](buffersandworkingwithrate.md).
+[Buffers and working with rate](xref:streams-buffers).
 
-# Parallel processing
+## Parallel processing
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
 the results on a shared plate. Whenever a pan becomes empty, he takes the next scoop from the shared bowl of batter.
 In essence he parallelizes the same process over multiple pans. This is how this setup will look like if implemented
@@ -91,9 +93,9 @@ if children like to track their "own" pancakes. In those cases the ``Balance`` a
 by strict round-robin balancing and merging stages that put in and take out pancakes in a strict order.
 
 A more detailed example of creating a worker pool can be found in the cookbook: 
-[Balancing jobs to a fixed pool of workers](cookbook.md#balancing-jobs-to-a-fixed-pool-of-workers)
+[Balancing jobs to a fixed pool of workers](xref:streams-cookbook#balancing-jobs-to-a-fixed-pool-of-workers)
 
-# Combining pipelining and parallel processing
+## Combining pipelining and parallel processing
 
 The two concurrency patterns that we demonstrated as means to increase throughput are not exclusive.
 In fact, it is rather simple to combine the two approaches and streams provide

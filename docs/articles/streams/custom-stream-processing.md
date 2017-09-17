@@ -4,7 +4,7 @@ title: Custom stream processing
 ---
 
 # Custom stream processing
-While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](cookbook.md) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for preformance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
+While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for preformance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
@@ -12,7 +12,7 @@ While the processing vocabulary of Akka Streams is quite rich (see the [Streams 
 ## Custom processing with GraphStage
 The `GraphStage` abstraction can be used to create arbitrary graph processing stages with any number of input or output ports. It is a counterpart of the `GraphDSL.Create()` method which creates new stream processing stages by composing others. Where `GraphStage` differs is that it creates a stage that is itself not divisible into smaller ones, and allows state to be maintained inside it in a safe way.
 
-As a first motivating example, we will build a new `Source` that will simply emit numbers from 1 until it is cancelled. To start, we need to define the "interface" of our stage, which is called shape in Akka Streams terminology (this is explained in more detail in the section [Modularity, Composition and Hierarchy](modularitycomposition.md)). This is how this looks like:
+As a first motivating example, we will build a new `Source` that will simply emit numbers from 1 until it is cancelled. To start, we need to define the "interface" of our stage, which is called shape in Akka Streams terminology (this is explained in more detail in the section [Modularity, Composition and Hierarchy](xref:streams-modularity)). This is how this looks like:
 
 ```csharp
 using Akka.Streams.Stage;
@@ -77,7 +77,7 @@ class NumbersSource : GraphStage<SourceShape<int>>
 }
 ```
 
-Instances of the above `GraphStage` are subclasses of `Graph<SourceShape<int>, NotUsed>` which means that they are already usable in many situations, but do not provide the DSL methods we usually have for other `Source`s. In order to convert this `Graph`to a proper `Source` we need to wrap it using `Source.FromGraph` (see [Modularity, Composition and Hierarchy](modularitycomposition.md) for more details about graphs and DSLs). Now we can use the source as any other built-in one:
+Instances of the above `GraphStage` are subclasses of `Graph<SourceShape<int>, NotUsed>` which means that they are already usable in many situations, but do not provide the DSL methods we usually have for other `Source`s. In order to convert this `Graph`to a proper `Source` we need to wrap it using `Source.FromGraph` (see [Modularity, Composition and Hierarchy](xref:streams-modularity) for more details about graphs and DSLs). Now we can use the source as any other built-in one:
 
 ```csharp
 // A GraphStage is a proper Graph, just like what GraphDSL.Create would return
@@ -604,7 +604,7 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 
 Stages can access the `Attributes` object created by the materializer. This contains all the applied (inherited) attributes applying to the stage, ordered from least specific (outermost) towards the most specific (innermost) attribute. It is the responsibility of the stage to decide how to reconcile this inheritance chain to a final effective decision.
 
-See [Modularity, Composition and Hierarchy](modularitycomposition.md) for an explanation on how attributes work.
+See [Modularity, Composition and Hierarchy](xref:streams-modularity) for an explanation on how attributes work.
 
 ### Rate decoupled graph stages
 

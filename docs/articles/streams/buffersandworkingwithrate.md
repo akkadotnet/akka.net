@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-buffers
 title: Buffers and working with rate
 ---
 

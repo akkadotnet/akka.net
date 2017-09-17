@@ -1,9 +1,11 @@
 ---
-layout: docs.hbs
+uid: streams-basics
 title: Basics and working with Flows
 ---
 
-# Core concepts
+# Basics and working with Flows
+
+## Core concepts
 Akka Streams is a library to process and transfer a sequence of elements using bounded buffer space. 
 This latter property is what we refer to as _boundedness_ and it is the defining feature of Akka Streams. 
 Translated to everyday terms it is possible to express a chain (or as we see later, graphs) 
@@ -34,7 +36,7 @@ A description of a stream processing topology, defining the pathways through whi
 **Processing Stage**  
 The common name for all building blocks that build up a `Graph`. 
 Examples of a processing stage would be operations like `Select()`, `Where()`, custom `GraphStage's` and graph junctions like `Merge` or `Broadcast`. 
-For the full list of built-in processing stages see [Overview of built-in stages and their semantics](builtinstages.md)   
+For the full list of built-in processing stages see [stages overview](xref:streams-builtin-stages)   
   
 When we talk about _asynchronous, non-blocking backpressure_ we mean that the processing stages available in Akka Streams 
 will not use blocking calls but asynchronous message passing to exchange messages between each other, 
@@ -42,7 +44,7 @@ and they will use asynchronous means to slow down a fast producer, without block
 This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer) 
 will not block the thread but can hand it back for further use to an underlying thread-pool.  
 
-# Defining and running streams  
+## Defining and running streams  
 Linear processing pipelines can be expressed in Akka Streams using the following core abstractions:  
   
 **Source**  
@@ -84,6 +86,7 @@ stage can produce a materialized value, and it is the responsibility of the user
 In the above example we used ``ToMaterialized`` to indicate that we want to transform the materialized value of the source and
 sink, and we used the convenience function ``Keep.Right`` to say that we are only interested in the materialized value
 of the sink.
+
 In our example the ``AggregateSink`` materializes a value of type ``Task<int>`` which will represent the result
 of the aggregating process over the stream.  In general, a stream can expose multiple materialized values,
 but it is quite common to be interested in only the value of the Source or the Sink in the stream. For this reason
@@ -117,7 +120,7 @@ zeroes.RunWith(Sink.Aggregate<int,int>(0, (agg, i) => agg + i), materializer); /
 > Also it allows for greater flexibility on *how exactly* to handle the multicast scenarios, 
 by providing named fan-out elements such as broadcast (signals all down-stream elements) or balance (signals one of available down-stream elements).  
 
-In the above example we used the ``runWith`` method, which both materializes the stream and returns the materialized value
+In the above example we used the ``RunWith`` method, which both materializes the stream and returns the materialized value
 of the given sink or source.
 
 Since a stream can be materialized multiple times, the materialized value will also be calculated new for each such
@@ -139,7 +142,7 @@ var sum2 = runnable.Run(materializer);
 // sum1 and sum2 are different Tasks!
   ```
     
-# Defining sources, sinks and flows  
+### Defining sources, sinks and flows  
 The objects `Source` and `Sink` define various ways to create sources and sinks of elements. The following
 examples show some of the most useful constructs (refer to the API documentation for more details):
 
@@ -196,12 +199,12 @@ var otherSink = Flow.Create<int>().AlsoTo(sink).To(Sink.Ignore<int>());
 Source.From(Enumerable.Range(1, 6)).To(otherSink);
 ```  
    
-#### Illegal stream elements
+### Illegal stream elements
 In accordance to the Reactive Streams specification ([Rule 2.13] (https://github.com/reactive-streams/reactive-streams-jvm#2.13>))
 Akka Streams do not allow ``null`` to be passed through the stream as an element. In case you want to model the concept
 of absence of a value we recommend using ``Akka.Streams.Util.Option<T>`` or ``Akka.Util.Either<TA,TB>``.  
 
-# Back-pressure explained
+## Back-pressure explained
 
 Akka Streams implement an asynchronous non-blocking back-pressure protocol standardised by the [Reactive Streams](http://reactive-streams.org/)
 specification, which Akka is a founding member of.
@@ -210,7 +213,7 @@ The user of the library does not have to write any explicit back-pressure handli
 and dealt with automatically by all of the provided Akka Streams processing stages. It is possible however to add
 explicit buffer stages with overflow strategies that can influence the behaviour of the stream. This is especially important
 in complex processing graphs which may even contain loops (which *must* be treated with very special
-care, as explained in [Graph cycles, liveness and deadlocks](workingwithgraphs.md#graph-cycles-liveness-and-deadlocks)).
+care, as explained in [Graph cycles, liveness and deadlocks](xref:streams-working-with-graphs#graph-cycles-liveness-and-deadlocks)).
 
 The back pressure protocol is defined in terms of the number of elements a downstream ``Subscriber`` is able to receive
 and buffer, referred to as ``demand``.
@@ -218,11 +221,9 @@ The source of data, referred to as ``Publisher`` in Reactive Streams terminology
 Streams, guarantees that it will never emit more elements than the received total demand for any given ``Subscriber``.  
 
 > [!NOTE]
-> The Reactive Streams specification defines its protocol in terms of ``Publisher`` and ``Subscriber``.
-> These types are **not** meant to be user facing API, instead they serve as the low level building blocks for different Reactive Streams implementations.
+> The Reactive Streams specification defines its protocol in terms of ``Publisher`` and ``Subscriber``. These types are **not** meant to be user facing API, instead they serve as the low level building blocks for different Reactive Streams implementations.
 > Akka Streams implements these concepts as ``Source``, ``Flow`` (referred to as ``Processor`` in Reactive Streams)
-and ``Sink`` without exposing the Reactive Streams interfaces directly.
-> If you need to integrate with other Reactive Stream libraries read [Integrating with Reactive Streams](integration.md#integrating-with-reactive-streams).
+and ``Sink`` without exposing the Reactive Streams interfaces directly. > If you need to integrate with other Reactive Stream libraries read [Integrating with Reactive Streams](xref:streams-integration#integrating-with-reactive-streams).
 
 The mode in which Reactive Streams back-pressure works can be colloquially described as "dynamic push / pull mode",
 since it will switch between push and pull based back-pressure models depending on the downstream being able to cope
@@ -230,7 +231,7 @@ with the upstream production rate or not.
 
 To illustrate this further let us consider both problem situations and how the back-pressure protocol handles them:
 
-#### Slow Publisher, fast Subscriber
+### Slow Publisher, fast Subscriber
 This is the happy case of course – we do not need to slow down the Publisher in this case. However signalling rates are
 rarely constant and could change at any point in time, suddenly ending up in a situation where the Subscriber is now
 slower than the Publisher. In order to safeguard from these situations, the back-pressure protocol must still be enabled
@@ -245,7 +246,7 @@ that the Publisher should not ever have to wait (be back-pressured) with publish
 As we can see, in this scenario we effectively operate in so called push-mode since the Publisher can continue producing
 elements as fast as it can, since the pending demand will be recovered just-in-time while it is emitting elements.
 
-#### Fast Publisher, slow Subscriber
+### Fast Publisher, slow Subscriber
 This is the case when back-pressuring the ``Publisher`` is required, because the ``Subscriber`` is not able to cope with
 the rate at which its upstream would like to emit data elements.
 
@@ -260,7 +261,7 @@ it will have to abide to this back-pressure by applying one of the below strateg
 As we can see, this scenario effectively means that the ``Subscriber`` will *pull* the elements from the Publisher –
 this mode of operation is referred to as pull-based back-pressure.
 
-# Stream Materialization
+## Stream Materialization
 
 When constructing flows and graphs in Akka Streams think of them as preparing a blueprint, an execution plan.
 Stream materialization is the process of taking a stream description (the graph) and allocating all the necessary resources
@@ -279,27 +280,12 @@ which will be running on the thread pools they have been configured to run on - 
 > [!NOTE]
 > Reusing *instances* of linear computation stages (Source, Sink, Flow) inside composite Graphs is legal, yet will materialize that stage multiple times.  
    
-#### Operator Fusion
-Akka Streams contains an initial version of stream operator fusion support. This means that
-the processing steps of a flow or stream graph can be executed within the same Actor and has three
-consequences:
-- starting up a stream may take longer than before due to executing the fusion algorithm
+### Operator Fusion
+By default Akka Streams will fuse the stream operators. This means that the processing steps of a flow or stream graph can be executed within the same Actor and has two consequences:
 - passing elements from one processing stage to the next is a lot faster between fused stages due to avoiding the asynchronous messaging overhead
-- fused stream processing stages do no longer run in parallel to each other, meaning that only up to one CPU core is used for each fused part
+- fused stream processing stages does not run in parallel to each other, meaning that only up to one CPU core is used for each fused part
 
-The first point can be countered by pre-fusing and then reusing a stream blueprint as sketched below:
-
-```csharp
-var flow = Flow.Create<int>().Select(x => x*2).Where(x => x > 500);
-var fused = Fusing.Aggressive(flow);
-
-Source.From(Enumerable.Range(0, int.MaxValue))
-    .Via(fused)
-    .Take(1000);
-```   
-
-In order to balance the effects of the second and third bullet points you will have to insert asynchronous
-boundaries manually into your flows and graphs by way of adding ``Attributes.AsyncBoundary`` using the method
+To allow for parallel processing you will have to insert asynchronous boundaries manually into your flows and graphs by way of adding ``Attributes.AsyncBoundary`` using the method
 ``Async`` on ``Source``, ``Sink`` and ``Flow`` to pieces that shall communicate with the rest of the graph in an
 asynchronous fashion.  
 
@@ -327,7 +313,7 @@ The new fusing behavior can be disabled by setting the configuration parameter `
 In that case you can still manually fuse those graphs which shall run on less Actors. With the exception of the
 `SslTlsStage` and the ``GroupBy`` operator all built-in processing stages can be fused.
 
-#### Combining materialized values
+### Combining materialized values
 Since every processing stage in Akka Streams can provide a materialized value after being materialized, it is necessary
 to somehow express how these values should be composed to a final value when we plug these stages together. For this,
 many combinator methods have variants that take an additional argument, a function, that will be used to combine the
@@ -351,8 +337,8 @@ IRunnableGraph<TaskCompletionSource<int>> r1 = source.Via(flow).To(sink);
 IRunnableGraph<ICancelable> r2 = source.ViaMaterialized(flow, Keep.Right).To(sink);
 IRunnableGraph<Task<int>> r3 = source.Via(flow).ToMaterialized(sink, Keep.Right);
 
-//Using runWith will always give the materialized values of the stages added
-//by RunWith() itself
+//Using RunWith will always give the materialized values of the stages added
+//by RunWith itself
 Task<int> r4 = source.Via(flow).RunWith(sink, materializer);
 TaskCompletionSource<int> r5 = flow.To(sink).RunWith(source, materializer);
 Tuple<TaskCompletionSource<int>, Task<int>> r6 = flow.RunWith(source, sink, materializer);
@@ -399,10 +385,10 @@ RunnableGraph<Tuple<TaskCompletionSource<int>, ICancelable, Task<int>>> r12 =
 
 > [!NOTE]
 > In Graphs it is possible to access the materialized value from inside the stream processing graph.
-> For details see [Accessing the materialized value inside the Graph](workingwithgraphs.md#accessing-the-materialized-value-inside-the-graph).
+> For details see [Accessing the materialized value inside the Graph](xref:streams-working-with-graphs#accessing-the-materialized-value-inside-the-graph).
    
 
-# Stream ordering
+## Stream ordering
 In Akka Streams almost all computation stages *preserve input order* of elements. This means that if inputs ``{IA1,IA2,...,IAn}``
 "cause" outputs ``{OA1,OA2,...,OAk}`` and inputs ``{IB1,IB2,...,IBm}`` "cause" outputs ``{OB1,OB2,...,OBl}`` and all of
 ``IAi`` happened before all ``IBi`` then ``OAi`` happens before ``OBi``.
