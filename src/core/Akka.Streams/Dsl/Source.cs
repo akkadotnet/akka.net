@@ -931,5 +931,21 @@ namespace Akka.Streams.Dsl
             Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
             return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
         }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to an existing <see cref="IObservable{T}"/>
+        /// </summary>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="observable">An <see cref="IObservable{T}"/> to which current source will be subscribed.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromObservable<T>(
+            IObservable<T> observable,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
+        }
     }
 }
