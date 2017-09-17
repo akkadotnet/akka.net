@@ -127,14 +127,17 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 var sub = s.ExpectSubscription();
+                sub.Request(2);
 
                 var e = new Exception("hello");
 
+                o.Event(1);
                 o.Error(e);
+                o.Event(2);
 
-                sub.Request(2);
-
+                s.ExpectNext(1);
                 s.ExpectError().ShouldBe(e);
+                s.ExpectNoMsg();
             }, _materializer);
         }
 

@@ -910,7 +910,8 @@ namespace Akka.Streams.Dsl
             int maxBufferCapacity = 128,
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
-            return FromGraph(new EventSourceStage<TDelegate, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<TDelegate, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
         }
 
         /// <summary>
@@ -929,7 +930,8 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
-            return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<EventHandler<T>, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
         }
 
         /// <summary>
