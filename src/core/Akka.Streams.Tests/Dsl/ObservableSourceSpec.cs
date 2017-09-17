@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -154,13 +155,8 @@ namespace Akka.Streams.Tests.Dsl
                 o.Complete();
 
                 sub.Request(5);
-
-                s.ExpectNext(1);
+                
                 s.ExpectComplete();
-
-                o.Event(2);
-
-                s.ExpectNoMsg();
             }, _materializer);
         }
 
@@ -180,6 +176,8 @@ namespace Akka.Streams.Tests.Dsl
                 o.Event(1);
 
                 sub.Cancel();
+
+                Thread.Sleep(100);
 
                 o.Subscribed.ShouldBeFalse();
             }, _materializer);
@@ -284,9 +282,7 @@ namespace Akka.Streams.Tests.Dsl
                 o.Event(3); // this should cause an error
 
                 sub.Request(3);
-
-                s.ExpectNext(1);
-                s.ExpectNext(2);
+                
                 s.ExpectError();
                 s.ExpectNoMsg();
 
