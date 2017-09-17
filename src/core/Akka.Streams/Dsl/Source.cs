@@ -893,7 +893,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="TDelegate">Delegate type used to attach current source.</typeparam>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
@@ -915,7 +917,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
         /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
@@ -935,7 +939,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to an existing <see cref="IObservable{T}"/>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to an existing <see cref="IObservable{T}"/>. In case when upstream (an <paramref name="observable"/>)
+        /// is producing events in a faster pace, than downstream is able to consume them, a buffering will occur. It can be configured via optional 
+        /// <paramref name="maxBufferCapacity"/> and <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
         /// <param name="observable">An <see cref="IObservable{T}"/> to which current source will be subscribed.</param>

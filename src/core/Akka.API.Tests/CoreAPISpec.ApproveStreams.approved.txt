@@ -1601,6 +1601,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, Akka.Actor.IActorRef> ActorSubscriber<TIn>(Akka.Actor.Props props) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TOut>> Aggregate<TIn, TOut>(TOut zero, System.Func<TOut, TIn, TOut> aggregate) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TOut>> AggregateAsync<TIn, TOut>(TOut zero, System.Func<TOut, TIn, System.Threading.Tasks.Task<TOut>> aggregate) { }
+        public static Akka.Streams.Dsl.Sink<T, System.IObservable<T>> AsObservable<T>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> AsPublisher<TIn>(bool fanout) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
@@ -1654,6 +1655,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<TDelegate, T>(System.Func<System.Action<T>, TDelegate> conversion, System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<T>(System.Action<System.EventHandler<T>> addHandler, System.Action<System.EventHandler<T>> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, TMat> FromGraph<T, TMat>(Akka.Streams.IGraph<Akka.Streams.SourceShape<T>, TMat> source) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromObservable<T>(System.IObservable<T> observable, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromPublisher<T>(Reactive.Streams.IPublisher<T> publisher) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
         public static Akka.Streams.Dsl.Source<TOut, System.Threading.Tasks.Task<TMat>> Lazily<TOut, TMat>(System.Func<Akka.Streams.Dsl.Source<TOut, TMat>> create) { }
@@ -2514,14 +2516,6 @@ namespace Akka.Streams.Implementation
         public abstract Akka.Streams.Implementation.EnumerableActorName Copy(string newPrefix);
         public static Akka.Streams.Implementation.EnumerableActorName Create(string prefix) { }
         public abstract string Next();
-    }
-    [Akka.Annotations.InternalApiAttribute()]
-    public sealed class EventSourceStage<TDelegate, TEventArgs> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TEventArgs>>
-    {
-        public EventSourceStage(System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, System.Func<System.Action<TEventArgs>, TDelegate> conversion, int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
-        public Akka.Streams.Outlet<TEventArgs> Out { get; }
-        public override Akka.Streams.SourceShape<TEventArgs> Shape { get; }
-        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public abstract class ExposedPublisherReceive
     {
