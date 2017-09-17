@@ -57,7 +57,7 @@ not be able to operate at full capacity [*1](_).
 > [!NOTE]
 > Asynchronous stream processing stages have internal buffers to make communication between them more efficient.
 For more details about the behavior of these and how to add additional buffers refer to 
-[Buffers and working with rate](buffersandworkingwithrate.md).
+[Buffers and working with rate](xref:streams-buffers).
 
 ## Parallel processing
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
@@ -93,7 +93,7 @@ if children like to track their "own" pancakes. In those cases the ``Balance`` a
 by strict round-robin balancing and merging stages that put in and take out pancakes in a strict order.
 
 A more detailed example of creating a worker pool can be found in the cookbook: 
-[Balancing jobs to a fixed pool of workers](cookbook.md#balancing-jobs-to-a-fixed-pool-of-workers)
+[Balancing jobs to a fixed pool of workers](xref:streams-cookbook#balancing-jobs-to-a-fixed-pool-of-workers)
 
 ## Combining pipelining and parallel processing
 

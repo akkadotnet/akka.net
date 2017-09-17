@@ -298,7 +298,7 @@ needs to return a different object that provides the necessary interaction capab
 Unlike actors though, each of the processing stages might provide a materialized value, so when we compose multiple
 stages or modules, we need to combine the materialized value as well (there are default rules which make this easier,
 for example `To()` and `Via()` takes care of the most common case of taking the materialized value to the left.
-See [Combining materialized values](basics.md#combining-materialized-values) for details). We demonstrate how this works by a code example and a diagram which graphically demonstrates what is happening.
+See [Combining materialized values](xref:streams-basics#combining-materialized-values) for details). We demonstrate how this works by a code example and a diagram which graphically demonstrates what is happening.
 
 The propagation of the individual materialized values from the enclosed modules towards the top will look like this:
 
@@ -375,14 +375,14 @@ var runnableGraph = nestedSource.ToMaterialized(nestedSink, (completion, rest) =
 ```
 
 > [!NOTE]
-> The nested structure in the above example is not necessary for combining the materialized values, it just demonstrates how the two features work together. See [Combining materialized values](basics.md#combining-materialized-values) for further examples of combining materialized values without nesting and hierarchy involved.
+> The nested structure in the above example is not necessary for combining the materialized values, it just demonstrates how the two features work together. See [Combining materialized values](xref:streams-basics#combining-materialized-values) for further examples of combining materialized values without nesting and hierarchy involved.
 
 ## Attributes
 We have seen that we can use ``Named()`` to introduce a nesting level in the fluid DSL (and also explicit nesting by using
 ``Create()`` from :class:`GraphDSL`). Apart from having the effect of adding a nesting level, ``Named()`` is actually
 a shorthand for calling ``WithAttributes(Attributes.CreateName("someName"))``. Attributes provide a way to fine-tune certain
 aspects of the materialized running entity. For example buffer sizes for asynchronous stages can be controlled via
-attributes ([see](buffersandworkingwithrate.md#buffers-for-asynchronous-stages)). When it comes to hierarchic composition, attributes are inherited by nested modules, unless they override them with a custom value.
+attributes ([see](xref:streams-buffers#buffers-for-asynchronous-stages)). When it comes to hierarchic composition, attributes are inherited by nested modules, unless they override them with a custom value.
 
 The code below, a modification of an earlier example sets the ``InputBuffer`` attribute on certain modules, but not
 on others:

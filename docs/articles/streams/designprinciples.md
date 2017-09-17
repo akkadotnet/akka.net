@@ -69,7 +69,7 @@ Akka Streams must enable a library to express any stream processing utility in t
 > A source that emits a stream of streams is still just a normal Source, the kind of elements that are produced does not play a role in the static stream topology that is being expressed.
 
 ## The difference between Error and Failure
-The starting point for this discussion is the definition given by the [Reactive Manifesto](http://www.reactivemanifesto.org/glossary#Failure). Translated to streams this means that an error is accessible within the stream as a normal data element, while a failure means that the stream itself has failed and is collapsing. In concrete terms, on the Reactive Streams interface level data elements (including errors) are signalled via `OnNext` while failures raise the `onError` signal.
+The starting point for this discussion is the definition given by the [Reactive Manifesto](http://www.reactivemanifesto.org/glossary#Failure). Translated to streams this means that an error is accessible within the stream as a normal data element, while a failure means that the stream itself has failed and is collapsing. In concrete terms, on the Reactive Streams interface level data elements (including errors) are signalled via `OnNext` while failures raise the `OnError` signal.
 
 > [!NOTE]
 > Unfortunately the method name for signalling *failure* to a Subscriber is called `OnError` for historical reasons. Always keep in mind that the Reactive Streams interfaces (Publisher/Subscription/Subscriber) are modeling the low-level infrastructure for passing streams between execution units, and errors on this level are precisely the failures that we are talking about on the higher level that is modelled by Akka Streams.

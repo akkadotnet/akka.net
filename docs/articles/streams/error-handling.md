@@ -127,7 +127,7 @@ Here you can see that all `DivideByZeroException` will resume the processing, i.
 elements that cause the division by zero are effectively dropped.
 
 > [!NOTE]
-> Be aware that dropping elements may result in deadlocks in graphs with cycles, as explained in [Graph cycles, liveness and deadlocks](xref:working-with-graphs#graph-cycles-liveness-and-deadlocks).
+> Be aware that dropping elements may result in deadlocks in graphs with cycles, as explained in [Graph cycles, liveness and deadlocks](xref:streams-working-with-graphs#graph-cycles-liveness-and-deadlocks).
 
 The supervision strategy can also be defined for all operators of a flow.
 

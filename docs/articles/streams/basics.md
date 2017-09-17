@@ -223,7 +223,7 @@ Streams, guarantees that it will never emit more elements than the received tota
 > [!NOTE]
 > The Reactive Streams specification defines its protocol in terms of ``Publisher`` and ``Subscriber``. These types are **not** meant to be user facing API, instead they serve as the low level building blocks for different Reactive Streams implementations.
 > Akka Streams implements these concepts as ``Source``, ``Flow`` (referred to as ``Processor`` in Reactive Streams)
-and ``Sink`` without exposing the Reactive Streams interfaces directly. > If you need to integrate with other Reactive Stream libraries read [Integrating with Reactive Streams](integration.md#integrating-with-reactive-streams).
+and ``Sink`` without exposing the Reactive Streams interfaces directly. > If you need to integrate with other Reactive Stream libraries read [Integrating with Reactive Streams](xref:streams-integration#integrating-with-reactive-streams).
 
 The mode in which Reactive Streams back-pressure works can be colloquially described as "dynamic push / pull mode",
 since it will switch between push and pull based back-pressure models depending on the downstream being able to cope
@@ -338,7 +338,7 @@ IRunnableGraph<ICancelable> r2 = source.ViaMaterialized(flow, Keep.Right).To(sin
 IRunnableGraph<Task<int>> r3 = source.Via(flow).ToMaterialized(sink, Keep.Right);
 
 //Using RunWith will always give the materialized values of the stages added
-//by RunWith() itself
+//by RunWith itself
 Task<int> r4 = source.Via(flow).RunWith(sink, materializer);
 TaskCompletionSource<int> r5 = flow.To(sink).RunWith(source, materializer);
 Tuple<TaskCompletionSource<int>, Task<int>> r6 = flow.RunWith(source, sink, materializer);

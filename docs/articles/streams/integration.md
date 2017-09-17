@@ -58,7 +58,7 @@ If that is not desired outcome you can use `Recover` on the `Ask` `CompletionSta
 If you don't care about the replies you can use `Sink.Ignore` after the `SelectAsync` stage 
 and then actor is effectively a sink of the stream.
 
-The same pattern can be used with [Actor routers](../actors/routers.md#Routers). Then you can use 
+The same pattern can be used with [Actor routers](xref:routers). Then you can use 
 `SelectAsyncUnordered` for better efficiency if you don't care about the order of the emitted 
 downstream elements (the replies).
 
@@ -72,7 +72,7 @@ If the target actor terminates the stream will be cancelled. When the stream is 
 the  given `OnCompleteMessage` will be sent to the destination actor. When the stream 
 is completed with failure a `Akka.Actor.Status.Failure` message will be sent to the destination actor.
 
->**Note**<br/>
+> [!NOTE]
 >Using `Sink.ActorRef` or ordinary `Tell` from a `Select` or `ForEach` stage means that there is 
 >no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages 
 >fast enough the mailbox of the actor will grow, unless you use a bounded mailbox with zero 
