@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -1043,7 +1044,8 @@ namespace Akka.Streams.Implementation
                             // do nothing
                         };
                     case OverflowStrategy.DropBuffer:
-                        return message => {
+                        return message =>
+                        {
                             _buffer.Clear();
                             Enqueue(message);
                         };
@@ -1190,7 +1192,8 @@ namespace Akka.Streams.Implementation
                     case OverflowStrategy.DropNew:
                         return message => { /* do nothing */ };
                     case OverflowStrategy.DropBuffer:
-                        return message => {
+                        return message =>
+                        {
                             _buffer.Clear();
                             Enqueue(message);
                         };
