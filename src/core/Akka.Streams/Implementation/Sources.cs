@@ -1093,4 +1093,133 @@ namespace Akka.Streams.Implementation
         public override SourceShape<TEventArgs> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal sealed class ObservableSourceStage<T> : GraphStage<SourceShape<T>>
+    {
+        #region internal classes
+        
+        private sealed class Logic : GraphStageLogic, IObserver<T>
+        {
+            private readonly ObservableSourceStage<T> _stage;
+            private readonly LinkedList<T> _buffer;
+            private readonly Action<T> _onOverflow;
+            private readonly Action<T> _onEvent;
+            private readonly Action<Exception> _onError;
+            private readonly Action _onCompleted;
+
+            private IDisposable _disposable;
+
+            public Logic(ObservableSourceStage<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _buffer = new LinkedList<T>();
+                var bufferCapacity = stage._maxBufferCapacity;
+                _onEvent = GetAsyncCallback<T>(e =>
+                {
+                    if (IsAvailable(_stage.Outlet))
+                    {
+                        Push(_stage.Outlet, e);
+                    }
+                    else
+                    {
+                        if (_buffer.Count >= bufferCapacity) _onOverflow(e);
+                        else Enqueue(e);
+                    }
+                });
+                _onError = GetAsyncCallback<Exception>(e => Fail(_stage.Outlet, e));
+                _onCompleted = GetAsyncCallback(() => Complete(_stage.Outlet));
+                _onOverflow = SetupOverflowStrategy(stage._overflowStrategy);
+
+                SetHandler(stage.Outlet, onPull: () =>
+                {
+                    if (_buffer.Count > 0)
+                    {
+                        var element = Dequeue();
+                        Push(_stage.Outlet, element);
+                    }
+
+                }, onDownstreamFinish: OnCompleted);
+            }
+
+            public void OnNext(T value) => _onEvent(value);
+            public void OnError(Exception error) => _onError(error);
+            public void OnCompleted() => _onCompleted();
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                _disposable = _stage._observable.Subscribe(this);
+            }
+
+            public override void PostStop()
+            {
+                _disposable?.Dispose();
+                _buffer.Clear();
+                base.PostStop();
+            }
+
+            private void Enqueue(T e) => _buffer.AddLast(e);
+
+            private T Dequeue()
+            {
+                var element = _buffer.First.Value;
+                _buffer.RemoveFirst();
+                return element;
+            }
+
+            private Action<T> SetupOverflowStrategy(OverflowStrategy overflowStrategy)
+            {
+                switch (overflowStrategy)
+                {
+                    case OverflowStrategy.DropHead:
+                        return message =>
+                        {
+                            _buffer.RemoveFirst();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropTail:
+                        return message =>
+                        {
+                            _buffer.RemoveLast();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropNew:
+                        return message => { /* do nothing */ };
+                    case OverflowStrategy.DropBuffer:
+                        return message => {
+                            _buffer.Clear();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.Fail:
+                        return message => FailStage(new BufferOverflowException($"{_stage.Outlet} buffer has been overflown"));
+                    case OverflowStrategy.Backpressure:
+                        return message => throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
+                    default: throw new NotSupportedException($"Unknown option: {overflowStrategy}");
+                }
+            }
+        }
+
+        #endregion
+
+        private readonly IObservable<T> _observable;
+        private readonly int _maxBufferCapacity;
+        private readonly OverflowStrategy _overflowStrategy;
+
+        public ObservableSourceStage(IObservable<T> observable, int maxBufferCapacity, OverflowStrategy overflowStrategy)
+        {
+            this._observable = observable;
+            this._maxBufferCapacity = maxBufferCapacity;
+            this._overflowStrategy = overflowStrategy;
+
+            this.Shape = new SourceShape<T>(Outlet);
+        }
+
+        public Outlet<T> Outlet { get; } = new Outlet<T>("observable.out");
+        public override SourceShape<T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
 }
