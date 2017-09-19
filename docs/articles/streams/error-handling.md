@@ -98,13 +98,11 @@ to recover, and it avoids using needless resources on the client side.
 
 The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource` 
 which will supervise the given `Source`. The `Source` in this case is a 
-stream of Server Sent Events, produced by akka-http. If the stream fails or completes at any point, the request will
+`HttpResponseMessage`, produced by `HttpCLient`. If the stream fails or completes at any point, the request will
 be made again, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds (at which point it will remain capped due
 to the `maxBackoff` parameter):
 
-```C#
-// TODO
-```
+[!code-csharp[RestartDocTests.cs](../../examples/DocsExamples/Streams/RestartDocTests.cs?name=restart-with-backoff-source)]
 
 Using a `randomFactor` to add a little bit of additional variance to the backoff intervals
 is highly recommended, in order to avoid multiple streams re-start at the exact same point in time,
@@ -116,11 +114,9 @@ large spikes of traffic hitting the recovering server or other resource that the
 The above `RestartSource` will never terminate unless the `Sink` it's fed into cancels. It will often be handy to use
 it in combination with a `KillSwitch`, so that you can terminate it when needed:
 
-```C#
-// TODO
-```
+[!code-csharp[RestartDocTests.cs](../../examples/DocsExamples/Streams/RestartDocTests.cs?name=with-kill-switch)]
 
-Sinks and flows can also be supervised, using `Akka.Streams.Dsl.RestartSink` and `Akka.Streams.Dsl.RestartFlow`].
+Sinks and flows can also be supervised, using `Akka.Streams.Dsl.RestartSink` and `Akka.Streams.Dsl.RestartFlow`.
 The `RestartSink` is restarted when it cancels, while the `RestartFlow` is restarted when either the in port cancels,
 the out port completes, or the out port sends an error.
 
