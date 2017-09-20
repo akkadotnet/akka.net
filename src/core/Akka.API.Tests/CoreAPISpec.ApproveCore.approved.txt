@@ -202,6 +202,7 @@ namespace Akka.Actor
             public override int GetHashCode() { }
         }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipeline : System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin>, System.Collections.IEnumerable
     {
         public ActorProducerPipeline(System.Lazy<Akka.Event.ILoggingAdapter> log, System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin> plugins) { }
@@ -210,6 +211,7 @@ namespace Akka.Actor
         public void BeforeActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public System.Collections.Generic.IEnumerator<Akka.Actor.IActorProducerPlugin> GetEnumerator() { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipelineResolver
     {
         public ActorProducerPipelineResolver(System.Func<Akka.Event.ILoggingAdapter> logBuilder) { }
@@ -219,6 +221,7 @@ namespace Akka.Actor
         public bool Register(Akka.Actor.IActorProducerPlugin plugin) { }
         public bool Unregister(Akka.Actor.IActorProducerPlugin plugin) { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase : Akka.Actor.IActorProducerPlugin
     {
         protected ActorProducerPluginBase() { }
@@ -226,6 +229,7 @@ namespace Akka.Actor
         public virtual void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public virtual bool CanBeAppliedTo(System.Type actorType) { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase<TActor> : Akka.Actor.IActorProducerPlugin
         where TActor : Akka.Actor.ActorBase
     {
@@ -691,6 +695,7 @@ namespace Akka.Actor
     public abstract class ExtendedActorSystem : Akka.Actor.ActorSystem
     {
         protected ExtendedActorSystem() { }
+        [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
         public abstract Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public abstract Akka.Actor.IInternalActorRef Guardian { get; }
         public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
@@ -925,6 +930,7 @@ namespace Akka.Actor
         void Stop(Akka.Actor.IActorRef child);
         void UnbecomeStacked();
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public interface IActorProducerPlugin
     {
         void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
