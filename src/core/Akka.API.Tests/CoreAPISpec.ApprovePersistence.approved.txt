@@ -1005,6 +1005,16 @@ namespace Akka.Persistence.Journal
         string Manifest(object evt);
         object ToJournal(object evt);
     }
+    public class LocalJournal : Akka.Persistence.Journal.AsyncWriteJournal
+    {
+        public LocalJournal(Akka.Configuration.Config journalConfig) { }
+        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
+        public Akka.Persistence.IPersistentRepresentation Load(System.IO.FileInfo file) { }
+        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
+        public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
+        protected System.IO.FileInfo WithOutputStream(Akka.Persistence.IPersistentRepresentation payload, System.Action<System.IO.Stream> p) { }
+        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages) { }
+    }
     public class MemoryJournal : Akka.Persistence.Journal.AsyncWriteJournal
     {
         public MemoryJournal() { }
