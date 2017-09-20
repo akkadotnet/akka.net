@@ -1106,7 +1106,8 @@ namespace Akka.IO
             actorRef?.Tell(ResolveMessage(e));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // Disabled pending resolution: https://github.com/akkadotnet/akka.net/issues/3092
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
         {
             switch (e.LastOperation)
