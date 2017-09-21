@@ -93,7 +93,7 @@ namespace Akka.Cluster.Sharding
                 id = se.EntityId;
             else
                 id = EntityId(message);
-            return (Math.Abs(id.GetHashCode())%MaxNumberOfShards).ToString();
+            return (Math.Abs(id.GetHashCode()) % MaxNumberOfShards).ToString();
         }
     }
 
@@ -618,7 +618,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            ExtractEntityId extractEntityId = msg =>
+            Tuple<EntityId, Msg> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
@@ -645,7 +645,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            ExtractEntityId extractEntityId = msg =>
+            Tuple<EntityId, Msg> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
@@ -853,32 +853,35 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is PersistentShardCoordinator.BeginHandOffAck hoa && _shard == hoa.Shard)
+            switch (message)
             {
-                _remaining.Remove(Sender);
-                if (_remaining.Count == 0)
-                {
-                    _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
-                    Context.Become(StoppingShard);
-                }
+                case PersistentShardCoordinator.BeginHandOffAck hoa when _shard == hoa.Shard:
+                    _remaining.Remove(Sender);
+                    if (_remaining.Count == 0)
+                    {
+                        _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
+                        Context.Become(StoppingShard);
+                    }
+                    return true;
+                case ReceiveTimeout _:
+                    Done(false);
+                    return true;
             }
-            else if (message is ReceiveTimeout)
-            {
-                Done(false);
-            }
-            else return false;
-            return true;
+            return false;
         }
 
         private bool StoppingShard(object message)
         {
-            if (message is PersistentShardCoordinator.ShardStopped ms && _shard == ms.Shard)
+            switch (message)
             {
-                Done(true);
+                case PersistentShardCoordinator.ShardStopped ms when _shard == ms.Shard:
+                    Done(true);
+                    return true;
+                case ReceiveTimeout _:
+                    Done(false);
+                    return true;
             }
-            else if (message is ReceiveTimeout) Done(false);
-            else return false;
-            return true;
+            return false;
         }
 
         private void Done(bool ok)

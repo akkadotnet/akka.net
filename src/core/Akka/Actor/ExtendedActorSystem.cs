@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Akka.Actor
 {
     /// <summary>
@@ -41,6 +43,7 @@ namespace Akka.Actor
         /// Gets the actor producer pipeline resolver for current actor system. It may be used by
         /// Akka plugins to inject custom behavior directly into actor creation chain.
         /// </summary>
+        [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
         public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
 
         /// <summary>

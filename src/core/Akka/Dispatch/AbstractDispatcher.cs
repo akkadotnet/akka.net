@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -86,6 +87,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// INTERNAL API - used to configure the executor used by the <see cref="Dispatcher"/>
     /// </summary>
+    [InternalApi]
     public abstract class ExecutorServiceConfigurator : ExecutorServiceFactory
     {
         /// <summary>
@@ -410,6 +412,7 @@ namespace Akka.Dispatch
         /// how long it will wait until it shuts itself down, defaulting to your Akka.NET config's 'akka.actor.default-dispatcher.shutdown-timeout'
         /// or the system default specified.
         /// </summary>
+        [InternalApi]
         public TimeSpan ShutdownTimeout { get; protected set; }
 
         /// <summary>
@@ -515,6 +518,7 @@ namespace Akka.Dispatch
         /// <remarks>
         /// MUST BE IDEMPOTENT
         /// </remarks>
+        [InternalApi]
         protected abstract void Shutdown();
 
         private readonly ShutdownAction _shutdownAction;

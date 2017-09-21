@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Annotations;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
@@ -15,6 +16,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
     {
         private readonly TaskCompletionSource<NotUsed> _whenCompleted;

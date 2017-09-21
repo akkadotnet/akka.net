@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -28,6 +29,7 @@ namespace Akka.Actor
     /// necessary to distinguish between local and non-local references, this is the only
     /// method provided on the scope. 
     /// </summary>
+    [InternalApi]
     public interface IActorRefScope
     {
         /// <summary>
@@ -358,6 +360,7 @@ namespace Akka.Actor
     /// Used by built-in <see cref="IActorRef"/> implementations for handling
     /// internal operations that are not exposed directly to end-users.
     /// </summary>
+    [InternalApi]
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         /// <summary>
@@ -433,6 +436,7 @@ namespace Akka.Actor
     /// 
     /// Abstract implementation of <see cref="IInternalActorRef"/>.
     /// </summary>
+    [InternalApi]
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         /// <inheritdoc cref="IInternalActorRef"/>
@@ -481,6 +485,7 @@ namespace Akka.Actor
     /// 
     /// Barebones <see cref="IActorRef"/> with no backing actor or <see cref="ActorCell"/>.
     /// </summary>
+    [InternalApi]
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
         /// <inheritdoc cref="InternalActorRefBase"/>
@@ -601,6 +606,7 @@ namespace Akka.Actor
     /// 
     /// Used to power actors that use an <see cref="ActorCell"/>, which is the majority of them.
     /// </summary>
+    [InternalApi]
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
         /// <summary>

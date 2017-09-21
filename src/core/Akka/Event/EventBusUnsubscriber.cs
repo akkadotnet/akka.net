@@ -5,12 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Util.Internal;
 
 namespace Akka.Event
@@ -27,6 +24,7 @@ namespace Akka.Event
     /// subscribe calls * because of the need of linearizing the history message sequence and the possibility of sometimes
     /// watching a few actors too much - we opt for the 2nd choice here.
     /// </summary>
+    [InternalApi]
     class EventStreamUnsubscriber : ActorBase
     {
         private readonly EventStream _eventStream;

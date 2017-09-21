@@ -1,9 +1,9 @@
 ---
-layout: docs.hbs
+uid: streams-quickstart
 title: Quickstart
 ---
 
-# Quick Start Guide
+# Streams Quickstart Guide
 A stream usually begins at a source, so this is also how we start an Akka Stream. Before we create one, we import the full complement of streaming tools:
 
 ```csharp
@@ -70,4 +70,4 @@ All operations so far have been time-independent and could have been performed i
 
 If you run this program you will see one line printed per second. One aspect that is not immediately visible deserves mention, though: if you try and set the streams to produce a billion numbers each then you will notice that your environment does not crash with an OutOfMemoryError, even though you will also notice that running the streams happens in the background, asynchronously (this is the reason for the auxiliary information to be provided as a `Task`). The secret that makes this work is that Akka Streams implicitly implement pervasive flow control, all combinators respect back-pressure. This allows the throttle combinator to signal to all its upstream sources of data that it can only accept elements at a certain rate--when the incoming rate is higher than one per second the throttle combinator will assert back-pressure upstream.
 
-This is basically all there is to Akka Streams in a nutshell--glossing over the fact that there are dozens of sources and sinks and many more stream transformation combinators to choose from, see also [Overview of built-in stages and their semantics](builtinstages.md).
+This is basically all there is to Akka Streams in a nutshell--glossing over the fact that there are dozens of sources and sinks and many more stream transformation combinators to choose from, see also [Overview of built-in stages and their semantics](xref:streams-builtin-stages).

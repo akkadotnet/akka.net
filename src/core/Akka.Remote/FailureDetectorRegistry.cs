@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 
@@ -59,6 +60,7 @@ namespace Akka.Remote
     /// 
     /// Utility class to create <see cref="FailureDetector"/> instances via reflection.
     /// </summary>
+    [InternalApi]
     public static class FailureDetectorLoader
     {
         /// <summary>

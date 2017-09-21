@@ -7,13 +7,17 @@
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 
 namespace Akka.IO
 {
     using ByteBuffer = ArraySegment<byte>;
 
-    // INTERNAL API
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     class UdpConnectedManager : ActorBase
     {
         private readonly UdpConnectedExt _udpConn;
@@ -34,7 +38,7 @@ namespace Akka.IO
             {
                 case UdpConnected.Connect connect:
                     {
-                        var commander = Sender;
+                        var commander = Sender; // NOTE: Aaronontheweb (9/1/2017) this should probably be the Handler...
                         Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, connect)));
                         return true;
                     }

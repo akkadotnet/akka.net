@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
@@ -1555,6 +1556,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="receive">Callback that will be called upon receiving of a message by this special Actor</param>
         /// <returns>Minimal actor with watch method</returns>
+        [ApiMayChange]
         protected StageActorRef GetStageActorRef(StageActorRef.Receive receive)
         {
             if (_stageActorRef == null)
@@ -1606,6 +1608,7 @@ namespace Akka.Streams.Stage
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
+        [InternalApi]
         protected class SubSinkInlet<T>
         {
             private readonly string _name;
@@ -1741,6 +1744,7 @@ namespace Akka.Streams.Stage
         /// given time limit, see e.g. ActorMaterializerSettings.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
+        [InternalApi]
         protected class SubSourceOutlet<T>
         {
             private readonly string _name;

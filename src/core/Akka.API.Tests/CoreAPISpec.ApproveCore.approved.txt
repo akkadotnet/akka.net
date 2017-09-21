@@ -202,6 +202,7 @@ namespace Akka.Actor
             public override int GetHashCode() { }
         }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipeline : System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin>, System.Collections.IEnumerable
     {
         public ActorProducerPipeline(System.Lazy<Akka.Event.ILoggingAdapter> log, System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin> plugins) { }
@@ -210,6 +211,7 @@ namespace Akka.Actor
         public void BeforeActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public System.Collections.Generic.IEnumerator<Akka.Actor.IActorProducerPlugin> GetEnumerator() { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipelineResolver
     {
         public ActorProducerPipelineResolver(System.Func<Akka.Event.ILoggingAdapter> logBuilder) { }
@@ -219,6 +221,7 @@ namespace Akka.Actor
         public bool Register(Akka.Actor.IActorProducerPlugin plugin) { }
         public bool Unregister(Akka.Actor.IActorProducerPlugin plugin) { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase : Akka.Actor.IActorProducerPlugin
     {
         protected ActorProducerPluginBase() { }
@@ -226,6 +229,7 @@ namespace Akka.Actor
         public virtual void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
         public virtual bool CanBeAppliedTo(System.Type actorType) { }
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase<TActor> : Akka.Actor.IActorProducerPlugin
         where TActor : Akka.Actor.ActorBase
     {
@@ -280,6 +284,7 @@ namespace Akka.Actor
         public static readonly Akka.Actor.Nobody Nobody;
         public static readonly Akka.Actor.IActorRef NoSender;
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class ActorRefWithCell : Akka.Actor.InternalActorRefBase
     {
         protected ActorRefWithCell() { }
@@ -520,6 +525,7 @@ namespace Akka.Actor
         protected override bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class DeadLetterMailbox : Akka.Dispatch.Mailbox
     {
         public DeadLetterMailbox(Akka.Actor.IActorRef deadLetters) { }
@@ -689,6 +695,7 @@ namespace Akka.Actor
     public abstract class ExtendedActorSystem : Akka.Actor.ActorSystem
     {
         protected ExtendedActorSystem() { }
+        [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
         public abstract Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public abstract Akka.Actor.IInternalActorRef Guardian { get; }
         public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
@@ -923,6 +930,7 @@ namespace Akka.Actor
         void Stop(Akka.Actor.IActorRef child);
         void UnbecomeStacked();
     }
+    [System.ObsoleteAttribute("Actor producer pipeline API will be removed in v1.5.")]
     public interface IActorProducerPlugin
     {
         void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
@@ -961,6 +969,7 @@ namespace Akka.Actor
         Akka.Actor.ActorPath TempPath();
         void UnregisterTempActor(Akka.Actor.ActorPath path);
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface IActorRefScope
     {
         bool IsLocal { get; }
@@ -990,6 +999,7 @@ namespace Akka.Actor
         Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject);
         Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message);
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface ICell
     {
         Akka.Actor.Internal.IChildrenContainer ChildrenContainer { get; }
@@ -1068,6 +1078,7 @@ namespace Akka.Actor
     {
         Akka.Actor.IActorContext ActorContext { get; }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface IInternalActorRef : Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
@@ -1115,6 +1126,7 @@ namespace Akka.Actor
     }
     public interface INoSerializationVerificationNeeded { }
     public interface INotInfluenceReceiveTimeout { }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class InternalActorRefBase : Akka.Actor.ActorRefBase, Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Actor.IInternalActorRef, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         protected InternalActorRefBase() { }
@@ -1267,6 +1279,7 @@ namespace Akka.Actor
         public LoggerInitializationException(string message, System.Exception cause = null) { }
         protected LoggerInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class MinimalActorRef : Akka.Actor.InternalActorRefBase, Akka.Actor.IActorRefScope, Akka.Actor.ILocalRef
     {
         protected MinimalActorRef() { }
@@ -1488,6 +1501,7 @@ namespace Akka.Actor
         public override int CompareTo(Akka.Actor.ActorPath other) { }
         public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class RootGuardianActorRef : Akka.Actor.LocalActorRef
     {
         public RootGuardianActorRef(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Dispatch.MailboxType mailboxType, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, Akka.Actor.IInternalActorRef deadLetters, System.Collections.Generic.IReadOnlyDictionary<string, Akka.Actor.IInternalActorRef> extraNames) { }
@@ -1702,6 +1716,7 @@ namespace Akka.Actor
         protected TypedActor() { }
         protected virtual bool Receive(object message) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class UnstartedCell : Akka.Actor.ICell
     {
         public UnstartedCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.RepointableActorRef self, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor) { }
@@ -1928,11 +1943,13 @@ namespace Akka.Actor.Internal
     {
         void Init();
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface IInternalSupportsTestFSMRef<TState, TData>
     {
         bool IsStateTimerActive { get; }
         void ApplyState(Akka.Actor.FSMBase.State<TState, TData> upcomingState);
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class InternalActivateFsmLogging
     {
         public static Akka.Actor.Internal.InternalActivateFsmLogging Instance { get; }
@@ -2000,6 +2017,19 @@ namespace Akka.Actor.Internal
     public class UnboundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
         public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
+    }
+}
+namespace Akka.Annotations
+{
+    [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class ApiMayChangeAttribute : System.Attribute
+    {
+        public ApiMayChangeAttribute() { }
+    }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class InternalApiAttribute : System.Attribute
+    {
+        public InternalApiAttribute() { }
     }
 }
 namespace Akka
@@ -2374,6 +2404,7 @@ namespace Akka.Dispatch
     {
         public Dispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator, string id, int throughput, System.Nullable<long> throughputDeadlineTime, Akka.Dispatch.ExecutorServiceFactory executorServiceFactory, System.TimeSpan shutdownTimeout) { }
         protected override void ExecuteTask(Akka.Dispatch.IRunnable run) { }
+        [Akka.Annotations.InternalApiAttribute()]
         protected override void Shutdown() { }
     }
     public sealed class DispatcherConfigurator : Akka.Dispatch.MessageDispatcherConfigurator
@@ -2400,12 +2431,14 @@ namespace Akka.Dispatch
         public abstract void Execute(Akka.Dispatch.IRunnable run);
         public abstract void Shutdown();
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class ExecutorServiceConfigurator : Akka.Dispatch.ExecutorServiceFactory
     {
         protected ExecutorServiceConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
         public Akka.Configuration.Config Config { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class ExecutorServiceFactory
     {
         protected ExecutorServiceFactory() { }
@@ -2490,6 +2523,7 @@ namespace Akka.Dispatch
         public string Id { get; set; }
         protected long Inhabitants { get; }
         public Akka.Dispatch.Mailboxes Mailboxes { get; }
+        [Akka.Annotations.InternalApiAttribute()]
         public System.TimeSpan ShutdownTimeout { get; set; }
         public int Throughput { get; set; }
         public System.Nullable<long> ThroughputDeadlineTime { get; set; }
@@ -2500,6 +2534,7 @@ namespace Akka.Dispatch
         protected void ReportFailure(System.Exception ex) { }
         public void Schedule(System.Action run) { }
         public void Schedule(Akka.Dispatch.IRunnable run) { }
+        [Akka.Annotations.InternalApiAttribute()]
         protected abstract void Shutdown();
         public virtual void SystemDispatch(Akka.Actor.ActorCell cell, Akka.Dispatch.SysMsg.SystemMessage message) { }
     }
@@ -2651,6 +2686,7 @@ namespace Akka.Dispatch.SysMsg
         public System.Exception Reason { get; }
         public override string ToString() { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class Failed : Akka.Dispatch.SysMsg.SystemMessage, Akka.Dispatch.SysMsg.IStashWhenFailed
     {
         public Failed(Akka.Actor.IActorRef child, System.Exception cause, long uid) { }
@@ -2705,6 +2741,7 @@ namespace Akka.Dispatch.SysMsg
         public Suspend() { }
         public override string ToString() { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class SystemMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Dispatch.SysMsg.ISystemMessage
     {
         protected SystemMessage() { }
@@ -4470,6 +4507,11 @@ namespace Akka.Serialization
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class static SerializerIdentifierHelper
+    {
+        public static int GetSerializerIdentifierFromConfig(System.Type type, Akka.Actor.ExtendedActorSystem system) { }
+    }
     public abstract class SerializerWithStringManifest : Akka.Serialization.Serializer
     {
         protected SerializerWithStringManifest(Akka.Actor.ExtendedActorSystem system) { }
@@ -4717,6 +4759,7 @@ namespace Akka.Util
         public TickTimeTokenBucket(long capacity, long period) { }
         public override long CurrentTime { get; }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class TokenBucket
     {
         protected TokenBucket(long capacity, long ticksBetweenTokens) { }
@@ -4728,6 +4771,7 @@ namespace Akka.Util
     {
         public static bool Implements<T>(this System.Type type) { }
         public static bool Implements(this System.Type type, System.Type moreGeneralType) { }
+        [Akka.Annotations.InternalApiAttribute()]
         public static string TypeQualifiedName(this System.Type type) { }
     }
     public class static Vector
@@ -4839,6 +4883,7 @@ namespace Akka.Util.Internal
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values) { }
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values, System.Action<System.Text.StringBuilder, T, int> valueAppender) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class static TaskExtensions
     {
         public static System.Threading.Tasks.Task<TResult> CastTask<TTask, TResult>(this System.Threading.Tasks.Task<TTask> task) { }

@@ -8,6 +8,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Annotations;
 
 namespace Akka.Util.Internal
 {
@@ -16,6 +17,7 @@ namespace Akka.Util.Internal
     ///
     /// Extensions for working with <see cref="Task"/> types
     /// </summary>
+    [InternalApi]
     public static class TaskExtensions
     {
         /// <summary>

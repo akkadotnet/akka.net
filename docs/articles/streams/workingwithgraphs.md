@@ -1,7 +1,9 @@
 ---
-layout: docs.hbs
+uid: streams-working-with-graphs
 title: Working with Graphs
 ---
+
+# Working with Graphs
 
 In Akka Streams computation graphs are not expressed using a fluent DSL like linear computations are, instead they are
 written in a more graph-resembling DSL which aims to make translating graph drawings (e.g. from notes taken
@@ -14,13 +16,13 @@ Some graph operations which are common enough and fit the linear style of Flows,
 streams, such that the second one is consumed after the first one has completed), may have shorthand methods defined on
 `Flow` or `Source` themselves, however you should keep in mind that those are also implemented as graph junctions.
 
-# Constructing Graphs
+## Constructing Graphs
 
 Graphs are built from simple Flows which serve as the linear connections within the graphs as well as junctions
 which serve as fan-in and fan-out points for Flows. Thanks to the junctions having meaningful types based on their behaviour
 and making them explicit elements these elements should be rather straightforward to use.
 
-Akka Streams currently provide these junctions (for a detailed list see [Overview of built-in stages and their semantics](builtinstages.md)):
+Akka Streams currently provide these junctions (for a detailed list see [Overview of built-in stages and their semantics](xref:streams-builtin-stages)):
 
 - **Fan-out**
  - ``Broadcast<T>`` – *(1 input, N outputs)* given an input element emits to each output
@@ -82,7 +84,7 @@ is passed to it and return the inlets and outlets of the resulting copy so that 
 Another alternative is to pass existing graphs—of any shape—into the factory method that produces a
 new graph. The difference between these approaches is that importing using ``builder.Add(...)`` ignores the
 materialized value of the imported graph while importing via the factory method allows its inclusion;
-for more details see [Stream Materialization](basics.md#stream-materialization).
+for more details see [Stream Materialization](xref:streams-basics#stream-materialization).
 
 In the example below we prepare a graph that consists of two parallel streams,
 in which we re-use the same instance of `Flow`, yet it will properly be
@@ -108,13 +110,12 @@ RunnableGraph.FromGraph(GraphDsl.Create(topHeadSink, bottomHeadSink, Keep.Both,
 	}));
 ```
 
-# Constructing and combining Partial Graphs
+## Constructing and combining Partial Graphs
 
 Sometimes it is not possible (or needed) to construct the entire computation graph in one place, but instead construct all of its different phases in different places and in the end connect them all into a complete graph and run it.
 
 This can be achieved by returning a different ``Shape`` than ``ClosedShape``, for example ``FlowShape(in, out)``, from the
 function given to ``GraphDSL.Create``. See  [Predefined shapes](#predefined-shapes) for a list of such predefined shapes.
-
 Making a ``Graph`` a `RunnableGraph` requires all ports to be connected, and if they are not
 it will throw an exception at construction time, which helps to avoid simple
 wiring errors while working with graphs. A partial graph however allows
@@ -166,7 +167,7 @@ Then we import it (all of its nodes and connections) explicitly into the closed 
 > Please note that `GraphDSL` is not able to provide compile time type-safety about whether or not all elements have been properly connected—this validation is performed as a runtime check during the graph's instantiation. A partial graph also verifies that all ports are either connected or part of the returned `Shape`.
 
 
-# Constructing Sources, Sinks and Flows from Partial Graphs
+## Constructing Sources, Sinks and Flows from Partial Graphs
 
 Instead of treating a partial graph as simply a collection of flows and junctions which may not yet all be
 connected it is sometimes useful to expose such a complex graph as a simpler structure,
@@ -229,7 +230,7 @@ var pairUpWithToString = Flow.FromGraph(
 pairUpWithToString.RunWith(Source.From(new[] {1}), Sink.First<Tuple<int, string>>(), materializer);
 ```
 
-# Combining Sources and Sinks with simplified API
+## Combining Sources and Sinks with simplified API
 There is a simplified API you can use to combine sources and sinks with junctions like: ``Broadcast<T>``, ``Balance<T>``,  ``Merge<In>`` and ``Concat<A>`` without the need for using the Graph DSL. The combine method takes care of constructing the necessary graph underneath. In following example we combine two sources into one (fan-in):
 
 ```csharp
@@ -252,7 +253,7 @@ var sink = Sink.Combine(i => new Broadcast<int>(i), sendRemotely, localProcessin
 Source.From(new[] {0, 1, 2}).RunWith(sink, materializer);
 ```
 
-# Building reusable Graph components
+## Building reusable Graph components
 It is possible to build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
 As an example, we will build a graph junction that represents a pool of workers, where a worker is expressed
@@ -307,7 +308,7 @@ public class PriorityWorkerPoolShape<TIn, TOut> : Shape
 }
 ```
 
-# Predefined shapes
+## Predefined shapes
 In general a custom `Shape` needs to be able to provide all its input and output ports, be able to copy itself, and also be
 able to create a new instance from given ports. There are some predefined shapes provided to avoid unnecessary
 boilerplate:
@@ -398,7 +399,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
 })).Run(materializer);
 ```
 
-# Bidirectional Flows
+## Bidirectional Flows
 A graph topology that is often useful is that of two flows going in opposite directions. Take for example a codec stage that serializes outgoing messages and deserializes incoming octet streams. Another such stage could add a framing protocol that attaches a length header to outgoing data and parses incoming frames back into the original octet stream chunks. These two stages are meant to be composed, applying one atop the other as part of a protocol stack. For this purpose exists the special type `BidiFlow` which is a graph that has exactly two open inlets and two open outlets. The corresponding shape is called `BidiShape` and is defined like this:
 
 ```csharp
@@ -509,7 +510,7 @@ public static IMessage FromBytes(ByteString bytes)
 
 In this way you could easily integrate any other serialization library that turns an object into a sequence of bytes.
 
-The other stage that we talked about is a little more involved since reversing a framing protocol means that any received chunk of bytes may correspond to zero or more messages. This is best implemented using a `GraphStage` (see also [Custom processing with GraphStage](customstreamprocessing.md#custom-processing-with-graphstage)).
+The other stage that we talked about is a little more involved since reversing a framing protocol means that any received chunk of bytes may correspond to zero or more messages. This is best implemented using a `GraphStage` (see also [Custom processing with GraphStage](xref:custom-stream-processing#custom-processing-with-graphstage)).
 
 ```csharp
 public static ByteString AddLengthHeader(ByteString bytes, ByteOrder order)
@@ -660,7 +661,7 @@ result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
 
 This example demonstrates how `BidiFlow` subgraphs can be hooked together and also turned around with the ``.Reversed`` method. The test simulates both parties of a network communication protocol without actually having to open a network connection—the flows can just be connected directly.
 
-# Accessing the materialized value inside the Graph
+## Accessing the materialized value inside the Graph
 In certain cases it might be necessary to feed back the materialized value of a Graph (partial, closed or backing a
 Source, Sink, Flow or BidiFlow). This is possible by using ``builder.MaterializedValue`` which gives an ``Outlet`` that
 can be used in the graph as an ordinary source or outlet, and which will eventually emit the materialized value.
@@ -695,7 +696,7 @@ var cyclicAggregate = Source.FromGraph(GraphDsl.Create(Sink.Aggregate<int, int>(
     }));
 ```
 
-# Graph cycles, liveness and deadlocks
+## Graph cycles, liveness and deadlocks
 Cycles in bounded stream topologies need special considerations to avoid potential deadlocks and other liveness issues. This section shows several examples of problems that can arise from the presence of feedback arcs in stream processing graphs.
 
 The first example demonstrates a graph that contains a naïve cycle. The graph takes elements from the source, prints them, then broadcasts those elements to a consumer (we just used ``Sink.Ignore`` for now) and to a feedback arc that is merged back into the main stream via a ``Merge`` junction.
@@ -837,7 +838,7 @@ element into the cycle that is independent from ``source``. We do this by using 
 arc that injects a single element using ``Source.Single``.
 
 > [!WARNING]
-> This approach isn't working in the current beta, the graph is still not printing any elements.
+> This approach isn't working in the current version of Akka.NET (1.3.0), the graph is still not printing any elements.
 
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b =>

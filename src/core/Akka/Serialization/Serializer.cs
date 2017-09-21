@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Util;
 
 namespace Akka.Serialization
@@ -149,12 +150,10 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API.
     /// </summary>
-    internal static class SerializerIdentifierHelper
+    [InternalApi]
+    public static class SerializerIdentifierHelper
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
+        internal const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
         /// <summary>
         /// TBD

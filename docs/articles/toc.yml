@@ -86,7 +86,7 @@
   items: 
   - name: Introduction
     href: streams/introduction.md
-  - name: Quick Start Guide
+  - name: Streams Quickstart Guide
     href: streams/quickstart.md
   - name: Reactive Tweets
     href: streams/reactivetweets.md
@@ -100,11 +100,13 @@
     href: streams/modularitycomposition.md
   - name: Buffers and working with rate
     href: streams/buffersandworkingwithrate.md
+  - name: Dynamic stream handling
+    href: streams/stream-dynamic.md
   - name: Custom stream processing
     href: streams/custom-stream-processing.md
   - name: Integration
     href: streams/integration.md
-  - name: Error Handling
+  - name: Error Handling in Streams
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md

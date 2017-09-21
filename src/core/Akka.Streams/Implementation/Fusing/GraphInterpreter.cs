@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -95,6 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// edge of a balance is pulled, dissolving the original cycle).
     ///
     /// </summary>
+    [InternalApi]
     public sealed class GraphInterpreter
     {
         #region internal classes
@@ -190,6 +192,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Contains all the necessary information for the GraphInterpreter to be able to implement a connection
         /// between an output and input ports.
         /// </summary>
+        [InternalApi]
         public sealed class Connection
         {
             /// <summary>

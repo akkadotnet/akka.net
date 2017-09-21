@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Annotations;
+
 namespace Akka.DistributedData
 {
     /// <summary>
@@ -24,6 +26,7 @@ namespace Akka.DistributedData
     /// a full merge is performed instead of the fast forward merge.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class FastMerge<T> : IReplicatedData<T> where T : FastMerge<T>
     {
         /// <summary>
@@ -36,6 +39,7 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="newData">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected T AssignAncestor(T newData)
         {
             newData.Ancestor = Ancestor ?? this;
@@ -48,12 +52,14 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="newData">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected bool IsAncestorOf(T newData) => ReferenceEquals(newData.Ancestor, this);
 
         /// <summary>
         /// INTERNAL API: should be called from merge 
         /// </summary>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected T ClearAncestor()
         {
             Ancestor = null;

@@ -1,7 +1,9 @@
 ---
-layout: docs.hbs
+uid: streams-tweets
 title: Reactive Tweets
 ---
+
+# Reactive Tweets
 
 A typical use case for stream processing is consuming a live stream of data that we want to extract or aggregate some
 other data from. In this example we'll consider consuming a stream of tweets and extracting information from them.
@@ -19,7 +21,7 @@ allow to control what should happen in such scenarios.
   Due to the fact that Tweetinvi doesn't implement the Reactive Streams specifications, we push the tweets into the stream
   via the `IActorRef` that is materialized from the following Source `Source.ActorRef<ITweet>(100, OverflowStrategy.DropHead);`.
 
-# Transforming and consuming simple streams
+## Transforming and consuming simple streams
 
 The example application we will be looking at is a simple Twitter feed stream from which we'll want to extract certain information,
 like for example the number of tweets a user has posted.
@@ -37,7 +39,7 @@ using (var sys = ActorSystem.Create("Reactive-Tweets"))
 ```
 
 The `ActorMaterializer` can optionally take `ActorMaterializerSettings` which can be used to define
-materialization properties, such as default buffer sizes (see also [Buffers for asynchronous stages](buffersandworkingwithrate.md#buffers-for-asynchronous-stages)), the dispatcher to
+materialization properties, such as default buffer sizes (see also [Buffers for asynchronous stages](xref:streams-buffers#buffers-for-asynchronous-stages)), the dispatcher to
 be used by the pipeline etc. These can be overridden with ``WithAttributes`` on `Flow`, `Source`, `Sink` and `IGraph`.
 
 Let's assume we have a stream of tweets readily available. In Akka this is expressed as a `Source[Out, M]`:
@@ -61,7 +63,7 @@ Source<string, NotUsed> formattedRetweets = tweetSource
   .Select(FormatTweet);
 ```
 
-Finally in order to [materialize](basics.md#stream-materialization) and run the stream computation we need to attach
+Finally in order to [materialize](xref:streams-basics#stream-materialization) and run the stream computation we need to attach
 the Flow to a `Sink` that will get the Flow running. The simplest way to do this is to call
 ``RunWith(sink, mat)`` on a ``Source``. For convenience a number of common Sinks are predefined and collected as methods on
 the `Sink` [companion class](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Streams/Dsl/Sink.cs).
@@ -93,7 +95,7 @@ using (var sys = ActorSystem.Create("Reactive-Tweets"))
 }
 ```
 
-# Flattening sequences in streams
+## Flattening sequences in streams
 In the previous section we were working on 1:1 relationships of elements which is the most common case, but sometimes
 we might want to map from one element to a number of elements and receive a "flattened" stream, similarly like ``SelectMany``
 works on .Net Collections. In order to get a flattened stream of hashtags from our stream of tweets we can use the ``SelectMany``
@@ -103,7 +105,7 @@ combinator:
 Source<IHashtagEntity, NotUsed> hashTags = tweetSource.SelectMany(tweet => tweet.Hashtags);
 ```
 
-# Broadcasting a stream
+## Broadcasting a stream
 Now let's say we want to persist all hashtags, as well as all author names from this one live stream.
 For example we'd like to write all author handles into one file, and all hashtags into another file on disk.
 This means we have to split the source stream into two streams which will handle the writing to these different files.
@@ -151,15 +153,15 @@ Both `IGraph` and `IRunnableGraph` are *immutable, thread-safe, and freely share
 
 A graph can also have one of several other shapes, with one or more unconnected ports. Having unconnected ports
 expresses a graph that is a *partial graph*. Concepts around composing and nesting graphs in large structures are
-explained in detail in [Modularity, Composition and Hierarchy](modularitycomposition.md#basics-of-composition-and-modularity). It is also possible to wrap complex computation graphs as Flows, Sinks or Sources, which will be explained in detail in
-[Constructing Sources, Sinks and Flows from Partial Graphs](workingwithgraphs.md#constructing-sources-sinks-and-flows-from-partial-graphs).
+explained in detail in [Modularity, Composition and Hierarchy](xref:streams-modularity#basics-of-composition-and-modularity). It is also possible to wrap complex computation graphs as Flows, Sinks or Sources, which will be explained in detail in
+[Constructing Sources, Sinks and Flows from Partial Graphs](xref:streams-working-with-graphs#constructing-sources-sinks-and-flows-from-partial-graphs).
 
-# Back-pressure in action
+## Back-pressure in action
 
 One of the main advantages of Akka Streams is that they *always* propagate back-pressure information from stream Sinks
 (Subscribers) to their Sources (Publishers). It is not an optional feature, and is enabled at all times. To learn more
 about the back-pressure protocol used by Akka Streams and all other Reactive Streams compatible implementations read
-[Back-pressure explained](basics.md#back-pressure-explained).
+[Back-pressure explained](xref:streams-basics#back-pressure-explained).
 
 A typical problem applications (not using Akka Streams) like this often face is that they are unable to process the incoming data fast enough,
 either temporarily or by design, and will start buffering incoming data until there's no more space to buffer, resulting
@@ -178,7 +180,7 @@ The ``Buffer`` element takes an explicit and required ``OverflowStrategy``, whic
 when it receives another element while it is full. Strategies provided include dropping the oldest element (``DropHead``),
 dropping the entire buffer, signalling errors etc. Be sure to pick and choose the strategy that fits your use case best.
 
-# Materialized value
+## Materialized value
 
 So far we've been only processing data using Flows and consuming it into some kind of external Sink - be it by printing
 values or storing them in some external system. However sometimes we may be interested in some value that can be
@@ -238,7 +240,7 @@ var eveningTweetsCount = counterGraph.Run(mat);
 ```
 
 Many elements in Akka Streams provide materialized values which can be used for obtaining either results of computation or
-steering these elements which will be discussed in detail in [Stream Materialization](basics.md#stream-materialization). Summing up this section, now we know
+steering these elements which will be discussed in detail in [Stream Materialization](xref:streams-basics#stream-materialization). Summing up this section, now we know
 what happens behind the scenes when we run this one-liner, which is equivalent to the multi line version above:
 
 ```csharp

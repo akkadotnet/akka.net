@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-builtin-stages
 title: Overview of built-in stages and their semantics
 ---
 
