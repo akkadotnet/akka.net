@@ -405,7 +405,6 @@ namespace Akka.Streams.Implementation.IO
 
         private void SendMessage(IAdapterToStageMessage msg, bool handleCancelled = true) => Send(() =>
         {
-
             _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
             if (_downstreamStatus.Value is Canceled && handleCancelled)
             {
