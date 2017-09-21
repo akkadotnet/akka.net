@@ -569,13 +569,7 @@ namespace Akka.Streams.Dsl
         /// </summary> 
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> Empty<T>()
-        {
-            return new Source<T, NotUsed>(new PublisherSource<T>(
-                EmptyPublisher<T>.Instance,
-                DefaultAttributes.EmptySource,
-                Shape<T>("EmptySource")));
-        }
+        public static Source<T, NotUsed> Empty<T>() => FromGraph(new EmptySource<T>());
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> which materializes a <see cref="TaskCompletionSource{TResult}"/> which controls what element

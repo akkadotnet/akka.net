@@ -567,41 +567,33 @@ namespace Akka.Streams.Implementation
                 _source = source;
                 _resource = new TaskCompletionSource<TSource>();
 
-                Decider CreateDecider()
+                _decider = new Lazy<Decider>(() =>
                 {
                     var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
-                }
-
-                _decider = new Lazy<Decider>(CreateDecider);
+                });
 
                 SetHandler(source.Out, this);
             }
 
-            public override void OnPull()
+            public override void OnPull() => OnResourceReady(source =>
             {
-                void Ready(TSource source)
+                try
                 {
-                    try
+                    _source._readData(source).ContinueWith(t =>
                     {
-                        void Continune(Task<Option<TOut>> t)
-                        {
-                            if (t.IsCompleted && !t.IsCanceled)
-                                _createdCallback(new Left<Option<TOut>, Exception>(t.Result));
-                            else
-                                _createdCallback(new Right<Option<TOut>, Exception>(t.Exception));
-                        }
-
-                        _source._readData(source).ContinueWith(Continune);
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorHandler(ex);
-                    }
+                        if (t.IsCompleted && !t.IsCanceled)
+                            _createdCallback(new Left<Option<TOut>, Exception>(t.Result));
+                        else
+                            _createdCallback(new Right<Option<TOut>, Exception>(t.Exception));
+                    });
                 }
-
-                OnResourceReady(Ready);
-            }
+                catch (Exception ex)
+                {
+                    ErrorHandler(ex);
+                }
+            });
+            
 
             public override void OnDownstreamFinish() => CloseStage();
 
@@ -609,7 +601,7 @@ namespace Akka.Streams.Implementation
             {
                 CreateStream(false);
 
-                void CreatedHandler(Either<Option<TOut>, Exception> either)
+                _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(either =>
                 {
                     if (either.IsLeft)
                     {
@@ -621,28 +613,22 @@ namespace Akka.Streams.Implementation
                     }
                     else
                         ErrorHandler(either.ToRight().Value);
-                }
+                });
 
-                _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(CreatedHandler);
-
-                void CloseHandler(Tuple<Action, Task> t)
+                _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(t =>
                 {
                     if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
                         t.Item1();
                     else
                         FailStage(t.Item2.Exception);
-                }
+                });
 
-                _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(CloseHandler);
-
-                void ReadyHandler(Tuple<TSource, Action<TSource>> t) => t.Item2(t.Item1);
-
-                _onResourceReadyCallback = GetAsyncCallback<Tuple<TSource, Action<TSource>>>(ReadyHandler);
+                _onResourceReadyCallback = GetAsyncCallback<Tuple<TSource, Action<TSource>>>(t => t.Item2(t.Item1));
             }
 
             private void CreateStream(bool withPull)
             {
-                void Handler(Either<TSource, Exception> either)
+                var callback = GetAsyncCallback<Either<TSource, Exception>>(either =>
                 {
                     if (either.IsLeft)
                     {
@@ -653,21 +639,17 @@ namespace Akka.Streams.Implementation
                     }
                     else
                         FailStage(either.ToRight().Value);
-                }
-
-                var cb = GetAsyncCallback<Either<TSource, Exception>>(Handler);
+                });
 
                 try
                 {
-                    void Continue(Task<TSource> t)
+                    _source._create().ContinueWith(t =>
                     {
                         if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                            cb(new Left<TSource, Exception>(t.Result));
+                            callback(new Left<TSource, Exception>(t.Result));
                         else
-                            cb(new Right<TSource, Exception>(t.Exception));
-                    }
-
-                    _source._create().ContinueWith(Continue);
+                            callback(new Right<TSource, Exception>(t.Exception));
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -675,16 +657,12 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void OnResourceReady(Action<TSource> action)
+            private void OnResourceReady(Action<TSource> action) => _resource.Task.ContinueWith(t =>
             {
-                void Continue(Task<TSource> t)
-                {
-                    if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                        _onResourceReadyCallback(Tuple.Create(t.Result, action));
-                }
+                if (t.IsCompleted && !t.IsFaulted && t.Result != null)
+                    _onResourceReadyCallback(Tuple.Create(t.Result, action));
 
-                _resource.Task.ContinueWith(Continue);
-            }
+            });
 
             private void ErrorHandler(Exception ex)
             {
@@ -710,7 +688,7 @@ namespace Akka.Streams.Implementation
             {
                 SetKeepGoing(true);
 
-                void Ready(TSource source)
+                OnResourceReady(source =>
                 {
                     try
                     {
@@ -725,21 +703,15 @@ namespace Akka.Streams.Implementation
                     {
                         _open = false;
                     }
-                }
-
-                OnResourceReady(Ready);
+                });
             }
 
-            private void RestartState()
+            private void RestartState() => CloseAndThen(() =>
             {
-                void Restart()
-                {
-                    _resource = new TaskCompletionSource<TSource>();
-                    CreateStream(true);
-                }
-
-                CloseAndThen(Restart);
-            }
+                _resource = new TaskCompletionSource<TSource>();
+                CreateStream(true);
+            });
+            
 
             private void CloseStage() => CloseAndThen(CompleteStage);
 
@@ -919,6 +891,36 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public static LazySource<TOut, TMat> Create<TOut, TMat>(Func<Source<TOut, TMat>> create) =>
             new LazySource<TOut, TMat>(create);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class EmptySource<TOut> : GraphStage<SourceShape<TOut>>
+    {
+        private sealed class Logic : OutGraphStageLogic
+        {
+            public Logic(EmptySource<TOut> stage) : base(stage.Shape) => SetHandler(stage.Out, this);
+
+            public override void OnPull() => CompleteStage();
+
+            public override void PreStart() => CompleteStage();
+        }
+
+        public EmptySource()
+        {
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("EmptySource.out");
+
+        public override SourceShape<TOut> Shape { get; }
+
+        protected override Attributes InitialAttributes => DefaultAttributes.LazySource;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "EmptySource";
     }
 
     /// <summary>

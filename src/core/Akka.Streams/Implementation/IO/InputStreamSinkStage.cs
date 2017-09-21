@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation.IO
         {
             base.Dispose(disposing);
 
-            NotUsed Deactivate()
+            ExecuteIfNotClosed(() =>
             {
                 // at this point Subscriber may be already terminated
                 if (_isStageAlive)
@@ -370,9 +370,7 @@ namespace Akka.Streams.Implementation.IO
 
                 _isActive = false;
                 return NotUsed.Instance;
-            }
-
-            ExecuteIfNotClosed(Deactivate);
+            });
         }
 
         /// <summary>
@@ -421,7 +419,7 @@ namespace Akka.Streams.Implementation.IO
             if (offset + count > buffer.Length)
                 throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
-            int Read()
+            return ExecuteIfNotClosed(() =>
             {
                 if (!_isStageAlive)
                     return 0;
@@ -450,9 +448,7 @@ namespace Akka.Streams.Implementation.IO
                 }
 
                 throw new IllegalStateException("message 'Initialized' must come first");
-            }
-
-            return ExecuteIfNotClosed(Read);
+            });
         }
 
         private T ExecuteIfNotClosed<T>(Func<T> f)

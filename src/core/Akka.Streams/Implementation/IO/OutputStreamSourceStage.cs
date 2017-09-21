@@ -134,15 +134,13 @@ namespace Akka.Streams.Implementation.IO
                 _downstreamStatus = downstreamStatus;
                 _dispatcherId = dispatcherId;
 
-                void Downstream(Either<ByteString, Exception> result)
+                var downstreamCallback = GetAsyncCallback<Either<ByteString, Exception>>(result =>
                 {
                     if (result.IsLeft)
                         OnPush(result.Value as ByteString);
                     else
                         FailStage(result.Value as Exception);
-                }
-
-                var downstreamCallback = GetAsyncCallback<Either<ByteString, Exception>>(Downstream);
+                });
                 _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
                 _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, _cancellation.Token);
                 SetHandler(_stage._out, this);
@@ -393,37 +391,30 @@ namespace Akka.Streams.Implementation.IO
                 throw new IOException("OutputStream is closed");
         }
 
-        private void SendData(ByteString data)
+        private void SendData(ByteString data) => Send(() =>
         {
-            void Add()
+            _dataQueue.Add(data);
+
+            if (_downstreamStatus.Value is Canceled)
             {
-                _dataQueue.Add(data);
-
-                if (_downstreamStatus.Value is Canceled)
-                {
-                    _isPublisherAlive = false;
-                    throw PublisherClosedException;
-                }
+                _isPublisherAlive = false;
+                throw PublisherClosedException;
             }
+        });
 
-            Send(Add);
-        }
 
-        private void SendMessage(IAdapterToStageMessage msg, bool handleCancelled = true)
+        private void SendMessage(IAdapterToStageMessage msg, bool handleCancelled = true) => Send(() =>
         {
-            void WakeUp()
-            {
-                _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
-                if (_downstreamStatus.Value is Canceled && handleCancelled)
-                {
-                    //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
-                    _isPublisherAlive = false;
-                    throw PublisherClosedException;
-                }
-            }
 
-            Send(WakeUp);
-        }
+            _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
+            if (_downstreamStatus.Value is Canceled && handleCancelled)
+            {
+                //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
+                _isPublisherAlive = false;
+                throw PublisherClosedException;
+            }
+        });
+        
 
         /// <summary>
         /// TBD

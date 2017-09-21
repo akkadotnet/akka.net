@@ -347,7 +347,6 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly Inlet<T> _inlet = new Inlet<T>("TerminationWatcher.in");
-
         private readonly Outlet<T> _outlet = new Outlet<T>("TerminationWatcher.out");
 
         private TerminationWatcher()
