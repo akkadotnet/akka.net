@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -27,7 +28,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(true)
+            CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.periodic-tasks-initial-delay = 300s
                   akka.cluster.publish-stats-interval = 0s
@@ -44,14 +45,16 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected TransitionSpec(TransitionSpecConfig config) : base(config)
+        protected TransitionSpec(TransitionSpecConfig config) : base(config, typeof(TransitionSpec))
         {
             _config = config;
         }
 
         private RoleName Leader(params RoleName[] roles)
         {
-            return roles.First();
+            // sorts the addresses and provides the address of the node with the lowest port number
+            // as that node will be the leader
+            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)
@@ -61,7 +64,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private MemberStatus MemberStatus(Address address)
         {
-            var status = ClusterView.Members.Concat(ClusterView.UnreachableMembers)
+            var status = ClusterView.Members.Union(ClusterView.UnreachableMembers)
                 .Where(m => m.Address == address)
                 .Select(m => m.Status)
                 .ToList();
@@ -158,13 +161,13 @@ namespace Akka.Cluster.Tests.MultiNode
             }, Roles.Where(r => r != fromRole && r != toRole).ToArray());
         }
 
-        //[MultiNodeFact(Skip = "Race conditions that are difficult to reproduce locally")]
+        [MultiNodeFact]
         public void TransitionSpecs()
         {
             A_Cluster_must_start_nodes_as_singleton_clusters();
             A_Cluster_must_perform_correct_transitions_when_second_joining_first();
             A_Cluster_must_perform_correct_transitions_when_third_joins_second();
-            A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble();
+            A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailable();
         }
 
         private void A_Cluster_must_start_nodes_as_singleton_clusters()
@@ -256,6 +259,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("convergence-joining-3");
 
             var leader12 = Leader(_config.First, _config.Second);
+            Log.Debug("Leader: {0}", leader12);
             var tmp = Roles.Where(x => x != leader12).ToList();
             var other1 = tmp.First();
             var other2 = tmp.Skip(1).First();
@@ -304,7 +308,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-3");
         }
 
-        private void A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble()
+        private void A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailable()
         {
             RunOn(() =>
             {

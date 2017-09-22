@@ -15,17 +15,13 @@ namespace Akka.Cluster.Tools.Singleton
     internal sealed class MemberAgeOrdering : IComparer<Member>
     {
         private readonly bool _ascending;
+
         private MemberAgeOrdering(bool ascending)
         {
             _ascending = ascending;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int Compare(Member x, Member y)
         {
             if (x.Equals(y)) return 0;
@@ -38,6 +34,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// TBD
         /// </summary>
         public static readonly MemberAgeOrdering Ascending = new MemberAgeOrdering(true);
+
         /// <summary>
         /// TBD
         /// </summary>

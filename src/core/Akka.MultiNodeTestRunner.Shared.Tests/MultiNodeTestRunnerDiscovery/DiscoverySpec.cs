@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DiscoverySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Xunit;
@@ -39,7 +46,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
         {
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath))
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.CodeBase).LocalPath))	
             {
                 using (var discovery = new Discovery())
                 {

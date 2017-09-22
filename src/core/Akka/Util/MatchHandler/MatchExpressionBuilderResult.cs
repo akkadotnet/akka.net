@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class MatchExpressionBuilderResult
+    internal class MatchExpressionBuilderResult
     {
         private readonly LambdaExpression _lambdaExpression;
         private readonly object[] _arguments;

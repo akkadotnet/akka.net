@@ -21,7 +21,7 @@ namespace Akka.Actor
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
         /// <summary>
-        /// TBD
+        /// The child container collection, used to house information about all child actors.
         /// </summary>
         public IChildrenContainer ChildrenContainer
         {
@@ -34,11 +34,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Attaches a child to the current <see cref="ActorCell"/>.
+        /// 
+        /// This method is used in the process of starting actors.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="isSystemService">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="props">The <see cref="Props"/> this child actor will use.</param>
+        /// <param name="isSystemService">If <c>true</c>, then this actor is a system actor and activates a special initialization path.</param>
+        /// <param name="name">The name of the actor being started. Can be <c>null</c>, and if it is we will automatically 
+        /// generate a random name for this actor.</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>
@@ -48,7 +51,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A reference to the initialized child actor.</returns>
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
@@ -321,11 +324,11 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use TryGetSingleChild")]
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
             IInternalActorRef child;
@@ -399,7 +402,7 @@ namespace Akka.Actor
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            if (_systemImpl.Settings.SerializeAllCreators && !systemService && props.Deploy != Deploy.Local)
+            if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var ser = _systemImpl.Serialization;
                 if (props.Arguments != null)
@@ -408,13 +411,12 @@ namespace Akka.Actor
                     {
                         if (argument != null && !(argument is INoSerializationVerificationNeeded))
                         {
-                            var objectType = argument.GetType();
-                            var serializer = ser.FindSerializerFor(objectType);
-                            var bytes = serializer.ToBinary(objectType);
+                            var serializer = ser.FindSerializerFor(argument);
+                            var bytes = serializer.ToBinary(argument);
                             var manifestSerializer = serializer as SerializerWithStringManifest;
                             if (manifestSerializer != null)
                             {
-                                var manifest = manifestSerializer.Manifest(objectType);
+                                var manifest = manifestSerializer.Manifest(argument);
                                 if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
@@ -422,7 +424,7 @@ namespace Akka.Actor
                             }
                             else
                             {
-                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
+                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().TypeQualifiedName()) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
                                 }

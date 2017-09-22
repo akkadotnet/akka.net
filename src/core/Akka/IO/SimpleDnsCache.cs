@@ -100,8 +100,7 @@ namespace Akka.IO
 
             public Dns.Resolved Get(string name)
             {
-                CacheEntry e;
-                if (_cache.TryGetValue(name, out e) && e.IsValid(_clock()))
+                if (_cache.TryGetValue(name, out var e) && e.IsValid(_clock()))
                     return e.Answer;
                 return null;
             }
@@ -111,10 +110,8 @@ namespace Akka.IO
                 var until = _clock() + ttl;
 
                 var cache = new Dictionary<string, CacheEntry>(_cache);
-                if (cache.ContainsKey(answer.Name))
-                    cache[answer.Name] = new CacheEntry(answer, until);
-                else
-                    cache.Add(answer.Name, new CacheEntry(answer, until));
+
+                cache[answer.Name] = new CacheEntry(answer, until);
 
                 return new Cache(
                     queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new ExpiryEntry(answer.Name, until) },
@@ -130,7 +127,8 @@ namespace Akka.IO
                     var minEntry = _queue.First();
                     var name = minEntry.Name;
                     _queue.Remove(minEntry);
-                    if (_cache.ContainsKey(name) && !_cache[name].IsValid(now))
+
+                    if (_cache.TryGetValue(name, out var cacheEntry) && !cacheEntry.IsValid(now))
                         _cache.Remove(name);
                 }
                 return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);
@@ -173,6 +171,7 @@ namespace Akka.IO
 
         class ExpiryEntryComparer : IComparer<ExpiryEntry>
         {
+            /// <inheritdoc/>
             public int Compare(ExpiryEntry x, ExpiryEntry y)
             {
                 return x.Until.CompareTo(y.Until);

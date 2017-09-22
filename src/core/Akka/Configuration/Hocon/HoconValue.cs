@@ -20,6 +20,9 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class HoconValue : IMightBeAHoconObject
     {
+        private static readonly Regex EscapeRegex = new Regex("[ \t:]{1}", RegexOptions.Compiled);
+        private static readonly Regex TimeSpanRegex = new Regex(@"^(?<value>([0-9]+(\.[0-9]+)?))\s*(?<unit>(nanoseconds|nanosecond|nanos|nano|ns|microseconds|microsecond|micros|micro|us|milliseconds|millisecond|millis|milli|ms|seconds|second|s|minutes|minute|m|hours|hour|h|days|day|d))$", RegexOptions.Compiled);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HoconValue"/> class.
         /// </summary>
@@ -146,7 +149,7 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public bool IsString()
         {
-            return Values.Any() && Values.All(v => v.IsString());
+            return Values.Count > 0 && Values.All(v => v.IsString());
         }
 
         private string ConcatString()
@@ -192,7 +195,6 @@ namespace Akka.Configuration.Hocon
                     return false;
                 default:
                     throw new NotSupportedException($"Unknown boolean format: {v}");
-
             }
         }
 
@@ -361,20 +363,9 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="GetTimeSpan"/> to retrieve <see cref="TimeSpan"/> information. This method will be removed in future versions.
-        /// </summary>
-        /// <param name="allowInfinite">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in future versions.")]
-        public TimeSpan GetMillisDuration(bool allowInfinite = true)
-        {
-            return GetTimeSpan(allowInfinite);
-        }
-
-        /// <summary>
         /// Retrieves the time span value from this <see cref="HoconValue"/>.
         /// </summary>
-        /// <param name="allowInfinite">A flag used to set inifinite durations.</param>
+        /// <param name="allowInfinite">A flag used to set infinite durations.</param>
         /// <exception cref="FormatException">
         /// This exception is thrown if the timespan given in the <see cref="HoconValue"/> is negative.
         /// </exception>
@@ -383,7 +374,7 @@ namespace Akka.Configuration.Hocon
         {
             string res = GetString();
 
-            var match = Regex.Match(res, @"^(?<value>([0-9]+(\.[0-9]+)?))\s*(?<unit>(nanoseconds|nanosecond|nanos|nano|ns|microseconds|microsecond|micros|micro|us|milliseconds|millisecond|millis|milli|ms|seconds|second|s|minutes|minute|m|hours|hour|h|days|day|d))$");
+            var match = TimeSpanRegex.Match(res);
             if (match.Success) 
             {
                 var u = match.Groups["unit"].Value;
@@ -484,8 +475,15 @@ namespace Akka.Configuration.Hocon
             }
             if (IsObject())
             {
-                var i = new string(' ', indent*2);
-                return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                if (indent == 0)
+                {
+                    return GetObject().ToString(indent + 1);
+                }
+                else
+                {
+                    var i = new string(' ', indent * 2);
+                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                }
             }
             if (IsArray())
             {
@@ -496,11 +494,13 @@ namespace Akka.Configuration.Hocon
 
         private string QuoteIfNeeded(string text)
         {
-            if(text == null) return "";
-            if(text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            if (text == null) return "";
+
+            if (EscapeRegex.IsMatch(text))
             {
                 return "\"" + text + "\"";
             }
+
             return text;
         }
     }

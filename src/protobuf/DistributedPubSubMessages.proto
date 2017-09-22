@@ -1,0 +1,55 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg;
+
+import "ContainerFormats.proto";
+
+message Status {
+  message Version {
+    Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
+    int64 timestamp = 2;
+  }
+  repeated Version versions = 1;
+  bool replyToStatus = 2;
+}
+
+message Delta {
+  message ValueHolder {
+    int64 version = 1;
+    string ref = 2; 
+  }
+  message Bucket {
+    Akka.Remote.Serialization.Proto.Msg.AddressData owner = 1;
+    int64 version = 2;
+    map<string, ValueHolder> content = 3;
+  }
+  repeated Bucket buckets = 1;
+}
+
+// Send normally local, but it is also used by the ClusterClient.
+message Send {
+  string path = 1;
+  bool localAffinity = 2;
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
+}
+
+// SendToAll normally local, but it is also used by the ClusterClient.
+message SendToAll {
+  string path = 1;
+  bool allButSelf = 2;
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
+}
+
+// Publish normally local, but it is also used by the ClusterClient.
+message Publish {
+  string topic = 1;
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
+}
+
+// Send a message to only one subscriber of a group.
+message SendToOneSubscriber {
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 1;
+}

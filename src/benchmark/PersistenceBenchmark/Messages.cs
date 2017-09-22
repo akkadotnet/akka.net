@@ -42,7 +42,7 @@ namespace PersistenceBenchmark
         }
 
         public DateTime StartedAt { get; private set; }
-        public DateTime StopedAt { get; private set; }
+        public DateTime StoppedAt { get; private set; }
 
         public void StartMeasure()
         {
@@ -51,25 +51,42 @@ namespace PersistenceBenchmark
 
         public double StopMeasure()
         {
-            StopedAt = DateTime.Now;
-            return MessagesCount/(StopedAt - StartedAt).TotalSeconds;
+            StoppedAt = DateTime.Now;
+            return MessagesCount/(StoppedAt - StartedAt).TotalSeconds;
         }
     }
 
     public class PerformanceTestException : Exception
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PerformanceTestException"/> class.
+        /// </summary>
         public PerformanceTestException()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PerformanceTestException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
         public PerformanceTestException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PerformanceTestException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public PerformanceTestException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PerformanceTestException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected PerformanceTestException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }

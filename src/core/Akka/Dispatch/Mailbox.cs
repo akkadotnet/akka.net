@@ -73,7 +73,7 @@ namespace Akka.Dispatch
          * This is needed for actually executing the mailbox, i.e. invoking the
          * ActorCell. There are situations (e.g. RepointableActorRef) where a Mailbox
          * is constructed but we know that we will not execute it, in which case this
-         * will be null. It must be a var to support switching into an “active”
+         * will be null. It must be a var to support switching into an "active"
          * mailbox, should the owning ActorRef turn local.
          *
          * ANOTHER THING, IMPORTANT:
@@ -105,7 +105,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
-        /// <param name="receiver">TBD</param>
+        /// <param name="receiver">The actor sending this message to the mailbox</param>
         /// <param name="envelope">The envelope.</param>
         internal void Enqueue(IActorRef receiver, Envelope envelope)
         {
@@ -375,8 +375,7 @@ namespace Akka.Dispatch
         {
             while (ShouldProcessMessage())
             {
-                Envelope next;
-                if (!TryDequeue(out next)) return;
+                if (!TryDequeue(out var next)) return;
 
                 DebugPrint("{0} processing message {1}", Actor.Self, next);
 
@@ -410,10 +409,12 @@ namespace Akka.Dispatch
                 msg.Unlink();
                 DebugPrint("{0} processing system message {1} with {2}", Actor.Self, msg, string.Join(",", Actor.GetChildren()));
                 // we know here that SystemInvoke ensures that only "fatal" exceptions get rethrown
+#if UNSAFE_THREADING
                 try
                 {
                     Actor.SystemInvoke(msg);
                 }
+
                 catch (ThreadInterruptedException ex)
                 // thrown only if thread is explicitly interrupted, which should never happen
                 {
@@ -423,6 +424,9 @@ namespace Akka.Dispatch
                 {
                     interruption = ex;
                 }
+#else 
+                Actor.SystemInvoke(msg);
+#endif
 
                 // don't ever execute normal message when system message present!
                 if (messageList.IsEmpty && !IsClosed())
@@ -443,6 +447,7 @@ namespace Akka.Dispatch
                 {
                     dlm.SystemEnqueue(Actor.Self, msg);
                 }
+#if UNSAFE_THREADING
                 catch (ThreadInterruptedException ex)
                 // thrown only if thread is explicitly interrupted, which should never happen
                 {
@@ -452,6 +457,7 @@ namespace Akka.Dispatch
                 {
                     interruption = ex;
                 }
+#endif
                 catch (Exception ex)
                 {
                     Actor.System.EventStream.Publish(new Error(ex, GetType().FullName, GetType(), $"error while enqueuing {msg} to deadletters: {ex.Message}"));
@@ -563,7 +569,7 @@ namespace Akka.Dispatch
     /// A factory to create <see cref="IMessageQueue"/>s for an optionally provided <see cref="IActorContext"/>.
     /// </summary>
     /// <remarks>
-    /// Possibily important notice.
+    /// Possibly important notice.
     /// 
     /// When implementing a custom MailboxType, be aware that there is special semantics attached to
     /// <see cref="ActorSystem.ActorOf"/> in that sending the returned <see cref="IActorRef"/> may, for a short
@@ -606,7 +612,7 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Compilment to <see cref="IRequiresMessageQueue{T}"/>
+    /// Compliment to <see cref="IRequiresMessageQueue{T}"/>
     /// </summary>
     /// <typeparam name="TQueue">The type of <see cref="IMessageQueue"/> produced by this class.</typeparam>
     public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue { }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -16,7 +17,7 @@ using Akka.TestKit;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
-    public class ReplicatorChaosSpec : MultiNodeSpec
+    public class ReplicatorChaosSpec : MultiNodeClusterSpec
     {
         public static readonly RoleName First = new RoleName("first");
         public static readonly RoleName Second = new RoleName("second");
@@ -37,16 +38,16 @@ namespace Akka.DistributedData.Tests.MultiNode
         public readonly GCounterKey KeyX = new GCounterKey("X");
 
         public ReplicatorChaosSpec() : this(new ReplicatorChaosSpecConfig()) { }
-        public ReplicatorChaosSpec(ReplicatorChaosSpecConfig config) : base(config)
+        protected ReplicatorChaosSpec(ReplicatorChaosSpecConfig config) : base(config, typeof(ReplicatorChaosSpec))
         {
-            _cluster = Cluster.Cluster.Get(Sys);
+            _cluster = Akka.Cluster.Cluster.Get(Sys);
             _timeout = Dilated(TimeSpan.FromSeconds(3));
             _replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
                 .WithRole("backend")
                 .WithGossipInterval(TimeSpan.FromSeconds(1))), "replicator");
         }
 
-        //[MultiNodeFact]
+        [MultiNodeFact(Skip = "FIXME")]
         public void ReplicatorChaos_Tests()
         {
             Replicator_in_chaotic_cluster_should_replicate_data_in_initial_phase();
@@ -67,7 +68,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.GetReplicaCount);
-                    ExpectMsg(new Replicator.ReplicaCount(5));
+                    ExpectMsg(new ReplicaCount(5));
                 });
             });
 
@@ -75,55 +76,55 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 for (int i = 0; i < 5; i++)
                 {
-                    _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                    _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                    _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                    _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
                 }
-                ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(Replicator.UpdateSuccess) });
+                ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(UpdateSuccess) });
             }, First);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 20)));
-                _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 20)));
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster.SelfUniqueAddress, 20)));
+                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 20)));
+                _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 20)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 20)));
 
                 ReceiveN(3).ToImmutableHashSet().ShouldBe(new[]
                 {
-                    new Replicator.UpdateSuccess(KeyA, null),
-                    new Replicator.UpdateSuccess(KeyB, null),
-                    new Replicator.UpdateSuccess(KeyC, null)
+                    new UpdateSuccess(KeyA, null),
+                    new UpdateSuccess(KeyB, null),
+                    new UpdateSuccess(KeyC, null)
                 });
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, WriteLocal.Instance, x => x.Add("e1").Add("e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
                 _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, WriteLocal.Instance, x => x
-                    .Add(_cluster.SelfUniqueAddress, "e1")
-                    .Add(_cluster.SelfUniqueAddress, "e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                    .Add(_cluster, "e1")
+                    .Add(_cluster, "e2")));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Second);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 40)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyD, null));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 40)));
+                ExpectMsg(new UpdateSuccess(KeyD, null));
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, WriteLocal.Instance, x => x.Add("e2").Add("e3")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
                 _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, WriteLocal.Instance, x => x
-                    .Add(_cluster.SelfUniqueAddress, "e2")
-                    .Add(_cluster.SelfUniqueAddress, "e3")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                    .Add(_cluster, "e2")
+                    .Add(_cluster, "e3")));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Fourth);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyX, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 50)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyX, null));
+                _replicator.Tell(Dsl.Update(KeyX, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 50)));
+                ExpectMsg(new UpdateSuccess(KeyX, null));
                 _replicator.Tell(Dsl.Delete(KeyX, WriteLocal.Instance));
-                ExpectMsg(new Replicator.DeleteSuccess(KeyX));
+                ExpectMsg(new DeleteSuccess(KeyX));
             }, Fifth);
 
             EnterBarrier("initial-updates-done");
@@ -155,26 +156,26 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyA, null));
+                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                ExpectMsg(new UpdateSuccess(KeyA, null));
             }, First);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 2)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyA, null));
+                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 2)));
+                ExpectMsg(new UpdateSuccess(KeyA, null));
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, new WriteTo(2, _timeout), x => x.Add("e4")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
-                _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, new WriteTo(2, _timeout), x => x.Remove(_cluster.SelfUniqueAddress, "e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, new WriteTo(2, _timeout), x => x.Remove(_cluster, "e2")));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Third);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyD, null));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                ExpectMsg(new UpdateSuccess(KeyD, null));
             }, Fourth);
 
             EnterBarrier("update-during-split");
@@ -241,7 +242,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Within(TimeSpan.FromSeconds(10), () => AwaitAssert(() =>
             {
                 _replicator.Tell(Dsl.Get(key, ReadLocal.Instance));
-                var g = ExpectMsg<Replicator.GetSuccess>().Get(key);
+                var g = ExpectMsg<GetSuccess>().Get(key);
                 object value;
                 if (g is GCounter) value = ((GCounter)g).Value;
                 else if (g is PNCounter) value = ((PNCounter)g).Value;
@@ -260,27 +261,34 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.Get(key, ReadLocal.Instance));
-                    ExpectMsg(new Replicator.DataDeleted(key));
+                    ExpectMsg(new DataDeleted(key));
                 });
             });
         }
     }
-
-    public class ReplicatorChaosSpecNode1 : ReplicatorChaosSpec { }
-    public class ReplicatorChaosSpecNode2 : ReplicatorChaosSpec { }
-    public class ReplicatorChaosSpecNode3 : ReplicatorChaosSpec { }
-    public class ReplicatorChaosSpecNode4 : ReplicatorChaosSpec { }
-    public class ReplicatorChaosSpecNode5 : ReplicatorChaosSpec { }
-
+    
     public class ReplicatorChaosSpecConfig : MultiNodeConfig
     {
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
+
         public ReplicatorChaosSpecConfig()
         {
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+            
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster.roles = [""backend""]
-                akka.log-dead-letters-during-shutdown = off");
+                akka.log-dead-letters-during-shutdown = off")
+                .WithFallback(DistributedData.DefaultConfig());
 
             TestTransport = true;
         }

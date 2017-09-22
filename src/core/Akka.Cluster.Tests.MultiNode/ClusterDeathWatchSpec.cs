@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         private ClusterDeathWatchSpec(ClusterDeathWatchSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterDeathWatchSpec))
         {
             _config = config;
         }

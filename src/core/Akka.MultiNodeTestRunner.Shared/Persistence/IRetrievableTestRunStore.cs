@@ -10,7 +10,7 @@ using Akka.MultiNodeTestRunner.Shared.Reporting;
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     /// <summary>
-    /// Persistent store for retreiving <see cref="TestRunTree" /> instances
+    /// Persistent store for retrieving <see cref="TestRunTree" /> instances
     /// from disk.
     /// </summary>
     public interface IRetrievableTestRunStore :IPersistentTestRunStore

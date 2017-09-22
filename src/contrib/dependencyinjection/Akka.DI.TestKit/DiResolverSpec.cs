@@ -240,15 +240,15 @@ namespace Akka.DI.TestKit
         protected abstract IDependencyResolver NewDependencyResolver(object diContainer, ActorSystem system);
 
         /// <summary>
-        /// Create a binding for type <typeparam name="T"/> on the provided DI container.
+        /// Create a binding for type <typeparamref name="T"/> on the provided DI container.
         /// </summary>
         /// <typeparam name="T">The type we're binding onto the DI container.</typeparam>
         /// <param name="diContainer">The DI container.</param>
-        /// <param name="generator">A generator function that yields new objects of type <typeparam name="T"/>.</param>
+        /// <param name="generator">A generator function that yields new objects of type <typeparamref name="T"/>.</param>
         protected abstract void Bind<T>(object diContainer, Func<T> generator);
 
         /// <summary>
-        /// Create a binding for type <typeparam name="T"/> on the provided DI container.
+        /// Create a binding for type <typeparamref name="T"/> on the provided DI container.
         /// 
         /// Used for DI frameworks that require the DI target to be registered as well
         /// as the injected components.
@@ -390,12 +390,18 @@ namespace Akka.DI.TestKit
 
         #endregion
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

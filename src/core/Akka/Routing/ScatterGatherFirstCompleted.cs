@@ -260,43 +260,33 @@ namespace Akka.Routing
 
         private RouterConfig OverrideUnsetConfig(RouterConfig other)
         {
-            if (other is NoRouter)
+            if (other is Pool pool)
             {
-                return this;
-            }
-            else
-            {
-                var pool = other as Pool;
-                if (pool != null)
+                ScatterGatherFirstCompletedPool wssConf;
+
+                if (SupervisorStrategy != null
+                    && SupervisorStrategy.Equals(DefaultSupervisorStrategy)
+                    && !pool.SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 {
-                    ScatterGatherFirstCompletedPool wssConf;
-
-                    if (SupervisorStrategy != null
-                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
-                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
-                    {
-                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
-                    }
-                    else
-                    {
-                        wssConf = this;
-                    }
-
-                    if (wssConf.Resizer == null && pool.Resizer != null)
-                        return wssConf.WithResizer(pool.Resizer);
-
-                    return wssConf;
+                    wssConf = WithSupervisorStrategy(pool.SupervisorStrategy);
                 }
                 else
                 {
-                    return this;
+                    wssConf = this;
                 }
+
+                if (wssConf.Resizer == null && pool.Resizer != null)
+                    return wssConf.WithResizer(pool.Resizer);
+
+                return wssConf;
             }
+
+            return this;
         }
 
         #region Surrogate
         /// <summary>
-        /// Creeates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
+        /// Creates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
         /// <returns>The surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.</returns>
@@ -419,7 +409,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="routees">N/A</param>
         /// <param name="within">N/A</param>
-        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead")]
+        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead [1.1.0]")]
         public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees, TimeSpan within)
             : this(routees.Select(c => c.Path.ToString()), within, Dispatchers.DefaultDispatcherId)
         {

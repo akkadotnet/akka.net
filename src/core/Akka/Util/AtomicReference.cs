@@ -74,27 +74,27 @@ namespace Akka.Util
         {
             return Interlocked.Exchange(ref atomicValue, newValue);
         }
-        
+
         #region Conversion operators
 
         /// <summary>
-        /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
+        /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <typeparamref name="T"/>.
         /// </summary>
-        /// <param name="aRef">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator T(AtomicReference<T> aRef)
+        /// <param name="atomicReference">The reference to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator T(AtomicReference<T> atomicReference)
         {
-            return aRef.Value;
+            return atomicReference.Value;
         }
 
         /// <summary>
-        /// Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}"/> instance.
+        /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="AtomicReference{T}"/>.
         /// </summary>
-        /// <param name="newValue">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator AtomicReference<T>(T newValue)
+        /// <param name="value">The reference to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator AtomicReference<T>(T value)
         {
-            return new AtomicReference<T>(newValue);
+            return new AtomicReference<T>(value);
         }
 
         #endregion

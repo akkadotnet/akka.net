@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
                 BidiFlow.FromFlows(
                     Flow.Create<int>().Select(x => ((long) x) + 2).WithAttributes(Attributes.CreateName("top")),
                     Flow.Create<ByteString>()
-                        .Select(x => x.DecodeString(Encoding.UTF8))
+                        .Select(x => x.ToString(Encoding.UTF8))
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(Source.Single(42).MapMaterializedValue(_=>Task.FromResult(0))).To(s);
 
                 var top = b.Add(Flow.Create<int>().Select(x => ((long) x) + 2));
-                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.DecodeString(Encoding.UTF8)));
+                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.ToString(Encoding.UTF8)));
                 return new BidiShape<int,long,ByteString, string>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
             }));
         }
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_BidiFlow_must_work_when_atop_its_iverse()
+        public void A_BidiFlow_must_work_when_atop_its_inverse()
         {
             var f = Bidi().Atop(Inverse()).Join(Flow.Create<int>().Select(x => x.ToString()));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
@@ -202,7 +202,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_BidiFlow_must_suitably_ovveride_attribute_handling_methods()
+        public void A_BidiFlow_must_suitably_override_attribute_handling_methods()
         {
             var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");

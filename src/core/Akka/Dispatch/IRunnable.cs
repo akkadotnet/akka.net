@@ -10,7 +10,7 @@ using System;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// An asynchronous opreation will be executed by a <see cref="MessageDispatcher"/>.
+    /// An asynchronous operation will be executed by a <see cref="MessageDispatcher"/>.
     /// </summary>
     public interface IRunnable
     {

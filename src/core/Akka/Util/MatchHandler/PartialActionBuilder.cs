@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class PartialActionBuilder : IPartialActionBuilder
+    internal class PartialActionBuilder : IPartialActionBuilder
     {
         /// <summary>
         /// The maximum number of arguments=15 not including the obligatory first value argument in a partial action. 

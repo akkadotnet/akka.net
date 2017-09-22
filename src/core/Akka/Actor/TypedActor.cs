@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
 
 namespace Akka.Actor
@@ -25,6 +26,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class TypedActor.
     /// </summary>
+    [Obsolete("TypedActor in its current shape will be removed in v1.5")]
     public abstract class TypedActor : ActorBase
     {
         /// <summary>
@@ -32,7 +34,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>TBD</returns>
-        protected override sealed bool Receive(object message)
+        protected sealed override bool Receive(object message)
         {
             MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)

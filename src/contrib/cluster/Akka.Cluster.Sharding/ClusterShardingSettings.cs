@@ -55,6 +55,14 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly int SnapshotAfter;
         /// <summary>
+        /// The shard deletes persistent events (messages and snapshots) after doing snapshot
+        /// keeping this number of old persistent batches.
+        /// Batch is of size <see cref="SnapshotAfter"/>.
+        /// When set to 0 after snapshot is successfully done all messages with equal or lower sequence number will be deleted.
+        /// Default value of 2 leaves last maximum 2*<see cref="SnapshotAfter"/> messages and 3 snapshots (2 old ones + fresh snapshot)
+        /// </summary>
+        public readonly int KeepNrOfBatches;
+        /// <summary>
         /// TBD
         /// </summary>
         public readonly int LeastShardAllocationRebalanceThreshold;
@@ -78,8 +86,16 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityRestartBackoff">TBD</param>
         /// <param name="rebalanceInterval">TBD</param>
         /// <param name="snapshotAfter">TBD</param>
+        /// <param name="keepNrOfBatches">Keep this number of old persistent batches</param>
         /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
         /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
+        /// <param name="entityRecoveryStrategy">TBD</param>
+        /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
+        /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="entityRecoveryStrategy"/> is invalid.
+        /// Acceptable values include: all | constant
+        /// </exception>
         public TunningParameters(
             TimeSpan coordinatorFailureBackoff,
             TimeSpan retryInterval,
@@ -90,6 +106,7 @@ namespace Akka.Cluster.Sharding
             TimeSpan entityRestartBackoff,
             TimeSpan rebalanceInterval,
             int snapshotAfter,
+            int keepNrOfBatches,
             int leastShardAllocationRebalanceThreshold,
             int leastShardAllocationMaxSimultaneousRebalance,
             string entityRecoveryStrategy,
@@ -108,6 +125,7 @@ namespace Akka.Cluster.Sharding
             EntityRestartBackoff = entityRestartBackoff;
             RebalanceInterval = rebalanceInterval;
             SnapshotAfter = snapshotAfter;
+            KeepNrOfBatches = keepNrOfBatches;
             LeastShardAllocationRebalanceThreshold = leastShardAllocationRebalanceThreshold;
             LeastShardAllocationMaxSimultaneousRebalance = leastShardAllocationMaxSimultaneousRebalance;
             EntityRecoveryStrategy = entityRecoveryStrategy;
@@ -129,21 +147,21 @@ namespace Akka.Cluster.Sharding
         public readonly string Role;
 
         /// <summary>
-        /// True if active entity actors shall be automatically restarted upon <see cref="Shard"/> restart.i.e. 
+        /// True if active entity actors shall be automatically restarted upon <see cref="Shard"/> restart.i.e.
         /// if the <see cref="Shard"/> is started on a different <see cref="ShardRegion"/> due to rebalance or crash.
         /// </summary>
         public readonly bool RememberEntities;
 
         /// <summary>
-        /// Absolute path to the journal plugin configuration entity that is to be used for the internal 
-        /// persistence of ClusterSharding.If not defined the default journal plugin is used. Note that 
+        /// Absolute path to the journal plugin configuration entity that is to be used for the internal
+        /// persistence of ClusterSharding.If not defined the default journal plugin is used. Note that
         /// this is not related to persistence used by the entity actors.
         /// </summary>
         public readonly string JournalPluginId;
 
         /// <summary>
-        /// Absolute path to the snapshot plugin configuration entity that is to be used for the internal persistence 
-        /// of ClusterSharding. If not defined the default snapshot plugin is used.Note that this is not related 
+        /// Absolute path to the snapshot plugin configuration entity that is to be used for the internal persistence
+        /// of ClusterSharding. If not defined the default snapshot plugin is used.Note that this is not related
         /// to persistence used by the entity actors.
         /// </summary>
         public readonly string SnapshotPluginId;
@@ -189,6 +207,7 @@ namespace Akka.Cluster.Sharding
                 entityRestartBackoff: config.GetTimeSpan("entity-restart-backoff"),
                 rebalanceInterval: config.GetTimeSpan("rebalance-interval"),
                 snapshotAfter: config.GetInt("snapshot-after"),
+                keepNrOfBatches: config.GetInt("keep-nr-of-batches"),
                 leastShardAllocationRebalanceThreshold: config.GetInt("least-shard-allocation-strategy.rebalance-threshold"),
                 leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"),
                 entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
@@ -283,12 +302,14 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="tunningParameters">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="tunningParameters"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public ClusterShardingSettings WithTuningParameters(TunningParameters tunningParameters)
         {
             if (tunningParameters == null)
-                throw new ArgumentNullException("tunningParameters");
+                throw new ArgumentNullException(nameof(tunningParameters), $"ClusterShardingSettings requires {nameof(tunningParameters)} to be provided");
 
             return Copy(tunningParameters: tunningParameters);
         }
@@ -297,11 +318,14 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="coordinatorSingletonSettings"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public ClusterShardingSettings WithCoordinatorSingletonSettings(ClusterSingletonManagerSettings coordinatorSingletonSettings)
         {
             if (coordinatorSingletonSettings == null)
-                throw new ArgumentNullException("coordinatorSingletonSettings");
+                throw new ArgumentNullException(nameof(coordinatorSingletonSettings), $"ClusterShardingSettings requires {nameof(coordinatorSingletonSettings)} to be provided");
 
             return Copy(coordinatorSingletonSettings: coordinatorSingletonSettings);
         }

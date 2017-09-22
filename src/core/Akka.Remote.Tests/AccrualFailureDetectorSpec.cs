@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Akka.Remote.Tests
 {
-    
+
     public class AccrualFailureDetectorSpec : AkkaSpec
     {
         public static IEnumerable<Tuple<T, T>> Slide<T>(IEnumerable<T> values)
@@ -243,6 +243,59 @@ namespace Akka.Remote.Tests
             var history5 = history4 + 80;
             ShouldBe(history5.Mean, 103.333333D, 0.00001D);
             ShouldBe(history5.Variance, 688.88888889D, 0.00001D);
+        }
+
+
+        // handle an edge case when the Clock rolls over
+        // see https://github.com/akkadotnet/akka.net/issues/2581
+        [Fact]
+        public void PhiAccrualHistory_can_roll_over()
+        {
+            unchecked
+            {
+                var absoluteTimes = new List<long>
+                {
+                    (Int64.MaxValue - 300),
+                    (Int64.MaxValue - 200),
+                    (Int64.MaxValue - 100),
+                    (Int64.MaxValue),
+                    (Int64.MaxValue + 100),
+                    (Int64.MaxValue + 200),
+                    (Int64.MaxValue + 300),
+                };
+
+                // compute intervals
+                var timeIntervals = new List<long>();
+
+                for (var i = 0; i < absoluteTimes.Count-1; i++)
+                {
+                    timeIntervals.Add(absoluteTimes[i+1] - absoluteTimes[i]);
+                }
+
+                var fd =
+                    FailureDetectorSpecHelpers.CreateFailureDetector(
+                        FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
+                foreach (var i in timeIntervals)
+                {
+                    fd.HeartBeat();
+                    Assert.True(fd.IsAvailable);
+                }
+            }
+        }
+
+        [Fact]
+        public void PhiAccrualHistory_must_work_with_MonotonicClock()
+        {
+            var fd =
+                   FailureDetectorSpecHelpers.CreateFailureDetector();
+
+            Assert.True(fd.IsAvailable);
+            fd.HeartBeat();
+            Assert.True(fd.IsAvailable);
+            fd.HeartBeat();
+            fd.HeartBeat();
+            fd.HeartBeat();
+            Assert.True(fd.IsAvailable);
         }
 
         /// <summary>

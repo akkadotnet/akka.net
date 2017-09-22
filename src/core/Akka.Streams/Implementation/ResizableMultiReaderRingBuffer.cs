@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using Akka.Annotations;
 using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
@@ -20,7 +21,7 @@ namespace Akka.Streams.Implementation
     public class NothingToReadException : Exception
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of this exception
         /// </summary>
         public static readonly NothingToReadException Instance = new NothingToReadException();
 
@@ -28,15 +29,17 @@ namespace Akka.Streams.Implementation
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NothingToReadException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected NothingToReadException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -68,6 +71,7 @@ namespace Akka.Streams.Implementation
     /// elements, rather, if full, the buffer tries to grow and rejects further writes if max capacity is reached.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public class ResizableMultiReaderRingBuffer<T>
     {
         private readonly int _maxSizeBit;
@@ -139,7 +143,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// The number of elements the buffer can still take without having to be resized.
         /// </summary>
-        public int ImmediatellyAvailable => _array.Length - Length;
+        public int ImmediatelyAvailable => _array.Length - Length;
 
         /// <summary>
         /// The maximum number of elements the buffer can still take.

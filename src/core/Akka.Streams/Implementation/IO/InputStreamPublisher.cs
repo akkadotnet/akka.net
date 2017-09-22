@@ -28,12 +28,14 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="inputstream">TBD</param>
         /// <param name="completionSource">TBD</param>
         /// <param name="chunkSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="chunkSize"/> is less than or equal to zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
             if (chunkSize <= 0)
-                throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}");
+                throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}", nameof(chunkSize));
 
             return Actor.Props.Create(()=> new InputStreamPublisher(inputstream, completionSource, chunkSize)).WithDeploy(Deploy.Local);
         }
@@ -89,9 +91,9 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Failure<NotUsed>(ex)));
+                _completionSource.SetResult(IOResult.Failed(_readBytesTotal, ex));
             }
-            _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Success(NotUsed.Instance)));
+            _completionSource.SetResult(IOResult.Success(_readBytesTotal));
         }
 
         private void ReadAndSignal()
@@ -123,7 +125,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _readBytesTotal += readBytes;
                     // emit immediately, as this is the only chance to do it before we might block again
-                    OnNext(ByteString.Create(_bytes, 0, readBytes));
+                    OnNext(ByteString.CopyFrom(_bytes, 0, readBytes));
                 }
             }
             catch (Exception ex)

@@ -13,7 +13,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    [Obsolete("Deprecated. Will be removed")]    //When removing this class, also make this constructor private:  internal CancellationTokenSourceCancelable(CancellationTokenSource source)
+    [Obsolete("Deprecated. Will be removed [1.0.0]")]    //When removing this class, also make this constructor private:  internal CancellationTokenSourceCancelable(CancellationTokenSource source)
     public static class DeprecatedSchedulerExtensions
     {
         /// <summary>
@@ -23,7 +23,7 @@ namespace Akka.Actor
         /// <param name="initialDelay">TBD</param>
         /// <param name="receiver">TBD</param>
         /// <param name="message">TBD</param>
-        [Obsolete("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable. This method will be removed in future versions. [1.0.0]")]
         public static void ScheduleOnce(this IScheduler scheduler, TimeSpan initialDelay, IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -38,7 +38,7 @@ namespace Akka.Actor
         /// <param name="receiver">TBD</param>
         /// <param name="message">TBD</param>
         /// <param name="cancellationToken">TBD</param>
-        [Obsolete("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable. This method will be removed in future versions. [1.0.0]")]
         public static void ScheduleOnce(this IScheduler scheduler, TimeSpan initialDelay, IActorRef receiver, object message, CancellationToken cancellationToken)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -53,7 +53,7 @@ namespace Akka.Actor
         /// <param name="interval">TBD</param>
         /// <param name="receiver">TBD</param>
         /// <param name="message">TBD</param>
-        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() which will return an ICancelable. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() which will return an ICancelable. This method will be removed in future versions. [1.0.0]")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -70,7 +70,7 @@ namespace Akka.Actor
         /// <param name="receiver">TBD</param>
         /// <param name="message">TBD</param>
         /// <param name="cancellationToken">TBD</param>
-        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() instead. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() instead. This method will be removed in future versions. [1.0.0]")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, IActorRef receiver, object message, CancellationToken cancellationToken)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -86,7 +86,7 @@ namespace Akka.Actor
         /// <param name="initialDelay">TBD</param>
         /// <param name="interval">TBD</param>
         /// <param name="action">TBD</param>
-        [Obsolete("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleRepeatedly(). This method will be removed in future versions.")]
+        [Obsolete("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleRepeatedly(). This method will be removed in future versions. [1.0.0]")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, Action action)
         {
             scheduler.Advanced.ScheduleRepeatedly(initialDelay, interval, action, null);
@@ -100,7 +100,7 @@ namespace Akka.Actor
         /// <param name="interval">TBD</param>
         /// <param name="action">TBD</param>
         /// <param name="cancellationToken">TBD</param>
-        [Obsolete("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleRepeatedly(). This method will be removed in future versions.")]
+        [Obsolete("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleRepeatedly(). This method will be removed in future versions. [1.0.0]")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken cancellationToken)
         {
             var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -115,7 +115,7 @@ namespace Akka.Actor
         /// <param name="scheduler">TBD</param>
         /// <param name="initialDelay">TBD</param>
         /// <param name="action">TBD</param>
-        [Obsolete("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This method will be removed in future versions.")]
+        [Obsolete("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This method will be removed in future versions. [1.0.0]")]
         public static void ScheduleOnce(this IScheduler scheduler, TimeSpan initialDelay, Action action)
         {
             scheduler.Advanced.ScheduleOnce(initialDelay, action, null);
@@ -128,7 +128,7 @@ namespace Akka.Actor
         /// <param name="initialDelay">TBD</param>
         /// <param name="action">TBD</param>
         /// <param name="cancellationToken">TBD</param>
-        [Obsolete("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This method will be removed in future versions.")]
+        [Obsolete("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside actors is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This method will be removed in future versions. [1.0.0]")]
         public static void ScheduleOnce(this IScheduler scheduler, TimeSpan initialDelay, Action action, CancellationToken cancellationToken)
         {
             var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

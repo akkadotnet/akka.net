@@ -59,7 +59,7 @@ namespace Akka.Event
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return "DeadLetter from " + Sender + " to " + Recipient + ": <" + Message + ">";
+            return $"DeadLetter from {Sender} to {Recipient}: <{Message}>";
         }
     }
 
@@ -70,12 +70,14 @@ namespace Akka.Event
     public sealed class DeadLetter : AllDeadLetters
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeadLetter"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="message">The original message that could not be delivered.</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <param name="recipient">The actor that was to receive the message.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when either the sender or the recipient is undefined.
+        /// </exception>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
             if (sender == null) throw new ArgumentNullException(nameof(sender), "DeadLetter sender may not be null");
@@ -90,12 +92,14 @@ namespace Akka.Event
     public sealed class SuppressedDeadLetter : AllDeadLetters
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SuppressedDeadLetter"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="message">The original message that could not be delivered.</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <param name="recipient">The actor that was to receive the message.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when either the sender or the recipient is undefined.
+        /// </exception>
         public SuppressedDeadLetter(IDeadLetterSuppression message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
             if (sender == null) throw new ArgumentNullException(nameof(sender), "SuppressedDeadLetter sender may not be null");

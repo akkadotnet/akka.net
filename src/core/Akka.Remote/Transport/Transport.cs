@@ -9,7 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Event;
 
@@ -99,6 +99,7 @@ namespace Akka.Remote.Transport
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="InvalidAssociationException"/> class.
         /// </summary>
@@ -108,6 +109,7 @@ namespace Akka.Remote.Transport
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -134,13 +136,10 @@ namespace Akka.Remote.Transport
         /// </summary>
         public ByteString Payload { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("InboundPayload(size = {0} bytes)", Payload.Length);
+            return $"InboundPayload(size = {Payload.Length} bytes)";
         }
     }
 
@@ -387,11 +386,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         public abstract void Disassociate();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -400,20 +395,13 @@ namespace Akka.Remote.Transport
             return Equals((AssociationHandle) obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected bool Equals(AssociationHandle other)
         {
             return Equals(LocalAddress, other.LocalAddress) && Equals(RemoteAddress, other.RemoteAddress);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

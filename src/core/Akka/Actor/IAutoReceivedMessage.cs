@@ -10,23 +10,25 @@ using Akka.Event;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Marker trait to show which Messages are automatically handled by Akka.NET
     /// </summary>
-    public interface IAutoReceivedMessage : INoSerializationVerificationNeeded
+    public interface IAutoReceivedMessage
     {
     }
 
     /// <summary>
-    /// TBD
+    /// When Death Watch is used, the watcher will receive a Terminated(watched) message when watched is terminated.
+    /// Terminated message can't be forwarded to another actor, since that actor might not be watching the subject.
+    /// Instead, if you need to forward Terminated to another actor you should send the information in your own message.
     /// </summary>
-    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Terminated" /> class.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="existenceConfirmed">TBD</param>
-        /// <param name="addressTerminated">TBD</param>
+        /// <param name="actorRef">the watched actor that terminated</param>
+        /// <param name="existenceConfirmed">is false when the Terminated message was not sent directly from the watched actor, but derived from another source, such as when watching a non-local ActorRef, which might not have been resolved</param>
+        /// <param name="addressTerminated">the Terminated message was derived from that the remote node hosting the watched actor was detected as unreachable</param>
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
             ActorRef = actorRef;
@@ -35,27 +37,29 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The watched actor that terminated
         /// </summary>
-        public IActorRef ActorRef { get; private set; }
+        public IActorRef ActorRef { get; }
 
         /// <summary>
-        /// TBD
+        /// Is false when the Terminated message was not sent
+        /// directly from the watched actor, but derived from another source, such as 
+        /// when watching a non-local ActorRef, which might not have been resolved
         /// </summary>
-        public bool AddressTerminated { get; private set; }
+        public bool AddressTerminated { get; }
 
         /// <summary>
-        /// TBD
+        /// The Terminated message was derived from that the remote node hosting the watched actor was detected as unreachable
         /// </summary>
-        public bool ExistenceConfirmed { get; private set; }
+        public bool ExistenceConfirmed { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return "<Terminated>: " + ActorRef + " - ExistenceConfirmed=" + ExistenceConfirmed;
+            return $"<Terminated>: {ActorRef} - ExistenceConfirmed={ExistenceConfirmed}";
         }
     }
 
@@ -65,9 +69,9 @@ namespace Akka.Actor
     public sealed class Identify : IAutoReceivedMessage, INotInfluenceReceiveTimeout
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Identify" /> class.
         /// </summary>
-        /// <param name="messageId">TBD</param>
+        /// <param name="messageId">A correlating ID used to distinguish multiple <see cref="Identify"/> requests to the same receiver.</param>
         public Identify(object messageId)
         {
             MessageId = messageId;
@@ -78,14 +82,32 @@ namespace Akka.Actor
         /// </summary>
         public object MessageId { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        #region Equals
+        private bool Equals(Identify other)
+        {
+            return Equals(MessageId, other.MessageId);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Identify && Equals((Identify)obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return (MessageId != null ? MessageId.GetHashCode() : 0);
+        }
+
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return "<Identify>: " + MessageId;
+            return $"<Identify>: {MessageId}";
         }
+        #endregion
     }
 
     /// <summary>
@@ -94,10 +116,10 @@ namespace Akka.Actor
     public sealed class ActorIdentity
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ActorIdentity" /> class.
         /// </summary>
-        /// <param name="messageId">TBD</param>
-        /// <param name="subject">TBD</param>
+        /// <param name="messageId">The same correlating ID used in the original <see cref="Identify"/> message.</param>
+        /// <param name="subject">A reference to the underyling actor.</param>
         public ActorIdentity(object messageId, IActorRef subject)
         {
             MessageId = messageId;
@@ -107,22 +129,43 @@ namespace Akka.Actor
         /// <summary>
         /// The same correlating ID used in the original <see cref="Identify"/> message.
         /// </summary>
-        public object MessageId { get; private set; }
+        public object MessageId { get; }
 
         /// <summary>
         /// A reference to the underyling actor.
         /// </summary>
         /// <remarks>Will be <c>null</c> if sent an <see cref="ActorSelection"/> that could not be resolved.</remarks>
-        public IActorRef Subject { get; private set; }
+        public IActorRef Subject { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        #region Equals
+        private bool Equals(ActorIdentity other)
+        {
+            return Equals(MessageId, other.MessageId) && Equals(Subject, other.Subject);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is ActorIdentity && Equals((ActorIdentity)obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((MessageId != null ? MessageId.GetHashCode() : 0) * 397) ^ (Subject != null ? Subject.GetHashCode() : 0);
+            }
+        }
+
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return "<ActorIdentity>: " + Subject + " - MessageId=" + MessageId;
+            return $"<ActorIdentity>: {Subject} - MessageId={MessageId}";
         }
+        #endregion
     }
 
     /// <summary>
@@ -136,28 +179,18 @@ namespace Akka.Actor
     public sealed class PoisonPill : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         private PoisonPill() { }
-        private static readonly PoisonPill _instance = new PoisonPill();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static PoisonPill Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
 
         /// <summary>
-        /// TBD
+        /// The singleton instance of PoisonPill.
         /// </summary>
-        /// <returns>TBD</returns>
+        public static PoisonPill Instance { get; } = new PoisonPill();
+
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "<PoisonPill>";
         }
     }
-
 
     /// <summary>
     /// Sending an <see cref="Kill"/> message to an actor causes the actor to throw an 
@@ -170,29 +203,17 @@ namespace Akka.Actor
     {
         private Kill() { }
 
-        private static readonly Kill _instance = new Kill();
         /// <summary>
-        /// TBD
+        /// The singleton instance of Kill.
         /// </summary>
-        public static Kill Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Kill Instance { get; } = new Kill();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "<Kill>";
         }
     }
-
-
 
     /// <summary>
     /// INTERNAL API
@@ -207,7 +228,7 @@ namespace Akka.Actor
     internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AddressTerminated" /> class.
         /// </summary>
         /// <param name="address">TBD</param>
         public AddressTerminated(Address address)
@@ -218,16 +239,12 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Address Address { get; private set; }
+        public Address Address { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return "<AddressTerminated>: " + Address;
+            return $"<AddressTerminated>: {Address}";
         }
     }
 }
-

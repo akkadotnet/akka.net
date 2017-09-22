@@ -71,10 +71,10 @@ namespace Akka.Streams.Dsl
         public sealed class ProducerFailed : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ProducerFailed"/> class.
             /// </summary>
-            /// <param name="message">TBD</param>
-            /// <param name="cause">TBD</param>
+            /// <param name="message">The error message that explains the reason for the exception.</param>
+            /// <param name="cause">The exception that is the cause of the current exception.</param>
             public ProducerFailed(string message, Exception cause) : base(message, cause)
             {
                 
@@ -429,7 +429,9 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="perProducerBufferSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/> is less than or equal to zero.
+        /// </exception>
         public MergeHub(int perProducerBufferSize)
         {
             if (perProducerBufferSize <= 0)
@@ -471,10 +473,10 @@ namespace Akka.Streams.Dsl
 
     /// <summary>
     /// A BroadcastHub is a special streaming hub that is able to broadcast streamed elements to a dynamic set of consumers.
-    /// It consissts of two parts, a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/>. The <see cref="Sink{TIn,TMat}"/> broadcasts elements from a producer to the
+    /// It consists of two parts, a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/>. The <see cref="Sink{TIn,TMat}"/> broadcasts elements from a producer to the
     /// actually live consumers it has. Once the producer has been materialized, the <see cref="Sink{TIn,TMat}"/> it feeds into returns a
     /// materialized value which is the corresponding <see cref="Source{TOut,TMat}"/>. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times,
-    /// where weach of the new materializations will receive their elements from the original <see cref="Sink{TIn,TMat}"/>.
+    /// where each of the new materializations will receive their elements from the original <see cref="Sink{TIn,TMat}"/>.
     /// </summary>
     public class BroadcastHub
     {
@@ -482,7 +484,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
         /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
         /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
-        /// broadcast elements form the ofiginal <see cref="Sink{TIn,TMat}"/>.
+        /// broadcast elements form the original <see cref="Sink{TIn,TMat}"/>.
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
@@ -508,7 +510,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
         /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
         /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
-        /// broadcast elements form the ofiginal <see cref="Sink{TIn,TMat}"/>.
+        /// broadcast elements from the original <see cref="Sink{TIn,TMat}"/>.
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
@@ -793,7 +795,7 @@ namespace Akka.Streams.Dsl
                 if (advance != null)
                 {
                     var newOffset = advance.PreviousOffset + _stage.DemandThreshold;
-                    // Move the consumer from its last known offest to its new one. Check if we are unblocked.
+                    // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                     var c = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
                     AddConsumer(c, newOffset);
                     CheckUnblock(advance.PreviousOffset);
@@ -802,7 +804,7 @@ namespace Akka.Streams.Dsl
 
                 // only NeedWakeup left
                 var wakeup = (NeedWakeup) hubEvent;
-                // Move the consumer from its last known offest to its new one. Check if we are unblocked.
+                // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                 var consumer = FindAndRemoveConsumer(wakeup.Id, wakeup.PreviousOffset);
                 AddConsumer(consumer, wakeup.CurrentOffset);
 
@@ -915,13 +917,29 @@ namespace Akka.Streams.Dsl
                 _tail++;
                 if (_activeConsumer == 0)
                 {
-                    var completeMessage = new HubCompleted();
-                    // Notify pending consumers and set tombstone
-                    var open = (Open) State.GetAndSet(new Closed());
-                    open.Registrations.ForEach(r => r.Callback(completeMessage));
-
                     // Existing consumers have already consumed all elements and will see completion status in the queue
                     CompleteStage();
+                }
+            }
+
+            public override void PostStop()
+            {
+                while (true)
+                {
+                    // Notify pending consumers and set tombstone
+                    if (State.Value is Open open)
+                    {
+                        if (State.CompareAndSet(open, new Closed()))
+                        {
+                            var completedMessage = new HubCompleted();
+                            foreach (var consumer in open.Registrations)
+                                consumer.Callback(completedMessage);
+                        }
+                        else
+                            continue;
+                    }
+                    // Already closed, ignore
+                    break;
                 }
             }
 
@@ -975,18 +993,18 @@ namespace Akka.Streams.Dsl
                 {
                     var callback = GetAsyncCallback<IConsumerEvent>(OnCommand);
 
-                    Action<Result<Action<IHubEvent>>> onHubReady = result =>
+                    void OnHubReady(Result<Action<IHubEvent>> result)
                     {
                         if (result.IsSuccess)
                         {
                             _hubCallback = result.Value;
-                            if(IsAvailable(_stage.Out) && _offsetInitialized)
+                            if (IsAvailable(_stage.Out) && _offsetInitialized)
                                 OnPull();
                             _hubCallback(RegistrationPending.Instance);
                         }
                         else
                             FailStage(result.Exception);
-                    };
+                    }
 
                     /*
                      * Note that there is a potential race here. First we add ourselves to the pending registrations, then
@@ -1015,7 +1033,7 @@ namespace Akka.Streams.Dsl
                             var newRegistrations = open.Registrations.Insert(0, new Consumer(_id, callback));
                             if (_stage._hubLogic.State.CompareAndSet(state, new Open(open.CallbackTask, newRegistrations)))
                             {
-                                var readyCallback = GetAsyncCallback(onHubReady);
+                                var readyCallback = GetAsyncCallback((Action<Result<Action<IHubEvent>>>)OnHubReady);
                                 open.CallbackTask.ContinueWith(t => readyCallback(Result.FromTask(t)));
                                 break;
                             }
@@ -1113,7 +1131,10 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="bufferSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="bufferSize"/>
+        /// is less than or equal to zero, is greater than 4095, or is not a power of two.
+        /// </exception>
         public BroadcastHub(int bufferSize)
         {
             if (bufferSize <= 0)

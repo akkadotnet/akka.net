@@ -239,11 +239,7 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Stats
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as Stats;
@@ -251,10 +247,7 @@ namespace Akka.Remote
                 return _watching == other._watching && _watchingNodes == other._watchingNodes;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -331,27 +324,22 @@ namespace Akka.Remote
             /// </summary>
             public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
-                Func<string> formatWatchingRefs = () =>
+                string FormatWatchingRefs()
                 {
                     if (!_watchingRefs.Any()) return "";
-                    return
-                        $"{_watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name).Aggregate((a, b) => a + ", " + b)}";
-                };
+                    return $"{string.Join(", ", _watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name))}";
+                }
 
-                Func<string> formatWatchingAddresses = () =>
+                string FormatWatchingAddresses()
                 {
-                    if (!_watchingAddresses.Any())
-                        return "";
+                    if (!_watchingAddresses.Any()) return "";
                     return string.Join(",", WatchingAddresses);
-                };
+                }
 
-                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{formatWatchingRefs()}], watchingAddresses=[{formatWatchingAddresses()}])";
+                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{FormatWatchingRefs()}], watchingAddresses=[{FormatWatchingAddresses()}])";
             }
 
             /// <summary>
@@ -375,7 +363,9 @@ namespace Akka.Remote
         /// <param name="heartbeatInterval">TBD</param>
         /// <param name="unreachableReaperInterval">TBD</param>
         /// <param name="heartbeatExpectedResponseAfter">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the actor system does not have a <see cref="RemoteActorRefProvider"/> enabled in the configuration.
+        /// </exception>
         public RemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -489,18 +479,20 @@ namespace Akka.Remote
             var from = Sender.Path.Address;
 
             if (_failureDetector.IsMonitoring(from))
-            {
                 Log.Debug("Received heartbeat rsp from [{0}]", from);
-            }
             else
-            {
                 Log.Debug("Received first heartbeat rsp from [{0}]", from);
-            }
 
             if (WatcheeByNodes.ContainsKey(from) && !Unreachable.Contains(from))
             {
-                if (!_addressUids.ContainsKey(from) || _addressUids[from] != uid)
+                if (_addressUids.TryGetValue(from, out int addressUid))
+                {
+                    if (addressUid != uid)
+                        ReWatch(from);
+                }
+                else
                     ReWatch(from);
+
                 _addressUids[from] = uid;
                 _failureDetector.Heartbeat(from);
             }
@@ -513,9 +505,8 @@ namespace Akka.Remote
                 if (!Unreachable.Contains(a) && !_failureDetector.IsAvailable(a))
                 {
                     Log.Warning("Detected unreachable: [{0}]", a);
-                    int addressUid;
                     var nullableAddressUid =
-                        _addressUids.TryGetValue(a, out addressUid) ? new int?(addressUid) : null;
+                        _addressUids.TryGetValue(a, out int addressUid) ? new int?(addressUid) : null;
 
                     Quarantine(a, nullableAddressUid);
                     PublishAddressTerminated(a);
@@ -555,10 +546,10 @@ namespace Akka.Remote
             if(watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
             Log.Debug("Watching: [{0} -> {1}]", watcher.Path, watchee.Path);
 
-            HashSet<IInternalActorRef> watching;
-            if (Watching.TryGetValue(watchee, out watching))
+            if (Watching.TryGetValue(watchee, out var watching))
                 watching.Add(watcher);
-           else Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
+            else
+                Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
             WatchNode(watchee);
 
             // add watch from self, this will actually send a Watch to the target when necessary
@@ -579,10 +570,10 @@ namespace Akka.Remote
                 _failureDetector.Remove(watcheeAddress);
             }
 
-            HashSet<IInternalActorRef> watchees;
-            if (WatcheeByNodes.TryGetValue(watcheeAddress, out watchees))
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out var watchees))
                 watchees.Add(watchee);
-            else WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
+            else
+                WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
         }
 
 
@@ -596,8 +587,7 @@ namespace Akka.Remote
         {
             if (watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
             Log.Debug($"Unwatching: [{watcher.Path} -> {watchee.Path}]");
-            HashSet<IInternalActorRef> watchers;
-            if (Watching.TryGetValue(watchee, out watchers))
+            if (Watching.TryGetValue(watchee, out var watchers))
             {
                 watchers.Remove(watcher);
                 if (!watchers.Any())
@@ -618,8 +608,7 @@ namespace Akka.Remote
         {
             var watcheeAddress = watchee.Path.Address;
             Watching.Remove(watchee);
-            HashSet<IInternalActorRef> watchees;
-            if (WatcheeByNodes.TryGetValue(watcheeAddress, out watchees))
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out var watchees))
             {
                 watchees.Remove(watchee);
                 if (!watchees.Any())

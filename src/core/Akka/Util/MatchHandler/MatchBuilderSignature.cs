@@ -17,7 +17,7 @@ namespace Akka.Tools.MatchHandler
     /// Two signatures are equal if they contain the same <see cref="Type">Types</see> and <see cref="HandlerKind">HandlerKinds</see>
     /// in the same order.
     /// </summary>
-    public class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
+    internal class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
     {
         private readonly IReadOnlyList<object> _list;
 
@@ -30,11 +30,7 @@ namespace Akka.Tools.MatchHandler
             _list = signature;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(MatchBuilderSignature other)
         {
             if(ReferenceEquals(null, other)) return false;
@@ -42,11 +38,7 @@ namespace Akka.Tools.MatchHandler
             return ListsEqual(_list, other._list);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if(ReferenceEquals(null, obj)) return false;
@@ -61,7 +53,7 @@ namespace Akka.Tools.MatchHandler
         {
             if(x == null) return y == null || y.Count == 0;
             var xCount = x.Count;
-            if(y == null) return xCount == 0;            
+            if(y == null) return xCount == 0;
             if(xCount != y.Count) return false;
             for(var i = 0; i < xCount; i++)
             {
@@ -70,10 +62,7 @@ namespace Akka.Tools.MatchHandler
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             if(_list == null) return 0;
@@ -87,13 +76,11 @@ namespace Akka.Tools.MatchHandler
             return hashCode;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return "[" + String.Join(", ", _list.Select(o => o as Type != null ? ((Type)o).Name : o)) + "]";
+            var types = _list.Select(o => (o as Type)?.Name ?? o);
+            return $"[{string.Join(", ", types)}]";
         }
     }
 }

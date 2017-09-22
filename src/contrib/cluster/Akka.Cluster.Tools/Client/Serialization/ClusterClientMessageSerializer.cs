@@ -8,46 +8,31 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
-using Contacts = Akka.Cluster.Client.Serializers.Proto.Contacts;
+using Google.Protobuf;
 
 namespace Akka.Cluster.Tools.Client.Serialization
 {
     /// <summary>
     /// TBD
     /// </summary>
-    internal class ClusterClientMessageSerializer : SerializerWithStringManifest
+    public class ClusterClientMessageSerializer : SerializerWithStringManifest
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public const int BufferSize = 1024 * 4;
-
         private const string ContactsManifest = "A";
         private const string GetContactsManifest = "B";
         private const string HeartbeatManifest = "C";
         private const string HeartbeatRspManifest = "D";
 
-        private static readonly byte[] EmptyBytes = new byte[0];
+        private static readonly byte[] EmptyBytes = {};
         private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterClientMessageSerializer"/> class.
         /// </summary>
-        public override int Identifier { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterClientMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterClientMessage>>
             {
                 {ContactsManifest, ContactsFromBinary},
@@ -58,45 +43,53 @@ namespace Akka.Cluster.Tools.Client.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Serializes the given object into a byte array
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj"/> is of an unknown type.
+        /// Acceptable values include:
+        /// <see cref="ClusterReceptionist.Contacts"/> | <see cref="ClusterReceptionist.GetContacts"/> | <see cref="ClusterReceptionist.Heartbeat"/> | <see cref="ClusterReceptionist.HeartbeatRsp"/>
+        /// </exception>
+        /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            if (obj is ClusterReceptionist.Contacts) return Compress(ContactsToProto(obj as ClusterReceptionist.Contacts));
-            if(obj is ClusterReceptionist.GetContacts) return EmptyBytes;
-            if(obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
-            if(obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
+            if (obj is ClusterReceptionist.Contacts) return ContactsToProto(obj as ClusterReceptionist.Contacts);
+            if (obj is ClusterReceptionist.GetContacts) return EmptyBytes;
+            if (obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
+            if (obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
 
-            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
+            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
         }
 
         /// <summary>
-        /// TBD
+        /// Deserializes a byte array into an object using an optional <paramref name="manifest" /> (type hint).
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="manifestString">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
-        public override object FromBinary(byte[] bytes, string manifestString)
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bytes"/>cannot be deserialized using the specified <paramref name="manifest"/>.
+        /// </exception>
+        /// <returns>The object contained in the array</returns>
+        public override object FromBinary(byte[] bytes, string manifest)
         {
-            Func<byte[], IClusterClientMessage> deserializer;
-            if (_fromBinaryMap.TryGetValue(manifestString, out deserializer))
-            {
+            if (_fromBinaryMap.TryGetValue(manifest, out var deserializer))
                 return deserializer(bytes);
-            }
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifestString}] in serializer {GetType()}");
+            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(ClusterClientMessageSerializer)}");
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(System.Byte[],System.String)" /> method.
+        /// <note>
+        /// This method returns <see cref="String.Empty" /> if a manifest is not needed.
+        /// </note>
         /// </summary>
-        /// <param name="o">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
+        /// </exception>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
             if (o is ClusterReceptionist.Contacts) return ContactsManifest;
@@ -104,47 +97,23 @@ namespace Akka.Cluster.Tools.Client.Serialization
             if (o is ClusterReceptionist.Heartbeat) return HeartbeatManifest;
             if (o is ClusterReceptionist.HeartbeatRsp) return HeartbeatRspManifest;
 
-            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
+            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
         }
 
-        private byte[] Compress(IMessageLite message)
+        private byte[] ContactsToProto(ClusterReceptionist.Contacts message)
         {
-            using (var bos = new MemoryStream(BufferSize))
-            using (var gzipStream = new GZipStream(bos, CompressionMode.Compress))
+            var protoMessage = new Proto.Msg.Contacts();
+            foreach (var contactPoint in message.ContactPoints)
             {
-                message.WriteTo(gzipStream);
-                gzipStream.Dispose();
-                return bos.ToArray();
+                protoMessage.ContactPoints.Add(contactPoint);
             }
-        }
-
-        private byte[] Decompress(byte[] bytes)
-        {
-            using (var input = new GZipStream(new MemoryStream(bytes), CompressionMode.Decompress))
-            using (var output = new MemoryStream())
-            {
-                var buffer = new byte[BufferSize];
-                var bytesRead = input.Read(buffer, 0, BufferSize);
-                while (bytesRead > 0)
-                {
-                    output.Write(buffer, 0, bytesRead);
-                    bytesRead = input.Read(buffer, 0, BufferSize);
-                }
-                return output.ToArray();
-            }
-        }
-
-        private Contacts ContactsToProto(ClusterReceptionist.Contacts message)
-        {
-            return Contacts.CreateBuilder()
-                .AddRangeContactPoints(message.ContactPoints)
-                .Build();
+            return protoMessage.ToByteArray();
         }
 
         private ClusterReceptionist.Contacts ContactsFromBinary(byte[] binary)
         {
-            var proto = Contacts.ParseFrom(Decompress(binary));
-            return new ClusterReceptionist.Contacts(proto.ContactPointsList.ToImmutableList());
+            var proto = Proto.Msg.Contacts.Parser.ParseFrom(binary);
+            return new ClusterReceptionist.Contacts(proto.ContactPoints.ToImmutableList());
         }
     }
 }

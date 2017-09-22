@@ -95,9 +95,9 @@ namespace Akka.Remote
         private RemoteActorRefProvider RemoteProvider => Provider as RemoteActorRefProvider;
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="Akka.Actor.UntypedActor.Context.Watch(IActorRef)"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
 
 

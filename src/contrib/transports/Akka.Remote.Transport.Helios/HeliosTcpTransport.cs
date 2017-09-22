@@ -12,9 +12,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Helios.Buffers;
 using Helios.Channels;
 using Helios.Exceptions;
@@ -25,6 +26,7 @@ namespace Akka.Remote.Transport.Helios
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener _listener;
@@ -214,6 +216,7 @@ namespace Akka.Remote.Transport.Helios
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     class TcpAssociationHandle : AssociationHandle
     {
         private readonly IChannel _channel;
@@ -290,10 +293,10 @@ namespace Akka.Remote.Transport.Helios
                 var clientBootstrap = ClientFactory(remoteAddress);
                 var socketAddress = AddressToSocketAddress(remoteAddress);
 
-                var associate = await clientBootstrap.ConnectAsync(socketAddress);
+                var associate = await clientBootstrap.ConnectAsync(socketAddress).ConfigureAwait(false);
 
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
-                return await handler.StatusFuture;
+                return await handler.StatusFuture.ConfigureAwait(false);
             }
             catch (AggregateException e) when (e.InnerException is ConnectException)
             {

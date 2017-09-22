@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Akka.Annotations;
 
 namespace Akka.Streams.Implementation
 {
@@ -121,7 +123,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check agains overflow or
+        /// Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check against overflow or
         /// underflow, it is the responsibility of the user to track or check the capacity of the buffer before enqueueing
         /// dequeueing or dropping.
         /// 
@@ -129,8 +131,11 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="size">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="size"/> is less than 1.
+        /// </exception>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static FixedSizeBuffer<T> Create<T>(int size)
         {
             if (size < 1)
@@ -214,6 +219,7 @@ namespace Akka.Streams.Implementation
         /// <param name="index">TBD</param>
         /// <param name="element">TBD</param>
         /// <param name="maintenance">TBD</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Put(long index, T element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
         /// <summary>

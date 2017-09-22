@@ -26,9 +26,9 @@ namespace Akka.Routing
         /// <param name="sender">TBD</param>
         public override void Send(object message, IActorRef sender)
         {
-            if (sender is LocalActorRef)
+            if (sender is LocalActorRef localActorRef)
             {
-                sender.AsInstanceOf<LocalActorRef>().Provider.DeadLetters.Tell(message);
+                localActorRef.Provider.DeadLetters.Tell(message);
             }
         }
     }
@@ -115,11 +115,7 @@ namespace Akka.Routing
             return Actor.Ask(message, timeout);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -128,24 +124,11 @@ namespace Akka.Routing
             return Equals((ActorRefRoutee)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        protected bool Equals(ActorRefRoutee other)
-        {
-            return Equals(Actor, other.Actor);
-        }
+        /// <inheritdoc/>
+        protected bool Equals(ActorRefRoutee other) => Equals(Actor, other.Actor);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return (Actor != null ? Actor.GetHashCode() : 0);
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => Actor?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -190,11 +173,7 @@ namespace Akka.Routing
             return _actor.Ask(message, timeout);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -203,24 +182,11 @@ namespace Akka.Routing
             return Equals((ActorSelectionRoutee)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        protected bool Equals(ActorSelectionRoutee other)
-        {
-            return Equals(_actor, other._actor);
-        }
+        /// <inheritdoc/>
+        protected bool Equals(ActorSelectionRoutee other) => Equals(_actor, other._actor);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return (_actor != null ? _actor.GetHashCode() : 0);
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => _actor?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -281,7 +247,7 @@ namespace Akka.Routing
         /// <param name="sender">TBD</param>
         public override void Send(object message, IActorRef sender)
         {
-            foreach (Routee routee in  routees)
+            foreach (Routee routee in routees)
             {
                 routee.Send(message, sender);
             }
@@ -292,7 +258,7 @@ namespace Akka.Routing
     /// This class contains logic used by a <see cref="Router"/> to route messages to one or more actors.
     /// These actors are known in the system as a <see cref="Routee"/>.
     /// </summary>
-    public abstract class RoutingLogic
+    public abstract class RoutingLogic : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Picks a <see cref="Routee"/> to receive the <paramref name="message"/>.
@@ -358,11 +324,7 @@ namespace Akka.Routing
         /// <param name="routees">TBD</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            if(routees == null)
-            {
-                routees = new Routee[0];
-            }
-            _routees = routees;
+            _routees = routees ?? new Routee[0];
             _logic = logic;
         }
         /// <summary>
@@ -384,9 +346,9 @@ namespace Akka.Routing
 
         private object UnWrap(object message)
         {
-            if (message is RouterEnvelope)
+            if (message is RouterEnvelope routerEnvelope)
             {
-                return message.AsInstanceOf<RouterEnvelope>().Message;
+                return routerEnvelope.Message;
             }
 
             return message;

@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         public ClusterConsistentHashingRouterSpec() : this(new ConsistentHashingRouterMultiNodeConfig()) { }
 
-        protected ClusterConsistentHashingRouterSpec(ConsistentHashingRouterMultiNodeConfig config) : base(config)
+        protected ClusterConsistentHashingRouterSpec(ConsistentHashingRouterMultiNodeConfig config) : base(config, typeof(ClusterConsistentHashingRouterSpec))
         {
             _config = config;
 

@@ -16,9 +16,10 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 using Xunit.Abstractions;
+using Nito.AsyncEx;
 
 namespace Akka.Remote.Tests
 {
@@ -54,6 +55,7 @@ namespace Akka.Remote.Tests
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
+                actor.serialize-messages = off
 
                 retry-gate-closed-for = 1 s
                 log-remote-lifecycle-events = on
@@ -177,6 +179,28 @@ namespace Akka.Remote.Tests
             var msg2 = here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).Result;
             Assert.Equal("pong", msg2.Item1);
         }
+        
+        [Fact]
+        public void Resolve_does_not_deadlock()
+        {
+            // here is really an ActorSelection
+            var actorSelection = (ActorSelection)here;
+            var actorRef = actorSelection.ResolveOne(TimeSpan.FromSeconds(10)).Result;
+            // the only test is that the ResolveOne works, so if we got here, the test passes
+        }
+
+        [Fact]
+        public void Resolve_does_not_deadlock_GuiApplication()
+        {
+            AsyncContext.Run(() =>
+            {
+                // here is really an ActorSelection
+                var actorSelection = (ActorSelection)here;
+                var actorRef = actorSelection.ResolveOne(TimeSpan.FromSeconds(10)).Result;
+                // the only test is that the ResolveOne works, so if we got here, the test passes
+                return Task.Delay(0);
+            });
+        }
 
         [Fact]
         public void Remoting_must_not_send_remote_recreated_actor_with_same_name()
@@ -224,7 +248,7 @@ namespace Akka.Remote.Tests
             l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
             var child = ExpectMsg<IActorRef>();
 
-            // grandchild is condfigured to be deployed on RemotingSpec (Sys)
+            // grandchild is configured to be deployed on RemotingSpec (Sys)
             child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
             var grandchild = ExpectMsg<IActorRef>();
             grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
@@ -512,12 +536,12 @@ namespace Akka.Remote.Tests
 
         private void VerifySend(object msg, Action afterSend)
         {
-            var bigBounceId = string.Format("bigBounce-{0}", ThreadLocalRandom.Current.Next());
+            var bigBounceId = $"bigBounce-{ThreadLocalRandom.Current.Next()}";
             var bigBounceOther = remoteSystem.ActorOf(Props.Create<Bouncer>().WithDeploy(Actor.Deploy.Local),
                 bigBounceId);
 
             var bigBounceHere =
-                Sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
+                Sys.ActorSelection($"akka.test://remote-sys@localhost:12346/user/{bigBounceId}");
             var eventForwarder = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)).WithDeploy(Actor.Deploy.Local));
             Sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
             Sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
@@ -545,7 +569,7 @@ namespace Akka.Remote.Tests
 
         private Address Addr(ActorSystem system, string proto)
         {
-            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
+            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address($"akka.{proto}", "", "", 0));
         }
 
         private int Port(ActorSystem system, string proto)
@@ -591,7 +615,7 @@ namespace Akka.Remote.Tests
         class NestedDeployer : UntypedActor
         {
             private Props _reporterProps;
-            private IActorRef _repoterActorRef;
+            private IActorRef _reporterActorRef;
 
             public class GetNestedReporter { }
 
@@ -602,14 +626,14 @@ namespace Akka.Remote.Tests
 
             protected override void PreStart()
             {
-                _repoterActorRef = Context.ActorOf(_reporterProps);
+                _reporterActorRef = Context.ActorOf(_reporterProps);
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is GetNestedReporter)
                 {
-                    Sender.Tell(_repoterActorRef);
+                    Sender.Tell(_reporterActorRef);
                 }
                 else
                 {

@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// <summary>
     /// TBD
     /// </summary>
-    public class DistributedPubSubExtensionProvider : ExtensionIdProvider<DistributedPubSub>
+    public sealed class DistributedPubSubExtensionProvider : ExtensionIdProvider<DistributedPubSub>
     {
         /// <summary>
         /// TBD
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// Extension that starts a <see cref="DistributedPubSubMediator"/> actor with settings 
     /// defined in config section `akka.cluster.pub-sub`.
     /// </summary>
-    public class DistributedPubSub : IExtension
+    public sealed class DistributedPubSub : IExtension
     {
         private readonly ExtendedActorSystem _system;
         private readonly DistributedPubSubSettings _settings;

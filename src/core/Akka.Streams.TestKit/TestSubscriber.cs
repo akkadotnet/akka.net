@@ -82,25 +82,13 @@ namespace Akka.Streams.TestKit
 
             private volatile ISubscription _subscription;
 
-            public void OnSubscribe(ISubscription subscription)
-            {
-                _probe.Ref.Tell(new OnSubscribe(subscription));
-            }
+            public void OnSubscribe(ISubscription subscription) => _probe.Ref.Tell(new OnSubscribe(subscription));
 
-            public void OnError(Exception cause)
-            {
-                _probe.Ref.Tell(new OnError(cause));
-            }
+            public void OnError(Exception cause) => _probe.Ref.Tell(new OnError(cause));
 
-            public void OnComplete()
-            {
-                _probe.Ref.Tell(TestSubscriber.OnComplete.Instance);
-            }
+            public void OnComplete() => _probe.Ref.Tell(TestSubscriber.OnComplete.Instance);
 
-            public void OnNext(T element)
-            {
-                _probe.Ref.Tell(new OnNext<T>(element));
-            }
+            public void OnNext(T element) => _probe.Ref.Tell(new OnNext<T>(element));
 
             /// <summary>
             /// Expects and returns <see cref="ISubscription"/>.
@@ -114,18 +102,12 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
             /// </summary>
-            public ISubscriberEvent ExpectEvent()
-            {
-                return _probe.ExpectMsg<ISubscriberEvent>();
-            }
+            public ISubscriberEvent ExpectEvent() => _probe.ExpectMsg<ISubscriberEvent>();
 
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
             /// </summary>
-            public ISubscriberEvent ExpectEvent(TimeSpan max)
-            {
-                return _probe.ExpectMsg<ISubscriberEvent>(max);
-            }
+            public ISubscriberEvent ExpectEvent(TimeSpan max) => _probe.ExpectMsg<ISubscriberEvent>(max);
 
             /// <summary>
             /// Fluent DSL. Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
@@ -143,8 +125,10 @@ namespace Akka.Streams.TestKit
             {
                 var t = _probe.RemainingOrDilated(null);
                 var message = _probe.ReceiveOne(t);
-                if (message is OnNext<T>) return ((OnNext<T>) message).Element;
-                else throw new Exception("expected OnNext, found " + message);
+                if (message is OnNext<T>)
+                    return ((OnNext<T>) message).Element;
+
+                throw new Exception("expected OnNext, found " + message);
             }
 
             /// <summary>
@@ -153,6 +137,15 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(T element)
             {
                 _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                return this;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect a stream element during specified time or timeout.
+            /// </summary>
+            public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
+            {
+                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
                 return this;
             }
 
@@ -253,63 +246,57 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Expect and return the signalled <see cref="Exception"/>.
             /// </summary>
-            public Exception ExpectError()
-            {
-                return _probe.ExpectMsg<OnError>().Cause;
-            }
+            public Exception ExpectError() => _probe.ExpectMsg<OnError>().Cause;
 
             /// <summary>
-            /// Expect subscription to be followed immediatly by an error signal. By default single demand will be signalled in order to wake up a possibly lazy upstream. 
+            /// Expect subscription to be followed immediately by an error signal. By default single demand will be signaled in order to wake up a possibly lazy upstream. 
             /// <seealso cref="ExpectSubscriptionAndError(bool)"/>
             /// </summary>
-            public Exception ExpectSubscriptionAndError()
-            {
-                return ExpectSubscriptionAndError(true);
-            }
+            public Exception ExpectSubscriptionAndError() => ExpectSubscriptionAndError(true);
 
             /// <summary>
-            /// Expect subscription to be followed immediatly by an error signal. Depending on the `signalDemand` parameter demand may be signalled 
-            /// immediatly after obtaining the subscription in order to wake up a possibly lazy upstream.You can disable this by setting the `signalDemand` parameter to `false`.
+            /// Expect subscription to be followed immediately by an error signal. Depending on the `signalDemand` parameter demand may be signaled 
+            /// immediately after obtaining the subscription in order to wake up a possibly lazy upstream.You can disable this by setting the `signalDemand` parameter to `false`.
             /// <seealso cref="ExpectSubscriptionAndError()"/>
             /// </summary>
             public Exception ExpectSubscriptionAndError(bool signalDemand)
             {
                 var sub = ExpectSubscription();
-                if(signalDemand) sub.Request(1);
+                if(signalDemand)
+                    sub.Request(1);
+
                 return ExpectError();
             }
 
             /// <summary>
-            /// Fluent DSL. Expect subscription followed by immediate stream completion. By default single demand will be signalled in order to wake up a possibly lazy upstream
+            /// Fluent DSL. Expect subscription followed by immediate stream completion. By default single demand will be signaled in order to wake up a possibly lazy upstream
             /// </summary>
             /// <seealso cref="ExpectSubscriptionAndComplete(bool)"/>
-            public ManualProbe<T> ExpectSubscriptionAndComplete()
-            {
-                return ExpectSubscriptionAndComplete(true);
-            }
+            public ManualProbe<T> ExpectSubscriptionAndComplete() => ExpectSubscriptionAndComplete(true);
 
             /// <summary>
             /// Fluent DSL. Expect subscription followed by immediate stream completion. Depending on the `signalDemand` parameter 
-            /// demand may be signalled immediatly after obtaining the subscription in order to wake up a possibly lazy upstream.
+            /// demand may be signaled immediately after obtaining the subscription in order to wake up a possibly lazy upstream.
             /// You can disable this by setting the `signalDemand` parameter to `false`.
             /// </summary>
             /// <seealso cref="ExpectSubscriptionAndComplete()"/>
             public ManualProbe<T> ExpectSubscriptionAndComplete(bool signalDemand)
             {
                 var sub = ExpectSubscription();
-                if (signalDemand) sub.Request(1);
+                if (signalDemand)
+                    sub.Request(1);
                 ExpectComplete();
                 return this;
             }
 
             /// <summary>
-            /// Expect given next element or error signal, returning whichever was signalled.
+            /// Expect given next element or error signal, returning whichever was signaled.
             /// </summary>
             public object ExpectNextOrError()
             {
                 var message = _probe.FishForMessage(m => m is OnNext<T> || m is OnError, hint: "OnNext(_) or error");
-                if (message is OnNext<T>)
-                    return ((OnNext<T>) message).Element;
+                if (message is OnNext<T> next)
+                    return next.Element;
                 return ((OnError) message).Cause;
             }
 
@@ -320,20 +307,20 @@ namespace Akka.Streams.TestKit
             {
                 _probe.FishForMessage(
                     m =>
-                        (m is OnNext<T> && ((OnNext<T>) m).Element.Equals(element)) ||
-                        (m is OnError && ((OnError) m).Cause.Equals(cause)),
+                        m is OnNext<T> next && next.Element.Equals(element) ||
+                        m is OnError error && error.Cause.Equals(cause),
                     hint: $"OnNext({element}) or {cause.GetType().Name}");
                 return this;
             }
 
             /// <summary>
-            /// Expect given next element or stream completion, returning whichever was signalled.
+            /// Expect given next element or stream completion, returning whichever was signaled.
             /// </summary>
             public object ExpectNextOrComplete()
             {
                 var message = _probe.FishForMessage(m => m is OnNext<T> || m is OnComplete, hint: "OnNext(_) or OnComplete");
-                if (message is OnNext<T>)
-                    return ((OnNext<T>) message).Element;
+                if (message is OnNext<T> next)
+                    return next.Element;
                 return message;
             }
 
@@ -344,7 +331,7 @@ namespace Akka.Streams.TestKit
             {
                 _probe.FishForMessage(
                     m =>
-                        (m is OnNext<T> && ((OnNext<T>) m).Element.Equals(element)) ||
+                        m is OnNext<T> next && next.Element.Equals(element) ||
                         m is OnComplete,
                     hint: $"OnNext({element}) or OnComplete");
                 return this;
@@ -368,15 +355,27 @@ namespace Akka.Streams.TestKit
                 return this;
             }
 
-            public TOther ExpectNext<TOther>(Predicate<TOther> predicate)
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>The next element</returns>
+            public TOther ExpectNext<TOther>(Predicate<TOther> predicate) => _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element)).Element;
+            
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>this</returns>
+            public ManualProbe<T> MatchNext<TOther>(Predicate<TOther> predicate)
             {
-                return _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element)).Element;
+                _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element));
+                return this;
             }
 
-            public TOther ExpectEvent<TOther>(Func<ISubscriberEvent, TOther> func)
-            {
-                return func(_probe.ExpectMsg<ISubscriberEvent>());
-            }
+            public TOther ExpectEvent<TOther>(Func<ISubscriberEvent, TOther> func) => func(_probe.ExpectMsg<ISubscriberEvent>(hint: "message matching function"));
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -394,10 +393,35 @@ namespace Akka.Streams.TestKit
                 return _probe.ReceiveWhile(max, max, msg => (msg as OnNext)?.Element as TOther, messages);
             }
 
-            public TOther Within<TOther>(TimeSpan max, Func<TOther> func)
-            {
-                return _probe.Within(TimeSpan.Zero, max, func);
-            }
+            /// <summary>
+            /// Execute code block while bounding its execution time between <paramref name="min"/> and
+            /// <paramref name="max"/>. <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> blocks may be nested. 
+            /// All methods in this class which take maximum wait times are available in a version which implicitly uses
+            /// the remaining time governed by the innermost enclosing <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> block.
+            /// 
+            /// <para />
+            /// 
+            /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
+            /// configuration entry "akka.test.timefactor", while the min Duration is not.
+            /// 
+            /// <![CDATA[
+            /// var ret = probe.Within(Timespan.FromMilliseconds(50), () =>
+            /// {
+            ///     test.Tell("ping");
+            ///     return ExpectMsg<string>();
+            /// });
+            /// ]]>
+            /// </summary>
+            /// <param name="min"></param>
+            /// <param name="max"></param>
+            /// <param name="execute"></param>
+            /// <returns></returns>
+            public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute) => _probe.Within(min, max, execute);
+
+            /// <summary>
+            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// </summary>
+            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute) => _probe.Within(max, execute);
 
             /// <summary>
             /// Attempt to drain the stream into a strict collection (by requesting <see cref="long.MaxValue"/> elements).
@@ -416,14 +440,14 @@ namespace Akka.Streams.TestKit
                 while (true)
                 {
                     var e = ExpectEvent(TimeSpan.FromTicks(Math.Max(deadline.Ticks - DateTime.UtcNow.Ticks, 0)));
-                    if (e is OnError)
+                    if (e is OnError error)
                         throw new ArgumentException(
                             $"ToStrict received OnError while draining stream! Accumulated elements: ${string.Join(", ", result)}",
-                            ((OnError) e).Cause);
+                            error.Cause);
                     if (e is OnComplete)
                         break;
-                    if (e is OnNext<T>)
-                        result.Add(((OnNext<T>) e).Element);
+                    if (e is OnNext<T> next)
+                        result.Add(next.Element);
                 }
                 return result;
             }

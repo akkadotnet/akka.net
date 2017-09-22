@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_with_failure_when_Aggregateing_functions_throws()
+        public void A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -415,6 +415,28 @@ namespace Akka.Streams.Tests.Dsl
                 sub.ExpectSubscription().Cancel();
                 
                 upstream.ExpectCancellation();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var task = Source.From(Enumerable.Empty<int>())
+                    .RunAggregateAsync(0, (acc, element) => Task.FromResult(acc + element), Materializer);
+                task.AwaitResult(RemainingOrDefault).ShouldBe(0);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var task = Source.Single(100)
+                    .RunAggregateAsync(5, (acc, element) => Task.FromResult(acc + element), Materializer);
+                task.AwaitResult(RemainingOrDefault).ShouldBe(105);
             }, Materializer);
         }
     }

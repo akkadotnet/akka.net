@@ -129,7 +129,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected ClusterRoundRobinSpec(ClusterRoundRobinSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterRoundRobinSpec))
         {
             _config = config;
 

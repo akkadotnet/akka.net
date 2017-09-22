@@ -14,13 +14,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
-using Helios.Channels;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -171,6 +172,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
+    [InternalApi]
     class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {
@@ -195,11 +197,13 @@ namespace Akka.Remote.TestKit
                 _runningOp = runningOp;
             }
 
+            /// <inheritdoc/>
             protected bool Equals(Data other)
             {
                 return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -208,6 +212,7 @@ namespace Akka.Remote.TestKit
                 return Equals((Data) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -217,11 +222,23 @@ namespace Akka.Remote.TestKit
                 }
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Data left, Data right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Data left, Data right)
             {
                 return !Equals(left, right);
@@ -248,6 +265,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_channel, other._channel);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -256,24 +274,44 @@ namespace Akka.Remote.TestKit
                 return Equals((Connected) obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_channel != null ? _channel.GetHashCode() : 0);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Connected left, Connected right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Connected left, Connected right)
             {
                 return !Equals(left, right);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ConnectionFailure : Exception
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ConnectionFailure"/> class.
+            /// </summary>
+            /// <param name="message">The message that describes the error.</param>
             public ConnectionFailure(string message) : base(message)
             {
             }
@@ -504,13 +542,13 @@ namespace Akka.Remote.TestKit
                 return null;
             });
 
-            OnTermination(@event =>
+            OnTermination(e =>
             {
-                _log.Info("Terminating connection to multi-node test controller...");
-                if (@event.StateData.Channel != null)
+                _log.Info("Terminating connection to multi-node test controller due to [{0}]", e.Reason);
+                if (e.StateData.Channel != null)
                 {
                     var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
-                    if (!@event.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
+                    if (!e.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
                     {
                         _log.Warning("Failed to disconnect from conductor within {0}", disconnectTimeout);
                     }
@@ -526,7 +564,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class PlayerHandler : ChannelHandlerAdapter
+    internal class PlayerHandler : ChannelHandlerAdapter
     {
         readonly IPEndPoint _server;
         int _reconnects;
@@ -538,7 +576,12 @@ namespace Akka.Remote.TestKit
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
-        
+
+        /// <summary>
+        /// Shareable, since the handler may be added multiple times during reconnect
+        /// </summary>
+        public override bool IsSharable => true;
+
         public PlayerHandler(IPEndPoint server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
             ILoggingAdapter log, IScheduler scheduler)
         {

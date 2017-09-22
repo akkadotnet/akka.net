@@ -98,17 +98,6 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Obsolete. Use another constructor instead.
-        /// </summary>
-        /// <param name="system">N/A</param>
-        /// <param name="count">N?A</param>
-        [Obsolete("Use another constructor instead")]
-        public TestLatch(ActorSystem system, int count = 1)
-        {
-            _latch = new CountdownEvent(count);
-        }
-
-        /// <summary>
         /// Gets a value indicating whether the latch is open.
         /// </summary>
         public bool IsOpen
@@ -182,31 +171,5 @@ namespace Akka.TestKit
         {
             Ready(_defaultTimeout);
         }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="Ready(TimeSpan)"/> instead. This method will be removed in future versions.
-        /// </summary>
-        /// <param name="atMost">N/A</param>
-        [Obsolete("Use Ready instead. This method will be removed in future versions")]
-        public void Result(TimeSpan atMost)
-        {
-            Ready(atMost);
-        }
-
-        #region Static methods
-
-        /// <summary>
-        /// Obsolete. Use the constructor instead. This method will be removed in future versions.
-        /// </summary>
-        /// <param name="system">N/A</param>
-        /// <param name="count">N/A</param>
-        /// <returns>N?A</returns>
-        [Obsolete("Use the constructor instead. This method will be removed in future versions")]
-        public static TestLatch Apply(ActorSystem system, int count = 1)
-        {
-            return new TestLatch(count);
-        }
-
-        #endregion
     }
 }

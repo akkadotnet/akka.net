@@ -17,6 +17,7 @@
 **Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
 
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
+* Gitter chat: https://gitter.im/akkadotnet/akka.net
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
 * Mail: hi@getakka.net
 * Stack Overflow: http://stackoverflow.com/questions/tagged/akka.net
@@ -46,9 +47,9 @@ PM> Install-Package Akka.FSharp
 ### Contributing
 #### Where Can I Contribute?
 
-[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
+[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues%20Needing%20Help%20Now!)](http://waffle.io/akkadotnet/akka.net)
 <br>
-[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
+[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General%20Issues%20Up%20For%20Grabs)](http://waffle.io/akkadotnet/akka.net)
 
 > *All contributions are welcome! Please consider the [issues categorized in the `Help!` column](http://waffle.io/akkadotnet/akka.net) first, as they are areas we could really use your help :)*
 

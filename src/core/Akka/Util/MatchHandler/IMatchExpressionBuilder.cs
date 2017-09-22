@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public interface IMatchExpressionBuilder
+    internal interface IMatchExpressionBuilder
     {
         /// <summary>
         /// TBD
@@ -20,6 +20,7 @@ namespace Akka.Tools.MatchHandler
         /// <param name="typeHandlers">TBD</param>
         /// <returns>TBD</returns>
         MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers);
+
         /// <summary>
         /// TBD
         /// </summary>

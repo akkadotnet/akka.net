@@ -28,6 +28,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_fail_fast_if_persistenceId_is_null()
+        {
+            EventFilter.Exception<ActorInitializationException>().And.Error(contains: "PersistenceId is [null] for PersistentActor").ExpectOne(() =>
+            {
+                var pref = ActorOf(Props.Create(() => new BehaviorOneActor(null)));
+                Watch(pref);
+                ExpectTerminated(pref);
+            });
+        }
+
+        [Fact]
         public void PersistentActor_should_recover_from_persisted_events()
         {
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
@@ -297,7 +308,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg("a-e1-1");    // persist, must be before next command
 
             var expected = new HashSet<string> { "b", "a-ea2-2" };
-            var found = ExpectMsgAnyOf(expected.Cast<object>().ToArray());  // ea2 is PersistAsyn, b can be processed before it
+            var found = ExpectMsgAnyOf(expected.Cast<object>().ToArray());  // ea2 is PersistAsync, b can be processed before it
             expected.Remove(found.ToString());
             ExpectMsgAnyOf(expected.Cast<object>().ToArray());
 
@@ -591,6 +602,14 @@ namespace Akka.Persistence.Tests
             ExpectMsg<DeleteMessagesSuccess>();
             pref.Tell(GetState.Instance);
             ExpectMsg<object[]>(m => m.Length == 0);
+        }
+
+        [Fact]
+        public void PersistentActor_should_brecover_the_message_which_caused_the_restart()
+        {
+            var persistentActor = ActorOf(Props.Create(() => new RecoverMessageCausedRestart(Name)));
+            persistentActor.Tell("boom");
+            ExpectMsg("failed with TestException while processing boom");
         }
     }
 }

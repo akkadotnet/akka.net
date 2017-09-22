@@ -199,38 +199,28 @@ namespace Akka.Routing
 
         private RouterConfig OverrideUnsetConfig(RouterConfig other)
         {
-            if (other is NoRouter)
+            if (other is Pool pool)
             {
-                return this;
-            }
-            else
-            {
-                var pool = other as Pool;
-                if (pool != null)
+                RoundRobinPool wssConf;
+
+                if (SupervisorStrategy != null
+                    && SupervisorStrategy.Equals(DefaultSupervisorStrategy)
+                    && !pool.SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 {
-                    RoundRobinPool wssConf;
-
-                    if (SupervisorStrategy != null
-                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
-                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
-                    {
-                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
-                    }
-                    else
-                    {
-                        wssConf = this;
-                    }
-
-                    if (wssConf.Resizer == null && pool.Resizer != null)
-                        return wssConf.WithResizer(pool.Resizer);
-
-                    return wssConf;
+                    wssConf = WithSupervisorStrategy(pool.SupervisorStrategy);
                 }
                 else
                 {
-                    return this;
+                    wssConf = this;
                 }
+
+                if (wssConf.Resizer == null && pool.Resizer != null)
+                    return wssConf.WithResizer(pool.Resizer);
+
+                return wssConf;
             }
+
+            return this;
         }
 
         /// <summary>
@@ -341,7 +331,7 @@ namespace Akka.Routing
         /// Obsolete. Use <see cref="RoundRobinGroup(IEnumerable{System.String})"/> instead.
         /// </summary>
         /// <param name="routees">N/A</param>
-        [Obsolete("Use RoundRobinGroup constructor with IEnumerable<string> parameter")]
+        [Obsolete("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
         public RoundRobinGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
         {

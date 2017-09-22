@@ -16,29 +16,34 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class Flag : IReplicatedData<Flag>, IEquatable<Flag>, IComparable<Flag>, IComparable, IReplicatedDataSerialization
+    public sealed class Flag : 
+        IReplicatedData<Flag>, 
+        IEquatable<Flag>, 
+        IComparable<Flag>, 
+        IComparable, 
+        IReplicatedDataSerialization
     {
         /// <summary>
-        /// TBD
+        /// Flag with a false value set.
         /// </summary>
         public static readonly Flag False = new Flag(false);
         /// <summary>
-        /// TBD
+        /// Flag with a true value set.
         /// </summary>
         public static readonly Flag True = new Flag(true);
 
         /// <summary>
-        /// TBD
+        /// Checks if current flag value is set.
         /// </summary>
         public bool Enabled { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Flag"/> instance set to false by default.
         /// </summary>
         public Flag(): this(false) { }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Flag"/> instance with value set to specified parameter.
         /// </summary>
         /// <param name="enabled">TBD</param>
         public Flag(bool enabled)
@@ -47,7 +52,7 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Checks if two flags are equal to each other.
         /// </summary>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
@@ -59,46 +64,31 @@ namespace Akka.DistributedData
             return Enabled == other.Enabled;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Flag && Equals((Flag) obj);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+
         public override int GetHashCode() => Enabled.GetHashCode();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj) => obj is Flag ? CompareTo((Flag) obj) : 1;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(Flag other) => other == null ? 1 : Enabled.CompareTo(other.Enabled);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => Enabled.ToString();
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public IReplicatedData Merge(IReplicatedData other) => Merge((Flag) other);
+        IReplicatedData IReplicatedData.Merge(IReplicatedData other) => Merge((Flag) other);
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
         public Flag Merge(Flag other) => other.Enabled ? other : this;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -106,21 +96,22 @@ namespace Akka.DistributedData
         public Flag SwitchOn() => Enabled ? this : new Flag(true);
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Flag" /> to <see cref="bool" />.
         /// </summary>
-        /// <param name="flag">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="flag">The flag to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator bool(Flag flag) => flag.Enabled;
     }
 
     /// <summary>
-    /// TBD
+    /// A typed key for <see cref="Flag"/> CRDT. Can be used to perform read/upsert/delete
+    /// operations on correlated data type.
     /// </summary>
     [Serializable]
     public sealed class FlagKey : Key<Flag>
     {
         /// <summary>
-        /// TBD
+        /// Creates a new instance of <see cref="FlagKey"/> class.
         /// </summary>
         /// <param name="id">TBD</param>
         public FlagKey(string id) : base(id) { }

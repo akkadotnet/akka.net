@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void MemberOrdering_must_order_members_by_host_and_port()
         {
-            var members = new SortedSet<Member>         
+            var members = new SortedSet<Member>       
             {
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1112"), MemberStatus.Up),
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1113"), MemberStatus.Joining),
@@ -91,6 +91,42 @@ namespace Akka.Cluster.Tests
             var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet<string>.Empty);
             Member.Ordering.Compare(a, b).Should().Be(1);
             Member.Ordering.Compare(b, a).Should().Be(-1);
+        }
+
+        [Fact]
+        public void MemberOrdering_must_work_pick_member_with_legal_transition()
+        {
+            var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
+            var address2 = address1.WithPort(9002);
+            var address3 = address1.WithPort(9003);
+
+            var s1 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Joining))
+                .Add(TestMember.Create(address2, MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 1));
+
+            var s2 = ImmutableSortedSet.Create(TestMember.Create(address1, MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber:2));
+
+            var s3 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up));
+
+            var u1 = Member.PickNextTransition(s2, s1);
+            u1.Should().BeEquivalentTo(s3);
+            u1.Single(x => x.Address.Equals(address1)).Status.Should().Be(MemberStatus.Up);
+
+            var s4 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up))
+                .Add(TestMember.Create(address3, MemberStatus.Joining));
+
+            var s5 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up))
+                .Add(TestMember.Create(address3, MemberStatus.Up));
+
+            var u2 = Member.PickNextTransition(s4, s1);
+            u2.Should().BeEquivalentTo(s5);
+            u2.Single(x => x.Address.Equals(address1)).Status.Should().Be(MemberStatus.Up);
         }
 
         [Fact]

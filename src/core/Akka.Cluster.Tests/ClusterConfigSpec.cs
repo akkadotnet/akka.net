@@ -61,6 +61,8 @@ namespace Akka.Cluster.Tests
             settings.SchedulerTicksPerWheel.Should().Be(512);
 
             settings.VerboseHeartbeatLogging.Should().BeFalse();
+            settings.VerboseGossipReceivedLogging.Should().BeFalse();
+            settings.RunCoordinatedShutdownWhenDown.Should().BeTrue();
         }
     }
 }

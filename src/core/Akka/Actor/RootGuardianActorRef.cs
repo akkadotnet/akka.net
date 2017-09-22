@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch;
 
 namespace Akka.Actor
@@ -17,6 +18,7 @@ namespace Akka.Actor
     /// 
     /// Used by <see cref="GuardianActor"/>
     /// </summary>
+    [InternalApi]
     public class RootGuardianActorRef : LocalActorRef
     {
         private IInternalActorRef _tempContainer;
@@ -71,8 +73,7 @@ namespace Akka.Actor
                 case "deadLetters":
                     return _deadLetters;
                 default:
-                    IInternalActorRef extraActorRef;
-                    if(_extraNames.TryGetValue(name, out extraActorRef))
+                    if(_extraNames.TryGetValue(name, out var extraActorRef))
                         return extraActorRef;
                     return base.GetSingleChild(name);
             }

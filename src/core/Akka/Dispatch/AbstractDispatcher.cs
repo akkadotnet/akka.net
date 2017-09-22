@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -86,6 +87,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// INTERNAL API - used to configure the executor used by the <see cref="Dispatcher"/>
     /// </summary>
+    [InternalApi]
     public abstract class ExecutorServiceConfigurator : ExecutorServiceFactory
     {
         /// <summary>
@@ -211,7 +213,9 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class ThreadPoolExecutorServiceFactory : ExecutorServiceConfigurator
     {
+#if APPDOMAIN
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+#endif
 
         /// <summary>
         /// TBD
@@ -220,8 +224,10 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
+#if APPDOMAIN
             if (IsFullTrusted)
                 return new FullThreadPoolExecutorServiceImpl(id);
+#endif
             return new PartialTrustThreadPoolExecutorService(id);
         }
 
@@ -248,7 +254,7 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            Config = config;
+            Config = new CachingConfig(config);
         }
 
         /// <summary>
@@ -406,6 +412,7 @@ namespace Akka.Dispatch
         /// how long it will wait until it shuts itself down, defaulting to your Akka.NET config's 'akka.actor.default-dispatcher.shutdown-timeout'
         /// or the system default specified.
         /// </summary>
+        [InternalApi]
         public TimeSpan ShutdownTimeout { get; protected set; }
 
         /// <summary>
@@ -415,7 +422,7 @@ namespace Akka.Dispatch
 
         private long AddInhabitants(long add)
         {
-            // Intelocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
+            // Interlocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
             var ret = Interlocked.Add(ref _inhabitantsDoNotCallMeDirectly, add);
             if (ret < 0)
             {
@@ -511,6 +518,7 @@ namespace Akka.Dispatch
         /// <remarks>
         /// MUST BE IDEMPOTENT
         /// </remarks>
+        [InternalApi]
         protected abstract void Shutdown();
 
         private readonly ShutdownAction _shutdownAction;

@@ -270,8 +270,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> Ignore<TIn>()
-            => new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
+        public static Sink<TIn, Task> Ignore<TIn>() => FromGraph(new IgnoreSink<TIn>());
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
@@ -386,7 +385,7 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream. 
         /// 
-        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
         /// </summary>

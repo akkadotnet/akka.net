@@ -5,52 +5,48 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
-using Helios.Buffers;
-using Helios.Net;
-using Google.ProtocolBuffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
+using DotNetty.Buffers;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit.Proto
 {
     /// <summary>
-    /// Encodes a generic object into a <see cref="IByteBuf"/> using Google protobufs
+    /// Encodes a generic object into a <see cref="IByteBuffer"/> using Google protobufs
     /// </summary>
-    public class ProtobufEncoder : MessageToMessageEncoder<object>
+    internal sealed class ProtobufEncoder : MessageToMessageEncoder<IMessage>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<ProtobufEncoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<ProtobufEncoder>();
 
-        protected override void Encode(IChannelHandlerContext context, object message, List<object> output)
+        protected override void Encode(IChannelHandlerContext context, IMessage message, List<object> output)
         {
-            _logger.Debug("Encoding {0}", message);
-            var messageLite = message as IMessageLite;
-            if (messageLite != null)
-            {
-                var bytes = messageLite.ToByteArray();
-                var buffer = context.Allocator.Buffer(bytes.Length);
-                buffer.WriteBytes(bytes);
-                _logger.Debug("Encoded {0}", buffer);
-                output.Add(buffer);
-                return;
-            }
+            _logger.LogDebug("[{0} --> {1}] Encoding {2} into Protobuf", context.Channel.LocalAddress, context.Channel.RemoteAddress, message);
+            IByteBuffer buffer = null;
 
-            var builderLite = message as IBuilderLite;
-            if (builderLite != null)
+            try
             {
-                var bytes = builderLite.WeakBuild().ToByteArray();
-                var buffer = context.Allocator.Buffer(bytes.Length);
-                buffer.WriteBytes(bytes);
-                _logger.Debug("Encoded {0}", buffer);
+                int size = message.CalculateSize();
+                if (size == 0)
+                {
+                    return;
+                }
+                buffer = Unpooled.WrappedBuffer(message.ToByteArray());
                 output.Add(buffer);
-                return;
+                buffer = null;
             }
-
-            // if the message is neither
-            _logger.Debug("Encoded {0}", message);
-            output.Add(message);
+            catch (Exception exception)
+            {
+                throw new CodecException(exception);
+            }
+            finally
+            {
+                buffer?.Release();
+            }
         }
     }
 }
-

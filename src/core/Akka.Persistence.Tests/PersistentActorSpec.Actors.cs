@@ -7,11 +7,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Akka.Persistence.Internal;
 
 namespace Akka.Persistence.Tests
 {
@@ -121,7 +123,7 @@ namespace Akka.Persistence.Tests
 
         internal abstract class ExamplePersistentActor : NamedPersistentActor
         {
-            protected LinkedList<object> Events = new LinkedList<object>();
+            protected ImmutableArray<object> Events = ImmutableArray<object>.Empty;
             protected IActorRef AskedForDelete;
 
             protected readonly Action<object> UpdateStateHandler;
@@ -140,7 +142,7 @@ namespace Akka.Persistence.Tests
             protected bool UpdateState(object message)
             {
                 if (message is Evt)
-                    Events.AddFirst((message as Evt).Data);
+                    Events = Events.AddFirst((message as Evt).Data);
                 else if (message is IActorRef)
                     AskedForDelete = (IActorRef) message;
                 else
@@ -363,7 +365,7 @@ namespace Akka.Persistence.Tests
                     if (message is SnapshotOffer)
                     {
                         Probe.Tell("offered");
-                        Events = (message as SnapshotOffer).Snapshot as LinkedList<object>;
+                        Events = (message as SnapshotOffer).Snapshot.AsInstanceOf<ImmutableArray<object>>();
                     }
                     else return false;
                 }
@@ -842,6 +844,31 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        internal class RecoverMessageCausedRestart : ExamplePersistentActor
+        {
+            private IActorRef _master;
+            public RecoverMessageCausedRestart(string name) : base(name)
+            {
+
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message.Equals("boom"))
+                {
+                    _master = Sender;
+                    throw new TestException("boom");
+                }
+                return false;
+            }
+
+            protected override void PreRestart(Exception reason, object message)
+            {
+                _master?.Tell($"failed with {reason.GetType().Name} while processing {message}");
+                Context.Stop(Self);
+            }
+        }
+
         internal class MultipleAndNestedPersists : ExamplePersistentActor
         {
             private readonly IActorRef _probe;
@@ -1024,8 +1051,8 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth))
+                    currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;
@@ -1068,8 +1095,8 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth))
+                    currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;

@@ -21,11 +21,11 @@ namespace Akka.TestKit.Xunit.Internals
     /// <typeparam name="T">The type that is being compared.</typeparam>
     public class AkkaAssertEqualityComparer<T> : IEqualityComparer<T>
     {
-        static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
-        static readonly TypeInfo NullableTypeInfo = typeof(Nullable<>).GetTypeInfo();
+        private static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
+        private static readonly TypeInfo NullableTypeInfo = typeof(Nullable<>).GetTypeInfo();
 
-        readonly Func<IEqualityComparer> innerComparerFactory;
-        readonly bool skipTypeCheck;
+        private readonly Func<IEqualityComparer> _innerComparerFactory;
+        private readonly bool _skipTypeCheck;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaAssertEqualityComparer{T}" /> class.
@@ -34,10 +34,10 @@ namespace Akka.TestKit.Xunit.Internals
         /// <param name="innerComparer">The inner comparer to be used when the compared objects are enumerable.</param>
         public AkkaAssertEqualityComparer(bool skipTypeCheck = false, IEqualityComparer innerComparer = null)
         {
-            this.skipTypeCheck = skipTypeCheck;
+            _skipTypeCheck = skipTypeCheck;
 
             // Use a thunk to delay evaluation of DefaultInnerComparer
-            innerComparerFactory = () => innerComparer ?? DefaultInnerComparer;
+            _innerComparerFactory = () => innerComparer ?? DefaultInnerComparer;
         }
 
         /// <inheritdoc/>
@@ -48,64 +48,50 @@ namespace Akka.TestKit.Xunit.Internals
             // Null?
             if(!typeInfo.IsValueType || (typeInfo.IsGenericType && typeInfo.GetGenericTypeDefinition().GetTypeInfo().IsAssignableFrom(NullableTypeInfo)))
             {
-                if(Object.Equals(x, default(T)))
-                    return Object.Equals(y, default(T));
+                if(object.Equals(x, default(T)))
+                    return object.Equals(y, default(T));
 
-                if(Object.Equals(y, default(T)))
+                if(object.Equals(y, default(T)))
                     return false;
             }
 
-            // Same type?
-            if(!skipTypeCheck && x.GetType() != y.GetType())
-                return false;
-
-            // Implements IEquatable<T>?
-            var equatable = x as IEquatable<T>;
-            if(equatable != null)
-                return equatable.Equals(y);
-
-            // Implements IComparable<T>?
-            var comparableGeneric = x as IComparable<T>;
-            if(comparableGeneric != null)
-                return comparableGeneric.CompareTo(y) == 0;
-
-            // Implements IComparable?
-            var comparable = x as IComparable;
-            if(comparable != null)
-                return comparable.CompareTo(y) == 0;
-
-            // Enumerable?
-            var enumerableX = x as IEnumerable;
-            var enumerableY = y as IEnumerable;
-
-            if(enumerableX != null && enumerableY != null)
+            switch (x)
             {
-                var enumeratorX = enumerableX.GetEnumerator();
-                var enumeratorY = enumerableY.GetEnumerator();
-                var equalityComparer = innerComparerFactory();
+                case IEquatable<T> equatable:
+                    return equatable.Equals(y);
+                case IComparable<T> comparableGeneric:
+                    return comparableGeneric.CompareTo(y) == 0;
+                case IComparable comparable:
+                    return comparable.CompareTo(y) == 0;
+                case IEnumerable enumerableX
+                    when y is IEnumerable enumerableY:
 
-                while(true)
-                {
-                    bool hasNextX = enumeratorX.MoveNext();
-                    bool hasNextY = enumeratorY.MoveNext();
+                    var enumeratorX = enumerableX.GetEnumerator();
+                    var enumeratorY = enumerableY.GetEnumerator();
+                    var equalityComparer = _innerComparerFactory();
 
-                    if(!hasNextX || !hasNextY)
-                        return (hasNextX == hasNextY);
+                    while (true)
+                    {
+                        var hasNextX = enumeratorX.MoveNext();
+                        var hasNextY = enumeratorY.MoveNext();
 
-                    if(!equalityComparer.Equals(enumeratorX.Current, enumeratorY.Current))
-                        return false;
-                }
+                        if (!hasNextX || !hasNextY)
+                            return hasNextX == hasNextY;
+
+                        if (!equalityComparer.Equals(enumeratorX.Current, enumeratorY.Current))
+                            return false;
+                    }
             }
 
+            // Same type?
+            if (!_skipTypeCheck && x.GetType() != y.GetType())
+                return false;
+
             // Last case, rely on Object.Equals
-            return Object.Equals(x, y);
+            return object.Equals(x, y);
         }
 
         /// <inheritdoc/>
-        public int GetHashCode(T obj)
-        {
-            throw new NotImplementedException();
-        }
+        public int GetHashCode(T obj) => throw new NotImplementedException();
     }
 }
-

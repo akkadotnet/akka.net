@@ -57,13 +57,15 @@ namespace Akka.Persistence.Sql.Common
         public bool AutoInitialize { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="JournalSettings"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="config">The configuration used to configure the settings.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        /// </exception>
         public JournalSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException("config", "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config == null) throw new ArgumentNullException(nameof(config), "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
@@ -112,13 +114,20 @@ namespace Akka.Persistence.Sql.Common
         public bool AutoInitialize { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The default serializer being used if no type match override is specified
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        public string DefaultSerializer { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SnapshotStoreSettings"/> class.
+        /// </summary>
+        /// <param name="config">The configuration used to configure the settings.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        /// </exception>
         public SnapshotStoreSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException("config", "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config == null) throw new ArgumentNullException(nameof(config), "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
@@ -126,6 +135,7 @@ namespace Akka.Persistence.Sql.Common
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
+            DefaultSerializer = config.GetString("serializer");
         }
 
         /// <summary>

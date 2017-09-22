@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="HeliosTransportDnsResolutionSpec.cs" company="Akka.NET Project">
+// <copyright file="DotNettyTransportDnsResolutionSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if FSCHECK
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -317,4 +317,4 @@ namespace Akka.Remote.Tests.Transport
         }
     }
 }
-
+#endif

@@ -20,12 +20,12 @@ namespace Akka.TestKit.Xunit.Internals
         private readonly object[] _args;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
-        /// <param name="expected">TBD</param>
-        /// <param name="actual">TBD</param>
-        /// <param name="format">TBD</param>
-        /// <param name="args">TBD</param>
+        /// <param name="expected">The expected value of the object</param>
+        /// <param name="actual">The actual value of the object</param>
+        /// <param name="format">A template string that describes the error.</param>
+        /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public AkkaEqualException(object expected, object actual, string format = "", params object[] args)
             : base(expected, actual)
         {
@@ -33,34 +33,19 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
-        /// <param name="expected">TBD</param>
-        /// <param name="actual">TBD</param>
-        /// <param name="skipPositionCheck">TBD</param>
-        /// <param name="format">TBD</param>
-        /// <param name="args">TBD</param>
-        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "",
-            params object[] args)
-            : base(expected, actual, skipPositionCheck)
-        {
-            _args = args;
-            _format = format;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
-
+#endif
         /// <summary>
-        /// TBD
+        /// The message that describes the error.
         /// </summary>
         public override string Message
         {
@@ -68,6 +53,7 @@ namespace Akka.TestKit.Xunit.Internals
             {
                 if(string.IsNullOrEmpty(_format))
                     return base.Message;
+
                 string message;
                 try
                 {
@@ -75,9 +61,10 @@ namespace Akka.TestKit.Xunit.Internals
                 }
                 catch(Exception)
                 {
-                    message = "[Could not string.Format(\"" + _format + "\", " + string.Join(", ", _args) + ")]";
+                    message = $@"[Could not string.Format(""{_format}"", {string.Join(", ", _args)})]";
                 }
-                return base.Message + " " + message;
+
+                return $"{base.Message} {message}";
             }
         }
     }

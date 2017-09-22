@@ -117,14 +117,14 @@ namespace Akka.Routing
 
         private void Watch(Routee routee)
         {
-            var actorRef = routee as ActorRefRoutee;
-            if (actorRef != null) Watch(actorRef.Actor);
+            if (routee is ActorRefRoutee actorRef)
+                Watch(actorRef.Actor);
         }
 
         private void Unwatch(Routee routee)
         {
-            var actorRef = routee as ActorRefRoutee;
-            if (actorRef != null) Unwatch(actorRef.Actor);
+            if (routee is ActorRefRoutee actorRef)
+                Unwatch(actorRef.Actor);
         }
 
         /// <summary>
@@ -133,12 +133,9 @@ namespace Akka.Routing
         /// <param name="routee">TBD</param>
         private void StopIfChild(Routee routee)
         {
-            var actorRefRoutee = routee as ActorRefRoutee;
-            IChildStats childActorStats;
-            if (actorRefRoutee != null && TryGetChildStatsByName(actorRefRoutee.Actor.Path.Name, out childActorStats))
+            if (routee is ActorRefRoutee actorRefRoutee && TryGetChildStatsByName(actorRefRoutee.Actor.Path.Name, out IChildStats childActorStats))
             {
-                var childRef = childActorStats as ChildRestartStats;
-                if (childRef != null && childRef.Child != null)
+                if (childActorStats is ChildRestartStats childRef && childRef.Child != null)
                 {
                     // The reason for the delay is to give concurrent
                     // messages a chance to be placed in mailbox before sending PoisonPill,
@@ -157,23 +154,14 @@ namespace Akka.Routing
             // create the initial routees before scheduling the Router actor
             Router = RouterConfig.CreateRouter(System);
 
-            if (RouterConfig is Pool)
+            if (RouterConfig is Pool pool)
             {
-                var pool = (Pool)RouterConfig;
-                // must not use pool.GetNrOfInstances(system) for old (not re-compiled) custom routers
-                // for binary backwards compatibility reasons
-                var deprecatedNrOfInstances = pool.NrOfInstances;
-
-                var nrOfRoutees = deprecatedNrOfInstances < 0
-                    ? pool.GetNrOfInstances(System)
-                    : deprecatedNrOfInstances;
-
+                var nrOfRoutees = pool.GetNrOfInstances(System);
                 if (nrOfRoutees > 0)
                     AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(RouteeProps, this)));
             }
-            else if (RouterConfig is Group)
+            else if (RouterConfig is Group group)
             {
-                var group = (Group)RouterConfig;
                 // must not use group.paths(system) for old (not re-compiled) custom routers
                 // for binary backwards compatibility reasons
                 var deprecatedPaths = group.Paths;

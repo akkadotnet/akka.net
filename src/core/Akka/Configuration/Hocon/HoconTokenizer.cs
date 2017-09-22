@@ -578,7 +578,7 @@ namespace Akka.Configuration.Hocon
                 case 'u':
                     string hex = "0x" + Take(4);
                     int j = Convert.ToInt32(hex, 16);
-                    return ((char) j).ToString(CultureInfo.InvariantCulture);
+                    return ((char) j).ToString();
                 default:
                     throw new FormatException($"Unknown escape code: {escaped}");
             }
@@ -742,6 +742,14 @@ namespace Akka.Configuration.Hocon
             {
                 sb.Append(Take());
             }
+
+            // Unquoted text does not support assignment character.
+            if (IsAssignment())
+                throw new ConfigurationException(
+                    @"Could not parse an unquoted text value containing assignment character '=' or ':'.
+- If you want to declare a new object, please enclose the item with curly brackets.
+- If you want to declare a URI address, please enclose the item with double quotes."
+                );
 
             return Token.LiteralValue(sb.ToString());
         }

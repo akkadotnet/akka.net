@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            eventFilter.Info("{\r\n  akka : {\r\n    log-config-on-start : on\r\n  }\r\n}").ExpectOne(() => system.Start());
+            eventFilter.Info(contains:"akka : {\r\n    log-config-on-start : on\r\n  }").ExpectOne(() => system.Start());
 
             system.Terminate();
         }
@@ -269,11 +269,11 @@ namespace Akka.Tests.Actor
 
         public void Handle_extensions_that_fail_to_initialize()
         {
-            Action loadExtenions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
+            Action loadExtensions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
 
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
             // same exception should be reported next time
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
         }
 
         #endregion

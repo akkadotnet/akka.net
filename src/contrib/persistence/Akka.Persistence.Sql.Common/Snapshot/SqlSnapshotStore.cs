@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -40,20 +40,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private readonly SnapshotStoreSettings _settings;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
         {
             _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
-        private ILoggingAdapter _log;
         /// <summary>
         /// TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
+        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD
@@ -143,9 +143,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
-            return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString
-                : connectionString;
+
+#if CONFIGURATION
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+            }
+#endif
+
+            return connectionString;
         }
 
         /// <summary>
@@ -211,7 +217,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Context.System.Serialization.FindSerializerForType(snapshotType);
+            var serializer = Context.System.Serialization.FindSerializerForType(snapshotType, _settings.DefaultSerializer);
 
             var binary = serializer.ToBinary(snapshot);
 
@@ -219,7 +225,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
-                manifest: snapshotType.QualifiedTypeName(),
+                manifest: snapshotType.TypeQualifiedName(),
                 payload: binary);
         }
     }

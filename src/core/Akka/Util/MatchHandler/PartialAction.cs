@@ -13,6 +13,6 @@ namespace Akka.Tools.MatchHandler
     /// <typeparam name="T">The type of the argument</typeparam>
     /// <param name="item">The argument.</param>
     /// <returns>Returns <c>true</c> if the <paramref name="item"/> was handled</returns>
-    public delegate bool PartialAction<in T>(T item);
+    internal delegate bool PartialAction<in T>(T item);
 }
 

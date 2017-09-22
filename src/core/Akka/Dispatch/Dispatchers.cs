@@ -43,6 +43,7 @@ namespace Akka.Dispatch
         }
     }
 
+#if UNSAFE_THREADING
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -65,6 +66,7 @@ namespace Akka.Dispatch
         {
         }
     }
+#endif
 
     /// <summary>
     /// INTERNAL API
@@ -296,21 +298,16 @@ namespace Akka.Dispatch
 
         private MessageDispatcherConfigurator LookupConfigurator(string id)
         {
-            MessageDispatcherConfigurator configurator;
-            if (!_dispatcherConfigurators.TryGetValue(id, out configurator))
+            if (!_dispatcherConfigurators.TryGetValue(id, out var configurator))
             {
                 // It doesn't matter if we create a dispatcher configurator that isn't used due to concurrent lookup.
                 // That shouldn't happen often and in case it does the actual ExecutorService isn't
                 // created until used, i.e. cheap.
                 MessageDispatcherConfigurator newConfigurator;
                 if (_cachingConfig.HasPath(id))
-                {
                     newConfigurator = ConfiguratorFrom(Config(id));
-                }
                 else
-                {
                     throw new ConfigurationException($"Dispatcher {id} not configured.");
-                }
 
                 return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
             }
@@ -447,7 +444,7 @@ namespace Akka.Dispatch
         /// Used to configure and produce <see cref="Dispatcher"/> instances for use with actors.
         /// </summary>
         /// <param name="config">The configuration for this dispatcher.</param>
-        /// <param name="prerequisites">System pre-reqs needed to run this dispatcher.</param>
+        /// <param name="prerequisites">System prerequisites needed to run this dispatcher.</param>
         public DispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {

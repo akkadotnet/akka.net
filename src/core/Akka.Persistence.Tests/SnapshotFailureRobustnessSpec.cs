@@ -6,11 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
+using Akka.TestKit.TestEvent;
+using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -153,10 +158,11 @@ namespace Akka.Persistence.Tests
         {
             protected override void Save(SnapshotMetadata metadata, object payload)
             {
-                if (metadata.SequenceNr == 2)
+                if (metadata.SequenceNr == 2 || payload.Equals("boom"))
                 {
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
-                    WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
+                    var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
+					tempFile.MoveTo(GetSnapshotFileForWrite(metadata, "").FullName);
                 }
                 else base.Save(metadata, payload);
             }
@@ -200,9 +206,8 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             ExpectMsg(1L);
             spref.Tell(new Cmd("kablama"));
             ExpectMsg(2L);
+            // var filter = EventFilter.Error(start: "Error loading snapshot").Mute(); // TODO for some reason filtering doesn't work
             Sys.EventStream.Subscribe(TestActor, typeof (Error));
-            // TODO for some reason filtering doesn't work
-            // var filter = EventFilter.Error(start: "Error loading snapshot").Mute();
             try
             {
                 var lpref = Sys.ActorOf(Props.Create(() => new LoadSnapshotTestActor(Name, TestActor)));
@@ -212,11 +217,46 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
                                               m.Snapshot.Equals("blahonga"));
                 ExpectMsg("kablama-2");
                 ExpectMsg<RecoveryCompleted>();
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                ExpectNoMsg(1.Seconds());
             }
             finally
             {
                 Sys.EventStream.Unsubscribe(TestActor, typeof (Error));
+                //filter.Unmute();
+            }
+        }
+
+        [Fact]
+        public void PersistentActor_with_a_failing_snapshot_should_fail_recovery_and_stop_actor_when_no_snapshot_could_be_loaded()
+        {
+            var spref = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestActor(Name, TestActor)));
+
+            ExpectMsg<RecoveryCompleted>();
+            spref.Tell(new Cmd("Ok"));
+            ExpectMsg(1L);
+            spref.Tell(new Cmd("boom"));
+            ExpectMsg(2L);
+            spref.Tell(new Cmd("boom"));
+            ExpectMsg(3L);
+            spref.Tell(new Cmd("boom"));
+            ExpectMsg(4L);
+            // var filter = EventFilter.Error(start: "Error loading snapshot").Mute(); // TODO for some reason filtering doesn't work
+            // var filter2 = EventFilter.Error(start: "Persistence failure").Mute(); // TODO for some reason filtering doesn't work
+            Sys.EventStream.Subscribe(TestActor, typeof(Error));
+            try
+            {
+                var lpref = Sys.ActorOf(Props.Create(() => new LoadSnapshotTestActor(Name, TestActor)));
+                Enumerable.Range(1, 3).ForEach(_ =>
+                {
+                    ExpectMsg<Error>(m => m.Message.ToString().StartsWith("Error loading snapshot"));
+                });
+                ExpectMsg<Error>(m => m.Message.ToString().StartsWith("Persistence failure"));
+                Watch(lpref);
+                ExpectTerminated(lpref);
+            }
+            finally
+            {
+                Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
                 //filter.Unmute();
             }
         }
@@ -246,7 +286,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             ExpectMsg(1L);
             pref.Tell(new Cmd("hola"));
             ExpectMsg(2L);
-            var criteria = new SnapshotSelectionCriteria(10);
+            var criteria = new SnapshotSelectionCriteria(maxSequenceNr: 10);
             pref.Tell(new DeleteSnapshots(criteria));
             ExpectMsg<DeleteSnapshotsFailure>(m => m.Criteria.Equals(criteria) &&
                                           m.Cause.Message.Contains("Failed to delete"));

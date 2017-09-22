@@ -66,13 +66,13 @@ namespace Akka.Cluster.Tests.MultiNode
             }
 
             private InitialHeartbeatSpec(InitialHeartbeatMultiNodeConfig config)
-                : base(config)
+                : base(config, typeof(InitialHeartbeatSpec))
             {
                 _config = config;
                 MuteMarkingAsUnreachable();
             }
 
-            //[MultiNodeFact] //currently bugged, due to issues with TestKit
+            [MultiNodeFact]
             public void A_member_must_detect_failure_even_though_no_heartbeats_have_been_received()
             {
                 var firstAddress = GetAddress(_config.First);
@@ -104,10 +104,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(50));
                 }, _config.Second);
 
-                //TODO: Seem to be able to pass barriers once other node fails?
                 EnterBarrier("second-joined");
-
-                return;
 
                 // It is likely that second has not started heartbeating to first yet,
                 // and when it does the messages doesn't go through and the first extra heartbeat is triggered.

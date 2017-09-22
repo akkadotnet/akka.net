@@ -6,9 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 
+#if CORECLR 
+using Microsoft.Extensions.DependencyModel;
+#endif
 namespace Akka.DI.Core
 {
     /// <summary>
@@ -22,12 +27,12 @@ namespace Akka.DI.Core
         /// <param name="system">The actor system in which to register the given dependency resolver.</param>
         /// <param name="dependencyResolver">The dependency resolver being registered to the actor system.</param>
         /// <exception cref="ArgumentNullException">
-        /// Either the <paramref name="system"/> or the <paramref name="dependencyResolver"/> was null.
+        /// This exception is thrown when either the specified <paramref name="system"/> or the specified <paramref name="dependencyResolver"/> is undefined.
         /// </exception>
         public static void AddDependencyResolver(this ActorSystem system, IDependencyResolver dependencyResolver)
         {
-            if (system == null) throw new ArgumentNullException("system");
-            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
+            if (system == null) throw new ArgumentNullException(nameof(system), $"ActorSystem requires a valid {nameof(system)}");
+            if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"ActorSystem requires {nameof(dependencyResolver)} to be provided");
             system.RegisterExtension(DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
@@ -61,12 +66,40 @@ namespace Akka.DI.Core
         {
             var firstTry = Type.GetType(typeName);
             Func<Type> searchForType = () =>
-                AppDomain.CurrentDomain
-                    .GetAssemblies()
+                GetLoadedAssemblies()
                     .SelectMany(x => x.GetTypes())
                     .FirstOrDefault(t => t.Name.Equals(typeName));
-            
             return firstTry ?? searchForType();
+        }
+
+        /// <summary>
+        /// Gets the list of loaded assemblies
+        /// </summary>
+        /// <returns>The list of loaded assemblies</returns>
+        private static IEnumerable<Assembly> GetLoadedAssemblies()
+        {
+#if APPDOMAIN
+            return AppDomain.CurrentDomain.GetAssemblies();
+#elif CORECLR 
+            var assemblies = new List<Assembly>();
+            var dependencies = DependencyContext.Default.RuntimeLibraries;
+            foreach (var library in dependencies)
+            {
+                try
+                {
+                    var assembly = Assembly.Load(new AssemblyName(library.Name));
+                    assemblies.Add(assembly);
+                }
+                catch
+                {
+                    //do nothing can't if can't load assembly
+                }
+            }
+            return assemblies;
+#else
+#warning Method not implemented
+            throw new NotImplementedException();
+#endif
         }
     }
 }

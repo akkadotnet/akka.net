@@ -6,12 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using Akka.Actor;
 using Akka.Cluster;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -64,7 +60,7 @@ namespace Akka.DistributedData
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     [Serializable]
-    public class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>
+    public sealed partial class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>
     {
         /// <summary>
         /// Default clock is using max between DateTime.UtcNow.Ticks and current timestamp + 1.
@@ -118,7 +114,7 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// Returns a timestamp used to determine predecende in current register updates.
+        /// Returns a timestamp used to determine precedence in current register updates.
         /// </summary>
         public long Timestamp { get; }
 
@@ -169,11 +165,8 @@ namespace Akka.DistributedData
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
         public IReplicatedData Merge(IReplicatedData other) => Merge((LWWRegister<T>)other);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public bool Equals(LWWRegister<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -182,17 +175,10 @@ namespace Akka.DistributedData
             return Timestamp == other.Timestamp && UpdatedBy == other.UpdatedBy && Equals(Value, other.Value);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is LWWRegister<T> && Equals((LWWRegister<T>)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -204,10 +190,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"LWWRegister(value={Value}, timestamp={Timestamp}, updatedBy={UpdatedBy})";
     }
 }

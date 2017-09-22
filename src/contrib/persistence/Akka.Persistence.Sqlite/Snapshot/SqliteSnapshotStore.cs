@@ -8,7 +8,7 @@
 using System;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
 
@@ -33,21 +33,26 @@ namespace Akka.Persistence.Sqlite.Snapshot
                     {configuration.TimestampColumnName} INTEGER(8) NOT NULL,
                     {configuration.ManifestColumnName} VARCHAR(255) NOT NULL,
                     {configuration.PayloadColumnName} BLOB NOT NULL,
+                    {configuration.SerializerIdColumnName} INTEGER(4),
                     PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
 
             InsertSnapshotSql = $@"
                 UPDATE {configuration.FullSnapshotTableName}
-                SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest, {configuration.PayloadColumnName} = @Payload
+                SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest,
+                {configuration.PayloadColumnName} = @Payload, {configuration.SerializerIdColumnName} = @SerializerId
                 WHERE {configuration.PersistenceIdColumnName} = @PersistenceId AND {configuration.SequenceNrColumnName} = @SequenceNr;
-                INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName}, {configuration.ManifestColumnName}, {configuration.PayloadColumnName})
-                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
+                INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName},
+                    {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName},
+                    {configuration.ManifestColumnName}, {configuration.PayloadColumnName}, {configuration.SerializerIdColumnName})
+                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override string InsertSnapshotSql { get; }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -60,7 +65,7 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <returns>TBD</returns>
         protected override DbCommand CreateCommand(DbConnection connection)
         {
-            return new SQLiteCommand((SQLiteConnection)connection);
+            return new SqliteCommand { Connection = (SqliteConnection)connection };
         }
 
         /// <summary>
@@ -114,7 +119,9 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 payloadColumnName: "payload",
                 manifestColumnName: "manifest",
                 timestampColumnName: "created_at",
-                timeout: config.GetTimeSpan("connection-timeout")), 
+                serializerIdColumnName: "serializer_id",
+                timeout: config.GetTimeSpan("connection-timeout"),
+                defaultSerializer: config.GetString("serializer")), 
                 Context.System.Serialization);
         }
 
@@ -130,7 +137,7 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <returns>TBD</returns>
         protected override DbConnection CreateDbConnection(string connectionString)
         {
-            return new SQLiteConnection(connectionString);
+            return new SqliteConnection(connectionString);
         }
 
         /// <summary>

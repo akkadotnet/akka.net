@@ -24,11 +24,11 @@ namespace Akka.DI.Core
         /// </summary>
         /// <param name="system">The actor system that contains the DI extension.</param>
         /// <exception cref="ArgumentNullException">
-        /// The <paramref name="system"/> was null.
+        /// This exception is thrown when the specified <paramref name="system"/> is undefined.
         /// </exception>
         public DIActorSystemAdapter(ActorSystem system)
         {
-            if (system == null) throw new ArgumentNullException("system");
+            if (system == null) throw new ArgumentNullException(nameof(system), $"DIActorSystemAdapter requires {nameof(system)} to be provided");
             this.system = system;
             this.producer = system.GetExtension<DIExt>();
         }

@@ -1,3 +1,191 @@
+#### 1.3.2 September 5 2017 ####
+Placeholder 
+
+#### 1.3.1 September 5 2017 ####
+**Maintenance Release for Akka.NET 1.3**
+
+**Updates and bugfixes**:
+
+- Bugfix: Hyperion NuGet package restore creating duplicate assemblies for the same version inside Akka
+- Various documentation fixes and updates
+- Bugfix: issue where data sent via UDP when `ByteString` payload had buffers with length more than 1, `UdpSender` only wrote the first part of the buffers and dropped the rest.
+- Bugfix: Akka.IO.Tcp failed to write some outgoing messages.
+- Improved support for OSX & Rider
+- Bugfix: Akka.Persistence support for `SerializerWithStringManifest` required by Akka.Cluster.Sharding and Akka.Cluster.Tools
+	- Akka.Persistence.Sqlite and Akka.Persistence.SqlServer were unable to support `SerializerWithStringManifest`, so using Akka.Cluster.Sharding with Sql plugins would not work.
+- Bugfix: Akka.Streams generic type parameters of the flow returned from current implementation of Bidiflow's JoinMat method were incorrect.
+- Bugfix: `PersistenceMessageSerializer` was failing with the wrong exceptoin when a non-supported type was provided.
+
+**Akka.Persistence backwards compability warning**:
+
+- Akka.Persistence.Sql introduces an additional field to the schema used by Sql-based plugins to allow for the use of `SerializerWithStringManifest` called `serializer_id`.  It requires any previous Sql schema to be updated to have this field.  Details are included in the Akka.Persistence.Sqlite plugin README.md file.  Users of the Akka.Persistence.Sqlite plugin must alter their existing databases to add the field `serializer_id int (4)`:
+
+```
+ALTER TABLE {your_event_journal_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+ALTER TABLE {your_snapshot_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+```
+
+[See the full set of Akka.NET 1.3.1 fixes here](https://github.com/akkadotnet/akka.net/milestone/19).
+
+#### 1.3.0 August 11 2017 ####
+**Feature Release for Akka.NET**
+Akka.NET 1.3.0 is a major feature release that introduces the significant changes to Akka.NET and its runtime.
+
+**.NET Core and .NET Standard 1.6 Support**
+This release introduces support for .NET Standard 1.6 for our core libraries and .NET Core 1.1 for the MultiNode Test Runner standalone executable. All packages for Akka.NET are dual-released under both .NET 4.5 and .NET Standard 1.6.
+
+As a side note: Akka.NET on .NET 4.5 is not wire compatible with Akka.NET on .NET Core; this is due to fundamental changes made to the base types in the CLR on .NET Core. It's a common problem facing many different serializers and networking libraries in .NET at the moment. You can use a X-plat serializer we've developed here: https://github.com/akkadotnet/akka.net/pull/2947 - please comment on that thread if you're considering building hybrid .NET and .NET Core clusters.
+
+**Akka.Persistence Released to Market**
+Akka.Persistence has graduated from beta status to stable modules and its interfaces are now considered to be stable. We'll begin updating all of the Akka.Persistence plugins to stable and to add .NET Standard / .NET 4.5 support to each of them as well following this patch.
+
+**DocFx-based Documentation Site**
+Documentation is now generated using DocFx and compiled from within the Akka.NET project rather than a separate documentation repository. 
+
+**API Changes**
+This release does **not** maintain wire format compatibility with the previous release (v1.2.3) inside Akka.Remote; primarily this is due to having to upgrade from Google Protobuf2 to Protobuf3 in order to add .NET Standard support, but we've also taken the liberty of making other serialization improvements while we're at it. So be advised that during an upgrade from 1.2.* to 1.3.* there will be periods of network disruption between nodes using different versions of the service.
+
+**Akka.Remote Performance Improvements**
+Akka.Remote's throughput has been significantly increased.
+
+[See the full set of Akka.NET 1.3.0 fixes here](https://github.com/akkadotnet/akka.net/milestone/14).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 64 | 7109 | 2670 | Marc Piechura |
+| 61 | 2420 | 6703 | Nick Chamberlain |
+| 46 | 2316 | 10066 | Aaron Stannard |
+| 42 | 56428 | 85473 | Alex Valuyskiy |
+| 32 | 7924 | 9483 | ravengerUA |
+| 31 | 17284 | 13592 | Bartosz Sypytkowski |
+| 25 | 2527 | 1124 | Gregorius Soedharmo |
+| 21 | 7810 | 1688 | zbynek001 |
+| 11 | 1932 | 2167 | Sean Gilliam |
+| 9 | 946 | 219 | Arjen Smits |
+| 4 | 679 | 105 | alexvaluyskiy |
+| 4 | 344 | 6 | Lealand Vettleson |
+| 4 | 1644 | 2210 | Arkatufus |
+| 3 | 32 | 6 | Lukas Rieger |
+| 3 | 153 | 17 | Quartus Dev |
+| 2 | 8 | 11 | Paweł Bańka |
+| 2 | 4866 | 12678 | olegz |
+| 2 | 1148 | 176 | Ismael Hamed |
+| 1 | 62 | 5 | Mikhail Kantarovskiy |
+| 1 | 4 | 2 | tstojecki |
+| 1 | 22 | 2 | Maxim Cherednik |
+| 1 | 1 | 1 | Sean Killeen |
+
+#### 1.2.3 July 07 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Resolves a bug introduced in Akka.NET 1.2.2 that caused Akka.Remote to not terminate properly under some conditions during `ActorSystem.Terminate`.
+
+[See the full set of Akka.NET 1.2.3 fixes here](https://github.com/akkadotnet/akka.net/milestone/18).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 46 | 63 | Aaron Stannard |
+
+#### 1.2.2 June 28 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Finally, fully resolves issues related to Akka.Cluster nodes not being able to cleanly leave or join a cluster after a period of network instability. Also includes some minor fixes for clustered routers and Akka.Persistence.
+
+[See the full set of Akka.NET 1.2.2 fixes here](https://github.com/akkadotnet/akka.net/milestone/16).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 13 | 589 | 52 | Aaron Stannard |
+
+#### 1.2.1 June 22 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Resolves issues related to Akka.Cluster nodes not being able to cleanly leave or join a cluster after a period of network instability.
+
+[See the full set of Akka.NET 1.2.1 fixes here](https://github.com/akkadotnet/akka.net/milestone/14).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 15 | 1362 | 753 | alexvaluyskiy |
+| 7 | 635 | 1487 | ravengerUA |
+| 7 | 1966 | 764 | Nick Chamberlain |
+| 4 | 420 | 345 | Aaron Stannard |
+| 3 | 18715 | 999 | Alex Valuyskiy |
+| 2 | 1943 | 3492 | Sean Gilliam |
+| 2 | 104 | 24 | Jaskula Tomasz |
+| 1 | 6 | 10 | Szer |
+| 1 | 20 | 25 | Lealand Vettleson |
+
+#### 1.2.0 April 11 2017 ####
+**Feature Release for Akka.NET**
+Akka.NET 1.2 is a major feature release that introduces the following major changes:
+
+**Akka.Remote now uses [DotNetty](https://github.com/azure/dotnetty) for its transport layer**
+The biggest change for 1.2 is the removal of Helios 2.0 as the default transport and the introduction of DotNetty. The new DotNetty transport is fully backwards compatible with the Helios 1.4 and 2.* transports, so you should be able to upgrade from any Akka.NET 1.* application to 1.2 without any downtime. All of the `helios.tcp` HOCON is also supported by the DotNetty transport, so none of that needs to updated for the DotNetty transport to work out of the box.
+
+In addition, the DotNetty transport supports TLS, which can be enabled via the following HOCON:
+
+```
+akka {
+  loglevel = DEBUG
+  actor {
+    provider = Akka.Remote.RemoteActorRefProvider,Akka.Remote
+  }
+  remote {
+    dot-netty.tcp {
+      port = 0
+      hostname = 127.0.0.1
+      enable-ssl = true
+      log-transport = true
+      ssl {
+        suppress-validation = true
+        certificate {
+          # valid ssl certificate must be installed on both hosts
+          path = "<valid certificate path>" 
+          password = "<certificate password>"
+          # flags is optional: defaults to "default-flag-set" key storage flag
+          # other available storage flags:
+          #   exportable | machine-key-set | persist-key-set | user-key-set | user-protected
+          flags = [ "default-flag-set" ] 
+        }
+      }
+    }
+  }
+}
+```
+
+You can [read more about Akka.Remote's TLS support here](http://getakka.net/docs/remoting/security#akka-remote-with-tls-transport-layer-security-).
+
+See [the complete DotNetty transport HOCON here](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Configuration/Remote.conf#L318).
+
+**Akka.Streams and Akka.Cluster.Tools RTMed**
+Akka.Streams and Akka.Cluster.Tools have graduated from beta status to stable modules and their interfaces are now considered to be stable.
+
+**CoordinatedShutdown**
+One of the major improvements in Akka.NET 1.2 is the addition of the new `CoordinatedShutdown` plugin, which is designed to make it easier for nodes that are running Akka.Cluster to automatically exit a cluster gracefully whenever `ActorSystem.Terminate` is called or when the process the node is running in attempts to exit. `CoordinatedShutdown` is fully extensible and can be used to schedule custom shutdown operations as part of `ActorSystem` termination.
+
+You can [read more about how to use `CoordinatedShutdown` here](http://getakka.net/docs/working-with-actors/coordinated-shutdown).
+
+**Additional Changes**
+In addition to the above changes, there have been a large number of performance improvements, bug fixes, and documentation improvements made to Akka.NET in 1.2. [Read the full list of changes in Akka.NET 1.2 here](https://github.com/akkadotnet/akka.net/milestone/13).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 4840 | 4460 | Alex Valuyskiy |
+| 16 | 4046 | 1144 | Aaron Stannard |
+| 12 | 8591 | 2984 | Sean Gilliam |
+| 6 | 971 | 1300 | Sergey |
+| 5 | 6787 | 2073 | Bartosz Sypytkowski |
+| 4 | 6461 | 8403 | Arjen Smits |
+| 4 | 333 | 125 | ravengerUA |
+| 3 | 71 | 65 | Marc Piechura |
+| 3 | 300 | 24 | Nick Chamberlain |
+| 2 | 79 | 40 | Maxim Salamatko |
+| 2 | 305 | 20 | Ismael Hamed |
+| 1 | 136 | 12 | Sergey Kostrukov |
+| 1 | 1015 | 45 | Lukas Rieger |
+| 1 | 1 | 0 | siudeks |
+
 #### 1.1.3 January 22 2017 ####
 **Maintenance release for Akka.NET v1.1**
 

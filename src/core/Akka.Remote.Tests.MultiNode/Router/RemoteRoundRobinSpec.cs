@@ -64,7 +64,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
         {
         }
 
-        protected RemoteRoundRobinSpec(RoundRobinMultiNodeConfig config) : base(config)
+        protected RemoteRoundRobinSpec(RoundRobinMultiNodeConfig config) : base(config, typeof(RemoteRoundRobinSpec))
         {
             _config = config;
         }

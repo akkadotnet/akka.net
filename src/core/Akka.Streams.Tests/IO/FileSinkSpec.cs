@@ -18,6 +18,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -149,6 +150,46 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f => 
+                {
+                    var testLinesCommon = new List<string>
+                    {
+                        new string('a', 1000) + "\n",
+                        new string('b', 1000) + "\n",
+                        new string('c', 1000) + "\n",
+                        new string('d', 1000) + "\n",
+                    };
+
+                    var commonByteString = ByteString.FromString(testLinesCommon.Join("")).Compact();
+                    var startPosition = commonByteString.Count;
+
+                    var testLinesPart2 = new List<string>()
+                    {
+                        new string('x', 1000) + "\n",
+                        new string('x', 1000) + "\n",
+                    };
+
+                    Task<IOResult> write(List<string> lines, long pos) => Source.From(lines)
+                        .Select(ByteString.FromString)
+                        .RunWith(FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: pos), _materializer);
+
+                    var completion1 = write(_testLines, 0);
+                    var result1 = completion1.AwaitResult();
+
+                    var completion2 = write(testLinesPart2, startPosition);
+                    var result2 = completion2.AwaitResult();
+
+                    f.Length.ShouldBe(startPosition + result2.Count);
+                    CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join(""));
+                });
+            }, _materializer);
+        }
+
+        [Fact]
         public void SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
         {
             this.AssertAllStagesStopped(() =>
@@ -205,6 +246,27 @@ namespace Akka.Streams.Tests.IO
                     {
                         Shutdown(sys);
                     }
+                });
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f => 
+                {
+                    var lazySink = Sink.LazySink(
+                        (ByteString _) => Task.FromResult(FileIO.ToFile(f)),
+                            () => Task.FromResult(IOResult.Success(0)))
+                            .MapMaterializedValue(t => t.AwaitResult());
+
+                    var completion = Source.From(new []{_testByteStrings.Head()})
+                        .RunWith(lazySink, _materializer);
+
+                    completion.AwaitResult();
+                    CheckFileContent(f, _testLines.Head());
                 });
             }, _materializer);
         }

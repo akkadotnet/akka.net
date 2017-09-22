@@ -88,7 +88,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected UseRoleIgnoredSpec(UseRoleIgnoredSpecConfig config)
-            : base(config)
+            : base(config, typeof(UseRoleIgnoredSpec))
         {
             _config = config;
         }
@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             A_cluster_must_start_cluster();
             A_cluster_must_pool_local_off_roles_off();
             A_cluster_must_group_local_off_roles_off();
-            //A_cluster_must_pool_local_on_role_b();
+            A_cluster_must_pool_local_on_role_b();
             A_cluster_must_group_local_on_role_b();
             A_cluster_must_pool_local_on_role_a();
             A_cluster_must_group_local_on_role_a();

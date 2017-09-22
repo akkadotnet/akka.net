@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RefreshContactsTick Instance = new RefreshContactsTick();
+            public static RefreshContactsTick Instance { get; } = new RefreshContactsTick();
             private RefreshContactsTick() { }
         }
 
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly HeartbeatTick Instance = new HeartbeatTick();
+            public static HeartbeatTick Instance { get; } = new HeartbeatTick();
             private HeartbeatTick() { }
         }
 
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ReconnectTimeout Instance = new ReconnectTimeout();
+            public static ReconnectTimeout Instance { get; } = new ReconnectTimeout();
             private ReconnectTimeout() { }
         }
 
@@ -168,7 +168,9 @@ namespace Akka.Cluster.Tools.Client
         /// Factory method for <see cref="ClusterClient"/> <see cref="Actor.Props"/>.
         /// </summary>
         /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="settings"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(ClusterClientSettings settings)
         {
@@ -191,11 +193,12 @@ namespace Akka.Cluster.Tools.Client
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterClient" /> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="settings">The settings used to configure the client.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the settings contains no initial contacts.
+        /// </exception>
         public ClusterClient(ClusterClientSettings settings)
         {
             if (settings.InitialContacts.Count == 0)
@@ -640,7 +643,7 @@ namespace Akka.Cluster.Tools.Client
         /// TBD
         /// </summary>
         /// <param name="contactPoints">TBD</param>
-        public ContactPoints(ImmutableHashSet<ActorPath> contactPoints)
+        public ContactPoints(IImmutableSet<ActorPath> contactPoints)
         {
             ContactPointsList = contactPoints;
         }
@@ -648,6 +651,6 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public ImmutableHashSet<ActorPath> ContactPointsList { get; }
+        public IImmutableSet<ActorPath> ContactPointsList { get; }
     }
 }

@@ -59,6 +59,7 @@ namespace Akka.Cluster
                 return Equals(Node, other.Node);
             }
 
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -66,6 +67,7 @@ namespace Akka.Cluster
                 return obj is UnreachableTimeout && Equals((UnreachableTimeout)obj);
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (Node != null ? Node.GetHashCode() : 0);
@@ -121,7 +123,9 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="node">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when a non-leader tries to down the specified <paramref name="node"/>.
+        /// </exception>
         public override void Down(Address node)
         {
             if(!_leader) throw new InvalidOperationException("Must be leader to down node");
@@ -275,8 +279,8 @@ namespace Akka.Cluster
 
         private void Remove(UniqueAddress node)
         {
-            ICancelable source;
-            if(_scheduledUnreachable.TryGetValue(node, out source)) source.Cancel();
+            if(_scheduledUnreachable.TryGetValue(node, out var source))
+                source.Cancel();
             _scheduledUnreachable = _scheduledUnreachable.Remove(node);
             _pendingUnreachable = _pendingUnreachable.Remove(node);
         }
@@ -308,7 +312,9 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the <c>akka.cluster.auto-down-unreachable-after</c> configuration setting is not set.
+        /// </exception>
         public Props DowningActorProps
         {
             get

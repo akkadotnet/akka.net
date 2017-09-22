@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -45,7 +44,7 @@ namespace Akka.Routing
         /// <summary>
         /// A configuration that specifies that no router is to be used.
         /// </summary>
-        [Obsolete("Use NoRouter.Instance instead")]
+        [Obsolete("Use NoRouter.Instance instead [1.1.0]")]
         public static RouterConfig NoRouter => Routing.NoRouter.Instance;
 
         /// <summary>
@@ -56,7 +55,7 @@ namespace Akka.Routing
         public abstract Router CreateRouter(ActorSystem system);
 
         /// <summary>
-        /// Dispatcher ID to use for running the “head” actor, which handles supervision, death watch and router management messages.
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public virtual string RouterDispatcher { get; }
 
@@ -118,11 +117,7 @@ namespace Akka.Routing
         /// <returns>The surrogate representation of the current router.</returns>
         public abstract ISurrogate ToSurrogate(ActorSystem system);
 
-        /// <summary>
-        /// Determines whether the specified router, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The router to compare.</param>
-        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         public bool Equals(RouterConfig other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -131,15 +126,8 @@ namespace Akka.Routing
             return GetType() == other.GetType() && (GetType() == typeof(NoRouter) || string.Equals(RouterDispatcher, other.RouterDispatcher));
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as RouterConfig);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as RouterConfig);
     }
 
     /// <summary>
@@ -201,11 +189,7 @@ namespace Akka.Routing
             return new RouterActor();
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="Group"/>, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The group to compare.</param>
-        /// <returns><c>true</c> if the specified <see cref="Group"/> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         public bool Equals(Group other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -213,13 +197,7 @@ namespace Akka.Routing
             return Paths.SequenceEqual(other.Paths);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object"/>, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object"/> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object"/> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -228,16 +206,8 @@ namespace Akka.Routing
             return Equals((Group)obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
-        public override int GetHashCode()
-        {
-            return Paths?.GetHashCode() ?? 0;
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => Paths?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -378,11 +348,7 @@ namespace Akka.Routing
             }
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="Pool"/>, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The pool to compare.</param>
-        /// <returns><c>true</c> if the specified <see cref="Pool"/> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         public bool Equals(Pool other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -391,13 +357,7 @@ namespace Akka.Routing
                    NrOfInstances == other.NrOfInstances;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object"/>, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object"/> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object"/> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -406,12 +366,7 @@ namespace Akka.Routing
             return Equals((Pool)obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -462,19 +417,19 @@ namespace Akka.Routing
     public class FromConfig : Pool
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
-        protected FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
+        public FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
         /// <param name="resizer">TBD</param>
         /// <param name="supervisorStrategy">TBD</param>
         /// <param name="routerDispatcher">TBD</param>
-        protected FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
+        public FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
             : base(0, resizer, supervisorStrategy, routerDispatcher, false)
         {
         }

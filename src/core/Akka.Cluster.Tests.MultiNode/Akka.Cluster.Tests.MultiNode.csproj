@@ -1,158 +1,33 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.Cluster.Tests.MultiNode</RootNamespace>
-    <AssemblyName>Akka.Cluster.Tests.MultiNode</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <AssemblyTitle>Akka.Cluster.Tests.MultiNode</AssemblyTitle>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+  </ItemGroup>
+ 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="FluentAssertions" Version="4.14.0" />
+  </ItemGroup>
+ 
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="FluentAssertions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="xunit.assert, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\xunit.assert.2.1.0\lib\dotnet\xunit.assert.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="xunit.core, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\xunit.extensibility.core.2.1.0\lib\dotnet\xunit.core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="xunit.execution.desktop, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\xunit.extensibility.execution.2.1.0\lib\net45\xunit.execution.desktop.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AttemptSysMsgRedeliverySpec.cs" />
-    <Compile Include="ClientDowningNodeThatIsUnreachableSpec.cs" />
-    <Compile Include="ClientDowningNodeThatIsUpSpec.cs" />
-    <Compile Include="ClusterAccrualFailureDetectorSpec.cs" />
-    <Compile Include="ClusterDeathWatchSpec.cs" />
-    <Compile Include="ConvergenceSpec.cs" />
-    <Compile Include="DeterministicOldestWhenJoiningSpec.cs" />
-    <Compile Include="DisallowJoinOfTwoClustersSpec.cs" />
-    <Compile Include="InitialHeartbeatSpec.cs" />
-    <Compile Include="JoinInProgressSpec.cs" />
-    <Compile Include="JoinSeedNodeSpec.cs" />
-    <Compile Include="LeaderDowningNodeThatIsUnreachableSpec.cs" />
-    <Compile Include="LeaderElectionSpec.cs" />
-    <Compile Include="LeaderDowningAllOtherNodesSpec.cs" />
-    <Compile Include="LeaderLeavingSpec.cs" />
-    <Compile Include="MembershipChangeListenerExitingSpec.cs" />
-    <Compile Include="MembershipChangeListenerUpSpec.cs" />
-    <Compile Include="NodeChurnSpec.cs" />
-    <Compile Include="MinMembersBeforeUpSpec.cs" />
-    <Compile Include="NodeDowningAndBeingRemovedSpec.cs" />
-    <Compile Include="NodeLeavingAndExitingAndBeingRemovedSpec.cs" />
-    <Compile Include="NodeLeavingAndExitingSpec.cs" />
-    <Compile Include="NodeMembershipSpec.cs" />
-    <Compile Include="NodeUpSpec.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QuickRestartSpec.cs" />
-    <Compile Include="RestartFirstSeedNodeSpec.cs" />
-    <Compile Include="RestartNode2Spec.cs" />
-    <Compile Include="RestartNode3Spec.cs" />
-    <Compile Include="RestartNodeSpec.cs" />
-    <Compile Include="Routing\ClusterBroadcastRouter2266BugfixSpec.cs" />
-    <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
-    <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
-    <Compile Include="Routing\ClusterRoundRobinSpec.cs" />
-    <Compile Include="Routing\UseRoleIgnoredSpec.cs" />
-    <Compile Include="SingletonClusterSpec.cs" />
-    <Compile Include="SplitBrainSpec.cs" />
-    <Compile Include="SunnyWeatherSpec.cs" />
-    <Compile Include="TransitionSpec.cs" />
-    <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
-    <Compile Include="JoinWithOfflineSeedNodeSpec.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
-      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
-      <Name>Akka.TestKit.Xunit2</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj">
-      <Project>{b32850d2-e9cb-4638-83a4-164907595e56}</Project>
-      <Name>Akka.Cluster.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj">
-      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
-      <Name>Akka.Cluster</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
-      <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
-      <Name>Akka.Remote.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
-      <Project>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</Project>
-      <Name>Akka.Remote</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
-      <Name>Akka.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

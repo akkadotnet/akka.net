@@ -5,50 +5,77 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Google.ProtocolBuffers;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Util;
+using System.IO;
+using DotNetty.Buffers;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit.Proto
 {
     /// <summary>
-    /// Decodes a message from a <see cref="IByteBuf"/> into a Google protobuff wire format
+    /// Decodes a message from a <see cref="IByteBuffer"/> into a Google protobuff wire format
     /// </summary>
-    public class ProtobufDecoder : ByteToMessageDecoder
+    internal sealed class ProtobufDecoder : MessageToMessageDecoder<IByteBuffer>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<ProtobufDecoder>();
-        private readonly IMessageLite _prototype;
-        private readonly ExtensionRegistry _extensions;
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<ProtobufDecoder>();
+        readonly MessageParser _messageParser;
 
-        public ProtobufDecoder(IMessageLite prototype)
-            : this(prototype, null)
+        public ProtobufDecoder(MessageParser messageParser)
         {
+            _messageParser = messageParser;
         }
 
-        public ProtobufDecoder(IMessageLite prototype, ExtensionRegistry extensions)
+        protected override void Decode(IChannelHandlerContext context, IByteBuffer message, List<object> output)
         {
-            _prototype = prototype;
-            _extensions = extensions;
-        }
+            _logger.LogDebug("Decoding {0} into Protobuf", message);
+            int length = message.ReadableBytes;
+            if (length <= 0)
+            {
+                return;
+            }
 
-        protected override void Decode(IChannelHandlerContext context, IByteBuf input, List<object> output)
-        {
-            _logger.Debug("Decoding {0} into Protobuf", input);
+            Stream inputStream = null;
+            try
+            {
+                CodedInputStream codedInputStream;
+                if (message.IoBufferCount == 1)
+                {
+                    ArraySegment<byte> bytes = message.GetIoBuffer(message.ReaderIndex, length);
+                    codedInputStream = new CodedInputStream(bytes.Array, bytes.Offset, length);
+                }
+                else
+                {
+                    inputStream = new ReadOnlyByteBufferStream(message, false);
+                    codedInputStream = new CodedInputStream(inputStream);
+                }
 
-            var readable = input.ReadableBytes;
-            var buf = new byte[readable];
-            input.ReadBytes(buf);
-            var bs = ByteString.CopyFrom(buf);
-            var result = _extensions == null
-                ? _prototype.WeakCreateBuilderForType().WeakMergeFrom(bs).WeakBuild()
-                : _prototype.WeakCreateBuilderForType().WeakMergeFrom(bs, _extensions).WeakBuild();
-            output.Add(result);
+                //
+                // Note that we do not dispose the input stream because there is no input stream attached. 
+                // Ideally, it should be disposed. BUT if it is disposed, a null reference exception is 
+                // thrown because CodedInputStream flag leaveOpen is set to false for direct byte array reads,
+                // when it is disposed the input stream is null.
+                // 
+                // In this case it is ok because the CodedInputStream does not own the byte data.
+                //
+                IMessage decoded = _messageParser.ParseFrom(codedInputStream);
+                if (decoded != null)
+                {
+                    output.Add(decoded);
+                }
+            }
+            catch (Exception exception)
+            {
+                throw new CodecException(exception);
+            }
+            finally
+            {
+                inputStream?.Dispose();
+            }
         }
     }
 }
-

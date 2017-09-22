@@ -76,12 +76,12 @@ namespace Akka.Persistence.Journal
 
         private class Journal : IPluginType
         {
-            public string Qualifier { get { return "journal"; } }
+            public string Qualifier => "journal";
         }
 
         private class SnapshotStore : IPluginType
         {
-            public string Qualifier { get { return "snapshot-store"; } }
+            public string Qualifier => "snapshot-store";
         }
 
         private readonly Config _config;
@@ -93,9 +93,13 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PersistencePluginProxy"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration used to configure the proxy.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when configuration is undefined for the plugin
+        /// or an unknown plugin type is defined.
+        /// </exception>
         public PersistencePluginProxy(Config config)
         {
             _config = config;
@@ -105,12 +109,12 @@ namespace Akka.Persistence.Journal
             else if (pluginId.Equals("akka.persistence.snapshot-store.proxy"))
                 _pluginType = new SnapshotStore();
             else
-                throw new ArgumentException(string.Format("Unknown plugin type: {0}.", pluginId));
+                throw new ArgumentException($"Unknown plugin type: {pluginId}.");
             _initTimeout = config.GetTimeSpan("init-timeout");
             var key = "target-" + _pluginType.Qualifier + "-plugin";
             _targetPluginId = config.GetString(key);
             if (string.IsNullOrEmpty(_targetPluginId))
-                throw new ArgumentException(string.Format("{0}.{1} must be defined.", pluginId, key));
+                throw new ArgumentException($"{pluginId}.{key} must be defined.");
             _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier);
 
             _selfAddress = ((ExtendedActorSystem) Context.System).Provider.DefaultAddress;
@@ -171,9 +175,7 @@ namespace Akka.Persistence.Journal
         {
             return
                 new TimeoutException(
-                    string.Format(
-                        "Target {0} not initialized. Use `PersistencePluginProxy.SetTargetLocation` or set `target-{0}-address`.",
-                        _pluginType.Qualifier));
+                    $"Target {_pluginType.Qualifier} not initialized. Use `PersistencePluginProxy.SetTargetLocation` or set `target-{_pluginType.Qualifier}-address`.");
         }
 
         /// <summary>
@@ -329,7 +331,7 @@ namespace Akka.Persistence.Journal
                     if (message is LoadSnapshot)
                     {
                         var l = (LoadSnapshot) message;
-                        Sender.Tell(new LoadSnapshotResult(null, l.ToSequenceNr));
+                        Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
                     }
                     else if (message is SaveSnapshot)
                     {

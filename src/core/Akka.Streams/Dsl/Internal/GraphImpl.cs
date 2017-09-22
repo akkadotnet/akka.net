@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Annotations;
 using Akka.Streams.Implementation;
 using Akka.Streams.Util;
 
@@ -15,6 +16,7 @@ namespace Akka.Streams.Dsl.Internal
     /// </summary>
     /// <typeparam name="TShape">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public class GraphImpl<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
     {
         /// <summary>
@@ -75,6 +77,7 @@ namespace Akka.Streams.Dsl.Internal
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public static class ModuleExtractor
     {
         /// <summary>

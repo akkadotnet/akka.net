@@ -7,111 +7,103 @@
 
 using System;
 using System.Collections.Generic;
+using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Util;
-using TCP;
-using Address = Akka.Actor.Address;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit
 {
     internal class MsgDecoder : MessageToMessageDecoder<object>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<MsgDecoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgDecoder>();
 
-        public static Address Proto2Address(TCP.Address addr)
+        public static Address Proto2Address(Serialization.Proto.Msg.AddressData addr)
         {
-            return new Address(addr.Protocol, addr.System, addr.Host, addr.Port);
+            return new Address(addr.Protocol, addr.System, addr.Hostname, (int)addr.Port);
         }
 
-        public static ThrottleTransportAdapter.Direction Proto2Direction(TCP.Direction dir)
+        public static ThrottleTransportAdapter.Direction Proto2Direction(Proto.Msg.InjectFailure.Types.Direction dir)
         {
             switch (dir)
             {
-                case Direction.Send:
-                    return ThrottleTransportAdapter.Direction.Send;
-                case Direction.Receive:
-                    return ThrottleTransportAdapter.Direction.Receive;
-                case Direction.Both:
-                default:
-                    return ThrottleTransportAdapter.Direction.Both;
+                case Proto.Msg.InjectFailure.Types.Direction.Send: return ThrottleTransportAdapter.Direction.Send;
+                case Proto.Msg.InjectFailure.Types.Direction.Receive: return ThrottleTransportAdapter.Direction.Receive;
+                case Proto.Msg.InjectFailure.Types.Direction.Both:
+                default: return ThrottleTransportAdapter.Direction.Both;
             }
         }
 
         protected object Decode(object message)
         {
-            _logger.Debug("Decoding {0}", message);
-            var w = message as TCP.Wrapper;
-            if (w != null && w.AllFields.Count == 1)
+            _logger.LogDebug("Decoding {0}", message);
+
+            var w = message as Proto.Msg.Wrapper;
+            if (w != null)
             {
-                if (w.HasHello)
+                if (w.Hello != null)
                 {
-                    var h = w.Hello;
-                    return new Hello(h.Name, Proto2Address(h.Address));
+                    return new Hello(w.Hello.Name, Proto2Address(w.Hello.Address));
                 }
-                else if (w.HasBarrier)
+                else if (w.Barrier != null)
                 {
-                    var barrier = w.Barrier;
-                    switch (barrier.Op)
+                    switch (w.Barrier.Op)
                     {
-                        case BarrierOp.Succeeded: return (new BarrierResult(barrier.Name, true));
-                        case BarrierOp.Failed: return (new BarrierResult(barrier.Name, false));
-                        case BarrierOp.Fail: return (new FailBarrier(barrier.Name));
-                        case BarrierOp.Enter:
-                            return (new EnterBarrier(barrier.Name, barrier.HasTimeout ? (TimeSpan?)TimeSpan.FromTicks(barrier.Timeout) : null));
+                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded: return new BarrierResult(w.Barrier.Name, true);
+                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Failed: return new BarrierResult(w.Barrier.Name, false);
+                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Fail: return new FailBarrier(w.Barrier.Name);
+                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Enter:
+                            return new EnterBarrier(w.Barrier.Name, w.Barrier.Timeout > 0 ? (TimeSpan?)TimeSpan.FromTicks(w.Barrier.Timeout) : null);
                     }
                 }
-                else if (w.HasFailure)
+                else if (w.Failure != null)
                 {
                     var f = w.Failure;
                     switch (f.Failure)
                     {
-                        case FailType.Throttle:
-                            return (new ThrottleMsg(Proto2Address(f.Address), Proto2Direction(f.Direction), f.RateMBit));
-                        case FailType.Abort:
-                            return (new DisconnectMsg(Proto2Address(f.Address), true));
-                        case FailType.Disconnect:
-                            return (new DisconnectMsg(Proto2Address(f.Address), false));
-                        case FailType.Exit:
-                            return (new TerminateMsg(new Right<bool, int>(f.ExitValue)));
-                        case FailType.Shutdown:
-                            return (new TerminateMsg(new Left<bool, int>(false)));
-                        case FailType.ShutdownAbrupt:
-                            return (new TerminateMsg(new Left<bool, int>(true)));
+                        case Proto.Msg.InjectFailure.Types.FailType.Throttle:
+                            return new ThrottleMsg(Proto2Address(f.Address), Proto2Direction(f.Direction), f.RateMBit);
+                        case Proto.Msg.InjectFailure.Types.FailType.Abort:
+                            return new DisconnectMsg(Proto2Address(f.Address), true);
+                        case Proto.Msg.InjectFailure.Types.FailType.Disconnect:
+                            return new DisconnectMsg(Proto2Address(f.Address), false);
+                        case Proto.Msg.InjectFailure.Types.FailType.Exit:
+                            return new TerminateMsg(new Right<bool, int>(f.ExitValue));
+                        case Proto.Msg.InjectFailure.Types.FailType.Shutdown:
+                            return new TerminateMsg(new Left<bool, int>(false));
+                        case Proto.Msg.InjectFailure.Types.FailType.ShutdownAbrupt:
+                            return new TerminateMsg(new Left<bool, int>(true));
                     }
                 }
-                else if (w.HasAddr)
+                else if (w.Addr != null)
                 {
                     var a = w.Addr;
-                    if (a.HasAddr)
-                    {
-                        return (new AddressReply(new RoleName(a.Node), Proto2Address(a.Addr)));
-                    }
-                    return (new GetAddress(new RoleName(a.Node)));
+                    if (a.Addr != null)
+                        return new AddressReply(new RoleName(a.Node), Proto2Address(a.Addr));
+
+                    return new GetAddress(new RoleName(a.Node));
                 }
-                else if (w.HasDone)
+                else if (!string.IsNullOrEmpty(w.Done))
                 {
-                    return (Done.Instance);
+                    return Done.Instance;
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("wrong message {0}", message));
+                    throw new ArgumentException($"unknown message {message}");
                 }
             }
 
-            throw new ArgumentException(string.Format("wrong message {0}", message));
+            throw new ArgumentException($"wrong message {message}");
         }
 
         protected override void Decode(IChannelHandlerContext context, object message, List<object> output)
         {
             var o = Decode(message);
-            _logger.Debug("Decoded {0}", o);
+            _logger.LogDebug("Decoded {0}", o);
             output.Add(o);
         }
     }
 }
-

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Annotations;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -23,6 +24,7 @@ namespace Akka.Streams.Implementation
     ///  - if the timer fires before the event happens, these stages all fail the stream
     ///  - otherwise, these streams do not interfere with the element flow, ordinary completion or failure
     /// </summary>
+    [InternalApi]
     public static class Timers
     {
         /// <summary>
@@ -43,6 +45,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Initial<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -122,6 +125,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Completion<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -192,6 +196,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Idle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -273,6 +278,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -361,6 +367,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
     {
         #region Logic
@@ -478,7 +485,8 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
+    [InternalApi]
+    public sealed class DelayInitial<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
@@ -490,11 +498,11 @@ namespace Akka.Streams.Implementation
             public Logic(DelayInitial<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(_stage.In, this);
-                SetHandler(_stage.Out, this);
+                SetHandler(_stage.Inlet, this);
+                SetHandler(_stage.Outlet, this);
             }
 
-            public void OnPush() => Push(_stage.Out, Grab(_stage.In));
+            public void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
 
             public void OnUpstreamFinish() => CompleteStage();
 
@@ -503,7 +511,7 @@ namespace Akka.Streams.Implementation
             public void OnPull()
             {
                 if (_isOpen)
-                    Pull(_stage.In);
+                    Pull(_stage.Inlet);
             }
 
             public void OnDownstreamFinish() => CompleteStage();
@@ -511,8 +519,8 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 _isOpen = true;
-                if (IsAvailable(_stage.Out))
-                    Pull(_stage.In);
+                if (IsAvailable(_stage.Outlet))
+                    Pull(_stage.Inlet);
             }
 
             public override void PreStart()
@@ -530,34 +538,21 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public readonly TimeSpan Delay;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("DelayInitial.in");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Out = new Outlet<T>("DelayInitial.out");
+
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="delay">TBD</param>
-        public DelayInitial(TimeSpan delay)
+        public DelayInitial(TimeSpan delay) : base("DelayInitial")
         {
             Delay = delay;
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelayInitial;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -578,6 +573,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
     {
         #region Logic

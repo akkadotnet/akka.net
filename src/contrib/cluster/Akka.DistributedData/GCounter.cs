@@ -7,22 +7,22 @@
 
 using Akka.Cluster;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
-using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// A typed key for <see cref="GCounter"/> CRDT. Can be used to perform read/upsert/delete
+    /// operations on correlated data type.
     /// </summary>
     [Serializable]
     public sealed class GCounterKey : Key<GCounter>
     {
         /// <summary>
-        /// TBD
+        /// Creates a new instance of <see cref="GCounterKey"/> class.
         /// </summary>
         /// <param name="id">TBD</param>
         public GCounterKey(string id) : base(id) { }
@@ -43,14 +43,22 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class GCounter : FastMerge<GCounter>, IRemovedNodePruning<GCounter>, IEquatable<GCounter>, IComparable<GCounter>, IComparable, IReplicatedDataSerialization
+    public sealed class GCounter :
+        FastMerge<GCounter>,
+        IRemovedNodePruning<GCounter>,
+        IEquatable<GCounter>,
+        IComparable<GCounter>,
+        IComparable,
+        IReplicatedDataSerialization,
+        IDeltaReplicatedData<GCounter, GCounter>,
+        IReplicatedDelta
     {
-        private static readonly BigInteger Zero = new BigInteger(0);
+        private static readonly ulong Zero = 0UL;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableDictionary<UniqueAddress, BigInteger> State { get; }
+        public ImmutableDictionary<UniqueAddress, ulong> State { get; }
 
         /// <summary>
         /// TBD
@@ -60,79 +68,56 @@ namespace Akka.DistributedData
         /// <summary>
         /// Current total value of the counter.
         /// </summary>
-        public BigInteger Value { get; }
+        public ulong Value { get; }
+
+        [NonSerialized]
+        private readonly GCounter _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
+        public GCounter Delta => _syncRoot;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public GCounter() : this(ImmutableDictionary<UniqueAddress, BigInteger>.Empty) { }
+        public GCounter() : this(ImmutableDictionary<UniqueAddress, ulong>.Empty) { }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="state">TBD</param>
-        public GCounter(IImmutableDictionary<UniqueAddress, BigInteger> state)
+        /// <param name="delta">TBD</param>
+        internal GCounter(ImmutableDictionary<UniqueAddress, ulong> state, GCounter delta = null)
         {
+            _syncRoot = delta;
             State = state;
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
-        /// <summary>
-        /// Increment the counter by 1.
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
-        public GCounter Increment(Cluster.Cluster node) => Increment(node.SelfUniqueAddress);
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => State.Keys.ToImmutableHashSet();
+        
         /// <summary>
-        /// Increment the counter by 1.
+        /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
-        public GCounter Increment(UniqueAddress node) => Increment(node, new BigInteger(1));
-
+        public GCounter Increment(Cluster.Cluster node, ulong delta = 1) => Increment(node.SelfUniqueAddress, delta);
+        
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
         /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="n"/> is less than zero.
+        /// </exception>
         /// <returns>TBD</returns>
-        public GCounter Increment(Cluster.Cluster node, ulong delta) => Increment(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Increment the counter with the delta specified. The delta must be zero or positive.
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <returns>TBD</returns>
-        public GCounter Increment(UniqueAddress node, ulong delta) => Increment(node, new BigInteger(delta));
-
-        /// <summary>
-        /// Increment the counter with the delta specified. The delta must be zero or positive.
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <returns>TBD</returns>
-        public GCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Increment the counter with the delta specified. The delta must be zero or positive.
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
-        public GCounter Increment(UniqueAddress node, BigInteger delta)
+        public GCounter Increment(UniqueAddress node, ulong n = 1)
         {
-            if (delta < 0) throw new ArgumentException("Can't decrement a GCounter");
-            if (delta == 0) return this;
+            if (n == 0) return this;
 
-            BigInteger v;
-            if (State.TryGetValue(node, out v))
-            {
-                var total = v + delta;
-                return AssignAncestor(new GCounter(State.SetItem(node, total)));
-            }
-            else return AssignAncestor(new GCounter(State.SetItem(node, delta)));
+            var nextValue = State.GetValueOrDefault(node, 0UL) + n;
+            var newDelta = Delta == null
+                ? new GCounter(
+                    ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, ulong>(node, nextValue) }))
+                : new GCounter(Delta.State.SetItem(node, nextValue));
+
+            return AssignAncestor(new GCounter(State.SetItem(node, nextValue), newDelta));
         }
 
         /// <summary>
@@ -160,12 +145,25 @@ namespace Akka.DistributedData
             }
         }
 
+        public GCounter MergeDelta(GCounter delta) => Merge(delta);
+        
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((GCounter)delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        public GCounter ResetDelta() => Delta == null ? this : AssignAncestor(new GCounter(State));
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="removedNode">TBD</param>
         /// <returns>TBD</returns>
         public bool NeedPruningFrom(UniqueAddress removedNode) => State.ContainsKey(removedNode);
+
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         /// <summary>
         /// TBD
@@ -175,9 +173,9 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            BigInteger prunedNodeValue;
-            return State.TryGetValue(removedNode, out prunedNodeValue) 
-                ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue) 
+            ulong prunedNodeValue;
+            return State.TryGetValue(removedNode, out prunedNodeValue)
+                ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue)
                 : this;
         }
 
@@ -188,68 +186,41 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter PruningCleanup(UniqueAddress removedNode) => new GCounter(State.Remove(removedNode));
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return State.GetHashCode();
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => State.GetHashCode();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public int CompareTo(object obj)
-        {
-            if (obj is GCounter) return CompareTo((GCounter) obj);
-            return -1;
-        }
+        /// <inheritdoc/>
+        public int CompareTo(object obj) => obj is GCounter ? CompareTo((GCounter)obj) : -1;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(GCounter other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return State.SequenceEqual(other.State);
+            return Equals(Value, other.Value);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is GCounter && Equals((GCounter)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(GCounter other)
         {
             if (ReferenceEquals(other, null)) return 1;
             return Value.CompareTo(other.Value);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"GCounter({Value})";
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="GCounter" /> to <see cref="ulong" />.
         /// </summary>
-        /// <param name="counter">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator BigInteger(GCounter counter) => counter.Value;
+        /// <param name="counter">The counter to convert</param>
+        /// <returns>The result of the conversion</returns>
+        public static implicit operator ulong(GCounter counter) => counter.Value;
+
+        IDeltaReplicatedData IReplicatedDelta.Zero => GCounter.Empty;
     }
 }

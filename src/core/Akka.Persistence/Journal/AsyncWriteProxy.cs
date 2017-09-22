@@ -37,6 +37,7 @@ namespace Akka.Persistence.Journal
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -46,6 +47,7 @@ namespace Akka.Persistence.Journal
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -58,11 +60,13 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="store">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="store"/> is undefined.
+        /// </exception>
         public SetStore(IActorRef store)
         {
             if (store == null)
-                throw new ArgumentNullException("store", "SetStore requires non-null reference to store actor");
+                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
 
             Store = store;
         }
@@ -78,7 +82,6 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public static class AsyncWriteTarget
     {
-
         #region Internal Messages
 
         /// <summary>
@@ -88,22 +91,24 @@ namespace Akka.Persistence.Journal
         public sealed class ReplayFailure
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ReplayFailure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="cause">The cause of the failure</param>
+            /// <exception cref="System.ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+            /// </exception>
             public ReplayFailure(Exception cause)
             {
                 if (cause == null)
-                    throw new ArgumentNullException("cause", "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
+                    throw new ArgumentNullException(nameof(cause), "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
 
                 Cause = cause;
             }
 
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
-            public Exception Cause { get; private set; }
+            public Exception Cause { get; }
         }
 
         /// <summary>
@@ -124,12 +129,9 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public long HighestSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long HighestSequenceNr { get; }
+
+            /// <inheritdoc/>
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -157,7 +159,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public AtomicWrite[] Messages { get; private set; }
+            public AtomicWrite[] Messages { get; }
         }
 
         /// <summary>
@@ -184,24 +186,24 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long FromSequenceNr { get; private set; }
+            public long FromSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
+            public long ToSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long Max { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long Max { get; }
+
+            /// <inheritdoc/>
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -234,16 +236,14 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long ToSequenceNr { get; }
+
+            /// <inheritdoc/>
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -296,7 +296,7 @@ namespace Akka.Persistence.Journal
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)
             {
@@ -326,6 +326,9 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the store has not been initialized.
+        /// </exception>
         /// <returns>TBD</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
@@ -340,6 +343,9 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the store has not been initialized.
+        /// </exception>
         /// <returns>TBD</returns>
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
@@ -358,6 +364,9 @@ namespace Akka.Persistence.Journal
         /// <param name="toSequenceNr">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="recoveryCallback">TBD</param>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the store has not been initialized.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
@@ -377,6 +386,9 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="fromSequenceNr">TBD</param>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the store has not been initialized.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
@@ -390,7 +402,7 @@ namespace Akka.Persistence.Journal
         private Task<T> StoreNotInitialized<T>()
         {
             var promise = new TaskCompletionSource<T>();
-            promise.SetException(new TimeoutException("Store not intialized."));
+            promise.SetException(new TimeoutException("Store not initialized."));
             return promise.Task;
         }
 
@@ -449,7 +461,9 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
-        /// <exception cref="AsyncReplayTimeoutException">TBD</exception>
+        /// <exception cref="AsyncReplayTimeoutException">
+        /// This exception is thrown when the replay timed out due to inactivity.
+        /// </exception>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
@@ -467,7 +481,7 @@ namespace Akka.Persistence.Journal
             }
             else if (message is ReceiveTimeout)
             {
-                var timeoutException = new AsyncReplayTimeoutException("Replay timed out after " + _replayTimeout.TotalSeconds + "s of inactivity");
+                var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
                 _replayCompletionPromise.SetException(timeoutException);
                 Context.Stop(Self);
             }
@@ -476,4 +490,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

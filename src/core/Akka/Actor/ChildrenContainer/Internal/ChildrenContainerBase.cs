@@ -43,6 +43,7 @@ namespace Akka.Actor.Internal
                 _lazyCount = -1;
             }
 
+            /// <inheritdoc/>
             public IEnumerator<T> GetEnumerator()
             {
                 return _enumerable.GetEnumerator();
@@ -147,7 +148,8 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
-            if (InternalChildren.TryGetValue(name, out stats)) return true;
+            if (InternalChildren.TryGetValue(name, out stats))
+                return true;
             stats = null;
             return false;
         }
@@ -160,8 +162,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
-            IChildStats stats;
-            if (InternalChildren.TryGetValue(actor.Path.Name, out stats))
+            if (InternalChildren.TryGetValue(actor.Path.Name, out var stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
                 var crStats = stats as ChildRestartStats;

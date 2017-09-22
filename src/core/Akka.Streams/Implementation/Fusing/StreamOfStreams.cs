@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -33,13 +34,15 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly FlattenMerge<TGraph, T, TMat> _stage;
+            private readonly Attributes _enclosingAttributes;
             private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
             private IBuffer<SubSinkInlet<T>> _q;
             private readonly Action _outHandler;
 
-            public Logic(FlattenMerge<TGraph, T, TMat> stage) : base(stage.Shape)
+            public Logic(FlattenMerge<TGraph, T, TMat> stage, Attributes enclosingAttributes) : base(stage.Shape)
             {
                 _stage = stage;
+                _enclosingAttributes = enclosingAttributes;
                 _outHandler = () =>
                 {
                     // could be unavailable due to async input having been executed before this notification
@@ -120,7 +123,10 @@ namespace Akka.Streams.Implementation.Fusing
 
                 sinkIn.Pull();
                 _sources.Add(sinkIn);
-                Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
+
+                var graph = Source.FromGraph(source).To(sinkIn.Sink);
+                var attributes = _stage.InitialAttributes.And(_enclosingAttributes);
+                Interpreter.SubFusingMaterializer.Materialize(graph, attributes);
             }
 
             public override string ToString() => $"FlattenMerge({_stage._breadth})";
@@ -158,9 +164,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
+        /// <param name="enclosingAttributes">TBD</param>
         /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        protected override GraphStageLogic CreateLogic(Attributes enclosingAttributes) => new Logic(this, enclosingAttributes);
 
         /// <summary>
         /// TBD
@@ -394,9 +400,8 @@ namespace Akka.Streams.Implementation.Fusing
                     if (key == null)
                         throw new ArgumentNullException(nameof(key), "Key cannot be null");
 
-                    if (_activeSubstreams.ContainsKey(key))
+                    if (_activeSubstreams.TryGetValue(key, out var substreamSource))
                     {
-                        var substreamSource = _activeSubstreams[key];
                         if (substreamSource.IsAvailable)
                             substreamSource.Push(element);
                         else
@@ -507,9 +512,8 @@ namespace Akka.Streams.Implementation.Fusing
             protected internal override void OnTimer(object timerKey)
             {
                 var key = (TKey) timerKey;
-                if (_activeSubstreams.ContainsKey(key))
+                if (_activeSubstreams.TryGetValue(key, out var substreamSource))
                 {
-                    var substreamSource = _activeSubstreams[key];
                     substreamSource.Timeout(_timeout);
                     _closedSubstreams.Add(key);
                     _activeSubstreams.Remove(key);
@@ -1145,6 +1149,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="s">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
+        [InternalApi]
         public static void Kill<T, TMat>(Source<T, TMat> s)
         {
             var module = s.Module as GraphStageModule;

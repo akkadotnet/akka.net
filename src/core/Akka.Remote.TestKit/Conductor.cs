@@ -16,8 +16,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Channels;
-using Helios.Topology;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -71,17 +70,6 @@ namespace Akka.Remote.TestKit
             var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;
-        }
-
-        /// <summary>
-        /// Obtain the port to which the controller’s socket is actually bound. This
-        /// will deviate from the configuration in `akka.testconductor.port` in case
-        /// that was given as zero.
-        /// </summary>
-        /// <returns>The address of the controller's socket endpoint</returns>
-        public Task<INode> SockAddr()
-        {
-            return Controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -189,7 +177,8 @@ namespace Akka.Remote.TestKit
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="exitValue">is the return code which shall be given to System.exit</param>
-        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public Task<Done> Exit(RoleName node, int exitValue)
         {
             // the recover is needed to handle ClientDisconnectedException exception,
@@ -200,7 +189,7 @@ namespace Akka.Remote.TestKit
                 var failure = t.Result as FSMBase.Failure;
                 if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
 
-                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+                throw new InvalidOperationException($"Expected Done but received {t.Result}");
             });
         }
 
@@ -210,8 +199,9 @@ namespace Akka.Remote.TestKit
         /// removed, so that the remaining nodes may still pass subsequent barriers.
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
-        /// <param name="abort"></param>
-        /// <returns></returns>
+        /// <param name="abort">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public Task<Done> Shutdown(RoleName node, bool abort = false)
         {
             // the recover is needed to handle ClientDisconnectedException exception,
@@ -222,7 +212,7 @@ namespace Akka.Remote.TestKit
                 var failure = t.Result as FSMBase.Failure;
                 if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
 
-                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+                throw new InvalidOperationException($"Expected Done but received {t.Result}");
             });
         }
 
@@ -237,7 +227,7 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Remove a remote host from the list, so that the remaining nodes may still
         /// pass subsequent barriers. This must be done before the client connection
-        /// breaks down in order to affect an “orderly” removal (i.e. without failing
+        /// breaks down in order to affect an "orderly" removal (i.e. without failing
         /// present and future barriers).
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be removed</param>
@@ -253,6 +243,12 @@ namespace Akka.Remote.TestKit
         private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
         private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
+
+        /// <summary>
+        /// A single <see cref="ConductorHandler"/> gets shared across all of the connections between 
+        /// server and clients.
+        /// </summary>
+        public override bool IsSharable => true;
 
         public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {
@@ -281,8 +277,7 @@ namespace Akka.Remote.TestKit
         {
             var channel = context.Channel;
             _log.Debug("disconnect from {0}", channel.RemoteAddress);
-            IActorRef fsm;
-            if (_clients.TryGetValue(channel, out fsm))
+            if (_clients.TryGetValue(channel, out var fsm))
             {
                 fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
                 IActorRef removedActor;
@@ -296,15 +291,10 @@ namespace Akka.Remote.TestKit
             _log.Debug("message from {0}: {1}", channel.RemoteAddress, message);
             if (message is INetworkOp)
             {
-                IActorRef fsm;
-                if (_clients.TryGetValue(channel, out fsm))
-                {
+                if (_clients.TryGetValue(channel, out var fsm))
                     fsm.Tell(message);
-                }
                 else
-                {
                     _log.Warning("Failed to get client for {0}", channel);
-                }
             }
             else
             {
@@ -341,7 +331,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
+    internal class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly IChannel _channel;

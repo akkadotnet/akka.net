@@ -19,6 +19,7 @@ namespace Akka.Persistence
     /// request must be sent to the view.
     /// </summary>
     [Serializable]
+    [Obsolete("PersistentView was deprecated and will be removed in the next major version [1.3.0]")]
     public sealed class Update
     {
         /// <summary>
@@ -69,6 +70,7 @@ namespace Akka.Persistence
     /// TBD
     /// </summary>
     [Serializable]
+    [Obsolete("PersistentView was deprecated and will be removed in the next major version [1.3.0]")]
     public sealed class ScheduledUpdate
     {
         /// <summary>
@@ -106,6 +108,7 @@ namespace Akka.Persistence
     /// `akka.persistence.view.auto-update-interval` configuration key. Applications may trigger additional
     /// view updates by sending the view <see cref="Update"/> requests. See also methods
     /// </summary>
+    [Obsolete("PersistentView was deprecated and will be removed in the next major version [1.3.0]")]
     public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, IWithUnboundedStash, IPersistenceRecovery
     {
         /// <summary>
@@ -235,7 +238,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Called when the persistent view is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
-        /// will recover its persistent state behore handling the first incoming message.
+        /// will recover its persistent state before handling the first incoming message.
         /// 
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>
@@ -314,4 +317,3 @@ namespace Akka.Persistence
         }
     }
 }
-

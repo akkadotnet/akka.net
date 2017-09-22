@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
@@ -19,6 +21,7 @@ namespace Akka.Streams.TestKit.Tests
     /// This mailbox is only used in tests to verify that stream actors are using
     /// the dispatcher defined in <see cref="ActorMaterializerSettings"/>
     /// </summary>
+    [InternalApi]
     public sealed class StreamTestDefaultMailbox : MailboxType, IProducesMessageQueue<UnboundedMessageQueue>
     {
 

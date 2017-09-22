@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 
@@ -59,6 +60,7 @@ namespace Akka.Remote
     /// 
     /// Utility class to create <see cref="FailureDetector"/> instances via reflection.
     /// </summary>
+    [InternalApi]
     public static class FailureDetectorLoader
     {
         /// <summary>
@@ -69,14 +71,16 @@ namespace Akka.Remote
         /// <param name="fqcn">The fully-qualified .NET assembly name of the FailureDetector implementation class to be loaded.</param>
         /// <param name="config">Configuration that will be passed to the implementation.</param>
         /// <param name="system">ActorSystem to be used for loading the implementation.</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the given <paramref name="fqcn"/> could not be resolved.
+        /// </exception>
         /// <returns>A configured instance of the given <see cref="FailureDetector"/> implementation.</returns>
         public static FailureDetector Load(string fqcn, Config config, ActorSystem system)
         {
             var failureDetectorClass = Type.GetType(fqcn);
             if (failureDetectorClass == null)
             {
-                throw new ConfigurationException(string.Format("Could not create custom FailureDetector {0}", fqcn));
+                throw new ConfigurationException($"Could not create custom FailureDetector {fqcn}");
             }
             var failureDetector = (FailureDetector) Activator.CreateInstance(failureDetectorClass, config, system.EventStream);
             return failureDetector;
@@ -90,6 +94,9 @@ namespace Akka.Remote
         /// <param name="context">The ActorContext used to resolve an <see cref="ActorSystem"/> for this <see cref="FailureDetector"/> instance.</param>
         /// <param name="fqcn">The fully-qualified .NET assembly name of the FailureDetector implementation class to be loaded.</param>
         /// <param name="config">Configuration that will be passed to the implementation.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the given <paramref name="fqcn"/> could not be resolved.
+        /// </exception>
         /// <returns>A configured instance of the given <see cref="FailureDetector"/> implementation.</returns>
         public static FailureDetector LoadFailureDetector(this IActorContext context, string fqcn, Config config)
         {
@@ -97,4 +104,3 @@ namespace Akka.Remote
         }
     }
 }
-

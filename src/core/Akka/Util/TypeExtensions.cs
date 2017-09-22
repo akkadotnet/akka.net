@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Reflection;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
@@ -39,15 +41,33 @@ namespace Akka.Util
             return moreGeneralType.IsAssignableFrom(type);
         }
 
+        private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new ConcurrentDictionary<Type, string>();
+        private static readonly string CoreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
+
         /// <summary>
-        /// Utility to be used by implementors to create a manifest from the type.
+        /// INTERNAL API
+        /// Utility to be used by implementers to create a manifest from the type.
         /// The manifest is used to look up the type on deserialization.
         /// </summary>
         /// <param name="type">TBD</param>
         /// <returns>Returns the type qualified name including namespace and assembly, but not assembly version.</returns>
+        [InternalApi]
         public static string TypeQualifiedName(this Type type)
         {
-            return type == null ? string.Empty : $"{type.GetTypeInfo().FullName}, {type.GetTypeInfo().Assembly.GetName().Name}";
+            string shortened;
+            if (ShortenedTypeNames.TryGetValue(type, out shortened))
+            {
+                return shortened;
+            }
+            else
+            {
+                var assemblyName = type.GetTypeInfo().Assembly.GetName().Name;
+                shortened = assemblyName.Equals(CoreAssemblyName)
+                    ? type.GetTypeInfo().FullName
+                    : $"{type.GetTypeInfo().FullName}, {assemblyName}";
+                ShortenedTypeNames.TryAdd(type, shortened);
+                return shortened;
+            }
         }
     }
 }

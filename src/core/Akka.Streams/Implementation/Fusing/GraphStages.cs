@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -68,6 +69,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class GraphStageModule : AtomicModule
     {
         /// <summary>
@@ -129,6 +131,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
     {
         /// <summary>
@@ -143,9 +146,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        protected SimpleLinearGraphStage()
+        protected SimpleLinearGraphStage(string name = null)
         {
-            var name = GetType().Name;
+            name = name ?? GetType().Name;
             Inlet = new Inlet<T>(name + ".in");
             Outlet = new Outlet<T>(name + ".out");
             Shape = new FlowShape<T, T>(Inlet, Outlet);
@@ -207,7 +210,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
+    [InternalApi]
+    public sealed class Detacher<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
         private sealed class Logic : InAndOutGraphStageLogic
@@ -260,33 +264,14 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> Inlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Detacher()
+        public Detacher() : base("Detacher")
         {
-            InitialAttributes = Attributes.CreateName("Detacher");
-            Inlet = new Inlet<T>("in");
-            Outlet = new Outlet<T>("out");
-            Shape = new FlowShape<T, T>(Inlet, Outlet);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected override Attributes InitialAttributes { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Detacher");
 
         /// <summary>
         /// TBD
@@ -666,6 +651,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// This source is not reusable, it is only created internally.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
     {
         #region internal classes
@@ -894,4 +880,67 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override string ToString() => "TaskSource";
     }
-}
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Discards all received elements.
+    /// </summary>
+    [InternalApi]
+    public sealed class IgnoreSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task>
+    {
+        #region Internal classes
+
+        private sealed class Logic : InGraphStageLogic
+        {
+            private readonly IgnoreSink<T> _stage;
+            private readonly TaskCompletionSource<int> _completion;
+
+            public Logic(IgnoreSink<T> stage, TaskCompletionSource<int> completion) : base(stage.Shape)
+            {
+                _stage = stage;
+                _completion = completion;
+
+                SetHandler(stage.Inlet, this);
+            }
+
+            public override void PreStart() => Pull(_stage.Inlet);
+
+            public override void OnPush() => Pull(_stage.Inlet);
+
+            public override void OnUpstreamFinish()
+            {
+                base.OnUpstreamFinish();
+                _completion.TrySetResult(0);
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                base.OnUpstreamFailure(e);
+                _completion.TrySetException(e);
+            }
+        }
+
+        #endregion
+
+        public IgnoreSink()
+        {
+            Shape = new SinkShape<T>(Inlet);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.IgnoreSink;
+
+        public Inlet<T> Inlet { get; } = new Inlet<T>("Ignore.in");
+
+        public override SinkShape<T> Shape { get; }
+
+        public override ILogicAndMaterializedValue<Task> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var completion = new TaskCompletionSource<int>();
+            var logic = new Logic(this, completion);
+            return new LogicAndMaterializedValue<Task>(logic, completion.Task);
+        }
+
+        public override string ToString() => "IgnoreSink";
+    }
+};

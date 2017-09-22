@@ -9,6 +9,7 @@ using System;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
@@ -19,30 +20,32 @@ namespace Akka.Streams.Implementation
     public class SubscriptionTimeoutException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SubscriptionTimeoutException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public SubscriptionTimeoutException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SubscriptionTimeoutException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="innerException">TBD</param>
+        /// <param name="message">The error message that explains the reason for the exception.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public SubscriptionTimeoutException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SubscriptionTimeoutException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected SubscriptionTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -91,6 +94,7 @@ namespace Akka.Streams.Implementation
     /// Subscription timeout which does not start any scheduled events and always returns `true`.
     /// This specialized implementation is to be used for "noop" timeout mode.
     /// </summary>
+    [InternalApi]
     public sealed class NoopSubscriptionTimeout : ICancelable
     {
         /// <summary>

@@ -13,7 +13,7 @@ using Akka.Pattern;
 namespace Akka.Cluster.Sharding
 {
     /// <summary>
-    /// INTERNAL API: <see cref="ShardRegion"/> and <see cref="PersistentShardCoordinator"/> actors are createad as children of this actor.
+    /// INTERNAL API: <see cref="ShardRegion"/> and <see cref="PersistentShardCoordinator"/> actors are created as children of this actor.
     /// </summary>
     internal sealed class ClusterShardingGuardian : ReceiveActor
     {
@@ -61,11 +61,11 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IdExtractor IdExtractor;
+            public readonly ExtractEntityId ExtractEntityId;
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ShardResolver ShardResolver;
+            public readonly ExtractShardId ExtractShardId;
             /// <summary>
             /// TBD
             /// </summary>
@@ -81,22 +81,24 @@ namespace Akka.Cluster.Sharding
             /// <param name="typeName">TBD</param>
             /// <param name="entityProps">TBD</param>
             /// <param name="settings">TBD</param>
-            /// <param name="idIdExtractor">TBD</param>
-            /// <param name="shardResolver">TBD</param>
+            /// <param name="extractEntityId">TBD</param>
+            /// <param name="extractShardId">TBD</param>
             /// <param name="allocationStrategy">TBD</param>
             /// <param name="handOffStopMessage">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <exception cref="ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
+            /// </exception>
             public Start(string typeName, Props entityProps, ClusterShardingSettings settings,
-                IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
+                ExtractEntityId extractEntityId, ExtractShardId extractShardId, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
             {
-                if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException("typeName", "ClusterSharding start requires type name to be provided");
-                if (entityProps == null) throw new ArgumentNullException("entityProps", string.Format("ClusterSharding start requires Props for [{0}] to be provided", typeName));
+                if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
+                if (entityProps == null) throw new ArgumentNullException(nameof(entityProps), $"ClusterSharding start requires Props for [{typeName}] to be provided");
 
                 TypeName = typeName;
                 EntityProps = entityProps;
                 Settings = settings;
-                IdExtractor = idIdExtractor;
-                ShardResolver = shardResolver;
+                ExtractEntityId = extractEntityId;
+                ExtractShardId = extractShardId;
                 AllocationStrategy = allocationStrategy;
                 HandOffStopMessage = handOffStopMessage;
             }
@@ -119,11 +121,11 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IdExtractor ExtractEntityId;
+            public readonly ExtractEntityId ExtractEntityId;
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ShardResolver ExtractShardId;
+            public readonly ExtractShardId ExtractShardId;
 
             /// <summary>
             /// TBD
@@ -132,10 +134,12 @@ namespace Akka.Cluster.Sharding
             /// <param name="settings">TBD</param>
             /// <param name="extractEntityId">TBD</param>
             /// <param name="extractShardId">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
-            public StartProxy(string typeName, ClusterShardingSettings settings, IdExtractor extractEntityId, ShardResolver extractShardId)
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
+            /// </exception>
+            public StartProxy(string typeName, ClusterShardingSettings settings, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
             {
-                if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException("typeName", "ClusterSharding start proxy requires type name to be provided");
+                if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start proxy requires type name to be provided");
 
                 TypeName = typeName;
                 Settings = settings;
@@ -156,49 +160,77 @@ namespace Akka.Cluster.Sharding
         {
             Receive<Start>(start =>
             {
-                var settings = start.Settings;
-                var encName = Uri.EscapeDataString(start.TypeName);
-                var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                var coordinatorPath = CoordinatorPath(encName);
-                var shardRegion = Context.Child(encName);
-
-                if (Equals(shardRegion, ActorRefs.Nobody))
+                try
                 {
-                    var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
-                    var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
-                    var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
-                    var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
-                    var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-                    var shardCoordinatorSingleton = Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings), coordinatorSingletonManagerName);
+                    var settings = start.Settings;
+                    var encName = Uri.EscapeDataString(start.TypeName);
+                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
+                    var coordinatorPath = CoordinatorPath(encName);
+                    var shardRegion = Context.Child(encName);
+
+                    if (Equals(shardRegion, ActorRefs.Nobody))
+                    {
+                        if (Equals(Context.Child(coordinatorSingletonManagerName), ActorRefs.Nobody))
+                        {
+                            var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
+                            var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
+                            var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
+                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
+                            var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
+                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
+                        }
+                        shardRegion = Context.ActorOf(ShardRegion.Props(
+                            typeName: start.TypeName,
+                            entityProps: start.EntityProps,
+                            settings: settings,
+                            coordinatorPath: coordinatorPath,
+                            extractEntityId: start.ExtractEntityId,
+                            extractShardId: start.ExtractShardId,
+                            handOffStopMessage: start.HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), encName);
+                    }
+
+                    Sender.Tell(new Started(shardRegion));
                 }
-
-                shardRegion = Context.ActorOf(ShardRegion.Props(
-                    typeName: start.TypeName,
-                    entityProps: start.EntityProps,
-                    settings: settings,
-                    coordinatorPath: coordinatorPath,
-                    extractEntityId: start.IdExtractor,
-                    extractShardId: start.ShardResolver,
-                    handOffStopMessage: start.HandOffStopMessage), encName);
-
-                Sender.Tell(new Started(shardRegion));
+                catch (Exception ex)
+                {
+                    //TODO: JVM version matches NonFatal. Can / should we do something similar?
+                    // don't restart
+                    // could be invalid ReplicatorSettings, or InvalidActorNameException
+                    // if it has already been started
+                    Sender.Tell(new Status.Failure(ex));
+                }
             });
 
             Receive<StartProxy>(startProxy =>
             {
-                var settings = startProxy.Settings;
-                var encName = Uri.EscapeDataString(startProxy.TypeName);
-                var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                var coordinatorPath = CoordinatorPath(encName);
+                try
+                {
+                    var settings = startProxy.Settings;
+                    var encName = Uri.EscapeDataString(startProxy.TypeName);
+                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
+                    var coordinatorPath = CoordinatorPath(encName);
+                    var shardRegion = Context.Child(encName);
 
-                var shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
-                    typeName: startProxy.TypeName,
-                    settings: settings,
-                    coordinatorPath: coordinatorPath,
-                    extractEntityId: startProxy.ExtractEntityId,
-                    extractShardId: startProxy.ExtractShardId), encName);
+                    if (Equals(shardRegion, ActorRefs.Nobody))
+                    {
 
-                Sender.Tell(new Started(shardRegion));
+                        shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
+                            typeName: startProxy.TypeName,
+                            settings: settings,
+                            coordinatorPath: coordinatorPath,
+                            extractEntityId: startProxy.ExtractEntityId,
+                            extractShardId: startProxy.ExtractShardId).WithDispatcher(Context.Props.Dispatcher), encName);
+                    }
+
+                    Sender.Tell(new Started(shardRegion));
+                }
+                catch (Exception ex)
+                {
+                    //TODO: JVM version matches NonFatal. Can / should we do something similar?
+                    // don't restart
+                    // could be InvalidActorNameException if it has already been started
+                    Sender.Tell(new Status.Failure(ex));
+                }
             });
         }
 

@@ -16,29 +16,25 @@ using Akka.Event;
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// TBD
+    /// Interface for producing adapters that can wrap an underlying transport and augment it with additional behavior.
     /// </summary>
     public interface ITransportAdapterProvider
     {
         /// <summary>
         /// Create a transport adapter that wraps the underlying transport
         /// </summary>
-        /// <param name="wrappedTransport">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="wrappedTransport">The transport that will be wrapped.</param>
+        /// <param name="system">The actor system to which this transport belongs.</param>
+        /// <returns>A transport wrapped with the new adapter.</returns>
         Transport Create(Transport wrappedTransport, ExtendedActorSystem system);
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
         {
             return new TransportAdapters((ActorSystemImpl) system);
@@ -77,12 +73,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// The ActorSystem
         /// </summary>
         public ActorSystem System { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The Akka.Remote settings
         /// </summary>
         protected RemoteSettings Settings;
 
@@ -103,7 +99,7 @@ namespace Akka.Remote.Transport
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentException(string.Format("Cannot initiate transport adapter {0}", adapter.Value), ex);
+                    throw new ArgumentException($"Cannot initiate transport adapter {adapter.Value}", ex);
                 }
             }
 
@@ -118,12 +114,10 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
-            if (AdaptersTable().ContainsKey(name))
-            {
-                return _adaptersTable[name];
-            }
+            if (AdaptersTable().TryGetValue(name, out var provider))
+                return provider;
 
-            throw new ArgumentException(string.Format("There is no registered transport adapter provider with name {0}", name));
+            throw new ArgumentException($"There is no registered transport adapter provider with name {name}");
         }
     }
 
@@ -275,7 +269,7 @@ namespace Akka.Remote.Transport
             {
                 var listenAddress = listenerTask.Result.Item1;
                 var listenerPromise = listenerTask.Result.Item2;
-                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task));
+                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task).ConfigureAwait(false));
                 return
                     new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
                         SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
@@ -364,11 +358,7 @@ namespace Akka.Remote.Transport
             return Equals(OriginalLocalAddress, other.OriginalLocalAddress) && Equals(OriginalRemoteAddress, other.OriginalRemoteAddress) && Equals(WrappedHandle, other.WrappedHandle);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -377,10 +367,7 @@ namespace Akka.Remote.Transport
             return Equals((AbstractTransportAdapterHandle) obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -499,7 +486,7 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    ///  Actor-based transport adapter
     /// </summary>
     public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
@@ -538,12 +525,7 @@ namespace Akka.Remote.Transport
             return System.ActorSelection("/system/transports").Ask<IActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="listenAddress">TBD</param>
-        /// <param name="listenerTask">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
         {
             return RegisterManager().ContinueWith(mgrTask =>
@@ -554,20 +536,13 @@ namespace Akka.Remote.Transport
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="statusPromise">TBD</param>
+        /// <inheritdoc/>
         protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             manager.Tell(new AssociateUnderlying(remoteAddress, statusPromise));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override Task<bool> Shutdown()
         {
             var stopTask = manager.GracefulStop((RARP.For(System).Provider).RemoteSettings.FlushWait);

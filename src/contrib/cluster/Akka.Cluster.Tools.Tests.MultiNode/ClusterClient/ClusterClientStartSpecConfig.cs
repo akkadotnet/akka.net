@@ -1,11 +1,16 @@
-using System.Collections.Generic;
+//-----------------------------------------------------------------------
+// <copyright file="ClusterClientStartSpecConfig.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
@@ -57,7 +62,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
             }
 
-            protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config)
+            protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config, typeof(ClusterClientStartSpec))
             {
                 _config = config;
             }

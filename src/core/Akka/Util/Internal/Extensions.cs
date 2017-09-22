@@ -36,7 +36,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static IEnumerable<T> Drop<T>(this IEnumerable<T> self, int count)
         {
-            return self.Skip(count).ToList();
+            return self.Skip(count);
         }
 
         /// <summary>
@@ -51,31 +51,35 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Like selectMany, but alternates between two selectors (starting with even for item 0)
-        /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <param name="self">The input sequence</param>
-        /// <param name="evenSelector">The selector to use for items 0, 2, 4 etc.</param>
-        /// <param name="oddSelector">The selector to use for items 1, 3, 5 etc.</param>
-        /// <returns>TBD</returns>
-        public static IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this IEnumerable<TIn> self,
-            Func<TIn, IEnumerable<TOut>> evenSelector, Func<TIn, IEnumerable<TOut>> oddSelector)
-        {
-            return self.SelectMany((val, i) => i%2 == 0 ? evenSelector(val) : oddSelector(val));
-        }
-
-        /// <summary>
         /// Splits a 'dotted path' in its elements, honouring quotes (not splitting by dots between quotes)
         /// </summary>
         /// <param name="path">The input path</param>
         /// <returns>The path elements</returns>
         public static IEnumerable<string> SplitDottedPathHonouringQuotes(this string path)
         {
-            return path.Split('\"')
-                .AlternateSelectMany(
-                    outsideQuote => outsideQuote.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries),
-                    insideQuote => new[] { insideQuote });
+            var i = 0;
+            var j = 0;
+            while (true)
+            {
+                if (j > path.Length) yield break;
+                else if (path[j] == '\"')
+                {
+                    i = path.IndexOf('\"', j + 1);
+                    yield return path.Substring(j + 1, i - j - 1);
+                    j = i + 2;
+                }
+                else
+                {
+                    i = path.IndexOf('.', j);
+                    if (i == -1)
+                    {
+                        yield return path.Substring(j);
+                        yield break;
+                    }
+                    yield return path.Substring(j, i - j);
+                    j = i + 1;
+                }
+            }
         }
         /// <summary>
         /// TBD
@@ -126,7 +130,8 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static TValue GetOrElse<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue elseValue)
         {
-            if (hash.ContainsKey(key)) return hash[key];
+            if (hash.TryGetValue(key, out var value))
+                return value;
             return elseValue;
         }
 
@@ -197,14 +202,14 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Applies a delegate <paramref name="action" /> to all elements of this enumerable.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="enumerable">TBD</param>
-        /// <param name="action">TBD</param>
-        public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+        /// <typeparam name="T">The type of the elements of <paramref name="source" />.</typeparam>
+        /// <param name="source">An <see cref="IEnumerable{T}" /> to iterate.</param>
+        /// <param name="action">The function that is applied for its side-effect to every element. The result of function <paramref name="action" /> is discarded.</param>
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            foreach (var item in enumerable)
+            foreach (var item in source)
                 action(item);
         }
 

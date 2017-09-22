@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -28,6 +29,7 @@ namespace Akka.Actor
     /// necessary to distinguish between local and non-local references, this is the only
     /// method provided on the scope. 
     /// </summary>
+    [InternalApi]
     public interface IActorRefScope
     {
         /// <summary>
@@ -48,14 +50,14 @@ namespace Akka.Actor
     /// 
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
-    /// the feature that it starts out “not fully started” (but you can send to it),
+    /// the feature that it starts out "not fully started" (but you can send to it),
     /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior. 
     /// </summary>
     public interface IRepointableRef : IActorRefScope
     {
         /// <summary>
-        /// Retruns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
+        /// Returns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
         /// </summary>
         bool IsStarted { get; }
     }
@@ -209,12 +211,12 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Utility class for working with built-in actor references
     /// </summary>
     public static class ActorRefs
     {
         /// <summary>
-        /// TBD
+        /// Use this value to represent a non-existent actor.
         /// </summary>
         public static readonly Nobody Nobody = Nobody.Instance;
         /// <summary>
@@ -225,12 +227,13 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Base implementation for <see cref="IActorRef"/> implementations.
     /// </summary>
     public abstract class ActorRefBase : IActorRef
     {
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of a <see cref="ActorRefBase"/> router.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class Surrogate : ISurrogate
         {
@@ -249,10 +252,10 @@ namespace Akka.Actor
             public string Path { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates an <see cref="ActorRefBase"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that contains this <see cref="ActorRefBase"/>.</param>
+            /// <returns>The <see cref="ActorRefBase"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
@@ -286,21 +289,14 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             if(Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
             return $"[{Path}#{Path.Uid}]";
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             var other = obj as IActorRef;
@@ -308,10 +304,7 @@ namespace Akka.Actor
             return Equals(other);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -323,16 +316,10 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
-        /// </summary>
-        /// <param name="obj">An object to compare with this instance.</param>
+        /// <inheritdoc/>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="obj"/> isn't an <see cref="IActorRef"/>.
         /// </exception>
-        /// <returns>
-        /// A value that indicates the relative order of the objects being compared. The return value has these meanings: Value Meaning Less than zero This instance precedes <paramref name="obj" /> in the sort order. Zero This instance occurs in the same position in the sort order as <paramref name="obj" />. Greater than zero This instance follows <paramref name="obj" /> in the sort order.
-        /// </returns>
         public int CompareTo(object obj)
         {
             if (obj != null && !(obj is IActorRef))
@@ -340,22 +327,14 @@ namespace Akka.Actor
             return CompareTo((IActorRef) obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid 
                 && Path.Equals(other.Path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(IActorRef other)
         {
             var pathComparisonResult = Path.CompareTo(other.Path);
@@ -365,10 +344,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="ActorRefBase"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that references this <see cref="ActorRefBase"/>.</param>
+        /// <returns>The surrogate representation of the current <see cref="ActorRefBase"/>.</returns>
         public virtual ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
@@ -381,6 +360,7 @@ namespace Akka.Actor
     /// Used by built-in <see cref="IActorRef"/> implementations for handling
     /// internal operations that are not exposed directly to end-users.
     /// </summary>
+    [InternalApi]
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         /// <summary>
@@ -394,9 +374,9 @@ namespace Akka.Actor
         IActorRefProvider Provider { get; }
 
         /// <summary>
-        /// Indicates if the current actor reference is terminated.
+        /// Obsolete. Use <see cref="Akka.Actor.UntypedActor.Context.Watch(IActorRef)"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         bool IsTerminated { get; }
 
         /// <summary>
@@ -437,11 +417,11 @@ namespace Akka.Actor
         void Suspend();
 
         /// <summary>
-        /// Sends an <see cref="ISystemMessage"/> to the underlying actor.
+        /// Obsolete. Use <see cref="SendSystemMessage(ISystemMessage)"/> instead.
         /// </summary>
-        /// <param name="message">The system message we're sending.</param>
-        /// <param name="sender">The sender of the message. Not used.</param>
-        [Obsolete("Use SendSystemMessage(message)")]
+        /// <param name="message">N/A</param>
+        /// <param name="sender">N/A</param>
+        [Obsolete("Use SendSystemMessage(message) [1.1.0]")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
 
         /// <summary>
@@ -456,6 +436,7 @@ namespace Akka.Actor
     /// 
     /// Abstract implementation of <see cref="IInternalActorRef"/>.
     /// </summary>
+    [InternalApi]
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         /// <inheritdoc cref="IInternalActorRef"/>
@@ -489,7 +470,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
 
         /// <inheritdoc cref="IInternalActorRef"/>
-        [Obsolete("Use SendSystemMessage(message) instead")]
+        [Obsolete("Use SendSystemMessage(message) instead [1.1.0]")]
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             SendSystemMessage(message);
@@ -504,6 +485,7 @@ namespace Akka.Actor
     /// 
     /// Barebones <see cref="IActorRef"/> with no backing actor or <see cref="ActorCell"/>.
     /// </summary>
+    [InternalApi]
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
         /// <inheritdoc cref="InternalActorRefBase"/>
@@ -563,7 +545,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
     }
 
@@ -620,25 +602,28 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Used to power actors that use an <see cref="ActorCell"/>, which is the majority of them.
     /// </summary>
+    [InternalApi]
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorCell"/>.
         /// </summary>
         public abstract ICell Underlying { get; }
 
         /// <summary>
-        /// TBD
+        /// An iterable collection of the actor's children. Empty if there are none.
         /// </summary>
         public abstract IEnumerable<IActorRef> Children { get; }
 
         /// <summary>
-        /// TBD
+        /// Fetches a reference to a single child actor.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the child we're trying to fetch.</param>
+        /// <returns>If the child exists, it returns the child actor. Otherwise, we return <see cref="ActorRefs.Nobody"/>.</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
     }
@@ -787,8 +772,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             var firstName = enumerator.Current;
             if (string.IsNullOrEmpty(firstName))
                 return this;
-            IInternalActorRef child;
-            if (_children.TryGetValue(firstName, out child))
+            if (_children.TryGetValue(firstName, out var child))
                 return child.GetChild(new Enumerable<string>(enumerator));
             return ActorRefs.Nobody;
         }
@@ -829,6 +813,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                 _enumerator = enumerator;
             }
 
+            /// <inheritdoc/>
             public IEnumerator<T> GetEnumerator()
             {
                 return _enumerator;

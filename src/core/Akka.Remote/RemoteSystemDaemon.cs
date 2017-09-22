@@ -309,12 +309,9 @@ namespace Akka.Remote
                 if (_parent2Children.TryAdd(parent, ImmutableHashSet<IActorRef>.Empty.Add(child)))
                     return true; //child was successfully added
 
-                IImmutableSet<IActorRef> children;
-                if (_parent2Children.TryGetValue(parent, out children))
-                {
+                if (_parent2Children.TryGetValue(parent, out var children))
                     if (_parent2Children.TryUpdate(parent, children.Add(child), children))
                         return false; //child successfully added
-                }
             }
         }
 
@@ -323,8 +320,7 @@ namespace Akka.Remote
             const bool weDontHaveTailRecursion = true;
             while (weDontHaveTailRecursion)
             {
-                IImmutableSet<IActorRef> children;
-                if (!_parent2Children.TryGetValue(parent, out children)) 
+                if (!_parent2Children.TryGetValue(parent, out var children)) 
                     return false; //parent is missing, so child does not need to be removed
 
                 if (_parent2Children.TryUpdate(parent, children.Remove(child), children))

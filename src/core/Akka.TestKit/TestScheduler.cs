@@ -71,7 +71,9 @@ namespace Akka.TestKit
         /// TBD
         /// </summary>
         /// <param name="when">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when the specified <paramref name="when"/> offset is less than the currently tracked time.
+        /// </exception>
         public void AdvanceTo(DateTimeOffset when)
         {
             if (when < _now)
@@ -85,8 +87,7 @@ namespace Akka.TestKit
         {
             var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;
 
-            ConcurrentQueue<ScheduledItem> tickItems = null;
-            if (!_scheduledWork.TryGetValue(scheduledTime, out tickItems))
+            if (!_scheduledWork.TryGetValue(scheduledTime, out var tickItems))
             {
                 tickItems = new ConcurrentQueue<ScheduledItem>();
                 _scheduledWork.TryAdd(scheduledTime, tickItems);

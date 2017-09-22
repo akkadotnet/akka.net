@@ -49,7 +49,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        private JoinInProgressSpec(JoinInProgressMultiNodeConfig config) : base(config)
+        private JoinInProgressSpec(JoinInProgressMultiNodeConfig config) : base(config, typeof(JoinInProgressSpec))
         {
             _config = config;
         }

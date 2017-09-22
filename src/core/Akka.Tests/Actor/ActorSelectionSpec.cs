@@ -191,7 +191,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorContext_must_select_actory_by_their_string_path_representation()
+        public void An_ActorContext_must_select_actor_by_their_string_path_representation()
         {
             Action<IActorRef, IActorRef> check = (looker, result) =>
             {

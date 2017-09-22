@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// A local actor reference that exists inside the same process as the current <see cref="ActorSystem"/>.
     /// </summary>
     public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
@@ -65,196 +65,152 @@ namespace Akka.Actor
             * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
             * which is called indirectly from ActorCell.init() (if you’re wondering why
             * this is at all important, remember that under the CLR readonly fields are only
-            * frozen at the _end_ of the constructor, but we are publishing “this” before
+            * frozen at the _end_ of the constructor, but we are publishing "this" before
             * that is reached).
             * This means that the result of NewActorCell needs to be written to the field
             * _cell before we call init and start, since we can start using "this"
             * object from another thread as soon as we run init.
             */
-            // ReSharper disable once VirtualMemberCallInContructor 
+            // ReSharper disable once VirtualMemberCallInConstructor 
             _cell = NewActorCell(_system, this, _props, _dispatcher, _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ActorCell"/> instance.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system to which this actor belongs.</param>
+        /// <param name="self">The reference to this actor.</param>
+        /// <param name="props">The <see cref="Props"/> used to create this actor.</param>
+        /// <param name="dispatcher">The dispatcher this actor will run on.</param>
+        /// <param name="supervisor">A reference to this actor's supervising actor, typically its parent.</param>
+        /// <returns>A reference to an uninitialized actor cell.</returns>
         protected virtual ActorCell NewActorCell(ActorSystemImpl system, IInternalActorRef self, Props props,
             MessageDispatcher dispatcher, IInternalActorRef supervisor)
         {
             return new ActorCell(system, self, props, dispatcher, supervisor);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override ICell Underlying
         {
             get { return _cell; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public ActorCell Cell
         {
             get { return _cell; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override IEnumerable<IActorRef> Children
         {
             get { return _cell.GetChildren(); }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override void Start()
         {
             _cell.Start();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override void Stop()
         {
             _cell.Stop();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override void Suspend()
         {
             _cell.Suspend();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override bool IsLocal
         {
             get { return true; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc/>
         public override void SendSystemMessage(ISystemMessage message)
         {
             _cell.SendSystemMessage(message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override ActorPath Path
         {
             get { return _path; }
         }
 
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorSystem"/> to which this actor ref belongs.
         /// </summary>
         protected ActorSystem System => _system;
 
         /// <summary>
-        /// TBD
+        /// The <see cref="Props"/> used to create this actor.
         /// </summary>
         protected Props Props => _props;
 
         /// <summary>
-        /// TBD
+        /// The <see cref="MessageDispatcher"/> this actor will use to execute its message-processing.
         /// </summary>
         protected MessageDispatcher Dispatcher => _dispatcher;
 
         /// <summary>
-        /// TBD
+        /// The actor's supervisor, typically its parent.
         /// </summary>
         protected IInternalActorRef Supervisor => _supervisor;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override bool IsTerminated => _cell.IsTerminated;
 
         /// <summary>
-        /// TBD
+        /// The type of mailbox used by this actor
         /// </summary>
         protected MailboxType MailboxType { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="causedByFailure">TBD</param>
+        /// <inheritdoc/>
         public override void Resume(Exception causedByFailure = null)
         {
             _cell.Resume(causedByFailure);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <inheritdoc/>
         public override void Restart(Exception cause)
         {
             _cell.Restart(cause);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <inheritdoc/>
         protected override void TellInternal(object message, IActorRef sender)
         {
             _cell.SendMessage(sender, message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override IInternalActorRef GetSingleChild(string name)
         {
             IInternalActorRef child;
             return _cell.TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             var current = (IActorRef)this;

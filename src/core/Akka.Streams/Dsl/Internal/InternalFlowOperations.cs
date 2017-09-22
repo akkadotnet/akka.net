@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -52,6 +53,8 @@ namespace Akka.Streams.Dsl.Internal
         /// Recover allows to send last element on failure and gracefully complete the stream
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// <para/>
+        /// Throwing an exception inside Recover will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and <paramref name="partialFunc"/> returns an element
         /// </para>
@@ -82,6 +85,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
         /// </para>
+        /// Throwing an exception inside RecoverWith will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
         /// </para>
@@ -98,7 +102,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="partialFunc">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use RecoverWithRetries instead.")]
+        [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static IFlow<TOut, TMat> RecoverWith<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
@@ -113,6 +117,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
         /// </para>
+        /// Throwing an exception inside RecoverWithRetries will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
         /// </para>
@@ -135,6 +140,33 @@ namespace Akka.Streams.Dsl.Internal
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
             return flow.Via(new Fusing.RecoverWith<TOut, TMat>(partialFunc, attempts));
+        }
+
+        /// <summary>
+        /// While similar to <see cref="Recover{TOut,TMat}"/> this stage can be used to transform an error signal to a different one without logging
+        /// it as an error in the process. So in that sense it is NOT exactly equivalent to Recover(e => throw e2) since Recover
+        /// would log the e2 error. 
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// Similarily to <see cref="Recover{TOut,TMat}"/> throwing an exception inside SelectError will be logged.
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and <paramref name="selector"/> returns an element
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception returned by the <paramref name="selector"/>
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        /// <param name="flow">TBD</param>
+        /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
+        public static IFlow<TOut, TMat> SelectError<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, Exception> selector)
+        {
+            return flow.Via(new Fusing.SelectError<TOut>(selector));
         }
 
         /// <summary>
@@ -366,29 +398,34 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// Terminate processing (and cancel the upstream publisher) after <paramref name="predicate"/>
-        /// returns false for the first time. Due to input buffering some elements may have been
-        /// requested from upstream publishers that will then not be processed downstream
-        /// of this step.
+        /// returns false for the first time, including the first failed element iff inclusive is true
+        /// Due to input buffering some elements may have been requested from upstream publishers
+        /// that will then not be processed downstream of this step.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
-        /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when <paramref name="predicate"/> returned false or upstream completes
+        /// Backpressures when downstream backpressures
         /// </para>
+        /// <para>
+        /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
+        /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
         {
-            return flow.Via(new Fusing.TakeWhile<T>(predicate));
+            return flow.Via(new Fusing.TakeWhile<T>(predicate, inclusive));
         }
 
         /// <summary>
@@ -588,6 +625,41 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// Similar to <see cref="Scan{TIn,TOut,TMat}"/> but with a asynchronous function,
+        /// emits its current value which starts at <paramref name="zero"/> and then
+        /// applies the current and next value to the given function <paramref name="scan"/>
+        /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Resume"/> current value starts at the previous
+        /// current value, or zero when it doesn't have one, and the stream will continue.
+        /// <para>
+        /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes upstream completes and the last task returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="scan">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> ScanAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+            Func<TOut, TIn, Task<TOut>> scan)
+        {
+            return flow.Via(new Fusing.ScanAsync<TIn, TOut>(zero, scan));
+        }
+
+        /// <summary>
         /// Similar to <see cref="Scan{TIn,TOut,TMat}"/> but only emits its result when the upstream completes,
         /// after which it also completes. Applies the given function <paramref name="fold"/> towards its current and next value,
         /// yielding the next current value.
@@ -696,7 +768,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Intersperse<T, TMat>(this IFlow<T, TMat> flow, T start, T inject, T end)
         {
@@ -725,7 +797,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         public static IFlow<T, TMat> Intersperse<T, TMat>(this IFlow<T, TMat> flow, T inject)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(inject);
@@ -820,7 +892,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.Via(new Fusing.Drop<T>(n));
+            return flow.Via(new Fusing.Skip<T>(n));
         }
 
         /// <summary>
@@ -1085,7 +1157,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Buffer<T, TMat>(this IFlow<T, TMat> flow, int size, OverflowStrategy strategy)
         {
-            return flow.AndThen(new Buffer<T>(size, strategy));
+            return flow.Via(new Fusing.Buffer<T>(size, strategy));
         }
 
         /// <summary>
@@ -1626,7 +1698,7 @@ namespace Akka.Streams.Dsl.Internal
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be "spared" for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as number of elements. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens.
         /// 
@@ -1650,9 +1722,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="per">TBD</param>
         /// <param name="maximumBurst">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
-        /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
-        /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when one of the following conditions is met.
+        /// <ul>
+        /// <li>The specified <paramref name="elements"/> is less than or equal to zero</li>
+        /// <li>The specified <paramref name="per"/> timeout is equal to <see cref="TimeSpan.Zero"/>.</li>
+        /// <li>The specified <paramref name="maximumBurst"/> is less than or equal zero in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</li>
+        /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="elements"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per,
             int maximumBurst, ThrottleMode mode)
@@ -1662,7 +1740,7 @@ namespace Akka.Streams.Dsl.Internal
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < elements)
-                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported", nameof(elements));
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1675,7 +1753,7 @@ namespace Akka.Streams.Dsl.Internal
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as element cost. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
         /// to their cost minus available tokens, meeting the target rate.
@@ -1701,7 +1779,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="maximumBurst">TBD</param>
         /// <param name="calculateCost">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when one of the following conditions is met.
+        /// <ul>
+        /// <li>The specified <paramref name="cost"/> is less than or equal to zero</li>
+        /// <li>The specified <paramref name="per"/> timeout is equal to <see cref="TimeSpan.Zero"/>.</li>
+        /// <li>The specified <paramref name="maximumBurst"/> is less than or equal zero in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</li>
+        /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="cost"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
@@ -1711,7 +1797,7 @@ namespace Akka.Streams.Dsl.Internal
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < cost)
-                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported", nameof(cost));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }
@@ -1854,6 +1940,28 @@ namespace Akka.Streams.Dsl.Internal
                 var r = builder.From(shape);
                 r.To(zip.In1);
                 return new FlowShape<T1, T3>(zip.In0, zip.Out);
+            });
+        }
+
+        /// <summary>
+        /// Combine the elements of current flow into a stream of tuples consisting
+        /// of all elements paired with their index. Indices start at 0.
+        /// 
+        /// <para/>
+        /// Emits when upstream emits an element and is paired with their index
+        /// <para/>
+        /// Backpressures when downstream backpressures
+        /// <para/>
+        /// Completes when upstream completes
+        /// <para/>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static IFlow<Tuple<T1, long>, TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
+        {
+            return flow.StatefulSelectMany<T1, Tuple<T1, long>, TMat>(() =>
+            {
+                var index = 0L;
+                return element => new[] {Tuple.Create(element, index++)};
             });
         }
 

@@ -11,22 +11,23 @@ using Akka.Actor;
 namespace Akka.Persistence
 {
     /// <summary>
-    ///     Receive persistent actor type, that sends messages with at-least-once delivery semantics to it's destinations.
+    /// Receive persistent actor type, that sends messages with at-least-once delivery semantics to it's destinations.
     /// </summary>
     public abstract class AtLeastOnceDeliveryReceiveActor : ReceivePersistentActor
     {
         private readonly AtLeastOnceDeliverySemantic _atLeastOnceDeliverySemantic;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryReceiveActor"/> class.
         /// </summary>
         protected AtLeastOnceDeliveryReceiveActor()
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, Extension.Settings.AtLeastOnceDelivery);
 
         }
+
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryReceiveActor"/> class.
         /// </summary>
         /// <param name="settings">TBD</param>
         protected AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings settings)
@@ -42,10 +43,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval
-        {
-            get { return _atLeastOnceDeliverySemantic.RedeliverInterval; ; }
-        }
+        public virtual TimeSpan RedeliverInterval => _atLeastOnceDeliverySemantic.RedeliverInterval;
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -57,10 +55,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public int RedeliveryBurstLimit
-        {
-            get { return _atLeastOnceDeliverySemantic.RedeliveryBurstLimit; }
-        }
+        public int RedeliveryBurstLimit => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
@@ -70,10 +65,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public int WarnAfterNumberOfUnconfirmedAttempts
-        {
-            get { return _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts; }
-        }
+        public int WarnAfterNumberOfUnconfirmedAttempts => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -84,18 +76,12 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public int MaxUnconfirmedMessages
-        {
-            get { return _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages; }
-        }
+        public int MaxUnconfirmedMessages => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
 
         /// <summary>
         /// Number of messages that have not been confirmed yet.
         /// </summary>
-        public int UnconfirmedCount
-        {
-            get { return _atLeastOnceDeliverySemantic.UnconfirmedCount; }
-        }
+        public int UnconfirmedCount => _atLeastOnceDeliverySemantic.UnconfirmedCount;
 
         /// <summary>
         /// TBD
@@ -117,7 +103,6 @@ namespace Akka.Persistence
             base.AroundPostStop();
         }
 
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -133,7 +118,7 @@ namespace Akka.Persistence
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             return _atLeastOnceDeliverySemantic.AroundReceive(receive, message) || base.AroundReceive(receive, message);
         }

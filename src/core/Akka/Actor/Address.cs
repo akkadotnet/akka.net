@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Akka.Util;
@@ -14,16 +15,48 @@ using Akka.Util;
 namespace Akka.Actor
 {
     /// <summary>
-    ///  The address specifies the physical location under which an Actor can be
-    ///  reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
+    /// The address specifies the physical location under which an Actor can be
+    /// reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
     /// name, and remote addresses, identified by protocol, host and port.
     ///  
     /// This class is sealed to allow use as a case class (copy method etc.); if
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : ICloneable, IEquatable<Address>, ISurrogated
+    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated
+#if CLONEABLE
+        , ICloneable
+#endif
     {
+        #region comparer
+
+        private sealed class AddressComparer : IComparer<Address>
+        {
+            public int Compare(Address x, Address y)
+            {
+                if (x == null) throw new ArgumentNullException(nameof(x));
+                if (y == null) throw new ArgumentNullException(nameof(y));
+
+                if (ReferenceEquals(x, y)) return 0;
+
+                var result = string.CompareOrdinal(x.Protocol, y.Protocol);
+                if (result != 0) return result;
+                result = string.CompareOrdinal(x.System, y.System);
+                if (result != 0) return result;
+                result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                if (result != 0) return result;
+                result = (x.Port ?? 0).CompareTo(y.Port ?? 0);
+                return result;
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// An <see cref="Address"/> comparer. Compares two addresses by their protocol, name, host and port.
+        /// </summary>
+        public static readonly IComparer<Address> Comparer = new AddressComparer();
+
         /// <summary>
         /// Pseudo address for all systems
         /// </summary>
@@ -46,7 +79,7 @@ namespace Akka.Actor
         {
             _protocol = protocol;
             _system = system;
-            _host = host != null ? host.ToLowerInvariant() : null;
+            _host = host?.ToLowerInvariant();
             _port = port;
             _toString = CreateLazyToString();
         }
@@ -54,53 +87,35 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public string Host
-        {
-            get { return _host; }
-        }
+        public string Host => _host;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int? Port
-        {
-            get { return _port; }
-        }
+        public int? Port => _port;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string System
-        {
-            get { return _system; }
-        }
+        public string System => _system;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Protocol
-        {
-            get { return _protocol; }
-        }
+        public string Protocol => _protocol;
 
         /// <summary>
         /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
         ///  hosts. See also <see cref="HasGlobalScope"/>
         /// </summary>
-        public bool HasLocalScope
-        {
-            get { return string.IsNullOrEmpty(Host); }
-        }
+        public bool HasLocalScope => string.IsNullOrEmpty(Host);
 
         /// <summary>
         /// Returns true if this Address is usable globally. Unlike locally defined addresses <see cref="HasLocalScope"/>
         /// addresses of global scope are safe to sent to other hosts, as they globally and uniquely identify an addressable
         /// entity.
         /// </summary>
-        public bool HasGlobalScope
-        {
-            get { return !string.IsNullOrEmpty(Host); }
-        }
+        public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
         private Lazy<string> CreateLazyToString()
         {
@@ -118,37 +133,30 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Compares current address with provided one by their protocol, name, host and port.
         /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
+        /// <param name="other">Other address to compare with.</param>
+        /// <returns></returns>
+        public int CompareTo(Address other)
         {
-            return _toString.Value;
+            return Comparer.Compare(this, other);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
+        public override string ToString() => _toString.Value;
+
+        /// <inheritdoc/>
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
+            return Port == other.Port && string.Equals(Host, other.Host) && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -161,72 +169,91 @@ namespace Akka.Actor
             }
         }
 
+        int IComparable.CompareTo(object obj)
+        {
+            if (obj is Address address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(Address)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
+        }
+
         /// <summary>
-        /// TBD
+        /// Creates a new copy with the same properties as the current address.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new copy of the current address</returns>
         public object Clone()
         {
             return new Address(Protocol, System, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="protocol"/>.
         /// </summary>
-        /// <param name="protocol">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="protocol">The protocol used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="protocol" />.</returns>
         public Address WithProtocol(string protocol)
         {
             return new Address(protocol, System, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="system"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="system">The system used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="system" />.</returns>
         public Address WithSystem(string system)
         {
             return new Address(Protocol, system, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="host"/>.
         /// </summary>
-        /// <param name="host">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="host">The host used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="host" />.</returns>
         public Address WithHost(string host = null)
         {
             return new Address(Protocol, System, host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="port"/>.
         /// </summary>
-        /// <param name="port">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="port">The port used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="port" />.</returns>
         public Address WithPort(int? port = null)
         {
             return new Address(Protocol, System, Host, port);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified addresses for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first address used for comparison</param>
+        /// <param name="right">The second address used for comparison</param>
+        /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified addresses for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first address used for comparison</param>
+        /// <param name="right">The second address used for comparison</param>
+        /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
             return !Equals(left, right);
@@ -272,7 +299,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of an <see cref="Address"/>.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class AddressSurrogate : ISurrogate
         {
@@ -293,10 +321,10 @@ namespace Akka.Actor
             /// </summary>
             public int? Port { get; set; }
             /// <summary>
-            /// TBD
+            /// Creates a <see cref="Address"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="Address"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new Address(Protocol, System, Host, Port);
@@ -304,10 +332,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="Address"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="Address"/>.</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new AddressSurrogate()

@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
 using Assert = System.Diagnostics.Debug;
@@ -21,7 +22,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    public partial class ActorCell : IUntypedActorContext, ICell 
+    public partial class ActorCell : IUntypedActorContext, ICell
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
@@ -78,7 +79,7 @@ namespace Akka.Actor
             _systemImpl = system;
             Parent = parent;
             Dispatcher = dispatcher;
-            
+
         }
 
         /// <summary>
@@ -226,11 +227,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TryGetChildStatsByName(string, out IChildStats)"/> instead.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use TryGetChildStatsByName", true)]
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
             IInternalActorRef child;
@@ -296,22 +297,6 @@ namespace Akka.Actor
             _state = _state.BecomeStacked(receive);
         }
 
-
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void IActorContext.Become(Receive receive, bool discardOld = true)
-        {
-            if(discardOld)
-                Become(receive);
-            else
-                BecomeStacked(receive);
-        }
-
-        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
-        void IActorContext.Unbecome()
-        {
-            UnbecomeStacked();
-        }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -328,15 +313,6 @@ namespace Akka.Actor
         void IUntypedActorContext.BecomeStacked(UntypedReceive receive)
         {
             BecomeStacked(m => { receive(m); return true; });
-        }
-
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
-        {
-            if (discardOld)
-                Become(m => { receive(m); return true; });
-            else
-                BecomeStacked(m => { receive(m); return true; });
         }
 
         private long NewUid()
@@ -420,31 +396,11 @@ namespace Akka.Actor
 
             try
             {
-                if (_systemImpl.Settings.SerializeAllMessages)
-                {
-                    DeadLetter deadLetter;
-                    var unwrapped = (deadLetter = message.Message as DeadLetter) != null ? deadLetter.Message : message.Message;
-                    if (!(unwrapped is INoSerializationVerificationNeeded))
-                    {
-                        Serializer serializer = _systemImpl.Serialization.FindSerializerFor(unwrapped);
-                        byte[] serialized = serializer.ToBinary(unwrapped);
+                var messageToDispatch = _systemImpl.Settings.SerializeAllMessages
+                    ? SerializeAndDeserialize(message)
+                    : message;
 
-                        var manifestSerializer = serializer as SerializerWithStringManifest;
-                        if (manifestSerializer != null)
-                        {
-                            var manifest = manifestSerializer.Manifest(unwrapped);
-                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, manifest);
-                            message = new Envelope(deserialized, message.Sender);
-                        }
-                        else
-                        {
-                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, unwrapped.GetType().TypeQualifiedName());
-                            message = new Envelope(deserialized, message.Sender);
-                        }
-                    }
-                }
-
-                Dispatcher.Dispatch(this, message);
+                Dispatcher.Dispatch(this, messageToDispatch);
             }
             catch (Exception e)
             {
@@ -561,6 +517,37 @@ namespace Akka.Actor
         {
             var current = Current;
             return current != null ? current.Sender : ActorRefs.NoSender;
+        }
+
+        private Envelope SerializeAndDeserialize(Envelope envelope)
+        {
+            DeadLetter deadLetter;
+            var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
+
+            if (!(unwrapped is INoSerializationVerificationNeeded))
+            {
+                var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+                if(deadLetter != null)
+                    return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
+                return new Envelope(deserializedMsg, envelope.Sender);
+            }
+
+            return envelope;
+        }
+
+        private object SerializeAndDeserializePayload(object obj)
+        {
+            Serializer serializer = _systemImpl.Serialization.FindSerializerFor(obj);
+            byte[] bytes = serializer.ToBinary(obj);
+
+            var manifestSerializer = serializer as SerializerWithStringManifest;
+            if (manifestSerializer != null)
+            {
+                var manifest = manifestSerializer.Manifest(obj);
+                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+            }
+
+            return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, obj.GetType().TypeQualifiedName());
         }
     }
 }

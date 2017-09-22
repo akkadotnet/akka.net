@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -89,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlattenMerge_must_propage_late_failure_from_main_stream()
+        public void A_FlattenMerge_must_propagate_late_failure_from_main_stream()
         {
             var ex = new TestException("buh");
 
@@ -224,6 +225,121 @@ namespace Akka.Streams.Tests.Dsl
             var elems = p.Within(TimeSpan.FromSeconds(1), () => Enumerable.Range(1, noOfSources * 10).Select(_ => p.RequestNext()).ToArray());
             p.ExpectComplete();
             elems.ShouldAllBeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
+        }
+
+        private sealed class AttibutesSourceStage : GraphStage<SourceShape<Attributes>>
+        {
+            #region Logic
+
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly AttibutesSourceStage _stage;
+                private readonly Attributes _inheritedAttributes;
+
+                public Logic(AttibutesSourceStage stage, Attributes inheritedAttributes) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _inheritedAttributes = inheritedAttributes;
+
+                    SetHandler(stage.Out, this);
+                }
+
+                public override void OnPull()
+                {
+                    Push(_stage.Out, _inheritedAttributes);
+                    CompleteStage();
+                }
+            }
+
+            #endregion
+
+
+            public AttibutesSourceStage()
+            {
+                Shape = new SourceShape<Attributes>(Out);
+            }
+
+            private Outlet<Attributes> Out { get; } = new Outlet<Attributes>("AttributesSource.out");
+
+            public override SourceShape<Attributes> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+        }
+
+        [Fact]
+        public void A_FlattenMerge_must_propagate_attributes_to_inner_stream()
+        {
+            var attributesSource = Source.FromGraph(new AttibutesSourceStage());
+
+            this.AssertAllStagesStopped(() =>
+            {
+                var task = Source.Single(attributesSource.AddAttributes(Attributes.CreateName("inner")))
+                    .MergeMany(1, x => x)
+                    .AddAttributes(Attributes.CreateName("outer"))
+                    .RunWith(Sink.First<Attributes>(), Materializer);
+
+                var attributes = task.AwaitResult().AttributeList.ToList();
+                var innerName = new Attributes.Name("inner");
+                var outerName = new Attributes.Name("outer");
+
+                attributes.Should().Contain(innerName);
+                attributes.Should().Contain(outerName);
+                attributes.IndexOf(outerName).Should().BeLessThan(attributes.IndexOf(innerName));
+
+            }, Materializer);
+
+        }
+
+        [Fact]
+        public void A_FlattenMerge_must_bubble_up_substream_materialization_exception()
+        {
+            this.AssertAllStagesStopped(() => {
+                var matFail = new TestException("fail!");
+
+                var task = Source.Single("whatever")
+                    .MergeMany(4, x => Source.FromGraph(new FailingInnerMat(matFail)))
+                    .RunWith(Sink.Ignore<string>(), Materializer);
+
+                try
+                {
+                    task.Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (AggregateException) { }
+
+                task.IsFaulted.ShouldBe(true);
+                task.Exception.ShouldNotBe(null);
+                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+
+            }, Materializer);
+        }
+
+        private sealed class FailingInnerMat : GraphStage<SourceShape<string>>
+        {
+            #region Logic
+            private sealed class FailingLogic : GraphStageLogic
+            {
+                public FailingLogic(Shape shape, TestException ex) : base(shape)
+                {
+                    throw ex;
+                }
+            }
+            #endregion
+
+            public FailingInnerMat(TestException ex)
+            {
+                var outlet = new Outlet<string>("out");
+                Shape = new SourceShape<string>(outlet);
+                _ex = ex;
+            }
+
+            private readonly TestException _ex;
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            {
+                return new FailingLogic(Shape, _ex);
+            }
         }
     }
 }

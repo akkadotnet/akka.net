@@ -52,11 +52,7 @@ namespace Akka.Util
             Exception = exception;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Result<T> other)
         {
             if (IsSuccess ^ other.IsSuccess) return false;
@@ -65,21 +61,14 @@ namespace Akka.Util
                 : Equals(Exception, other.Exception);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (obj is Result<T>) return Equals((Result<T>) obj);
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return IsSuccess
@@ -88,25 +77,25 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="Result{T}"/> for equality.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator ==(Result<T> x, Result<T> y)
+        /// <param name="left">The first <see cref="Result{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Result{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Result{T}"/> are equal; otherwise <c>false</c></returns>
+        public static bool operator ==(Result<T> left, Result<T> right)
         {
-            return x.Equals(y);
+            return left.Equals(right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="Result{T}"/> for inequality.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator !=(Result<T> x, Result<T> y)
+        /// <param name="left">The first <see cref="Result{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Result{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Result{T}"/> are not equal; otherwise <c>false</c></returns>
+        public static bool operator !=(Result<T> left, Result<T> right)
         {
-            return !(x == y);
+            return !(left == right);
         }
     }
 

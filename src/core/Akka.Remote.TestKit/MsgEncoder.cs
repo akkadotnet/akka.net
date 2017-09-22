@@ -7,127 +7,154 @@
 
 using System;
 using System.Collections.Generic;
-using Akka.Remote.TestKit.Proto;
+using Akka.Actor;
 using Akka.Remote.Transport;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Net;
-using TCP;
-using Address = Akka.Actor.Address;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit
 {
     internal class MsgEncoder : MessageToMessageEncoder<object>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<MsgEncoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgEncoder>();
 
-        public static TCP.Address Address2Proto(Address addr)
+        private static Serialization.Proto.Msg.AddressData AddressMessageBuilder(Address address)
         {
-            return TCP.Address.CreateBuilder()
-                .SetProtocol(addr.Protocol)
-                .SetSystem(addr.System)
-                .SetHost(addr.Host)
-                .SetPort(addr.Port.Value) //yep, it's FINE if this throws a null reference error - means that the test configuration is borked anyway
-                .Build();
+            var message = new Serialization.Proto.Msg.AddressData();
+            message.System = address.System;
+            message.Hostname = address.Host;
+            message.Port = (uint)(address.Port ?? 0);
+            message.Protocol = address.Protocol;
+            return message;
         }
 
-        public static TCP.Direction Direction2Proto(ThrottleTransportAdapter.Direction dir)
+        public static Proto.Msg.InjectFailure.Types.Direction Direction2Proto(ThrottleTransportAdapter.Direction dir)
         {
             switch (dir)
             {
-                case ThrottleTransportAdapter.Direction.Send: return Direction.Send;
-                case ThrottleTransportAdapter.Direction.Receive: return Direction.Receive;
+                case ThrottleTransportAdapter.Direction.Send: return Proto.Msg.InjectFailure.Types.Direction.Send;
+                case ThrottleTransportAdapter.Direction.Receive: return Proto.Msg.InjectFailure.Types.Direction.Receive;
                 case ThrottleTransportAdapter.Direction.Both:
-                default:
-                    return Direction.Both;
+                default: return Proto.Msg.InjectFailure.Types.Direction.Both;
             }
         }
 
         protected override void Encode(IChannelHandlerContext context, object message, List<object> output)
         {
-            _logger.Debug("Encoding {0}", message);
-            var w = Wrapper.CreateBuilder();
-            message.Match()
-                .With<Hello>(
-                    hello =>
-                        w.SetHello(
-                            TCP.Hello.CreateBuilder()
-                                .SetName(hello.Name)
-                                .SetAddress(Address2Proto(hello.Address))))
-                .With<EnterBarrier>(barrier =>
-                {
-                    var protoBarrier = TCP.EnterBarrier.CreateBuilder().SetName(barrier.Name);
-                    if (barrier.Timeout.HasValue)
-                        protoBarrier.SetTimeout(barrier.Timeout.Value.Ticks);
-                    protoBarrier.SetOp(BarrierOp.Enter);
-                    w.SetBarrier(protoBarrier);
-                })
-                .With<BarrierResult>(result =>
-                {
-                    var res = result.Success ? BarrierOp.Succeeded : BarrierOp.Failed;
-                    w.SetBarrier(
-                        TCP.EnterBarrier.CreateBuilder().SetName(result.Name).SetOp(res));
-                })
-                .With<FailBarrier>(
-                    barrier =>
-                        w.SetBarrier(TCP.EnterBarrier.CreateBuilder()
-                            .SetName(barrier.Name)
-                            .SetOp(BarrierOp.Fail)))
-                .With<ThrottleMsg>(
-                    throttle =>
-                    {
-                        w.SetFailure(
-                            InjectFailure.CreateBuilder()
-                                .SetFailure(TCP.FailType.Throttle)
-                                .SetAddress(Address2Proto(throttle.Target))
-                                .SetFailure(TCP.FailType.Throttle)
-                                .SetDirection(Direction2Proto(throttle.Direction))
-                                .SetRateMBit(throttle.RateMBit));
-                    })
-                .With<DisconnectMsg>(
-                    disconnect =>
-                        w.SetFailure(
-                            InjectFailure.CreateBuilder()
-                                .SetAddress(Address2Proto(disconnect.Target))
-                                .SetFailure(disconnect.Abort ? TCP.FailType.Abort : TCP.FailType.Disconnect)))
-                .With<TerminateMsg>(terminate =>
-                {
-                    if (terminate.ShutdownOrExit.IsRight)
-                    {
-                        w.SetFailure(
-                            InjectFailure.CreateBuilder()
-                                .SetFailure(TCP.FailType.Exit)
-                                .SetExitValue(terminate.ShutdownOrExit.ToRight().Value));
-                    }
-                    else if (terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value)
-                    {
-                        w.SetFailure(
-                            InjectFailure.CreateBuilder()
-                                .SetFailure(TCP.FailType.Shutdown));
-                    }
-                    else
-                    {
-                        w.SetFailure(
-                            InjectFailure.CreateBuilder()
-                                .SetFailure(TCP.FailType.ShutdownAbrupt));
-                    }
+            _logger.LogDebug("Encoding {0}", message);
 
-                })
-                .With<GetAddress>(
-                    address => w.SetAddr(AddressRequest.CreateBuilder().SetNode(address.Node.Name)))
-                .With<AddressReply>(
-                    reply =>
-                        w.SetAddr(
-                            AddressRequest.CreateBuilder()
-                                .SetNode(reply.Node.Name)
-                                .SetAddr(Address2Proto(reply.Addr))))
-                .With<Done>(done => w.SetDone(string.Empty))
-                .Default(obj => w.SetDone(string.Empty));
+            var wrapper = new Proto.Msg.Wrapper();
 
-            output.Add(w.Build());
+            if (message is Hello)
+            {
+                var hello = (Hello)message;
+                wrapper.Hello = new Proto.Msg.Hello
+                {
+                    Name = hello.Name,
+                    Address = AddressMessageBuilder(hello.Address)
+                };
+            }
+            else if (message is EnterBarrier)
+            {
+                var enterBarrier = (EnterBarrier)message;
+                wrapper.Barrier = new Proto.Msg.EnterBarrier
+                {
+                    Name = enterBarrier.Name,
+                    Timeout = enterBarrier.Timeout?.Ticks ?? 0,
+                    Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Enter,
+                };
+            }
+            else if (message is BarrierResult)
+            {
+                var barrierResult = (BarrierResult)message;
+                wrapper.Barrier = new Proto.Msg.EnterBarrier
+                {
+                    Name = barrierResult.Name,
+                    Op = barrierResult.Success
+                        ? Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded
+                        : Proto.Msg.EnterBarrier.Types.BarrierOp.Failed
+                };
+            }
+            else if (message is FailBarrier)
+            {
+                var failBarrier = (FailBarrier)message;
+                wrapper.Barrier = new Proto.Msg.EnterBarrier
+                {
+                    Name = failBarrier.Name,
+                    Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Fail
+                };
+            }
+            else if (message is ThrottleMsg)
+            {
+                var throttleMsg = (ThrottleMsg)message;
+                wrapper.Failure = new Proto.Msg.InjectFailure
+                {
+                    Address = AddressMessageBuilder(throttleMsg.Target),
+                    Failure = Proto.Msg.InjectFailure.Types.FailType.Throttle,
+                    Direction = Direction2Proto(throttleMsg.Direction),
+                    RateMBit = throttleMsg.RateMBit
+                };
+            }
+            else if (message is DisconnectMsg)
+            {
+                var disconnectMsg = (DisconnectMsg)message;
+                wrapper.Failure = new Proto.Msg.InjectFailure
+                {
+                    Address = AddressMessageBuilder(disconnectMsg.Target),
+                    Failure = disconnectMsg.Abort
+                        ? Proto.Msg.InjectFailure.Types.FailType.Abort
+                        : Proto.Msg.InjectFailure.Types.FailType.Disconnect
+                };
+            }
+            else if (message is TerminateMsg)
+            {
+                var terminate = (TerminateMsg)message;
+                if (terminate.ShutdownOrExit.IsRight)
+                {
+                    wrapper.Failure = new Proto.Msg.InjectFailure()
+                    {
+                        Failure = Proto.Msg.InjectFailure.Types.FailType.Exit,
+                        ExitValue = terminate.ShutdownOrExit.ToRight().Value
+                    };
+                }
+                else if (terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value)
+                {
+                    wrapper.Failure = new Proto.Msg.InjectFailure()
+                    {
+                        Failure = Proto.Msg.InjectFailure.Types.FailType.Shutdown
+                    };
+                }
+                else
+                {
+                    wrapper.Failure = new Proto.Msg.InjectFailure()
+                    {
+                        Failure = Proto.Msg.InjectFailure.Types.FailType.ShutdownAbrupt
+                    };
+                }
+            }
+            else if (message is GetAddress)
+            {
+                var getAddress = (GetAddress)message;
+                wrapper.Addr = new Proto.Msg.AddressRequest { Node = getAddress.Node.Name };
+            }
+            else if (message is AddressReply)
+            {
+                var addressReply = (AddressReply)message;
+                wrapper.Addr = new Proto.Msg.AddressRequest
+                {
+                    Node = addressReply.Node.Name,
+                    Addr = AddressMessageBuilder(addressReply.Addr)
+                };
+            }
+            else if (message is Done)
+            {
+                wrapper.Done = " ";
+            }
+
+            output.Add(wrapper);
         }
     }
 }
-
