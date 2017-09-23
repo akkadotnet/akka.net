@@ -128,7 +128,7 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    _result.TrySetResult(message);
+                    Task.Run(() => _result.TrySetResult(message));
                 }
             }
         }
