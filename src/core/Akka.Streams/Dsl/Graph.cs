@@ -497,17 +497,11 @@ namespace Akka.Streams.Dsl
                 SetHandler(_stage.Out, this);
             }
 
-            public override void PreStart()
-            {
-                foreach (var input in _stage.In)
-                {
-                    TryPull(input);
-                }
-            }
+            public override void PreStart() => _stage.In.ForEach(TryPull);
 
             public override void OnPull()
             {
-                if (!HasPending)
+                if (HasPending)
                     DequeueAndDispatch();
             }
 
