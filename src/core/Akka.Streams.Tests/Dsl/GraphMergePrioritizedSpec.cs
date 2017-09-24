@@ -46,9 +46,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void MergePrioritized_must_stream_data_from_all_sources()
         {
-            var source1 = Source.FromEnumerator(() => Enumerable.Range(1, 3).GetEnumerator());
-            var source2 = Source.FromEnumerator(() => Enumerable.Range(4, 6).GetEnumerator());
-            var source3 = Source.FromEnumerator(() => Enumerable.Range(7, 9).GetEnumerator());
+            var source1 = Source.From(Enumerable.Range(1, 3));
+            var source2 = Source.From(Enumerable.Range(4, 3));
+            var source3 = Source.From(Enumerable.Range(7, 3));
 
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
@@ -72,9 +72,12 @@ namespace Akka.Streams.Tests.Dsl
         public void MergePrioritized_must_stream_data_with_priority()
         {
             var elementCount = 20000;
-            var source1 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 1).GetEnumerator());
-            var source2 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 2).GetEnumerator());
-            var source3 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 3).GetEnumerator());
+
+            var a = Vector.Fill<int>(elementCount)(() => 1);
+
+            var source1 = Source.From(Vector.Fill<int>(elementCount)(() => 1));
+            var source2 = Source.From(Vector.Fill<int>(elementCount)(() => 2));
+            var source3 = Source.From(Vector.Fill<int>(elementCount)(() => 3));
 
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
@@ -103,9 +106,9 @@ namespace Akka.Streams.Tests.Dsl
         public void MergePrioritized_must_stream_data_when_only_one_source_produces()
         {
             var elementCount = 10;
-            var source1 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 1).GetEnumerator());
-            var source2 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
-            var source3 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
+            var source1 = Source.From(Vector.Fill<int>(elementCount)(() => 1));
+            var source2 = Source.From(new List<int>());
+            var source3 = Source.From(new List<int>());
 
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
@@ -134,9 +137,9 @@ namespace Akka.Streams.Tests.Dsl
         public void MergePrioritized_must_stream_data_with_priority_when_only_two_sources_produce()
         {
             var elementCount = 20000;
-            var source1 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 1).GetEnumerator());
-            var source2 = Source.FromEnumerator(() => Vector.Fill<int>(elementCount)(() => 2).GetEnumerator());
-            var source3 = Source.FromEnumerator(() => new List<int>().GetEnumerator());
+            var source1 = Source.From(Vector.Fill<int>(elementCount)(() => 1));
+            var source2 = Source.From(Vector.Fill<int>(elementCount)(() => 2));
+            var source3 = Source.From(new List<int>());
 
             var priorities = new List<int> { 6, 3, 1 };
             var probe = this.CreateManualSubscriberProbe<int>();
@@ -160,7 +163,7 @@ namespace Akka.Streams.Tests.Dsl
             Math.Round(ones / twos).Should().Be(2);
         }
 
-        private RunnableGraph<Tuple<NotUsed, NotUsed, NotUsed>> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
+        private IRunnableGraph<Tuple<NotUsed, NotUsed, NotUsed>> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
             Source<T, NotUsed> source3, List<int> priorities, TestSubscriber.ManualProbe<T> probe)
         {
             return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, Tuple.Create, (builder, s1, s2, s3) =>
