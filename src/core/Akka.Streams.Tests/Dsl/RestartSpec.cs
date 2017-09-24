@@ -494,7 +494,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext("cancel");
             // This will complete the flow in probe and cancel the flow out probe
             flowInProbe.Request(2);
-            ImmutableList.Create(flowInProbe.ExpectNext(), flowInProbe.ExpectNext()).Should()
+            ImmutableList.Create(flowInProbe.ExpectNext(TimeSpan.FromSeconds(5)), flowInProbe.ExpectNext(TimeSpan.FromSeconds(5))).Should()
                 .Contain(ImmutableList.Create("in complete", "out complete"));
 
             // and it should restart
@@ -526,7 +526,7 @@ namespace Akka.Streams.Tests.Dsl
 
             // This will complete the flow in probe and cancel the flow out probe
             flowInProbe.Request(2);
-            ImmutableList.Create(flowInProbe.ExpectNext(), flowInProbe.ExpectNext()).Should()
+            ImmutableList.Create(flowInProbe.ExpectNext(TimeSpan.FromSeconds(5)), flowInProbe.ExpectNext(TimeSpan.FromSeconds(5))).Should()
                 .Contain(ImmutableList.Create("in complete", "out complete"));
 
             // and it should restart
@@ -586,7 +586,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext("cancel");
             // This will complete the flow in probe and cancel the flow out probe
             flowInProbe.Request(2);
-            ImmutableList.Create(flowInProbe.ExpectNext(), flowInProbe.ExpectNext()).Should()
+            ImmutableList.Create(flowInProbe.ExpectNext(TimeSpan.FromSeconds(5)), flowInProbe.ExpectNext(TimeSpan.FromSeconds(5))).Should()
                 .Contain(ImmutableList.Create("in complete", "out complete"));
 
             source.SendNext("c");
