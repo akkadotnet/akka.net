@@ -73,8 +73,6 @@ namespace Akka.Streams.Tests.Dsl
         {
             var elementCount = 20000;
 
-            var a = Vector.Fill<int>(elementCount)(() => 1);
-
             var source1 = Source.From(Vector.Fill<int>(elementCount)(() => 1));
             var source2 = Source.From(Vector.Fill<int>(elementCount)(() => 2));
             var source3 = Source.From(Vector.Fill<int>(elementCount)(() => 3));
@@ -86,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = probe.ExpectSubscription();
 
-            var collected = new HashSet<int>();
+            var collected = new List<int>();
             for (int i = 1; i <= elementCount; i++)
             {
                 subscription.Request(1);
@@ -117,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = probe.ExpectSubscription();
 
-            var collected = new HashSet<int>();
+            var collected = new List<int>();
             for (int i = 1; i <= elementCount; i++)
             {
                 subscription.Request(1);
@@ -148,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = probe.ExpectSubscription();
 
-            var collected = new HashSet<int>();
+            var collected = new List<int>();
             for (int i = 1; i <= elementCount; i++)
             {
                 subscription.Request(1);
