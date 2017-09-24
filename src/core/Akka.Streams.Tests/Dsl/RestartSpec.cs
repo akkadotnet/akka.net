@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 // We should have reset, so the restart delay should be back to 200ms, ie we should definitely receive the
                 // next element within 300ms
-                probe.RequestNext().Should().Be("a"); // TODO: why I can't set timeout here?
+                probe.RequestNext(TimeSpan.FromMilliseconds(300)).Should().Be("a");
 
                 created.Current.Should().Be(4);
 
@@ -417,10 +417,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     created.IncrementAndGet();
                     var snk = Flow.Create<string>()
-                        .TakeWhile(s =>
-                        {
-                            return s != "cancel";
-                        })
+                        .TakeWhile(s => s != "cancel")
                         .To(Sink.ForEach<string>(c => flowInSource.SendNext(c))
                             .MapMaterializedValue(task => task.ContinueWith(
                                 t1 =>
@@ -431,10 +428,7 @@ namespace Akka.Streams.Tests.Dsl
                                         flowInSource.SendNext("in complete");
                                 })));
 
-                    var src = flowOutSource.TakeWhile(s =>
-                    {
-                        return s != "complete";
-                    }).Select(c =>
+                    var src = flowOutSource.TakeWhile(s => s != "complete").Select(c =>
                     {
                         if (c == "error")
                             throw new ArgumentException("failed");
