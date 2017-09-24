@@ -160,18 +160,18 @@ namespace Akka.Streams.Tests.Dsl
             Math.Round(ones / twos).Should().Be(2);
         }
 
-        private RunnableGraph<T> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
+        private RunnableGraph<Tuple<NotUsed, NotUsed, NotUsed>> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
             Source<T, NotUsed> source3, List<int> priorities, TestSubscriber.ManualProbe<T> probe)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, (p1, p2, p3) => default(T), (builder, s1, s2, s3) =>
+            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, Tuple.Create, (builder, s1, s2, s3) =>
             {
                 var merge = builder.Add(new MergePrioritized<T>(priorities));
-                var sink = builder.Add(Sink.FromSubscriber(probe));
+
                 builder.From(s1.Outlet).To(merge.In(0));
                 builder.From(s2.Outlet).To(merge.In(1));
                 builder.From(s3.Outlet).To(merge.In(2));
 
-                builder.From(merge.Out).To(sink);
+                builder.From(merge.Out).To(Sink.FromSubscriber(probe));
 
                 return ClosedShape.Instance;
             }));
