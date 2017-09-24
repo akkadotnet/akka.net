@@ -205,7 +205,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (!e.IsFaulted && e.IsCompleted && e.Result == null)
                         throw new InvalidOperationException("Sink.First materialized on an empty stream");
-
+                    
                     return e;
                 });
 
@@ -241,7 +241,12 @@ namespace Akka.Streams.Dsl
             => FromGraph(new LastOrDefault<TIn>()).WithAttributes(DefaultAttributes.LastOrDefaultSink);
 
         /// <summary>
-        /// TBD
+        /// A <see cref="Sink{TIn,TMat}"/> that keeps on collecting incoming elements until upstream terminates.
+        /// As upstream may be unbounded, `Flow.Create{T}().Take` or the stricter `Flow.Create{T}().Limit` (and their variants)
+        /// may be used to ensure boundedness.
+        /// Materializes into a <see cref="Task"/> of <see cref="Seq{TIn}"/> containing all the collected elements.
+        /// `Seq` is limited to <see cref="int.MaxValue"/> elements, this Sink will cancel the stream
+        /// after having received that many elements.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
