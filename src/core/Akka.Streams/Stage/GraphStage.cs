@@ -523,8 +523,8 @@ namespace Akka.Streams.Stage
             {
                 var next = head.Dequeue();
                 next.AddFollowUp(head);
-                next.FollowUps = null;
-                next.FollowUpsTail = null;
+                head.FollowUps = null;
+                head.FollowUpsTail = null;
                 return next;
             }
 
