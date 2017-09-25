@@ -54,15 +54,15 @@ PM> Install-Package Akka.FSharp
 > *All contributions are welcome! Please consider the [issues categorized in the `Help!` column](http://waffle.io/akkadotnet/akka.net) first, as they are areas we could really use your help :)*
 
 #### Contribution Guidelines
-If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/docs/Contributing%20to%20Akka).
+If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/community/contributor-guidelines.html).
 
-Our [docs](http://getakka.net/docs/) are always a work in progress—to contribute to docs, please see the [docs contribution guidelines here](http://getakka.net/docs/Documentation%20guidelines).
+Our [docs](http://getakka.net/docs/) are always a work in progress—to contribute to docs, please see the [docs contribution guidelines here](http://getakka.net/community/documentation-guidelines.html).
 
 
 #### Builds
-Please see [Building Akka.NET](http://getakka.net/docs/Building%20and%20Distributing%20Akka).
+Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
 
-To access unstable nightly builds, please [see the instructions here](http://getakka.net/docs/akka-developers/nightly-builds).
+To access unstable nightly builds, please [see the instructions here](http://getakka.net/community/getting-access-to-nightly-builds.html).
 
 ### Support
 <a href="http://www.jetbrains.com/resharper"><img src="http://i61.tinypic.com/15qvwj7.jpg" alt="ReSharper" title="ReSharper"></a>
