@@ -56,7 +56,7 @@ PM> Install-Package Akka.FSharp
 #### Contribution Guidelines
 If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/community/contributor-guidelines.html).
 
-Our [docs](http://getakka.net/docs/) are always a work in progress—to contribute to docs, please see the [docs contribution guidelines here](http://getakka.net/community/documentation-guidelines.html).
+Our [docs](http://getakka.net/articles/intro/what-is-akka.html) are always a work in progress—to contribute to docs, please see the [docs contribution guidelines here](http://getakka.net/community/documentation-guidelines.html).
 
 
 #### Builds
