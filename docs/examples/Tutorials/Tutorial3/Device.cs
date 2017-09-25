@@ -71,7 +71,7 @@ namespace Tutorials.Tutorial3
             {
                 switch (message)
                 {
-                    case RequestTrackDevice req when req.GroupId.Equals("groupId") && req.DeviceId.Equals("deviceId"):
+                    case RequestTrackDevice req when req.GroupId.Equals(GroupId) && req.DeviceId.Equals(DeviceId):
                         Sender.Tell(DeviceRegistered.Instance);
                         break;
                     case RequestTrackDevice req:
