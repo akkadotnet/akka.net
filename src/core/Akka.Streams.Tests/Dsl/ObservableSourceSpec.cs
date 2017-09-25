@@ -54,9 +54,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         #endregion
-        
+
+        public const string SpecConfig = @"akka.loglevel = DEBUG";
+
         private readonly ActorMaterializer _materializer;
-        public ObservableSourceSpec(ITestOutputHelper helper) : base(helper)
+        public ObservableSourceSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
             _materializer = ActorMaterializer.Create(Sys);
         }
