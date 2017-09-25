@@ -1190,7 +1190,7 @@ namespace Akka.Streams.Dsl
             where TIn : TOut { }
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ForwardOps<TOut, TMat> ops, Akka.Streams.FlowShape<TIn, TOut> flow)
             where TIn : TOut { }
-        public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ForwardOps<TOut, TMat> ops, Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat> sink)
+        public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> To<TIn, TOut, TMat, TMat2>(this Akka.Streams.Dsl.GraphDsl.ForwardOps<TOut, TMat> ops, Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat2> sink)
             where TIn : TOut { }
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.GraphDsl.ForwardOps<TOut1, TMat> ops, Akka.Streams.UniformFanInShape<TIn, TOut2> junction)
             where TIn : TOut1 { }
@@ -1364,6 +1364,15 @@ namespace Akka.Streams.Dsl
             public Akka.Streams.Inlet<T> Preferred { get; }
             protected override Akka.Streams.FanInShape<T> Construct(Akka.Streams.FanInShape<T>.IInit init) { }
         }
+    }
+    public sealed class MergePrioritized<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanInShape<T, T>>
+    {
+        public MergePrioritized(System.Collections.Generic.IEnumerable<int> priorities, bool eagerComplete = False) { }
+        public System.Collections.Generic.IReadOnlyList<Akka.Streams.Inlet<T>> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
+        public override Akka.Streams.UniformFanInShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public sealed class MergeSorted<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FanInShape<T, T, T>>
     {

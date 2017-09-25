@@ -426,7 +426,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Merge several streams, taking elements as they arrive from input streams
     /// (picking from prioritized once when several have elements ready).
-    /// A <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> has one <see cref="P:Akka.Streams.Dsl.MergePrioritized`1.Out" /> port, one or more input port with their priorities.
+    /// A <see cref="MergePrioritized{T}" /> has one <see cref="MergePrioritized{T}.Out" /> port, one or more input port with their priorities.
     /// <para>
     /// Emits when one of the inputs has an element available, preferring
     /// a input based on its priority if multiple have elements available
@@ -439,9 +439,9 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public sealed class MergePrioritized<T> : GraphStage<UniformFanInShape<T, T>>
     {
-        public IList<int> Priorities { get; }
-        public bool EagerComplete { get; }
-        public int InputPorts { get; }
+        internal IList<int> Priorities { get; }
+        internal bool EagerComplete { get; }
+        internal int InputPorts { get; }
 
         #region internal classes
         internal sealed class MergePrioritizedLogic : OutGraphStageLogic
@@ -454,7 +454,7 @@ namespace Akka.Streams.Dsl
             public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                allBuffers = new List<FixedSizeBuffer<Inlet<T>>>();
+                allBuffers = new List<FixedSizeBuffer<Inlet<T>>>(stage.Priorities.Count);
                 foreach (int priority in stage.Priorities)
                 {
                     allBuffers.Add(FixedSizeBuffer.Create<Inlet<T>>(priority));
@@ -556,31 +556,21 @@ namespace Akka.Streams.Dsl
         #endregion
 
         /// <summary>
-        /// Create a new <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> with specified number of input ports.
-        /// </summary>
-        /// <param name="priorities">Priorities of the input ports</param>
-        public MergePrioritized(IList<int> priorities)
-            :this(priorities, false)
-        {
-            
-        }
-
-        /// <summary>
-        /// Create a new <see cref="T:Akka.Streams.Dsl.MergePrioritized`1" /> with specified number of input ports.
+        /// Create a new <see cref="MergePrioritized{T}" /> with specified number of input ports.
         /// </summary>
         /// <param name="priorities">Priorities of the input ports</param>
         /// <param name="eagerComplete">If true, the merge will complete as soon as one of its inputs completes</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="priorities"/> is less or equal zero.
         /// </exception>
-        public MergePrioritized(IList<int> priorities, bool eagerComplete)
+        public MergePrioritized(IEnumerable<int> priorities, bool eagerComplete = false)
         {
-            Priorities = priorities;
+            Priorities = priorities.ToList();
             EagerComplete = eagerComplete;
-            InputPorts = priorities.Count;
+            InputPorts = Priorities.Count;
             if (InputPorts <= 0)
                 throw new ArgumentException("A Merge must have one or more input ports");
-            if (!priorities.All(x => x > 0))
+            if (!Priorities.All(x => x > 0))
                 throw new ArgumentException("Priorities should be positive integers");
 
             var input = new List<Inlet<T>>();
@@ -598,7 +588,7 @@ namespace Akka.Streams.Dsl
 
         public override UniformFanInShape<T, T> Shape { get; }
 
-        public List<Inlet<T>> In { get; }
+        public IReadOnlyList<Inlet<T>> In { get; }
 
         public Outlet<T> Out { get; }
 
