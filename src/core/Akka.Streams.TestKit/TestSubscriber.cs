@@ -150,7 +150,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(T element)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element));
                 return this;
             }
 
@@ -159,7 +159,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -168,7 +168,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(T element, TimeSpan timeout)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -227,7 +227,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextN(IEnumerable<T> all)
             {
                 foreach (var x in all)
-                    _probe.ExpectMsg<OnNext<T>>(y => Equals(y.Element, x));
+                    _probe.ExpectMsg<OnNext<T>>(y => AssertEquals(y.Element, x, "Expected one of ({0}), but got '{1}'", string.Join(", ", all), y.Element));
 
                 return this;
             }
