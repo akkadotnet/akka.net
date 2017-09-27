@@ -184,9 +184,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusterSharding.Node", "examples\Cluster\ClusterSharding\ClusterSharding.Node\ClusterSharding.Node.csproj", "{3C6EB4EF-3726-432F-812E-07828876418B}"
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp", "core\Akka.FSharp\Akka.FSharp.fsproj", "{D7A8DD54-0A8D-4EB4-8E18-29F58A7CFDAA}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp.Tests", "core\Akka.FSharp.Tests\Akka.FSharp.Tests.fsproj", "{DF49C57E-ED5E-44EA-883F-7F0DC27224CF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.Persistence.FSharp", "core\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj", "{99FCAE2D-56E0-4D28-AE71-51F2D226EEA0}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusterSharding.Node", "ClusterSharding.Node", "{820CFBF7-E165-4ADA-B821-E6A0A81DFE84}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusterSharding.Node", "examples\Cluster\ClusterSharding\ClusterSharding.Node\ClusterSharding.Node.csproj", "{3C6EB4EF-3726-432F-812E-07828876418B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -846,6 +848,6 @@ Global
 		{99FCAE2D-56E0-4D28-AE71-51F2D226EEA0} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {6116EA21-68A0-448A-AD48-EF5C2AD49B19}
+		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
 	EndGlobalSection
 EndGlobal
