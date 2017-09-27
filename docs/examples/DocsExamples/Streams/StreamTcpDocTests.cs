@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
@@ -9,9 +9,8 @@ using Xunit;
 using Xunit.Abstractions;
 using Akka.Actor;
 using Akka.IO;
+using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
-using TcpExt = Akka.Streams.Dsl.TcpExt;
-using Akka.Util.Internal;
 
 namespace DocsExamples.Streams
 {
@@ -83,37 +82,6 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
-        public void Simple_server_connection_must_REPL()
-        {
-            #region repl-client
-            var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
-
-            var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
-                .Concat(Source.Single("BYE"))
-                .Select(elem => ByteString.FromString($"{elem}\n"));
-
-            var repl = Flow.Create<ByteString>()
-                .Via(Framing.Delimiter(
-                    ByteString.FromString("\n"),
-                    maximumFrameLength: 256,
-                    allowTruncation: true))
-                .Select(c => c.ToString())
-                .Select(text =>
-                {
-                    Console.WriteLine($"Server: {text}");
-                    return text;
-                })
-                .Select(text =>
-                {
-                    return Console.ReadLine(); // TODO: implement
-                })
-                .Via(replParser);
-
-            connection.Join(repl).Run(Materializer);
-            #endregion
-        }
-
-        [Fact]
         public void Simple_server_must_initial_server_banner_echo_server()
         {
             var connections = Sys.TcpStream().Bind("127.0.0.1", 8888);
@@ -122,6 +90,7 @@ namespace DocsExamples.Streams
             #region welcome-banner-chat-server
             connections.RunForeach(connection =>
             {
+                // server logic, parses incoming commands
                 var commandParser = Flow.Create<string>().TakeWhile(c => c != "BYE").Select(c => c + "!");
 
                 var welcomeMessage = $"Welcome to: {connection.LocalAddress}, you are: {connection.RemoteAddress}!";
@@ -146,6 +115,52 @@ namespace DocsExamples.Streams
                 connection.HandleWith(serverLogic, Materializer);
             }, Materializer);
             #endregion
+
+            var input = new AtomicReference<List<string>>(new List<string> { "Hello world", "What a lovely day", null });
+
+            string ReadLine(string prompt)
+            {
+                // TODO: implement it
+                switch (input.Value)
+                {
+                    default:
+                        return null;
+                }
+            }
+
+            {
+                var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
+            }
+
+            {
+                #region repl-client
+                var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
+
+                var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
+                    .Concat(Source.Single("BYE"))
+                    .Select(elem => ByteString.FromString($"{elem}\n"));
+
+                var repl = Flow.Create<ByteString>()
+                    .Via(Framing.Delimiter(
+                        ByteString.FromString("\n"),
+                        maximumFrameLength: 256,
+                        allowTruncation: true))
+                    .Select(c => c.ToString())
+                    .Select(text =>
+                    {
+                        Output.WriteLine($"Server: {text}");
+                        return text;
+                    })
+                    .Select(text => ReadLine("> "))
+                    .Via(replParser);
+
+                connection.Join(repl).Run(Materializer);
+                #endregion
+            }
+
+            serverProbe.ExpectMsg("Hello world", TimeSpan.FromSeconds(20));
+            serverProbe.ExpectMsg("What a lovely day");
+            serverProbe.ExpectMsg("BYE");
         }
     }
 }
