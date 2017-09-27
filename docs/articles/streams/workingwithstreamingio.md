@@ -13,7 +13,7 @@ In order to implement a simple EchoServer we bind to a given address, which retu
 
 [!code-csharp[StreamTcpDocTests.cs](../../examples/DocsExamples/Streams/StreamTcpDocTests.cs?name=echo-server-simple-bind)]
 
-> TODO: Pic1
+![tcp stream bind](/images/tcp-stream-bind.png)
 
 Next, we simply handle each incoming connection using a `Flow` which will be used as the processing stage to handle and emit `ByteString` from and to the TCP Socket. Since one `ByteString` does not have to necessarily correspond to exactly one line of text (the client might be sending the line in chunks) we use the `Framing.Delimiter` helper to chunk the inputs up into actual lines of text. The last boolean argument indicates that we require an explicit line ending even for the last message before the connection is closed. In this example we simply add exclamation marks to each incoming text message and push it through the flow:
 
@@ -21,11 +21,17 @@ Next, we simply handle each incoming connection using a `Flow` which will be use
 
 Notice that while most building blocks in Akka Streams are reusable and freely shareable, this is not the case for the incoming connection Flow, since it directly corresponds to an existing, already accepted connection its handling can only ever be materialized once.
 
-Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
+Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible `to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
 
-We can then test the TCP server by sending data to the TCP Socket using netcat:
+[!code-csharp[StreamTcpDocTests.cs](../../examples/DocsExamples/Streams/StreamTcpDocTests.cs?name=close-incoming-connection)]
 
-> TODO: Pic2
+We can then test the TCP server by sending data to the TCP Socket using `netcat` (on Windows it is possible to use Linux Subsystem for Windows):
+```
+echo -n "Hello World" | netcat 127.0.0.1 8888
+Hello World!!!
+```
+
+![tcp stream run](/images/tcp-stream-run.png)
 
 ### Connecting: REPL Client
 

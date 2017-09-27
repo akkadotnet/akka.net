@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.TestKit.Xunit2;
@@ -27,13 +28,14 @@ namespace DocsExamples.Streams
         [Fact]
         public async Task Simple_server_connection_must_bind_and_unbind()
         {
-
             #region echo-server-simple-bind
-            var tcp = new TcpExt(Sys.AsInstanceOf<ExtendedActorSystem>());
-            Tcp.ServerBinding binding = await tcp
-                .Bind("127.0.0.1", 8888)
-                .To(Sink.Ignore<Tcp.IncomingConnection>())
-                .Run(Materializer);
+            // define an incoming request processing logic
+            Flow<ByteString, ByteString, NotUsed> echo = Flow.Create<ByteString>();
+
+            Tcp.ServerBinding binding = await Sys.TcpStream()
+                .BindAndHandle(echo, Materializer, "localhost", 9000);
+
+            Console.WriteLine($"Server listening at {binding.LocalAddress}");
 
             // close server after everything is done
             await binding.Unbind();
@@ -44,9 +46,8 @@ namespace DocsExamples.Streams
         public void Simple_server_connection_must_handle_connection()
         {
             #region echo-server-simple-handle
-            var tcp = new TcpExt(Sys.AsInstanceOf<ExtendedActorSystem>());
             Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> connections =
-                tcp.Bind("127.0.0.1", 8888);
+                Sys.TcpStream().Bind("127.0.0.1", 8888);
 
             connections.RunForeach(connection =>
             {
@@ -67,11 +68,25 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
+        public void Simple_server_connection_must_close_incoming_connection()
+        {
+            Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> connections =
+                Sys.TcpStream().Bind("127.0.0.1", 8888);
+
+            connections.RunForeach(connection =>
+            {
+                #region close-incoming-connection
+                var closed = Flow.FromSinkAndSource(Sink.Cancelled<ByteString>(), Source.Empty<ByteString>());
+                connection.HandleWith(closed, Materializer);
+                #endregion
+            }, Materializer);
+        }
+
+        [Fact]
         public void Simple_server_connection_must_REPL()
         {
-            var tcp = new TcpExt(Sys.AsInstanceOf<ExtendedActorSystem>());
             #region repl-client
-            var connection = tcp.OutgoingConnection("127.0.0.1", 8888);
+            var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
 
             var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
                 .Concat(Source.Single("BYE"))
@@ -101,8 +116,7 @@ namespace DocsExamples.Streams
         [Fact]
         public void Simple_server_must_initial_server_banner_echo_server()
         {
-            var tcp = new TcpExt(Sys.AsInstanceOf<ExtendedActorSystem>());
-            var connections = tcp.Bind("127.0.0.1", 8888);
+            var connections = Sys.TcpStream().Bind("127.0.0.1", 8888);
             var serverProbe = CreateTestProbe();
 
             #region welcome-banner-chat-server
