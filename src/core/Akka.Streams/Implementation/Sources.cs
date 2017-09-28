@@ -1114,11 +1114,11 @@ namespace Akka.Streams.Implementation
 
         public ObservableSourceStage(IObservable<T> observable, int maxBufferCapacity, OverflowStrategy overflowStrategy)
         {
-            this._observable = observable;
-            this._maxBufferCapacity = maxBufferCapacity;
-            this._overflowStrategy = overflowStrategy;
+            _observable = observable;
+            _maxBufferCapacity = maxBufferCapacity;
+            _overflowStrategy = overflowStrategy;
 
-            this.Shape = new SourceShape<T>(Outlet);
+            Shape = new SourceShape<T>(Outlet);
         }
 
         public Outlet<T> Outlet { get; } = new Outlet<T>("observable.out");

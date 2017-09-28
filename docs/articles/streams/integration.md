@@ -422,7 +422,7 @@ await Source.FromObservable(observable, maxBufferCapacity: 128, overflowStrategy
     .RunForEach(Console.WriteLine, materializer);
 ```
 
-You may notice two extra parameters here. One of the advantages of Akka.Streams (and reactive streams in general) over Reactive Extensions in notion of backpressure - absent in Rx.NET. This puts a constraint of rate limiting the events incoming form upstream. If an observable will be producing events faster, than downstream is able to consume them, source stage will start to buffer them up to a provided `maxBufferCapacity` limit. Once that limit is reached, an overflow strategy will be applied. There are several different overflow strategies to choose from:
+You may notice two extra parameters here. One of the advantages of Akka.Streams (and reactive streams in general) over Reactive Extensions is notion of backpressure - absent in Rx.NET. This puts a constraint of rate limiting the events incoming form upstream. If an observable will be producing events faster, than downstream is able to consume them, source stage will start to buffer them up to a provided `maxBufferCapacity` limit. Once that limit is reached, an overflow strategy will be applied. There are several different overflow strategies to choose from:
 
 - `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
 - `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.

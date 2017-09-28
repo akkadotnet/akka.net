@@ -1196,6 +1196,7 @@ namespace Akka.Streams.Implementation
                     onUpstreamFailure: e =>
                     {
                         foreach (var observer in _observers.Keys) observer.OnError(e);
+                        _observers = ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty;
                     });
             }
 
