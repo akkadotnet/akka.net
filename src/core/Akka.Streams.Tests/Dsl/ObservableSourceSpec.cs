@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -48,8 +49,13 @@ namespace Akka.Streams.Tests.Dsl
                 return new TestDisposer(this);
             }
 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public void Event(T element) => Observer.OnNext(element);
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public void Error(Exception error) => Observer.OnError(error);
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public void Complete() => Observer.OnCompleted();
         }
 
