@@ -60,6 +60,7 @@ namespace Akka.Serialization
 
         private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
         private readonly Dictionary<int, Serializer> _serializers = new Dictionary<int, Serializer>();
+        private readonly Dictionary<string, int> _serializerIdByName = new Dictionary<string, int>();
 
         /// <summary>
         /// TBD
@@ -91,7 +92,8 @@ namespace Akka.Serialization
                 var serializer = serializerConfig != null
                     ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
                     : (Serializer)Activator.CreateInstance(serializerType, system);
-                AddSerializer(serializer);
+
+                AddSerializer(kvp.Key, serializer);
                 namedSerializers.Add(kvp.Key, serializer);
             }
 
@@ -129,10 +131,9 @@ namespace Akka.Serialization
             {
                 if (kvp.Key.Equals(name))
                 {
-                    var serializerTypeName = kvp.Value.GetString();
-                    var serializerType = Type.GetType(serializerTypeName);
+                    if (!_serializerIdByName.TryGetValue(name, out int serializerId))
+                        throw new ArgumentException($"Couldn't find serializer id for [{name}] make sure your serializer implements the Identity property.");
 
-                    var serializerId = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(serializerType, (ExtendedActorSystem)System);
                     return GetSerializerById(serializerId);
                 }
             }
@@ -145,14 +146,15 @@ namespace Akka.Serialization
         public ActorSystem System { get; }
 
         /// <summary>
-        /// TBD
+        /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
-        /// <param name="serializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">Configuration name of the serializer</param>
+        /// <param name="serializer">Serializer instance</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddSerializer(Serializer serializer)
+        public void AddSerializer(string name, Serializer serializer)
         {
             _serializers.Add(serializer.Identifier, serializer);
+            _serializerIdByName.Add(name, serializer.Identifier);
         }
 
         /// <summary>
