@@ -222,7 +222,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -233,7 +233,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be return a default value.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
