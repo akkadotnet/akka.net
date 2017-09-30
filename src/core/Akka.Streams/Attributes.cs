@@ -440,7 +440,7 @@ namespace Akka.Streams
             public readonly Decider Decider;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="SupervisionStrategy"/> class.
             /// </summary>
             /// <param name="decider">TBD</param>
             public SupervisionStrategy(Decider decider)
@@ -460,8 +460,11 @@ namespace Akka.Streams
         public static Attributes CreateDispatcher(string dispatcherName) => new Attributes(new Dispatcher(dispatcherName));
 
         /// <summary>
-        /// Specifies the SupervisionStrategy.
         /// Decides how exceptions from user are to be handled
+        /// <para>
+        /// Stages supporting supervision strategies explicitly document that they do so. If a stage does not document
+        /// support for these, it should be assumed it does not support supervision.
+        /// </para>
         /// </summary>
         /// <param name="strategy">TBD</param>
         /// <returns>TBD</returns>
