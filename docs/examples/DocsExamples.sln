@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocsExamples", "DocsExamples\DocsExamples.csproj", "{47E0257B-23D0-4D0E-B567-4DFCC3B2B2E1}"
 EndProject
@@ -24,8 +24,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster", "..\..\src\core\Akka.Cluster\Akka.Cluster.csproj", "{3A67944B-05B5-410C-93C7-654DC91E7F1C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote", "..\..\src\core\Akka.Remote\Akka.Remote.csproj", "{E5AB69B8-8D2A-406A-AB00-FBA6FBA0D0BA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{62B898A3-7448-4394-A9AA-2996EAD0EEB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -157,18 +155,6 @@ Global
 		{E5AB69B8-8D2A-406A-AB00-FBA6FBA0D0BA}.Release|x64.Build.0 = Release|Any CPU
 		{E5AB69B8-8D2A-406A-AB00-FBA6FBA0D0BA}.Release|x86.ActiveCfg = Release|Any CPU
 		{E5AB69B8-8D2A-406A-AB00-FBA6FBA0D0BA}.Release|x86.Build.0 = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|x64.Build.0 = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Debug|x86.Build.0 = Debug|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|x64.ActiveCfg = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|x64.Build.0 = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|x86.ActiveCfg = Release|Any CPU
-		{62B898A3-7448-4394-A9AA-2996EAD0EEB9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka;
@@ -116,17 +117,9 @@ namespace DocsExamples.Streams
             }, Materializer);
             #endregion
 
-            var input = new AtomicReference<List<string>>(new List<string> { "Hello world", "What a lovely day", null });
+            var input = new ConcurrentQueue<string>(new[] { "Hello world", "What a lovely day" });
 
-            string ReadLine(string prompt)
-            {
-                // TODO: implement it
-                switch (input.Value)
-                {
-                    default:
-                        return null;
-                }
-            }
+            string ReadLine(string prompt) => input.TryDequeue(out var cmd) ? cmd : "q";
 
             {
                 var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
