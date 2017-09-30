@@ -1790,6 +1790,7 @@ namespace Akka.Streams.Dsl
     public class TcpExt : Akka.Actor.IExtension
     {
         protected readonly System.TimeSpan BindShutdownTimeout;
+        [Akka.Annotations.InternalApiAttribute()]
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = False, System.Nullable<System.TimeSpan> idleTimeout = null) { }
         public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = False, System.Nullable<System.TimeSpan> idleTimeout = null) { }
