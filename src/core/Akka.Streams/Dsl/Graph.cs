@@ -127,7 +127,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerComplete;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -201,7 +201,7 @@ namespace Akka.Streams.Dsl
     public sealed class Merge<T> : Merge<T, T>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{T}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -372,7 +372,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerClose;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergePreferred{T}"/> class.
         /// </summary>
         /// <param name="secondaryPorts">TBD</param>
         /// <param name="eagerClose">TBD</param>
@@ -867,7 +867,7 @@ namespace Akka.Streams.Dsl
         private readonly Func<T, T, int> _compare;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergeSorted{T}"/> class.
         /// </summary>
         /// <param name="compare">TBD</param>
         public MergeSorted(Func<T, T, int> compare)
@@ -998,7 +998,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerCancel;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Broadcast{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="eagerCancel">TBD</param>
@@ -1167,7 +1167,7 @@ namespace Akka.Streams.Dsl
         private readonly Func<T, int> _partitioner;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Partition{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="partitioner">TBD</param>
@@ -1331,7 +1331,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _waitForAllDownstreams;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Balance{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="waitForAllDownstreams">TBD</param>
@@ -1405,7 +1405,7 @@ namespace Akka.Streams.Dsl
     public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
         public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
 
@@ -1430,7 +1430,7 @@ namespace Akka.Streams.Dsl
     public sealed partial class ZipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="ZipWith"/>.
         /// </summary>
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
@@ -1443,7 +1443,7 @@ namespace Akka.Streams.Dsl
     /// <para>
     /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// Backpressures when any of the outputs backpressures
+    /// Backpressures when any of the outputs backpressure
     /// <para>
     /// Completes when upstream completes
     /// </para>
@@ -1454,7 +1454,7 @@ namespace Akka.Streams.Dsl
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
         public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
 
@@ -1479,7 +1479,7 @@ namespace Akka.Streams.Dsl
     public partial class UnzipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="UnzipWith"/>.
         /// </summary>
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
@@ -1516,7 +1516,7 @@ namespace Akka.Streams.Dsl
     public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipN{T}"/> class.
         /// </summary>
         /// <param name="n">TBD</param>
         public ZipN(int n) : base(x => x, n)
@@ -1625,7 +1625,7 @@ namespace Akka.Streams.Dsl
         private readonly int _n;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipWithN{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="zipper">TBD</param>
         /// <param name="n">TBD</param>
@@ -1757,7 +1757,7 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Concat{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <exception cref="ArgumentException">
@@ -1897,7 +1897,7 @@ namespace Akka.Streams.Dsl
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="OrElse{T}"/> class.
         /// </summary>
         public OrElse()
         {
