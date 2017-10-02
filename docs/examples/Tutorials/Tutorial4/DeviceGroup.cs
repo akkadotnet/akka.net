@@ -106,7 +106,7 @@ namespace Tutorials.Tutorial4
             {
                 switch (message)
                 {
-                    case RequestTrackDevice trackMsg when trackMsg.GroupId.Equals("groupId"):
+                    case RequestTrackDevice trackMsg when trackMsg.GroupId.Equals(GroupId):
                         if (deviceIdToActor.TryGetValue(trackMsg.DeviceId, out var actorRef))
                         {
                             actorRef.Forward(trackMsg);

@@ -424,6 +424,178 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking from prioritized once when several have elements ready).
+    /// A <see cref="MergePrioritized{T}" /> has one <see cref="MergePrioritized{T}.Out" /> port, one or more input port with their priorities.
+    /// <para>
+    /// Emits when one of the inputs has an element available, preferring
+    /// a input based on its priority if multiple have elements available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true), default value is `false`
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    public sealed class MergePrioritized<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        internal IList<int> Priorities { get; }
+        internal bool EagerComplete { get; }
+        internal int InputPorts { get; }
+
+        #region internal classes
+        internal sealed class MergePrioritizedLogic : OutGraphStageLogic
+        {
+            private readonly MergePrioritized<T> _stage;
+            private List<FixedSizeBuffer<Inlet<T>>> allBuffers;
+            private int runningUpstreams;
+            private Random randomGen = new Random();
+
+            public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                allBuffers = new List<FixedSizeBuffer<Inlet<T>>>(stage.Priorities.Count);
+                foreach (int priority in stage.Priorities)
+                {
+                    allBuffers.Add(FixedSizeBuffer.Create<Inlet<T>>(priority));
+                }
+
+                runningUpstreams = stage.InputPorts;
+
+                for (int i = 0; i < stage.In.Count; i++)
+                {
+                    var inlet = stage.In[i];
+                    var buffer = allBuffers[i];
+
+                    SetHandler(inlet, onPush: () =>
+                    {
+                        if (IsAvailable(_stage.Out) && !HasPending)
+                        {
+                            Push(_stage.Out, Grab(inlet));
+                            TryPull(inlet);
+                        }
+                        else
+                        {
+                            buffer.Enqueue(inlet);
+                        }
+                    }, onUpstreamFinish: () =>
+                    {
+                        if (_stage.EagerComplete)
+                        {
+                            _stage.In.ForEach(Cancel);
+                            runningUpstreams = 0;
+                            if (!HasPending) CompleteStage();
+                        }
+                        else
+                        {
+                            runningUpstreams -= 1;
+                            if (UpstreamsClosed && !HasPending) CompleteStage();
+                        }
+                    });
+                }
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void PreStart() => _stage.In.ForEach(TryPull);
+
+            public override void OnPull()
+            {
+                if (HasPending)
+                    DequeueAndDispatch();
+            }
+
+            public bool HasPending => allBuffers.Any(c => c.NonEmpty);
+
+            public bool UpstreamsClosed => runningUpstreams == 0;
+
+            private void DequeueAndDispatch()
+            {
+                var input = SelectNextElement();
+                Push(_stage.Out, Grab(input));
+                if (UpstreamsClosed && !HasPending)
+                    CompleteStage();
+                else
+                    TryPull(input);
+            }
+
+            private Inlet<T> SelectNextElement()
+            {
+                var tp = 0;
+                var ix = 0;
+
+                while (ix < _stage.In.Count)
+                {
+                    if (allBuffers[ix].NonEmpty)
+                    {
+                        tp += _stage.Priorities[ix];
+                    }
+                    ix += 1;
+                }
+
+                int r = randomGen.Next(tp);
+                Inlet<T> next = null;
+                ix = 0;
+
+                while (ix < _stage.In.Count && next == null)
+                {
+                    if (allBuffers[ix].NonEmpty)
+                    {
+                        r -= _stage.Priorities[ix];
+                        if (r < 0)
+                            next = allBuffers[ix].Dequeue();
+                    }
+                    ix += 1;
+                }
+
+                return next;
+            }
+
+            public override string ToString() => "MergePrioritized";
+        }
+        #endregion
+
+        /// <summary>
+        /// Create a new <see cref="MergePrioritized{T}" /> with specified number of input ports.
+        /// </summary>
+        /// <param name="priorities">Priorities of the input ports</param>
+        /// <param name="eagerComplete">If true, the merge will complete as soon as one of its inputs completes</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="priorities"/> is less or equal zero.
+        /// </exception>
+        public MergePrioritized(IEnumerable<int> priorities, bool eagerComplete = false)
+        {
+            Priorities = priorities.ToList();
+            EagerComplete = eagerComplete;
+            InputPorts = Priorities.Count;
+            if (InputPorts <= 0)
+                throw new ArgumentException("A Merge must have one or more input ports");
+            if (!Priorities.All(x => x > 0))
+                throw new ArgumentException("Priorities should be positive integers");
+
+            var input = new List<Inlet<T>>();
+            for (int i = 1; i <= InputPorts; i++)
+            {
+                input.Add(new Inlet<T>("MergePrioritized.in" + i));
+            }
+            In = input;
+
+            Out = new Outlet<T>("MergePrioritized.out");
+            Shape = new UniformFanInShape<T, T>(Out, In.ToArray());
+        }
+
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MergePrioritized");
+
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        public IReadOnlyList<Inlet<T>> In { get; }
+
+        public Outlet<T> Out { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new MergePrioritizedLogic(this);
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     public static class Interleave
