@@ -273,7 +273,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId 
                     AND {Configuration.SequenceNrColumnName} <= @SequenceNr
                     AND {Configuration.TimestampColumnName} <= @Timestamp
-                ORDER BY {Configuration.SequenceNrColumnName} DESC";
+                ORDER BY {Configuration.SequenceNrColumnName} DESC
+                LIMIT 1";
 
             DeleteSnapshotSql = $@"
                 DELETE FROM {Configuration.FullSnapshotTableName}
