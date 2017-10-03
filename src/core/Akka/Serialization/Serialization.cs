@@ -59,8 +59,8 @@ namespace Akka.Serialization
         private readonly Serializer _nullSerializer;
 
         private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> _serializers = new Dictionary<int, Serializer>();
-        private readonly Dictionary<string, int> _serializerIdByName = new Dictionary<string, int>();
+        private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
+        private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
         /// <summary>
         /// TBD
@@ -76,7 +76,7 @@ namespace Akka.Serialization
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
             var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            var namedSerializers = new Dictionary<string, Serializer>();
+            
             foreach (var kvp in serializersConfig)
             {
                 var serializerTypeName = kvp.Value.GetString();
@@ -94,7 +94,6 @@ namespace Akka.Serialization
                     : (Serializer)Activator.CreateInstance(serializerType, system);
 
                 AddSerializer(kvp.Key, serializer);
-                namedSerializers.Add(kvp.Key, serializer);
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -111,7 +110,7 @@ namespace Akka.Serialization
                 }
 
                 
-                if (!namedSerializers.TryGetValue(serializerName, out var serializer))
+                if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
@@ -126,18 +125,10 @@ namespace Akka.Serialization
             if (name == null)
                 return null;
 
-            var serializersConfig = System.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
-            foreach (var kvp in serializersConfig)
-            {
-                if (kvp.Key.Equals(name))
-                {
-                    if (!_serializerIdByName.TryGetValue(name, out int serializerId))
-                        throw new ArgumentException($"Couldn't find serializer id for [{name}] make sure your serializer implements the Identity property.");
+            if (!_serializersByName.TryGetValue(name, out Serializer serializer))
+                throw new ArgumentException($"Couldn't find serializer for [{name}] make sure you correctly defined.");
 
-                    return GetSerializerById(serializerId);
-                }
-            }
-            return null;
+            return serializer;
         }
 
         /// <summary>
@@ -148,13 +139,24 @@ namespace Akka.Serialization
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
+        /// <param name="serializer">Serializer instance</param>
+        [Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddSerializer(Serializer serializer)
+        {
+            _serializersById.Add(serializer.Identifier, serializer);
+        }
+
+        /// <summary>
+        /// Adds the serializer to the internal state of the serialization subsystem
+        /// </summary>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
-            _serializers.Add(serializer.Identifier, serializer);
-            _serializerIdByName.Add(name, serializer.Identifier);
+            _serializersById.Add(serializer.Identifier, serializer);
+            _serializersByName.Add(name, serializer);
         }
 
         /// <summary>
@@ -181,7 +183,7 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
-            if (!_serializers.TryGetValue(serializerId, out var serializer))
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
@@ -202,7 +204,7 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
-            if (!_serializers.TryGetValue(serializerId, out var serializer))
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
@@ -334,7 +336,7 @@ namespace Akka.Serialization
 
         internal Serializer GetSerializerById(int serializerId)
         {
-            return _serializers[serializerId];
+            return _serializersById[serializerId];
         }
     }
 }

@@ -4489,6 +4489,8 @@ namespace Akka.Serialization
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Actor.ActorSystem System { get; }
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
+        [System.ObsoleteAttribute("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
+        public void AddSerializer(Akka.Serialization.Serializer serializer) { }
         public void AddSerializer(string name, Akka.Serialization.Serializer serializer) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
