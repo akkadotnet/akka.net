@@ -242,5 +242,5 @@ akka.cluster.pub-sub {
 It is recommended to load the extension when the actor system is started by defining it in akka.extensions configuration property. Otherwise it will be activated when first used and then it takes a while for it to be populated.
 
 ```hocon
-akka.extensions = ["akka.cluster.pubsub.DistributedPubSub"]
+akka.extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
 ```
