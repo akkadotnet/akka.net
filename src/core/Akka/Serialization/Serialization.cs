@@ -124,10 +124,8 @@ namespace Akka.Serialization
         {
             if (name == null)
                 return null;
-
-            if (!_serializersByName.TryGetValue(name, out Serializer serializer))
-                throw new ArgumentException($"Couldn't find serializer for [{name}] make sure you correctly defined.");
-
+           
+            _serializersByName.TryGetValue(name, out Serializer serializer);
             return serializer;
         }
 
@@ -271,7 +269,7 @@ namespace Akka.Serialization
                 }
             }
 
-            if (serializer == null)
+            if (serializer == null)  
                 serializer = GetSerializerByName(defaultSerializerName);
 
             // do a final check for the "object" serializer

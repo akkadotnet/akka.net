@@ -22,7 +22,7 @@ namespace Akka.Tests.Serialization
             var config = ConfigurationFactory.ParseString(@"
                 akka.actor {
                     serializers {
-                        custom = tnw = ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests""
+                        custom = ""Akka.Tests.Serialization.CustomSerializer, Akka.Tests""
                     }
                     serialization-bindings {
                         ""System.Object"" = custom
