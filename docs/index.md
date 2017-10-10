@@ -13,6 +13,9 @@ tagline: A straightforward approach to building distributed, high-scale applicat
 img.main-logo{
     width: 192px;
 }
+h2:before{
+    display: none;
+}
 </style>
 
 <div class="jumbotron">
@@ -91,7 +94,7 @@ img.main-logo{
                 <p class="lead">
 The Actor Model provides a higher level of abstraction for writing concurrent and distributed systems. It alleviates the developer from having to deal with explicit locking and thread management, making it easier to write correct concurrent and parallel systems. </p>
                 <p>Actors were defined in the 1973 paper by <a href="http://en.wikipedia.org/wiki/Carl_Hewitt">Carl Hewitt</a> but have been popularized by the Erlang language, and used for example at Ericsson with great success to build highly concurrent and reliable telecom systems.</p>
-                <p><a href="/docs/Actors">Read more</a></p>
+                <p><a href="/articles/intro/what-are-actors.html">Read more</a></p>
             </div>
 
             <div class="col-md-6 text-center">
@@ -107,7 +110,7 @@ Everything in Akka.NET is designed to work in a distributed setting: all interac
 </p>
                 <p>This effort has been undertaken to ensure that all functions are available equally when running within a single process or on a cluster of hundreds of machines. The key for enabling this is to go from remote to local by way of optimization instead of trying to go from local to remote by way of generalization. See this classic paper for a detailed discussion on why the second approach is bound to fail.
                 </p>
-                <p><a href="/docs/Remoting">Read more</a></p>
+                <p><a href="/articles/Remoting">Read more</a></p>
             </div>
 
             <div class="col-md-6 text-center">
@@ -122,7 +125,7 @@ Actors form a tree with actors being parents to the actors they've created.</p>
                 <p>
 As a parent, the actor is responsible for handling its children’s failures (so-called supervision), forming a chain of responsibility, all the way to the top. When an actor crashes, its parent can either restart or stop it, or escalate the failure up the hierarchy of actors.
 This enables a clean set of semantics for managing failures in a concurrent, distributed system and allows for writing highly fault-tolerant systems that self-heal.</p>
-<p><a href="/docs/Supervision">Read more</a></p>
+<p><a href="/articles/concepts/supervision.html">Read more</a></p>
             </div>
 
             <div class="col-md-6 text-center">
