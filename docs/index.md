@@ -13,6 +13,9 @@ tagline: A straightforward approach to building distributed, high-scale applicat
 img.main-logo{
     width: 192px;
 }
+h2:before{
+    display: none;
+}
 </style>
 
 <div class="jumbotron">
