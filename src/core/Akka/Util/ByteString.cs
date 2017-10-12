@@ -580,13 +580,10 @@ namespace Akka.IO
 
         public string ToString(Encoding encoding)
         {
-            var builder = new StringBuilder(_count);
-            foreach (var buffer in _buffers)
-            {
-                var part = encoding.GetString(buffer.Array, buffer.Offset, buffer.Count);
-                builder.Append(part);
-            }
-            return builder.ToString();
+            if (IsCompact)
+                return encoding.GetString(_buffers[0].Array);
+
+            return Compact().ToString(encoding);
         }
 
         public static bool operator ==(ByteString x, ByteString y) => Equals(x, y);

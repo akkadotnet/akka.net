@@ -93,6 +93,13 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
+        public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_unicode_String()
+        {
+            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.Unicode).ToString(Encoding.Unicode) == (s ?? "")) // TODO: What should we do with null string?
+                .QuickCheckThrowOnFailure();
+        }
+
+        [Fact]
         public void A_ByteString_must_behave_as_expected_when_compacting()
         {
             Prop.ForAll((ByteString a) =>
@@ -122,6 +129,44 @@ namespace Akka.Tests.Util
             int offset = b.IndexOf(3);
 
             Assert.Equal(-1, offset);
+        }
+
+        [Fact(DisplayName = "A concatenated byte string composed of partial characters should the correct string for ToString(Unicode)")]
+        public void A_concatenated_bytestring_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
+        {
+            // In Unicode encoding, characters present in the ASCII character set are 2 bytes long.
+
+            const string expected = "ǢBC";
+            Encoding encoding = Encoding.Unicode;
+
+            byte[] rawData = encoding.GetBytes(expected);
+
+            ByteString data = ByteString.Empty;
+            data += ByteString.CopyFrom(rawData, 0, 3); // One and a half characters
+            data += ByteString.CopyFrom(rawData, 3, 3); // One and a half characters
+            Assert.Equal(rawData.Length, data.Count);
+
+            string actual = data.ToString(encoding);
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact(DisplayName = "A concatenated byte string composed of partial characters should the correct string for ToString(UTF8)")]
+        public void A_concatenated_bytestring_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
+        {
+            // In UTF-8 encoding, characters present in the ASCII character set are only 1 byte long.
+
+            const string expected = "ǢBC";
+            Encoding encoding = Encoding.UTF8;
+
+            byte[] rawData = encoding.GetBytes(expected);
+
+            ByteString data = ByteString.Empty;
+            data += ByteString.CopyFrom(rawData, 0, 1); // Half a character
+            data += ByteString.CopyFrom(rawData, 1, 3); // One and a half characters
+            Assert.Equal(rawData.Length, data.Count);
+
+            string actual = data.ToString(encoding);
+            Assert.Equal(expected, actual);
         }
     }
 }
