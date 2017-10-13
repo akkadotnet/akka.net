@@ -111,12 +111,12 @@ Target "RunTests" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests Net |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
+                            (getIncrementalUnitTests Net) |> Seq.iter log
+                            getUnitTestProjects Net
         | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
+               getUnitTestProjects Net
     
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -140,9 +140,9 @@ Target "RunTestsNetCore" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests NetCore |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
+                            getIncrementalUnitTests NetCore |> Seq.iter log
                             getUnitTestProjects()
         | _ -> log "All test projects will be run..."
                getUnitTestProjects()
