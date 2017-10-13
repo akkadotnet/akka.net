@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
-    <TargetFrameworks>net452;netcoreapp1.1.1</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
