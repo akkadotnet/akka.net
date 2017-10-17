@@ -258,7 +258,7 @@ module IncrementalTests =
     let getIncrementalUnitTests runtime =
         getIncrementalTestProjects2 Unit runtime
     
-    let getIncrementalMNTRTests =
+    let getIncrementalMNTRTests() =
         getIncrementalTestProjects2 MNTR Net
         |> Seq.map (fun p -> getAssemblyForProject p)
     
