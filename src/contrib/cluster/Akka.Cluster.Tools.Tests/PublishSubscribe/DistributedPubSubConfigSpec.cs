@@ -23,7 +23,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString("akka.actor.provider = \"Akka.Cluster.ClusterActorRefProvider, Akka.Cluster\"");
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                    akka.extensions = [""Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools""]");
         }
 
         [Fact]
@@ -41,6 +42,14 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
             config.GetString("name").ShouldBe("distributedPubSubMediator");
             config.GetString("use-dispatcher").ShouldBe(string.Empty);
+        }
+
+        [Fact]
+        public void DistributedPubSub_must_load_via_HOCON()
+        {
+            // Validate that the syntax recommended at http://getakka.net/articles/clustering/distributed-publish-subscribe.html
+            // for automatically loading the DistributedPubSub plugin at startup is correct
+            Assert.True(Sys.HasExtension<DistributedPubSub>());
         }
     }
 }

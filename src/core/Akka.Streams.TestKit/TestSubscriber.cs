@@ -73,10 +73,12 @@ namespace Akka.Streams.TestKit
         /// </summary>
         public class ManualProbe<T> : ISubscriber<T>
         {
+            private readonly TestKitBase _testKit;
             private readonly TestProbe _probe;
 
             internal ManualProbe(TestKitBase testKit)
             {
+                _testKit = testKit;
                 _probe = testKit.CreateTestProbe();
             }
 
@@ -123,12 +125,24 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public T ExpectNext()
             {
-                var t = _probe.RemainingOrDilated(null);
-                var message = _probe.ReceiveOne(t);
-                if (message is OnNext<T>)
-                    return ((OnNext<T>) message).Element;
+                return ExpectNext(_testKit.Dilated(_probe.TestKitSettings.SingleExpectDefault));
+            }
 
-                throw new Exception("expected OnNext, found " + message);
+            /// <summary>
+            /// Expect and return a stream element during specified time or timeout.
+            /// </summary>
+            public T ExpectNext(TimeSpan timeout)
+            {
+                var t = _probe.RemainingOrDilated(timeout);
+                switch (_probe.ReceiveOne(t))
+                {
+                    case null:
+                        throw new Exception($"Expected OnNext(_), yet no element signaled during {timeout}");
+                    case OnNext<T> message:
+                        return message.Element;
+                    case var other:
+                        throw new Exception($"expected OnNext, found {other}");
+                }
             }
 
             /// <summary>
@@ -136,7 +150,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(T element)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element));
                 return this;
             }
 
@@ -145,7 +159,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -154,7 +168,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(T element, TimeSpan timeout)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -213,7 +227,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextN(IEnumerable<T> all)
             {
                 foreach (var x in all)
-                    _probe.ExpectMsg<OnNext<T>>(y => Equals(y.Element, x));
+                    _probe.ExpectMsg<OnNext<T>>(y => AssertEquals(y.Element, x, "Expected one of ({0}), but got '{1}'", string.Join(", ", all), y.Element));
 
                 return this;
             }
@@ -503,10 +517,22 @@ namespace Akka.Streams.TestKit
                 return this;
             }
 
+            /// <summary>
+            /// Request and expect a stream element.
+            /// </summary>
             public T RequestNext()
             {
                 _subscription.Value.Request(1);
                 return ExpectNext();
+            }
+
+            /// <summary>
+            /// Request and expect a stream element during the specified time or timeout.
+            /// </summary>
+            public T RequestNext(TimeSpan timeout)
+            {
+                _subscription.Value.Request(1);
+                return ExpectNext(timeout);
             }
         }
 
