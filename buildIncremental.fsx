@@ -16,6 +16,17 @@ module IncrementalTests =
     | Linux
     | All
 
+    type Runtime =
+    | NetCore
+    | Net
+
+    let SkippedTest name runtime =
+        match (name, runtime) with
+            | (EndsWith "Sqlite.Tests.csproj", NetCore) -> false
+            | (EndsWith "Cluster.Sharding.Tests.MultiNode.csproj", NetCore) -> false
+            | _ -> true
+
+
     let (|IsRunnable|_|) name platform (csproj:string) =
         let isSupported =
             match platform with
@@ -30,12 +41,13 @@ module IncrementalTests =
         | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
         | _ -> true
 
-    let getUnitTestProjects() =
+    let getUnitTestProjects runtime =
         let allTestProjects = !! "./**/core/**/*.Tests.csproj"
                               ++ "./**/contrib/**/*.Tests.csproj"
                               -- "./**/serializers/**/*Wire*.csproj"
         allTestProjects 
         |> Seq.filter IsRunnable
+        |> Seq.filter (fun p -> SkippedTest p runtime) // filter out specs that should not be run based on .NET Core / .NET differences
 
     let isBuildScript (file:string) =
         match file with
@@ -131,16 +143,18 @@ module IncrementalTests =
     // MultiNodeTestRunner incremental test selection
     //--------------------------------------------------------------------------------
 
-    let getMntrProjects() =
+    let getMntrProjects runtime =
         !! "./src/**/*Tests.MultiNode.csproj"
         |> Seq.map (fun x -> x.ToString())
+        |> Seq.filter (fun p -> SkippedTest p runtime) // filter out specs that should not be run based on .NET Core / .NET differences
     
     let getAllMntrTestAssemblies() = // if we're not running incremental tests
-        getMntrProjects()
+        getMntrProjects Net
         |> Seq.map (fun x -> getAssemblyForProject x)
+        |> Seq.filter (fun p -> SkippedTest p Net) // filter out specs that should not be run based on .NET Core / .NET differences
     
     let getAllMntrTestNetCoreAssemblies() = // if we're not running incremental tests
-        getMntrProjects()
+        getMntrProjects NetCore
         |> Seq.map (fun x -> getNetCoreAssemblyForProject x)
     
     //--------------------------------------------------------------------------------
@@ -215,7 +229,7 @@ module IncrementalTests =
                         //logfn "%s references %s but is not a test project..." proj.parentProject.projectName project
                         yield! findTestProjectsThatHaveDependencyOn proj.parentProject.projectName testMode }
     
-    let getIncrementalTestProjects2 testMode =
+    let getIncrementalTestProjects2 testMode runtime =
         logfn "Searching for incremental tests to run in %s test mode..." (testMode.ToString())
         let updatedFiles = getUpdatedFiles()
         log "The following files have been updated since forking from dev branch..."
@@ -223,10 +237,13 @@ module IncrementalTests =
         log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
             log "Full test suite"
-            match testMode with
-            | Unit -> getUnitTestProjects()
-            | MNTR -> getMntrProjects()
-            | Perf -> getPerfTestProjects()
+            let specs =
+                match testMode with
+                | Unit -> getUnitTestProjects runtime
+                | MNTR -> getMntrProjects runtime
+                | Perf -> getPerfTestProjects()
+            specs
+            |> Seq.filter (fun p -> SkippedTest p runtime) // filter out specs that should not be run based on .NET Core / .NET differences
         else
             updatedFiles
             |> generateContainingProjFileCollection
@@ -236,18 +253,19 @@ module IncrementalTests =
             |> Seq.map (fun p -> p.parentProject.projectPath)
             |> Seq.distinct
             |> Seq.filter IsRunnable
+            |> Seq.filter (fun p -> SkippedTest p runtime) // filter out specs that should not be run based on .NET Core / .NET differences
     
-    let getIncrementalUnitTests() =
-        getIncrementalTestProjects2 Unit
+    let getIncrementalUnitTests runtime =
+        getIncrementalTestProjects2 Unit runtime
     
-    let getIncrementalMNTRTests() =
-        getIncrementalTestProjects2 MNTR
+    let getIncrementalMNTRTests =
+        getIncrementalTestProjects2 MNTR Net
         |> Seq.map (fun p -> getAssemblyForProject p)
     
     let getIncrementalNetCoreMNTRTests() =
-        getIncrementalTestProjects2 MNTR
+        getIncrementalTestProjects2 MNTR NetCore
         |> Seq.map (fun p -> getNetCoreAssemblyForProject p)
     
     let getIncrementalPerfTests() =
-        getIncrementalTestProjects2 Perf
+        getIncrementalTestProjects2 Perf Net
         |> Seq.map (fun p -> getAssemblyForProject p)
