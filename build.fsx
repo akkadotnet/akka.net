@@ -171,9 +171,9 @@ Target "MultiNodeTests" (fun _ ->
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalMNTRTests |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalMNTRTests |> Seq.iter log
+                            getIncrementalMNTRTests() |> Seq.iter log
                             getAllMntrTestAssemblies()
         | _ -> log "All test projects will be run"
                getAllMntrTestAssemblies()
