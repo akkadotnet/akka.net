@@ -88,9 +88,6 @@ public class Publisher : ReceiveActor
         // activate the extension
         var mediator = DistributedPubSub.Get(Context.System).Mediator;
 
-        // subscribe to the topic named "content"
-        mediator.Tell(new Subscribe("content", Self));
-
         Receive<string>(str =>
         {
             var upperCase = str.ToUpper();
