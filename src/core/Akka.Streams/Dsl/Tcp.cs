@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.IO;
@@ -144,6 +145,7 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="system">TBD</param>
+        [InternalApi]
         public TcpExt(ExtendedActorSystem system)
         {
             _system = system;

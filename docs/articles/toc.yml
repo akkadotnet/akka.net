@@ -168,6 +168,8 @@
     href: utilities/event-bus.md
   - name: Logging
     href: utilities/logging.md
+  - name: Serilog
+    href: utilities/serilog.md
   - name: Scheduler
     href: utilities/scheduler.md
   - name: Circuit Breaker

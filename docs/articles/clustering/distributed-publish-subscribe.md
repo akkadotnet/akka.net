@@ -88,9 +88,6 @@ public class Publisher : ReceiveActor
         // activate the extension
         var mediator = DistributedPubSub.Get(Context.System).Mediator;
 
-        // subscribe to the topic named "content"
-        mediator.Tell(new Subscribe("content", Self));
-
         Receive<string>(str =>
         {
             var upperCase = str.ToUpper();
@@ -242,5 +239,5 @@ akka.cluster.pub-sub {
 It is recommended to load the extension when the actor system is started by defining it in akka.extensions configuration property. Otherwise it will be activated when first used and then it takes a while for it to be populated.
 
 ```hocon
-akka.extensions = ["akka.cluster.pubsub.DistributedPubSub"]
+akka.extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
 ```
