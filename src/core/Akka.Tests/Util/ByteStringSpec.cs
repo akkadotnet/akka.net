@@ -131,8 +131,8 @@ namespace Akka.Tests.Util
             Assert.Equal(-1, offset);
         }
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters should the correct string for ToString(Unicode)")]
-        public void A_concatenated_bytestring_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
+        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(Unicode)")]
+        public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
         {
             // In Unicode encoding, characters present in the ASCII character set are 2 bytes long.
 
@@ -150,8 +150,8 @@ namespace Akka.Tests.Util
             Assert.Equal(expected, actual);
         }
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters should the correct string for ToString(UTF8)")]
-        public void A_concatenated_bytestring_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
+        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(UTF8)")]
+        public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
         {
             // In UTF-8 encoding, characters present in the ASCII character set are only 1 byte long.
 
@@ -167,6 +167,26 @@ namespace Akka.Tests.Util
 
             string actual = data.ToString(encoding);
             Assert.Equal(expected, actual);
+        }
+
+        [Fact(DisplayName = "A sliced byte string must return the correct string for ToString")]
+        public void A_sliced_ByteString_must_return_correct_string_for_ToString()
+        {
+            const string expected = "ABCDEF";
+            Encoding encoding = Encoding.ASCII;
+
+            int halfExpected = expected.Length / 2;
+
+            string expectedLeft = expected.Substring(startIndex: 0, length: halfExpected);
+            string expectedRight = expected.Substring(startIndex: halfExpected, length: halfExpected);
+
+            ByteString data = ByteString.FromString(expected, encoding);
+
+            string actualLeft = data.Slice(index: 0, count: halfExpected).ToString(encoding);
+            string actualRight = data.Slice(index: halfExpected, count: halfExpected).ToString(encoding);
+
+            Assert.Equal(expectedLeft, actualLeft);
+            Assert.Equal(expectedRight, actualRight);
         }
     }
 }
