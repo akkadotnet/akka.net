@@ -157,7 +157,7 @@ involved (where message losses are to be expected).**
    (a long queue), delays caused by garbage collection, etc. In face of these, concurrent systems should handle response
    deadlines in the form of timeouts, just like networked/distributed systems.**  
 
-## How the actor model meets the needs of concurrent, distributed systems
+### How the actor model meets the needs of concurrent, distributed systems
 
 As described in the sections above, common programming practices cannot properly address the needs of modern concurrent
 and distributed systems.
@@ -186,7 +186,7 @@ In this way, actors actually achieve the execution we imagined for objects:
 ![actors interact with each other by sending messages](/images/actor_graph.png)
 
 An important difference of passing messages instead of calling methods is that messages have no return value.
-By sending a message, an actor delegates work to another actor. As we saw in @ref:[The illusion of a call stack](actors-intro.md#the-illusion-of-a-call-stack),
+By sending a message, an actor delegates work to another actor. As we saw in @ref:[The illusion of a call stack](what-are-actors.md#the-illusion-of-a-call-stack),
 if it expected a return value, the sending actor would either need to block or to execute the other actor's work on the same thread.
 Instead, the receiving actor delivers the results in a reply message.
 
