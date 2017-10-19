@@ -233,8 +233,6 @@ int-prio-mailbox {
             //resume mailbox, this prevents the mailbox from running to early
             actor.SendSystemMessage(new Resume(null));
 
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
-
             // expect the messages in the correct order
             foreach (var value in values)
             {
@@ -274,8 +272,6 @@ int-prio-mailbox {
 
             //resume mailbox, this prevents the mailbox from running to early
             actor.SendSystemMessage(new Resume(null));
-
-            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             this.Within(5.Seconds(), () =>
             {
