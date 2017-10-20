@@ -14,16 +14,12 @@
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 15 | 250 | 115 | Aaron Stannard |
-| 10 | 2844 | 1062 | Alex Valuyskiy |
-| 9 | 300 | 212 | Arjen Smits |
-| 8 | 994 | 415 | Bartosz Sypytkowski |
-| 8 | 269 | 82 | Nick Chamberlain |
-| 8 | 1925 | 111 | Joshua Garnett |
-| 4 | 47 | 15 | ravengerUA |
+| 9 | 137 | 59 | Aaron Stannard |
+| 8 | 2713 | 997 | Alex Valuyskiy |
+| 3 | 486 | 95 | Bartosz Sypytkowski |
 | 3 | 12 | 12 | Sebastien Bacquet |
-| 2 | 292 | 78 | Sean Gilliam |
-| 1 | 84 | 7 | Andrew Young |
+| 2 | 33 | 7 | ravengerUA |
+| 2 | 184 | 102 | Arjen Smits |
 | 1 | 71 | 7 | Adam Friedman |
 | 1 | 7 | 4 | Sam Neirinck |
 | 1 | 604 | 481 | zbynek001 |
@@ -31,15 +27,12 @@
 | 1 | 42 | 3 | Lukas Rieger |
 | 1 | 40 | 2 | Joshua Benjamin |
 | 1 | 4 | 5 | derrickcrowne |
-| 1 | 3 | 3 | Ian Clegg |
 | 1 | 3 | 2 | Mikhail Moussikhine |
 | 1 | 20 | 0 | Arturo Sevilla |
-| 1 | 2 | 3 | alexvaluyskiy |
-| 1 | 2 | 2 | Alberto Dallagiacoma |
 | 1 | 2 | 0 | Paweł Bańka |
 | 1 | 17 | 11 | planerist |
 | 1 | 1 | 4 | lesscode |
-| 1 | 1 | 1 | Tvildo |
+
 
 
 You can [view the full v1.3.2 change set here](https://github.com/akkadotnet/akka.net/milestone/20).
