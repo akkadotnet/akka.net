@@ -1,5 +1,41 @@
-#### 1.3.2 September 5 2017 ####
-Placeholder 
+#### 1.3.2 October 20 2017 ####
+**Maintenance Release for Akka.NET 1.3**
+
+**Updates and bugfixes**:
+- Bugfix: Akka incorrectly schedules continuations after .Ask, causing deadlocks and/or delays
+- Bugfix: ByteString.ToString is sometimes broken for Unicode encoding
+- Bugfix: ClusterShardingMessageSerializer Exception after upgrade from 1.2.0 to 1.3.1
+- Bugfix: Fix an inconstant ToString on ConsistentRoutee when the node is remote vs. local
+- Various documentation fixes
+- Akka.Streams: Implement MergePrioritized
+- Akka.Streams: Implement Restart Flow/Source/Sink
+- Akka.TestKit.Xunit: updated `xunit` dependency to 2.3.0 stable.
+- Akka.Cluster.TestKit: removed dependency on Akka.Tests.Shared.Internals
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 9 | 137 | 59 | Aaron Stannard |
+| 8 | 2713 | 997 | Alex Valuyskiy |
+| 3 | 486 | 95 | Bartosz Sypytkowski |
+| 3 | 12 | 12 | Sebastien Bacquet |
+| 2 | 33 | 7 | ravengerUA |
+| 2 | 184 | 102 | Arjen Smits |
+| 1 | 71 | 7 | Adam Friedman |
+| 1 | 7 | 4 | Sam Neirinck |
+| 1 | 604 | 481 | zbynek001 |
+| 1 | 6 | 6 | Kenneth Ito |
+| 1 | 42 | 3 | Lukas Rieger |
+| 1 | 40 | 2 | Joshua Benjamin |
+| 1 | 4 | 5 | derrickcrowne |
+| 1 | 3 | 2 | Mikhail Moussikhine |
+| 1 | 20 | 0 | Arturo Sevilla |
+| 1 | 2 | 0 | Paweł Bańka |
+| 1 | 17 | 11 | planerist |
+| 1 | 1 | 4 | lesscode |
+
+
+
+You can [view the full v1.3.2 change set here](https://github.com/akkadotnet/akka.net/milestone/20).
 
 #### 1.3.1 September 5 2017 ####
 **Maintenance Release for Akka.NET 1.3**
