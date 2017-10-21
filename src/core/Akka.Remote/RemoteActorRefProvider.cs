@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -25,6 +26,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class RemoteActorRefProvider : IActorRefProvider
     {
         private readonly ILoggingAdapter _log;

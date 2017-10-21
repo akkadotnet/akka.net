@@ -107,19 +107,25 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal static ExtractShardId extractShardId1 = message =>
         {
-            if (message is int)
-                return (((int)message) % ShardCount).ToString();
-            if (message is ShardRegion.StartEntity)
-                return extractShardId1(((ShardRegion.StartEntity)message).EntityId);
+            switch (message)
+            {
+                case int msg:
+                    return (msg % ShardCount).ToString();
+                case ShardRegion.StartEntity msg:
+                    return extractShardId1(msg.EntityId);
+            }
             return null;
         };
 
         internal static ExtractShardId extractShardId2 = message =>
         {
-            if (message is int)
-                return (((int)message + 1) % ShardCount).ToString();
-            if (message is ShardRegion.StartEntity)
-                return extractShardId2(((ShardRegion.StartEntity)message).EntityId);
+            switch (message)
+            {
+                case int msg:
+                    return ((msg + 1) % ShardCount).ToString();
+                case ShardRegion.StartEntity msg:
+                    return extractShardId2(msg.EntityId);
+            }
             return null;
         };
 

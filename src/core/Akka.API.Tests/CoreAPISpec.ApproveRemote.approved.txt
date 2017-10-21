@@ -107,6 +107,7 @@ namespace Akka.Remote
         public abstract bool IsMonitoring { get; }
         public abstract void HeartBeat();
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class static FailureDetectorLoader
     {
         public static Akka.Remote.FailureDetector Load(string fqcn, Akka.Configuration.Config config, Akka.Actor.ActorSystem system) { }
@@ -156,6 +157,7 @@ namespace Akka.Remote
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class RemoteActorRefProvider : Akka.Actor.IActorRefProvider
     {
         public RemoteActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
@@ -229,6 +231,7 @@ namespace Akka.Remote
             public string TransportClass { get; set; }
         }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public abstract class RemoteTransport
     {
         protected RemoteTransport(Akka.Actor.ExtendedActorSystem system, Akka.Remote.RemoteActorRefProvider provider) { }

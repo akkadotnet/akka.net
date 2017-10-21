@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Annotations;
+
 namespace Akka.Actor.Internal
 {
     /// <summary>
@@ -14,6 +16,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     /// <typeparam name="TState">TBD</typeparam>
     /// <typeparam name="TData">TBD</typeparam>
+    [InternalApi]
     public interface IInternalSupportsTestFSMRef<TState, TData>
     {
         /// <summary>
@@ -34,6 +37,7 @@ namespace Akka.Actor.Internal
     /// INTERNAL API. Used for testing.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
+    [InternalApi]
     public class InternalActivateFsmLogging
     {
         private static readonly InternalActivateFsmLogging _instance = new InternalActivateFsmLogging();

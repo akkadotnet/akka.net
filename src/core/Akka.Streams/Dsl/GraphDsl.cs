@@ -471,10 +471,11 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
         /// <param name="ops">TBD</param>
         /// <param name="sink">TBD</param>
         /// <returns>TBD</returns>
-        public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, IGraph<SinkShape<TIn>, TMat> sink)
+        public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat, TMat2>(this GraphDsl.ForwardOps<TOut, TMat> ops, IGraph<SinkShape<TIn>, TMat2> sink)
             where TIn : TOut
         {
             var b = ops.Builder;

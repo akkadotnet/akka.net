@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Streams.Actors;
 using Reactive.Streams;
 
@@ -36,6 +37,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public abstract class SourceModule<TOut, TMat> : AtomicModule, ISourceModule
     {
         private readonly SourceShape<TOut> _shape;
@@ -132,6 +134,7 @@ namespace Akka.Streams.Implementation
     /// Holds a `Subscriber` representing the input side of the flow. The `Subscriber` can later be connected to an upstream `Publisher`.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class SubscriberSource<TOut> : SourceModule<TOut, ISubscriber<TOut>>
     {
         /// <summary>
@@ -186,6 +189,7 @@ namespace Akka.Streams.Implementation
     /// downstream and the propagation of back-pressure upstream.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class PublisherSource<TOut> : SourceModule<TOut, NotUsed>
     {
         private readonly IPublisher<TOut> _publisher;
@@ -247,6 +251,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class MaybeSource<TOut> : SourceModule<TOut, TaskCompletionSource<TOut>>
     {
         /// <summary>
@@ -298,6 +303,7 @@ namespace Akka.Streams.Implementation
     /// Creates and wraps an actor into <see cref="IPublisher{T}"/> from the given <see cref="Props"/>, which should be props for an <see cref="ActorPublisher{T}"/>.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorPublisherSource<TOut> : SourceModule<TOut, IActorRef>
     {
         private readonly Props _props;
@@ -353,6 +359,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorRefSource<TOut> : SourceModule<TOut, IActorRef>
     {
         private readonly int _bufferSize;

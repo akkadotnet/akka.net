@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 
 namespace Akka.Remote
@@ -23,6 +24,7 @@ namespace Akka.Remote
     /// be available (i.e. fully initialized) by the time the first message is received or when the Start() method
     /// returns, whichever happens first.
     /// </summary>
+    [InternalApi]
     public abstract class RemoteTransport
     {
         /// <summary>

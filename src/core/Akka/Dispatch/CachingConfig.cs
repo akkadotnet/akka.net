@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 
@@ -22,6 +23,7 @@ namespace Akka.Dispatch
     /// 
     /// All other <see cref="Config"/> operations are delegated to the wrapped <see cref="Config"/>.
     /// </summary>
+    [InternalApi]
     class CachingConfig : Config
     {
         private static readonly Config EmptyConfig = ConfigurationFactory.Empty;

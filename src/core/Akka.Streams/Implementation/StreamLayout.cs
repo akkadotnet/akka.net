@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
@@ -1480,61 +1481,58 @@ namespace Akka.Streams.Implementation
         public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
-    /**
-     * INTERNAL API
-     *
-     * This is a transparent processor that shall consume as little resources as
-     * possible. Due to the possibility of receiving uncoordinated inputs from both
-     * downstream and upstream, this needs an atomic state machine which looks a
-     * little like this:
-     *
-     * <![CDATA[
-     *            +--------------+      (2)    +------------+
-     *            |     null     | ----------> | Subscriber |
-     *            +--------------+             +------------+
-     *                   |                           |
-     *               (1) |                           | (1)
-     *                  \|/                         \|/
-     *            +--------------+      (2)    +------------+ --\
-     *            | Subscription | ----------> |    Both    |    | (4)
-     *            +--------------+             +------------+ <-/
-     *                   |                           |
-     *               (3) |                           | (3)
-     *                  \|/                         \|/
-     *            +--------------+      (2)    +------------+ --\
-     *            |   Publisher  | ----------> |   Inert    |    | (4, *)
-     *            +--------------+             +------------+ <-/
-     * ]]>
-     * The idea is to keep the major state in only one atomic reference. The actions
-     * that can happen are:
-     *
-     *  (1) onSubscribe
-     *  (2) subscribe
-     *  (3) onError / onComplete
-     *  (4) onNext
-     *      (*) Inert can be reached also by cancellation after which onNext is still fine
-     *          so we just silently ignore possible spec violations here
-     *
-     * Any event that occurs in a state where no matching outgoing arrow can be found
-     * is a spec violation, leading to the shutdown of this processor (meaning that
-     * the state is updated such that all following actions match that of a failed
-     * Publisher or a cancelling Subscriber, and the non-guilty party is informed if
-     * already connected).
-     *
-     * request() can only be called after the Subscriber has received the Subscription
-     * and that also means that onNext() will only happen after having transitioned into
-     * the Both state as well. The Publisher state means that if the real
-     * Publisher terminates before we get the Subscriber, we can just forget about the
-     * real one and keep an already finished one around for the Subscriber.
-     *
-     * The Subscription that is offered to the Subscriber must cancel the original
-     * Publisher if things go wrong (like `request(0)` coming in from downstream) and
-     * it must ensure that we drop the Subscriber reference when `cancel` is invoked.
-     */
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// This is a transparent processor that shall consume as little resources as
+    /// possible. Due to the possibility of receiving uncoordinated inputs from both
+    /// downstream and upstream, this needs an atomic state machine which looks a
+    /// little like this:
+    /// 
+    /// <![CDATA[
+    ///            +--------------+      (2)    +------------+
+    ///            |     null     | ----------> | Subscriber |
+    ///            +--------------+             +------------+
+    ///                   |                           |
+    ///               (1) |                           | (1)
+    ///                  \|/                         \|/
+    ///            +--------------+      (2)    +------------+ --\
+    ///            | Subscription | ----------> |    Both    |    | (4)
+    ///            +--------------+             +------------+ <-/
+    ///                   |                           |
+    ///               (3) |                           | (3)
+    ///                  \|/                         \|/
+    ///            +--------------+      (2)    +------------+ --\
+    ///            |   Publisher  | ----------> |   Inert    |    | (4, *)
+    ///            +--------------+             +------------+ <-/
+    /// ]]>
+    /// The idea is to keep the major state in only one atomic reference. The actions
+    /// that can happen are:
+    /// 
+    ///  (1) onSubscribe
+    ///  (2) subscribe
+    ///  (3) onError / onComplete
+    ///  (4) onNext
+    ///      (*) Inert can be reached also by cancellation after which onNext is still fine
+    ///          so we just silently ignore possible spec violations here
+    /// 
+    /// Any event that occurs in a state where no matching outgoing arrow can be found
+    /// is a spec violation, leading to the shutdown of this processor (meaning that
+    /// the state is updated such that all following actions match that of a failed
+    /// Publisher or a cancelling Subscriber, and the non-guilty party is informed if
+    /// already connected).
+    /// 
+    /// request() can only be called after the Subscriber has received the Subscription
+    /// and that also means that onNext() will only happen after having transitioned into
+    /// the Both state as well. The Publisher state means that if the real
+    /// Publisher terminates before we get the Subscriber, we can just forget about the
+    /// real one and keep an already finished one around for the Subscriber.
+    /// 
+    /// The Subscription that is offered to the Subscriber must cancel the original
+    /// Publisher if things go wrong (like `request(0)` coming in from downstream) and
+    /// it must ensure that we drop the Subscriber reference when `cancel` is invoked.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class VirtualProcessor<T> : AtomicReference<object>, IProcessor<T, T>
     {
         private const string NoDemand = "spec violation: OnNext was signaled from upstream without demand";
@@ -2012,28 +2010,24 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    /**
-     * INTERNAL API
-     *
-     * The implementation of `Sink.AsPublisher` needs to offer a `Publisher` that
-     * defers to the upstream that is connected during materialization. This would
-     * be trivial if it were not for materialized value computations that may even
-     * spawn the code that does `pub.subscribe(sub)` in a Future, running concurrently
-     * with the actual materialization. Therefore we implement a minimal shell here
-     * that plugs the downstream and the upstream together as soon as both are known.
-     * Using a VirtualProcessor would technically also work, but it would defeat the
-     * purpose of subscription timeouts�the subscription would always already be
-     * established from the Actor�s perspective, regardless of whether a downstream
-     * will ever be connected.
-     *
-     * One important consideration is that this `Publisher` must not retain a reference
-     * to the `Subscriber` after having hooked it up with the real `Publisher`, hence
-     * the use of `Inert.subscriber` as a tombstone.
-     */
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// The implementation of <see cref="Sink.AsPublisher{T}"/> needs to offer a <see cref="IPublisher{T}"/> that
+    /// defers to the upstream that is connected during materialization. This would
+    /// be trivial if it were not for materialized value computations that may even
+    /// spawn the code that does <see cref="IPublisher{T}.Subscribe"/> in a Future, running concurrently
+    /// with the actual materialization. Therefore we implement a minimal shell here
+    /// that plugs the downstream and the upstream together as soon as both are known.
+    /// Using a VirtualProcessor would technically also work, but it would defeat the
+    /// purpose of subscription timeouts�the subscription would always already be
+    /// established from the Actor�s perspective, regardless of whether a downstream
+    /// will ever be connected.
+    /// 
+    /// One important consideration is that this <see cref="IPublisher{T}"/> must not retain a reference
+    /// to the <see cref="ISubscriber{T}"/> after having hooked it up with the real <see cref="IPublisher{T}"/>, hence
+    /// the use of `Inert.subscriber` as a tombstone.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
     internal sealed class VirtualPublisher<T> : AtomicReference<object>, IPublisher<T>, IUntypedVirtualPublisher
     {
         #region internal classes
@@ -2126,6 +2120,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public abstract class MaterializerSession
     {
         /// <summary>
@@ -2538,6 +2533,7 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
         private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Reactive.Streams;
@@ -395,6 +396,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public static class FanOut
     {
         /// <summary>
@@ -527,6 +529,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class FanOut<T> : ActorBase, IPump
     {
 

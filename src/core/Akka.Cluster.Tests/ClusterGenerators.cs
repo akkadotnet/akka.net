@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Net;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Tests.Shared.Internals.Helpers;
 using FsCheck;
 
@@ -20,6 +21,7 @@ namespace Akka.Cluster.Tests
     /// 
     /// FsCheck data generators for Akka.Cluster types.
     /// </summary>
+    [InternalApi]
     public class ClusterGenerators
     {
         public static Arbitrary<Address> AddressGenerator()

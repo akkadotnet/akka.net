@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -332,6 +333,7 @@ namespace Akka.Actor
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class UnstartedCell : ICell
     {
         private readonly ActorSystemImpl _system;

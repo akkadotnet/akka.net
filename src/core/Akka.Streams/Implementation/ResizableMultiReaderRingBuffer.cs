@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using Akka.Annotations;
 using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
@@ -70,6 +71,7 @@ namespace Akka.Streams.Implementation
     /// elements, rather, if full, the buffer tries to grow and rejects further writes if max capacity is reached.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public class ResizableMultiReaderRingBuffer<T>
     {
         private readonly int _maxSizeBit;

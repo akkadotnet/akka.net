@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Annotations;
 using Akka.Streams.Implementation;
 
 namespace Akka.Streams
@@ -22,6 +23,7 @@ namespace Akka.Streams
         /// <summary>
         /// INTERNAL API: Every materializable element must be backed by a stream layout module
         /// </summary>
+        [InternalApi]
         IModule Module { get; }
     }
 

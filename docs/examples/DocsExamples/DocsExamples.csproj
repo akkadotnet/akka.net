@@ -3,12 +3,12 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net461</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\core\Akka\Akka.csproj" />
     <ProjectReference Include="..\..\..\src\core\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\src\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\..\..\src\core\Akka.TestKit\Akka.TestKit.csproj" />
     <ProjectReference Include="..\..\..\src\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
     <ProjectReference Include="..\..\..\src\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
