@@ -41,6 +41,26 @@ var log = Context.GetLogger(new SerilogLogMessageFormatter());
 ...
 log.Info("The value is {Counter}", counter);
 ```
+## Extensions
+
+The package __Akka.Logger.Serilog__ also includes the extension method `ForContext()` for `ILoggingAdapter` (the object returned by `Context.GetLogger()`). This is analogous to Serilog's `ForContext()` but instead of returning a Serilog `ILogger` it returns an Akka.NET `ILoggingAdapter`. This instance acts as contextual logger that will attach a property to all events logged through it.
+
+However, in order to use it, the parent `ILoggingAdapter` must be constructed through another included generic extension method for `GetLogger()`. For example,
+
+```csharp
+using Akka.Logger.Serilog;
+...
+private readonly ILoggingAdapter _logger = Context.GetLogger<SerilogLoggingAdapter>();
+...
+private void ProcessMessage(string correlationId)
+{
+    var contextLogger = _logger.ForContext("CorrelationId", correlationId);
+    contextLogger.Info("Processing message.");
+}
+```
+
+If the configured output template is, for example, `"[{CorrelationId}] {Message}{NewLine}"`, and the parameter `correlationId` is `"1234"` then the resulting log would contain the line `[1234] Processing message.`. This can work for message templates as well, however, as specified in a previous section, a `SerilogLogMessageFormatter` instance would have to be provided to `GetLogger<SerilogLoggingAdapter>()`.
+
 ## HOCON configuration
 
 In order to be able to change log level without the need to recompile, we need to employ some sort of configuration.  To use Serilog via HOCON configuration, add the following to the App.config
