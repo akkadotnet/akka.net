@@ -11,6 +11,7 @@ open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
 open Fake.Git
+open Fake.NuGet.Install
 
 // Variables
 let configuration = "Release"
@@ -488,12 +489,19 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
+    // build the project with samples
     let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
     DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
     DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
-    let docsPath = "./docs"
+    // install MSDN references
+    NugetInstall (fun p -> 
+            { p with
+                ExcludeVersion = true
+                Version = "0.1.0-alpha-1611021200"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
+    let docsPath = "./docs"
     DocFx (fun p -> 
                 { p with 
                     Timeout = TimeSpan.FromMinutes 30.0; 
