@@ -300,32 +300,13 @@ let overrideVersionSuffix (project:string) =
     | _ -> versionSuffix
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/Akka.csproj"
-                   ++ "src/**/Akka.Cluster.csproj"
-                   ++ "src/**/Akka.Cluster.TestKit.csproj"
-                   ++ "src/**/Akka.Cluster.Tools.csproj"
-                   ++ "src/**/Akka.Cluster.Sharding.csproj"
-                   ++ "src/**/Akka.DistributedData.csproj"
-                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
-                   ++ "src/**/Akka.Persistence.csproj"
-                   ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TCK.csproj"
-                   ++ "src/**/Akka.Persistence.Query.Sql.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.Common.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
-                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
-                   ++ "src/**/Akka.Remote.csproj"
-                   ++ "src/**/Akka.Remote.TestKit.csproj"
-                   ++ "src/**/Akka.Streams.csproj"
-                   ++ "src/**/Akka.Streams.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit2.csproj"
-                   ++ "src/**/Akka.DI.Core.csproj"
-                   ++ "src/**/Akka.DI.TestKit.csproj"
-                   ++ "src/**/Akka.Serialization.Hyperion.csproj"
-                   ++ "src/**/Akka.Serialization.TestKit.csproj"
-                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
+    let projects = !! "src/**/*.csproj"
+                   -- "src/**/*.Tests*.csproj"
+                   -- "src/benchmark/**/*.csproj"
+                   -- "src/examples/**/*.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
+                   -- "src/**/*.NodeTestRunner.csproj"
 
     let runSingleProject project =
         DotNetCli.Pack
@@ -585,8 +566,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"
