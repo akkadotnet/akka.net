@@ -566,7 +566,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-//"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"
