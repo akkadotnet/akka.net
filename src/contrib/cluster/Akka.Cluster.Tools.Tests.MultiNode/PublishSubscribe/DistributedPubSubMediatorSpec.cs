@@ -158,7 +158,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 Receive<JoinGroup>(j => mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
                 Receive<ExitGroup>(j => mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
 
-                ReceiveAny(msg => DistributedPubSubMediatorSpec.Current.TestActor.Tell(msg));
+                var testActor = DistributedPubSubMediatorSpec.Current.TestActor;
+                ReceiveAny(msg => testActor.Tell(msg));
             }
         }
 
@@ -300,11 +301,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private int MediatorCount {
             get {
-                return Mediator.Ask<int>(Count.Instance).Result;
-
-                // The code below seems racy : sometimes the count is sent to other actors than the supposed requester
-                //Mediator.Tell(Count.Instance);
-                //return ExpectMsg<int>();
+                Mediator.Tell(Count.Instance);
+                return ExpectMsg<int>();
             }
         }
 
