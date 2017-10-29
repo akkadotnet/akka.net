@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RecoveryPermitter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Event;
@@ -9,14 +16,23 @@ namespace Akka.Persistence
 {
     internal sealed class RequestRecoveryPermit
     {
-        public static RequestRecoveryPermit Instance { get; } = new RequestRecoveryPermit();
-        private RequestRecoveryPermit() { }
+        public RequestRecoveryPermit(object correlationId)
+        {
+            CorrelationId = correlationId;
+        }
+
+        public object CorrelationId { get; }
+
     }
 
     internal sealed class RecoveryPermitGranted
     {
-        public static RecoveryPermitGranted Instance { get; } = new RecoveryPermitGranted();
-        private RecoveryPermitGranted() { }
+        public RecoveryPermitGranted(object correlationId)
+        {
+            CorrelationId = correlationId;
+        }
+
+        public object CorrelationId { get; }
     }
 
     internal sealed class ReturnRecoveryPermit
@@ -48,7 +64,7 @@ namespace Akka.Persistence
 
         protected override void OnReceive(object message)
         {
-            if (message is RequestRecoveryPermit)
+            if (message is RequestRecoveryPermit req)
             {
                 Context.Watch(Sender);
                 if (_usedPermits >= MaxPermits)
@@ -60,7 +76,7 @@ namespace Akka.Persistence
                 }
                 else
                 {
-                    RecoveryPermitGranted(Sender);
+                    FinalizeRecoveryPermitGranted(Sender);
                 }
             }
             else if (message is ReturnRecoveryPermit)
@@ -85,7 +101,7 @@ namespace Akka.Persistence
             if (pending.Count > 0)
             {
                 var popRef = pending.Pop();
-                RecoveryPermitGranted(popRef);
+                FinalizeRecoveryPermitGranted(popRef);
             }
 
             if (pending.Count != 0 || _maxPendingStats <= 0)
@@ -95,10 +111,10 @@ namespace Akka.Persistence
             _maxPendingStats = 0;
         }
 
-        private void RecoveryPermitGranted(IActorRef actorRef)
+        private void FinalizeRecoveryPermitGranted(IActorRef actorRef)
         {
             _usedPermits++;
-            actorRef.Tell(Akka.Persistence.RecoveryPermitGranted.Instance);
+            actorRef.Tell(RecoveryPermitGranted.Instance);
         }
     }
 }

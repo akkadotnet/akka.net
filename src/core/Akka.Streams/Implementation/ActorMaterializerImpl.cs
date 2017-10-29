@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
@@ -26,30 +27,33 @@ namespace Akka.Streams.Implementation
     public abstract class ExtendedActorMaterializer : ActorMaterializer
     {
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <param name="subFlowFuser">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser);
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <param name="subFlowFuser">TBD</param>
         /// <param name="initialAttributes">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes);
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="props">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public override IActorRef ActorOf(MaterializationContext context, Props props)
         {
             var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
@@ -60,13 +64,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <param name="props">TBD</param>
         /// <param name="name">TBD</param>
         /// <param name="dispatcher">TBD</param>
         /// <exception cref="IllegalStateException">TBD</exception>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
             var localActorRef = Supervisor as LocalActorRef;
@@ -253,21 +258,27 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public override bool IsShutdown => _haveShutDown.Value;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override ActorMaterializerSettings Settings => _settings;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override ActorSystem System => _system;
+
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
+        [InternalApi]
         public override IActorRef Supervisor => _supervisor;
+
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
+        [InternalApi]
         public override ILoggingAdapter Logger => _logger ?? (_logger = GetLogger());
 
         /// <summary>

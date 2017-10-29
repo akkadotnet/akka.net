@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Assert = System.Diagnostics.Debug;
 
@@ -276,6 +277,7 @@ namespace Akka.Dispatch.SysMsg
     /// <see cref="ISystemMessage"/> is an interface and too basic to express
     /// all of the capabilities needed to express a full-fledged system message.
     /// </summary>
+    [InternalApi]
     public abstract class SystemMessage : ISystemMessage
     {
         /// <summary>
@@ -356,6 +358,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
         private readonly long _uid;

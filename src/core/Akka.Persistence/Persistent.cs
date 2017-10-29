@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Serialization;
 
@@ -275,6 +276,7 @@ namespace Akka.Persistence
     /// <summary>
     /// INTERNAL API.
     /// </summary>
+    [InternalApi]
     [Serializable]
     public class Persistent : IPersistentRepresentation, IEquatable<IPersistentRepresentation>
     {

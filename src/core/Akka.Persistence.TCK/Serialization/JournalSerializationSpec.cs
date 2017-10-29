@@ -52,9 +52,9 @@ namespace Akka.Persistence.TCK.Serialization
                 new AtomicWrite(persistentEvent)
             };
 
-            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(messages, probe.Ref, CorrelationId));
             probe.ExpectMsg<WriteMessagesSuccessful>();
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.CorrelationId == CorrelationId && m.Persistent.PersistenceId == Pid);
 
             Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, probe.Ref));
             probe.ExpectMsg<ReplayedMessage>(s => s.Persistent.PersistenceId == Pid
@@ -74,9 +74,9 @@ namespace Akka.Persistence.TCK.Serialization
                 new AtomicWrite(persistentEvent)
             };
 
-            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(messages, probe.Ref, CorrelationId));
             probe.ExpectMsg<WriteMessagesSuccessful>();
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.CorrelationId == CorrelationId && m.Persistent.PersistenceId == Pid);
 
             Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, probe.Ref));
             probe.ExpectMsg<ReplayedMessage>(s => s.Persistent.PersistenceId == persistentEvent.PersistenceId
@@ -96,9 +96,9 @@ namespace Akka.Persistence.TCK.Serialization
                 new AtomicWrite(persistentEvent)
             };
 
-            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(messages, probe.Ref, CorrelationId));
             probe.ExpectMsg<WriteMessagesSuccessful>();
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.CorrelationId == CorrelationId && m.Persistent.PersistenceId == Pid);
 
             Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, probe.Ref));
             probe.ExpectMsg<ReplayedMessage>(s => s.Persistent.PersistenceId == persistentEvent.PersistenceId
@@ -119,9 +119,9 @@ namespace Akka.Persistence.TCK.Serialization
                 new AtomicWrite(new Persistent(stateChangeEvent, 1, Pid))
             };
 
-            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(messages, probe.Ref, CorrelationId));
             probe.ExpectMsg<WriteMessagesSuccessful>();
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.CorrelationId == CorrelationId && m.Persistent.PersistenceId == Pid);
 
             Journal.Tell(new ReplayMessages(0, 1, long.MaxValue, Pid, probe.Ref));
             probe.ExpectMsg<ReplayedMessage>();

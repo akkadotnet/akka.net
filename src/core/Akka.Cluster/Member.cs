@@ -21,7 +21,7 @@ namespace Akka.Cluster
     /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
     /// not its <see cref="MemberStatus"/> and roles.
     /// </remarks>
-    public class Member : IComparable<Member>
+    public class Member : IComparable<Member>, IComparable
     {
         /// <summary>
         /// TBD
@@ -112,9 +112,13 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="IComparable.CompareTo"/>
-        public int CompareTo(Member other)
+        public int CompareTo(Member other) => Ordering.Compare(this, other);
+
+        int IComparable.CompareTo(object obj)
         {
-            return Ordering.Compare(this, other);
+            if (obj is Member member) return CompareTo(member);
+
+            throw new ArgumentException($"Cannot compare {nameof(Member)} to an instance of type '{obj?.GetType().FullName ?? "null"}'");
         }
 
         /// <inheritdoc cref="object.ToString"/>
@@ -192,10 +196,13 @@ namespace Akka.Cluster
             /// <inheritdoc cref="IComparer{Address}.Compare"/>
             public int Compare(Address x, Address y)
             {
-                if (x.Equals(y)) return 0;
-                if (!x.Host.Equals(y.Host)) return String.Compare(x.Host.GetOrElse(""), y.Host.GetOrElse(""), StringComparison.Ordinal);
-                if (!x.Port.Equals(y.Port)) return Nullable.Compare(x.Port.GetOrElse(0), (y.Port.GetOrElse(0)));
-                return 0;
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                if (ReferenceEquals(x, y)) return 0;
+                var result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                if (result != 0) return result;
+                return Nullable.Compare(x.Port, y.Port);
             }
         }
 
@@ -258,7 +265,10 @@ namespace Akka.Cluster
             /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member x, Member y)
             {
-                return x.UniqueAddress.CompareTo(y.UniqueAddress);
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                return x.UniqueAddress.CompareTo(y.UniqueAddress, AddressOrdering);
             }
         }
 
@@ -420,7 +430,7 @@ namespace Akka.Cluster
     /// The `uid` is needed to be able to distinguish different
     /// incarnations of a member with same hostname and port.
     /// </summary>
-    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>
+    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>, IComparable
     {
         /// <summary>
         /// The bound listening address for Akka.Remote.
@@ -468,16 +478,23 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="that">TBD</param>
+        /// <param name="uniqueAddress">TBD</param>
         /// <returns>TBD</returns>
-        public int CompareTo(UniqueAddress that)
+        public int CompareTo(UniqueAddress uniqueAddress) => CompareTo(uniqueAddress, Address.Comparer);
+
+        int IComparable.CompareTo(object obj)
         {
-            var result = Member.AddressOrdering.Compare(Address, that.Address);
-            if (result == 0)
-                if (Uid < that.Uid) return -1;
-                else if (Uid == that.Uid) return 0;
-                else return 1;
-            return result;
+            if (obj is UniqueAddress address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(UniqueAddress)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
+        }
+
+        internal int CompareTo(UniqueAddress uniqueAddress, IComparer<Address> addresComparer)
+        {
+            if (uniqueAddress == null) throw new ArgumentNullException(nameof(uniqueAddress));
+
+            var result = addresComparer.Compare(Address, uniqueAddress.Address);
+            return result == 0 ? Uid.CompareTo(uniqueAddress.Uid) : result;
         }
 
         /// <inheritdoc cref="object.ToString"/>

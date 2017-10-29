@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Util;
@@ -22,6 +23,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Leading whitespace between elements will be trimmed.
     /// </summary>
+    [InternalApi]
     public class JsonObjectParser
     {
         private static readonly byte SquareBraceStart = Convert.ToByte('[');

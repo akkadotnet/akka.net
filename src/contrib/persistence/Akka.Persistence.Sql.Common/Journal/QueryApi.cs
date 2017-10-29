@@ -177,23 +177,26 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long FromOffset;
+        public long FromOffset { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long ToOffset;
+        public long ToOffset { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long Max;
+        public long Max { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Tag;
+        public string Tag { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef ReplyTo;
+        public IActorRef ReplyTo { get; }
+
+        /// <inheritdoc />
+        public object CorrelationId { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
@@ -203,6 +206,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="max">TBD</param>
         /// <param name="tag">TBD</param>
         /// <param name="replyTo">TBD</param>
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
+        /// </param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown for a number of reasons. These include the following:
         /// <ul>
@@ -214,7 +220,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
         /// </exception>
-        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
+        public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo, object correlationId = null)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
             if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
@@ -226,6 +232,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Max = max;
             Tag = tag;
             ReplyTo = replyTo;
+            CorrelationId = correlationId;
         }
     }
 

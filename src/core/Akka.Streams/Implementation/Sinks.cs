@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -43,6 +44,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
@@ -146,6 +148,7 @@ namespace Akka.Streams.Implementation
     /// a subscriber connects and creates demand for elements to be emitted.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     internal class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
         /// <summary>
@@ -258,6 +261,7 @@ namespace Akka.Streams.Implementation
     /// Attaches a subscriber to this stream.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly ISubscriber<TIn> _subscriber;
@@ -314,6 +318,7 @@ namespace Akka.Streams.Implementation
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class CancelSink<T> : SinkModule<T, NotUsed>
     {
         /// <summary>
@@ -368,6 +373,7 @@ namespace Akka.Streams.Implementation
     /// which should be <see cref="Props"/> for an <see cref="ActorSubscriber"/>.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
         private readonly Props _props;
@@ -425,6 +431,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly IActorRef _ref;
@@ -489,6 +496,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
@@ -568,6 +576,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
@@ -643,6 +652,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
     {
         #region stage logic
@@ -730,6 +740,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
     {
         #region stage logic

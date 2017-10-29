@@ -35,6 +35,16 @@ namespace Akka.IO
         #region creation methods
 
         /// <summary>
+        /// INTERNAL API: remove this method once <see cref="Udp.Send"/> public constructor will be removed.
+        /// </summary>
+        internal static ByteString FromBuffers(IEnumerator<ByteBuffer> buffers)
+        {
+            var cached = new List<ByteBuffer>();
+            while (buffers.MoveNext()) cached.Add(buffers.Current);
+            return FromBytes(cached);
+        }
+
+        /// <summary>
         /// Creates a new <see cref="ByteString"/> by copying a provided byte array.
         /// </summary>
         /// <param name="array">Array of bytes to copy</param>
@@ -570,13 +580,12 @@ namespace Akka.IO
 
         public string ToString(Encoding encoding)
         {
-            var builder = new StringBuilder(_count);
-            foreach (var buffer in _buffers)
-            {
-                var part = encoding.GetString(buffer.Array, buffer.Offset, buffer.Count);
-                builder.Append(part);
-            }
-            return builder.ToString();
+            if (IsCompact)
+                return encoding.GetString(_buffers[0].Array, _buffers[0].Offset, _buffers[0].Count);
+
+            byte[] buffer = ToArray();
+
+            return encoding.GetString(buffer);
         }
 
         public static bool operator ==(ByteString x, ByteString y) => Equals(x, y);

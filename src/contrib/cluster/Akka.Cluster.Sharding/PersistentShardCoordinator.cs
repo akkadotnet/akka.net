@@ -118,74 +118,64 @@ namespace Akka.Cluster.Sharding
             /// <returns>TBD</returns>
             public State Updated(IDomainEvent e)
             {
-                if (e is ShardRegionRegistered)
+                switch (e)
                 {
-                    var message = e as ShardRegionRegistered;
-                    if (Regions.ContainsKey(message.Region))
-                        throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
+                    case ShardRegionRegistered message:
+                        if (Regions.ContainsKey(message.Region))
+                            throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
 
-                    return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
-                }
+                        return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
 
-                if (e is ShardRegionProxyRegistered)
-                {
-                    var message = e as ShardRegionProxyRegistered;
-                    if (RegionProxies.Contains(message.RegionProxy))
-                        throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
+                    case ShardRegionProxyRegistered message:
+                        if (RegionProxies.Contains(message.RegionProxy))
+                            throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
 
-                    return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
-                }
+                        return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
 
-                if (e is ShardRegionTerminated)
-                {
-                    var message = e as ShardRegionTerminated;
-                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
-                        throw new ArgumentException($"Terminated region {message.Region} not registered", nameof(e));
+                    case ShardRegionTerminated message:
+                        {
+                            if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                                throw new ArgumentException($"Terminated region {message.Region} not registered", nameof(e));
 
-                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Union(shardRegions) : UnallocatedShards;
-                    return Copy(
-                        regions: Regions.Remove(message.Region),
-                        shards: Shards.RemoveRange(shardRegions),
-                        unallocatedShards: newUnallocatedShards);
-                }
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Union(shardRegions) : UnallocatedShards;
+                            return Copy(
+                                regions: Regions.Remove(message.Region),
+                                shards: Shards.RemoveRange(shardRegions),
+                                unallocatedShards: newUnallocatedShards);
+                        }
 
-                if (e is ShardRegionProxyTerminated)
-                {
-                    var message = e as ShardRegionProxyTerminated;
-                    if (!RegionProxies.Contains(message.RegionProxy))
-                        throw new ArgumentException($"Terminated region proxy {message.RegionProxy} not registered", nameof(e));
+                    case ShardRegionProxyTerminated message:
+                        if (!RegionProxies.Contains(message.RegionProxy))
+                            throw new ArgumentException($"Terminated region proxy {message.RegionProxy} not registered", nameof(e));
 
-                    return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
-                }
+                        return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
 
-                if (e is ShardHomeAllocated)
-                {
-                    var message = e as ShardHomeAllocated;
-                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
-                        throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
-                    if (Shards.ContainsKey(message.Shard))
-                        throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
+                    case ShardHomeAllocated message:
+                        {
+                            if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                                throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                            if (Shards.ContainsKey(message.Shard))
+                                throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
 
-                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Remove(message.Shard) : UnallocatedShards;
-                    return Copy(
-                        shards: Shards.SetItem(message.Shard, message.Region),
-                        regions: Regions.SetItem(message.Region, shardRegions.Add(message.Shard)),
-                        unallocatedShards: newUnallocatedShards);
-                }
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Remove(message.Shard) : UnallocatedShards;
+                            return Copy(
+                                shards: Shards.SetItem(message.Shard, message.Region),
+                                regions: Regions.SetItem(message.Region, shardRegions.Add(message.Shard)),
+                                unallocatedShards: newUnallocatedShards);
+                        }
+                    case ShardHomeDeallocated message:
+                        {
+                            if (!Shards.TryGetValue(message.Shard, out var region))
+                                throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
+                            if (!Regions.TryGetValue(region, out var shardRegions))
+                                throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
-                if (e is ShardHomeDeallocated)
-                {
-                    var message = e as ShardHomeDeallocated;
-                    if (!Shards.TryGetValue(message.Shard, out var region))
-                        throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
-                    if (!Regions.TryGetValue(region, out var shardRegions))
-                        throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
-
-                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Add(message.Shard) : UnallocatedShards;
-                    return Copy(
-                        shards: Shards.Remove(message.Shard),
-                        regions: Regions.SetItem(region, shardRegions.Where(s => s != message.Shard).ToImmutableList()),
-                        unallocatedShards: newUnallocatedShards);
+                            var newUnallocatedShards = RememberEntities ? UnallocatedShards.Add(message.Shard) : UnallocatedShards;
+                            return Copy(
+                                shards: Shards.Remove(message.Shard),
+                                regions: Regions.SetItem(region, shardRegions.Where(s => s != message.Shard).ToImmutableList()),
+                                unallocatedShards: newUnallocatedShards);
+                        }
                 }
 
                 return this;
@@ -372,42 +362,63 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected bool Active(object message)
         {
-            if (message is Register) HandleRegister(message as Register);
-            else if (message is RegisterProxy) HandleRegisterProxy(message as RegisterProxy);
-            else if (message is GetShardHome) HandleGetShardHome(message as GetShardHome);
-            else if (message is AllocateShardResult) HandleAllocateShardResult(message as AllocateShardResult);
-            else if (message is ShardStarted) HandleShardStated(message as ShardStarted);
-            else if (message is ResendShardHost) HandleResendShardHost(message as ResendShardHost);
-            else if (message is RebalanceTick) HandleRebalanceTick();
-            else if (message is RebalanceResult) ContinueRebalance(((RebalanceResult)message).Shards);
-            else if (message is RebalanceDone) HandleRebalanceDone(message as RebalanceDone);
-            else if (message is GracefulShutdownRequest) HandleGracefulShutdownRequest(message as GracefulShutdownRequest);
-            else if (message is GetClusterShardingStats) HandleGetClusterShardingStats(message as GetClusterShardingStats);
-            else if (message is ShardHome)
+            switch (message)
             {
-                // On rebalance, we send ourselves a GetShardHome message to reallocate a
-                // shard. This receive handles the "response" from that message. i.e. Ignores it.
+                case Register msg:
+                    HandleRegister(msg);
+                    return true;
+                case RegisterProxy msg:
+                    HandleRegisterProxy(msg);
+                    return true;
+                case GetShardHome msg:
+                    HandleGetShardHome(msg);
+                    return true;
+                case AllocateShardResult msg:
+                    HandleAllocateShardResult(msg);
+                    return true; ;
+                case ShardStarted msg:
+                    HandleShardStated(msg);
+                    return true;
+                case ResendShardHost msg:
+                    HandleResendShardHost(msg);
+                    return true;
+                case RebalanceTick _:
+                    HandleRebalanceTick();
+                    return true;
+                case RebalanceResult msg:
+                    ContinueRebalance(msg.Shards);
+                    return true;
+                case RebalanceDone msg:
+                    HandleRebalanceDone(msg);
+                    return true;
+                case GracefulShutdownRequest msg:
+                    HandleGracefulShutdownRequest(msg);
+                    return true;
+                case GetClusterShardingStats msg:
+                    HandleGetClusterShardingStats(msg);
+                    return true;
+                case ShardHome _:
+                    // On rebalance, we send ourselves a GetShardHome message to reallocate a
+                    // shard. This receive handles the "response" from that message. i.e. Ignores it.
+                    return true;
+                case ClusterEvent.ClusterShuttingDown msg:
+                    Log.Debug("Shutting down shard coordinator");
+                    // can't stop because supervisor will start it again,
+                    // it will soon be stopped when singleton is stopped
+                    Context.Become(ShuttingDown);
+                    return true;
+                case GetCurrentRegions _:
+                    var regions = _currentState.Regions.Keys
+                        .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? Cluster.SelfAddress : region.Path.Address)
+                        .ToImmutableHashSet();
+                    Sender.Tell(new CurrentRegions(regions));
+                    return true;
+                case ClusterEvent.CurrentClusterState _:
+                    /* ignore */
+                    return true;
+                default:
+                    return ReceiveTerminated(message);
             }
-            else if (message is ClusterEvent.ClusterShuttingDown)
-            {
-                Log.Debug("Shutting down shard coordinator");
-                // can't stop because supervisor will start it again,
-                // it will soon be stopped when singleton is stopped
-                Context.Become(ShuttingDown);
-            }
-            else if (message is GetCurrentRegions)
-            {
-                var regions = _currentState.Regions.Keys
-                    .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? Cluster.SelfAddress : region.Path.Address)
-                    .ToImmutableHashSet();
-                Sender.Tell(new CurrentRegions(regions));
-            }
-            else if (message is ClusterEvent.CurrentClusterState)
-            {
-                /* ignore */
-            }
-            else return ReceiveTerminated(message);
-            return true;
         }
 
         private void AllocateShardHomesForRememberEntities()
@@ -474,27 +485,28 @@ namespace Akka.Cluster.Sharding
 
         private bool ReceiveTerminated(object message)
         {
-            if (message is Terminated)
+            switch (message)
             {
-                var terminated = (Terminated)message;
-                var terminatedRef = terminated.ActorRef;
-                if (_currentState.Regions.ContainsKey(terminatedRef))
-                {
-                    if (RemovalMargin != TimeSpan.Zero && terminated.AddressTerminated && _aliveRegions.Contains(terminatedRef))
+                case Terminated terminated:
+                    var terminatedRef = terminated.ActorRef;
+                    if (_currentState.Regions.ContainsKey(terminatedRef))
                     {
-                        Context.System.Scheduler.ScheduleTellOnce(RemovalMargin, Self, new DelayedShardRegionTerminated(terminatedRef), Self);
-                        _regionTerminationInProgress = _regionTerminationInProgress.Add(terminatedRef);
+                        if (RemovalMargin != TimeSpan.Zero && terminated.AddressTerminated && _aliveRegions.Contains(terminatedRef))
+                        {
+                            Context.System.Scheduler.ScheduleTellOnce(RemovalMargin, Self, new DelayedShardRegionTerminated(terminatedRef), Self);
+                            _regionTerminationInProgress = _regionTerminationInProgress.Add(terminatedRef);
+                        }
+                        else
+                            RegionTerminated(terminatedRef);
                     }
-                    else
-                        RegionTerminated(terminatedRef);
-                }
-                else if (_currentState.RegionProxies.Contains(terminatedRef))
-                    RegionProxyTerminated(terminatedRef);
+                    else if (_currentState.RegionProxies.Contains(terminatedRef))
+                        RegionProxyTerminated(terminatedRef);
+                    return true;
+                case DelayedShardRegionTerminated msg:
+                    RegionTerminated(msg.Region);
+                    return true;
             }
-            else if (message is DelayedShardRegionTerminated)
-                RegionTerminated(((DelayedShardRegionTerminated)message).Region);
-            else return false;
-            return true;
+            return false;
         }
 
         private void HandleGracefulShutdownRequest(GracefulShutdownRequest request)
@@ -805,37 +817,39 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected override bool ReceiveRecover(Object message)
         {
-            if (message is IDomainEvent)
+            switch (message)
             {
-                var evt = message as IDomainEvent;
-                Log.Debug("ReceiveRecover {0}", evt);
+                case IDomainEvent evt:
+                    Log.Debug("ReceiveRecover {0}", evt);
 
-                if (message is ShardRegionRegistered) _currentState = _currentState.Updated(evt);
-                else if (message is ShardRegionProxyRegistered) _currentState = _currentState.Updated(evt);
-                else if (message is ShardRegionTerminated)
-                {
-                    var regionTerminated = (ShardRegionTerminated)message;
-                    if (_currentState.Regions.ContainsKey(regionTerminated.Region))
-                        _currentState = _currentState.Updated(evt);
-                    else
-                        Log.Debug("ShardRegionTerminated but region {0} was not registered", regionTerminated.Region);
-                }
-                else if (message is ShardRegionProxyTerminated)
-                {
-                    var proxyTerminated = (ShardRegionProxyTerminated)message;
-                    if (_currentState.RegionProxies.Contains(proxyTerminated.RegionProxy))
-                        _currentState = _currentState.Updated(evt);
-                }
-                else if (message is ShardHomeAllocated) _currentState = _currentState.Updated(evt);
-                else if (message is ShardHomeDeallocated) _currentState = _currentState.Updated(evt);
-                else return false;
-                return true;
-            }
-            else if (message is SnapshotOffer)
-            {
-                var state = ((SnapshotOffer)message).Snapshot as State;
-                if (state != null)
-                {
+                    switch (evt)
+                    {
+                        case ShardRegionRegistered _:
+                            _currentState = _currentState.Updated(evt);
+                            return true;
+                        case ShardRegionProxyRegistered _:
+                            _currentState = _currentState.Updated(evt);
+                            return true;
+                        case ShardRegionTerminated regionTerminated:
+                            if (_currentState.Regions.ContainsKey(regionTerminated.Region))
+                                _currentState = _currentState.Updated(evt);
+                            else
+                                Log.Debug("ShardRegionTerminated but region {0} was not registered", regionTerminated.Region);
+                            return true;
+                        case ShardRegionProxyTerminated proxyTerminated:
+                            if (_currentState.RegionProxies.Contains(proxyTerminated.RegionProxy))
+                                _currentState = _currentState.Updated(evt);
+                            return true;
+                        case ShardHomeAllocated _:
+                            _currentState = _currentState.Updated(evt);
+                            return true;
+                        case ShardHomeDeallocated _:
+                            _currentState = _currentState.Updated(evt);
+                            return true;
+                    }
+                    return false;
+                case SnapshotOffer offer when offer.Snapshot is State:
+                    var state = offer.Snapshot as State;
                     Log.Debug("ReceiveRecover SnapshotOffer {0}", state);
                     _currentState = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,
@@ -844,13 +858,11 @@ namespace Akka.Cluster.Sharding
                         _currentState = _currentState.Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty);
 
                     return true;
-                }
-            }
-            else if (message is RecoveryCompleted)
-            {
-                _currentState = _currentState.WithRememberEntities(Settings.RememberEntities);
-                WatchStateActors();
-                return true;
+
+                case RecoveryCompleted _:
+                    _currentState = _currentState.WithRememberEntities(Settings.RememberEntities);
+                    WatchStateActors();
+                    return true;
             }
             return false;
         }

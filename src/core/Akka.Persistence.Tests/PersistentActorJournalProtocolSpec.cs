@@ -376,7 +376,7 @@ akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store"""
                     var msgs = (IEnumerable<IPersistentRepresentation>) ((AtomicWrite) message).Payload;
                     foreach (var msg in msgs)
                     {
-                        w.PersistentActor.Tell(new WriteMessageSuccess(msg, w.ActorInstanceId), msg.Sender);
+                        w.PersistentActor.Tell(new WriteMessageSuccess(msg, w.CorrelationId), msg.Sender);
                     }
                 }
                 else

@@ -305,24 +305,24 @@ namespace Akka.Persistence.Journal
                                 foreach (var p in (IEnumerable<IPersistentRepresentation>) m.Payload)
                                 {
                                     w.PersistentActor.Tell(new WriteMessageFailure(p, TimeoutException(),
-                                        w.ActorInstanceId));
+                                        w.CorrelationId));
                                 }
                             }
                             else if (m is NonPersistentMessage)
                             {
-                                w.PersistentActor.Tell(new LoopMessageSuccess(m.Payload, w.ActorInstanceId));
+                                w.PersistentActor.Tell(new LoopMessageSuccess(m.Payload, w.CorrelationId));
                             }
                         }
                     }
                     else if (message is ReplayMessages)
                     {
                         var r = (ReplayMessages) message;
-                        r.PersistentActor.Tell(new ReplayMessagesFailure(TimeoutException()));
+                        r.PersistentActor.Tell(new ReplayMessagesFailure(TimeoutException(), r.CorrelationId));
                     }
                     else if (message is DeleteMessagesTo)
                     {
                         var d = (DeleteMessagesTo) message;
-                        d.PersistentActor.Tell(new DeleteMessagesFailure(TimeoutException(), d.ToSequenceNr));
+                        d.PersistentActor.Tell(new DeleteMessagesFailure(TimeoutException(), d.ToSequenceNr, d.CorrelationId));
                     }
                 }
                 else if (message is ISnapshotRequest)
@@ -331,22 +331,22 @@ namespace Akka.Persistence.Journal
                     if (message is LoadSnapshot)
                     {
                         var l = (LoadSnapshot) message;
-                        Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
+                        Sender.Tell(new LoadSnapshotFailed(TimeoutException(), l.CorrelationId));
                     }
                     else if (message is SaveSnapshot)
                     {
                         var s = (SaveSnapshot) message;
-                        Sender.Tell(new SaveSnapshotFailure(s.Metadata, TimeoutException()));
+                        Sender.Tell(new SaveSnapshotFailure(s.Metadata, TimeoutException(), s.CorrelationId));
                     }
                     else if (message is DeleteSnapshot)
                     {
                         var d = (DeleteSnapshot) message;
-                        Sender.Tell(new DeleteSnapshotFailure(d.Metadata, TimeoutException()));
+                        Sender.Tell(new DeleteSnapshotFailure(d.Metadata, TimeoutException(), d.CorrelationId));
                     }
                     else if (message is DeleteSnapshots)
                     {
                         var d = (DeleteSnapshots) message;
-                        Sender.Tell(new DeleteSnapshotsFailure(d.Criteria, TimeoutException()));
+                        Sender.Tell(new DeleteSnapshotsFailure(d.Criteria, TimeoutException(), d.CorrelationId));
                     }
                 }
                 else if (message is TargetLocation)

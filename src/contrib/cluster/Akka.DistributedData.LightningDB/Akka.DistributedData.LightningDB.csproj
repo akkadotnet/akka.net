@@ -17,15 +17,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LightningDB" version="0.9.8" />
+    <PackageReference Include="LightningDB" Version="0.9.8" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.6|AnyCPU'">
-    <Optimize>False</Optimize>
   </PropertyGroup>
 
 </Project>

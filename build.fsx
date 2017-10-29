@@ -11,6 +11,7 @@ open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
 open Fake.Git
+open Fake.NuGet.Install
 
 // Variables
 let configuration = "Release"
@@ -28,7 +29,7 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
-let preReleaseVersionSuffix = (if (not (buildNumber = "0")) then (buildNumber) else "") + "-beta"
+let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else "")
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
@@ -111,12 +112,12 @@ Target "RunTests" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests Net |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
+                            (getIncrementalUnitTests Net) |> Seq.iter log
+                            getUnitTestProjects Net
         | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
+               getUnitTestProjects Net
     
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -133,7 +134,6 @@ Target "RunTests" (fun _ ->
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
-
 )
 
 Target "RunTestsNetCore" (fun _ ->
@@ -141,12 +141,12 @@ Target "RunTestsNetCore" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests NetCore |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
+                            getIncrementalUnitTests NetCore |> Seq.iter log
+                            getUnitTestProjects NetCore
         | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
+               getUnitTestProjects NetCore
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -300,31 +300,13 @@ let overrideVersionSuffix (project:string) =
     | _ -> versionSuffix
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/Akka.csproj"
-                   ++ "src/**/Akka.Cluster.csproj"
-                   ++ "src/**/Akka.Cluster.TestKit.csproj"
-                   ++ "src/**/Akka.Cluster.Tools.csproj"
-                   ++ "src/**/Akka.Cluster.Sharding.csproj"
-                   ++ "src/**/Akka.DistributedData.csproj"
-                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
-                   ++ "src/**/Akka.Persistence.csproj"
-                   ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TestKit.csproj"
-                   ++ "src/**/Akka.Persistence.Query.Sql.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.Common.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
-                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
-                   ++ "src/**/Akka.Remote.csproj"
-                   ++ "src/**/Akka.Remote.TestKit.csproj"
-                   ++ "src/**/Akka.Streams.csproj"
-                   ++ "src/**/Akka.Streams.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit2.csproj"
-                   ++ "src/**/Akka.DI.Core.csproj"
-                   ++ "src/**/Akka.DI.TestKit.csproj"
-                   ++ "src/**/Akka.Serialization.Hyperion.csproj"
-                   ++ "src/**/Akka.Serialization.TestKit.csproj"
-                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
+    let projects = !! "src/**/*.csproj"
+                   -- "src/**/*.Tests*.csproj"
+                   -- "src/benchmark/**/*.csproj"
+                   -- "src/examples/**/*.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
+                   -- "src/**/*.NodeTestRunner.csproj"
 
     let runSingleProject project =
         DotNetCli.Pack
@@ -398,37 +380,59 @@ Target "CreateMntrNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
-    let apiKey = getBuildParamOrDefault "nugetkey" ""
-    let source = getBuildParamOrDefault "nugetpublishurl" ""
-    let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
-    let shouldPublishSymbolsPackages = not (symbolSource = "")
+    let nugetExe = FullName @"./tools/nuget.exe"
+    let rec publishPackage url accessKey trialsLeft packageFile =
+        let tracing = enableProcessTracing
+        enableProcessTracing <- false
+        let args p =
+            match p with
+            | (pack, key, "") -> sprintf "push \"%s\" %s" pack key
+            | (pack, key, url) -> sprintf "push \"%s\" %s -source %s" pack key url
 
-    if (not (source = "") && not (apiKey = "") && shouldPublishSymbolsPackages) then
-        let runSingleProject project =
-            DotNetCli.RunCommand
-                (fun p -> 
-                    { p with 
-                        TimeOut = TimeSpan.FromMinutes 10. })
-                (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
+        tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
+        try 
+            let result = ExecProcess (fun info -> 
+                    info.FileName <- nugetExe
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
+                    info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
+            enableProcessTracing <- tracing
+            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, "key omitted",url))
+        with exn -> 
+            if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
+            else raise exn
+    let shouldPushNugetPackages = hasBuildParam "nugetkey"
+    let shouldPushSymbolsPackages = (hasBuildParam "symbolspublishurl") && (hasBuildParam "symbolskey")
+    
+    if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
+        printfn "Pushing nuget packages"
+        if shouldPushNugetPackages then
+            let normalPackages= 
+                !! (outputNuGet @@ "*.nupkg") 
+                -- (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            for package in normalPackages do
+                try
+                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+                with exn ->
+                    printfn "%s" exn.Message
 
-        projects |> Seq.iter (runSingleProject)
-    else if (not (source = "") && not (apiKey = "") && not shouldPublishSymbolsPackages) then
-        let runSingleProject project =
-            DotNetCli.RunCommand
-                (fun p -> 
-                    { p with 
-                        TimeOut = TimeSpan.FromMinutes 10. })
-                (sprintf "nuget push %s --api-key %s --source %s" project apiKey source)
-
-        projects |> Seq.iter (runSingleProject)
+        if shouldPushSymbolsPackages then
+            let symbolPackages= !! (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            for package in symbolPackages do
+                try
+                    publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
+                with exn ->
+                    printfn "%s" exn.Message
 )
 
 //--------------------------------------------------------------------------------
 // Serialization
 //--------------------------------------------------------------------------------
 Target "Protobuf" <| fun _ ->
-    let protocPath = findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
+
+    let protocPath =
+        if isWindows then findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
+        elif isMacOS then findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/macosx_x64"
+        else findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/linux_x64"
 
     let protoFiles = [
         ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
@@ -439,14 +443,16 @@ Target "Protobuf" <| fun _ ->
         ("ClusterClientMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/Client/Serialization/Proto/");
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
-        ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/") ]
+        ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
 
     printfn "Using proto.exe: %s" protocPath
 
     let runProtobuf assembly =
         let protoName, destinationPath = assembly
         let args = StringBuilder()
-                |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
+                |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") )
+                |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=internal_access:%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
                 |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
@@ -464,12 +470,19 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
+    // build the project with samples
     let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
     DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
     DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
-    let docsPath = "./docs"
+    // install MSDN references
+    NugetInstall (fun p -> 
+            { p with
+                ExcludeVersion = true
+                Version = "0.1.0-alpha-1611021200"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
+    let docsPath = "./docs"
     DocFx (fun p -> 
                 { p with 
                     Timeout = TimeSpan.FromMinutes 30.0; 
@@ -546,15 +559,14 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"

@@ -103,10 +103,9 @@ namespace Akka.Actor
 
             #endregion
         }
-
-        /** INTERNAL API */
+        
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 

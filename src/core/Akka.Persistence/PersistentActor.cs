@@ -551,7 +551,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Registers an asynchronous handler for incoming command of the specified type <typeparamref name="T"/>.
+        /// Registers an asynchronous handler for incoming command of the specified type <paramref name="messageType"/>.
         /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
         /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
         /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
@@ -560,7 +560,7 @@ namespace Akka.Persistence
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <param name="messageType">The type of the message</param>
-        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
         {
@@ -568,7 +568,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Registers an asynchronous handler for incoming command of the specified type <typeparamref name="T"/>.
+        /// Registers an asynchronous handler for incoming command of the specified type <paramref name="messageType"/>.
         /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
         /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
         /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
@@ -578,7 +578,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="messageType">The type of the message</param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
         protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
         {
             Command(messageType, shouldHandle, WrapAsyncHandler(handler));
@@ -586,14 +586,13 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Registers an asynchronous handler for incoming command of any type.
-        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
         /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
         /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
         /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already.
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
-        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of any type</param>
         protected void CommandAnyAsync(Func<object, Task> handler)
         {
             CommandAny(WrapAsyncHandler(handler));

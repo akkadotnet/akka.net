@@ -126,7 +126,7 @@ namespace Akka.IO
         /// must be set to an instance of this class. The token contained within can be used
         /// to recognize which write failed when receiving a <see cref="CommandFailed"/> message.
         /// </summary>
-        public class NoAck : Event
+        public sealed class NoAck : Event
         {
             /// <summary>
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
@@ -170,43 +170,47 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="payload">TBD</param>
-            /// <param name="target">TBD</param>
-            /// <param name="ack">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
             public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
+                : this(ByteString.FromBuffers(payload), target, ack)
             {
-                if (ack == null)
-                    throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
-                Payload = payload;
-                HasData = Payload.MoveNext();
-                Target = target;
-                Ack = ack;
             }
 
-            internal bool HasData { get; set; }
-
-            internal Send Advance() => new Send(Payload, Target, Ack);
-
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
+            /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
+            /// object.
             /// </summary>
-            public IEnumerator<ByteBuffer> Payload { get; }
+            /// <param name="payload">Binary payload to be send.</param>
+            /// <param name="target">An endpoint of the message receiver.</param>
+            /// <param name="ack">Acknowledgement send back to the sender, once <paramref name="payload"/> has been send through a socket.</param>
+            public Send(ByteString payload, EndPoint target, Event ack)
+            {
+                Payload = payload;
+                Target = target;
+                Ack = ack ?? throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
+            }
+
+            internal bool HasData => !Payload.IsEmpty;
 
             /// <summary>
-            /// TBD
+            /// A binary payload to be send to the <see cref="Target"/>. It must fit into a single UDP datagram.
+            /// </summary>
+            public ByteString Payload { get; }
+
+            /// <summary>
+            /// An endpoint, to which current <see cref="Payload"/> will be send.
             /// </summary>
             public EndPoint Target { get; }
+
             /// <summary>
-            /// TBD
+            /// Acknowledgement send back to the sender, once <see cref="Payload"/> has been send through a socket.
+            /// If it's <see cref="NoAck"/>, then no acknowledgement will be send.
             /// </summary>
             public Event Ack { get; }
 
             /// <summary>
-            /// TBD
+            /// Flag determining is a message sender is interested in receving send acknowledgement.
             /// </summary>
             public bool WantsAck => !(Ack is NoAck);
 
@@ -214,15 +218,13 @@ namespace Akka.IO
                 $"Send(to: {Target}, ack: {Ack})";
 
             /// <summary>
-            /// TBD
+            /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
+            /// Once send completes, this request will not be acknowledged on by the sender side.
             /// </summary>
-            /// <param name="data">TBD</param>
-            /// <param name="target">TBD</param>
+            /// <param name="data">Binary payload to be send.</param>
+            /// <param name="target">An endpoint of the message receiver.</param>
             /// <returns>TBD</returns>
-            public static Send Create(ByteString data, EndPoint target)
-            {
-                return new Send(data.Buffers.GetEnumerator(), target, NoAck.Instance);
-            }
+            public static Send Create(ByteString data, EndPoint target) => new Send(data, target, NoAck.Instance);
         }
 
         /// <summary>
@@ -268,7 +270,7 @@ namespace Akka.IO
         /// message in order to close the listening socket. The recipient will reply
         /// with an <see cref="Unbound"/> message.
         /// </summary>
-        public class Unbind : Command
+        public sealed class Unbind : Command
         {
             /// <summary>
             /// TBD
@@ -288,7 +290,7 @@ namespace Akka.IO
         /// The "simple sender" will not stop itself, you will have to send it a <see cref="Akka.Actor.PoisonPill"/>
         /// when you want to close the socket.
         /// </summary>
-        public class SimpleSender : Command
+        public sealed class SimpleSender : Command
         {
             /// <summary>
             /// TBD
@@ -316,7 +318,7 @@ namespace Akka.IO
         /// buffer runs full then subsequent datagrams will be silently discarded.
         /// Re-enable reading from the socket using the `ResumeReading` command.
         /// </summary>
-        public class SuspendReading : Command
+        public sealed class SuspendReading : Command
         {
             /// <summary>
             /// TBD
@@ -331,7 +333,7 @@ namespace Akka.IO
         ///  This message must be sent to the listener actor to re-enable reading from
         ///  the socket after a `SuspendReading` command.
         /// </summary>
-        public class ResumeReading : Command
+        public sealed class ResumeReading : Command
         {
             /// <summary>
             /// TBD
@@ -438,7 +440,7 @@ namespace Akka.IO
         /// This message is sent by the listener actor in response to an `Unbind` command
         /// after the socket has been closed.
         /// </summary>
-        public class Unbound
+        public sealed class Unbound
         {
             /// <summary>
             /// TBD
@@ -450,7 +452,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public class SO : Inet.SoForwarders
+        public sealed class SO : Inet.SoForwarders
         {
             /// <summary>
             /// <see cref="Akka.IO.Inet.SocketOption"/> to set the SO_BROADCAST option

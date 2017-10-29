@@ -2,15 +2,32 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.3.0</VersionPrefix>
-    <PackageReleaseNotes>Placeholder</PackageReleaseNotes>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <VersionPrefix>1.3.2</VersionPrefix>
+    <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.3.0-beta2-*</XunitVersion>
+    <XunitVersion>2.3.0</XunitVersion>
+    <TestSdkVersion>15.3.0</TestSdkVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageReleaseNotes>Maintenance Release for Akka.NET 1.3**
+Updates and bugfixes**:
+- Bugfix: Akka incorrectly schedules continuations after .Ask, causing deadlocks and/or delays
+- Bugfix: ByteString.ToString is sometimes broken for Unicode encoding
+- Bugfix: ClusterShardingMessageSerializer Exception after upgrade from 1.2.0 to 1.3.1
+- Bugfix: Fix an inconstant ToString on ConsistentRoutee when the node is remote vs. local
+- Various documentation fixes
+- Akka.Streams: Implement MergePrioritized
+- Akka.Streams: Implement Restart Flow/Source/Sink
+- Akka.TestKit.Xunit: updated `xunit` dependency to 2.3.0 stable.
+- Akka.Cluster.TestKit: removed dependency on Akka.Tests.Shared.Internals
+You can [view the full v1.3.2 change set here](https://github.com/akkadotnet/akka.net/milestone/20).</PackageReleaseNotes>
   </PropertyGroup>
 </Project>

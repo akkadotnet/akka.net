@@ -139,6 +139,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <param name="flow">TBD</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static Flow<TIn, TOut, TMat> SelectError<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -148,6 +149,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="mapper"/> to each of the elements
         /// as they pass through this processing step.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when the mapping function <paramref name="mapper"/> returns an element
         /// </para>
@@ -213,8 +217,10 @@ namespace Akka.Streams.Dsl
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
-        /// 
         /// <para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// Emits when the mapping function returns an element or there are still remaining elements
         /// from the previously calculated collection
         /// </para>
@@ -302,6 +308,9 @@ namespace Akka.Streams.Dsl
         /// with failure and the supervision decision is <see cref="Directive.Resume"/> or
         /// <see cref="Directive.Restart"/> the element is dropped and the stream continues.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when any of the tasks returned by the provided function complete
         /// </para>
         /// <para>
@@ -331,6 +340,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Only pass on those elements that satisfy the given <paramref name="predicate"/>.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the given <paramref name="predicate"/> returns true for the element
         /// </para>
         /// <para>
@@ -354,6 +366,9 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Only pass on those elements that NOT satisfy the given <paramref name="predicate"/>.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when the given <paramref name="predicate"/> returns true for the element
         /// </para>
@@ -387,18 +402,23 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
+        /// <para>
         /// Backpressures when downstream backpressures
+        /// </para>
         /// <para>
         /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
-        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
+        /// <seealso cref="Limit{TIn,TOut,TMat}"/> <seealso cref="LimitWeighted{TIn,TOut,TMat}"/> 
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> TakeWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
@@ -525,6 +545,9 @@ namespace Akka.Streams.Dsl
         /// The stream will be completed without producing any elements if <paramref name="max"/> is zero
         /// or negative.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the specified number of elements to take has not yet been reached
         /// </para>
         /// Backpressures when downstream backpressures
@@ -586,6 +609,9 @@ namespace Akka.Streams.Dsl
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the function scanning the element returns a new element
         /// </para>
         /// Backpressures when downstream backpressures
@@ -621,6 +647,9 @@ namespace Akka.Streams.Dsl
         /// <see cref="Directive.Resume"/> current value starts at the previous
         /// current value, or zero when it doesn't have one, and the stream will continue.
         /// <para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
         /// </para>
         /// Backpressures when downstream backpressures
@@ -651,6 +680,9 @@ namespace Akka.Streams.Dsl
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when upstream completes
         /// </para>
         /// Backpressures when downstream backpressures
@@ -680,6 +712,9 @@ namespace Akka.Streams.Dsl
         /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -713,6 +748,9 @@ namespace Akka.Streams.Dsl
         /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -972,6 +1010,9 @@ namespace Akka.Streams.Dsl
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is a conflated element available
         /// </para>
         /// Backpressures when never
@@ -1004,6 +1045,9 @@ namespace Akka.Streams.Dsl
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is a conflated element available
         /// </para>
         /// Backpressures when never
@@ -1030,15 +1074,21 @@ namespace Akka.Streams.Dsl
         ///
         /// This only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
-        ///
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is an aggregated element available
-        ///
+        /// </para>
+        /// <para>
         /// Backpressures when there are <paramref name="max"/> batched elements and 1 pending element and downstream backpressures
-        ///
+        /// </para>
+        /// <para>
         /// Completes when upstream completes and there is no batched/pending element waiting
-        ///
+        /// </para>
+        /// <para>
         /// Cancels when downstream cancels
-        ///
+        /// </para>
         /// See also <seealso cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>, <seealso cref="BatchWeighted{TIn,TOut,TOut2,TMat}"/>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
@@ -1134,7 +1184,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
-        /// Backpressures when depending on OverflowStrategy
+        /// Backpressures when downstream backpressures or depending on OverflowStrategy:
         /// <para/> * Backpressure - backpressures when buffer is full
         /// <para/> * DropHead, DropTail, DropBuffer - never backpressures
         /// <para/> * Fail - fails the stream if buffer gets full
@@ -1218,6 +1268,9 @@ namespace Akka.Streams.Dsl
         /// the element is dropped and the stream and substreams continue.
         /// 
         /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when an element for which the grouping function returns a group that has not yet been created.
         /// Emits the new group
@@ -1335,10 +1388,10 @@ namespace Akka.Streams.Dsl
         /// false, false, true  // elements go into third substream
         /// }}}
         ///
-        /// The object returned from this method is not a normal [[Source]] or[[Flow]],
+        /// The object returned from this method is not a normal <see cref="Source"/> or <see cref="Flow"/>,
         /// it is a <see cref="SubFlow{TOut,TMat,TClosed}"/>. This means that after this combinator all transformations
-        ///are applied to all encountered substreams in the same fashion.Substream mode
-        /// is exited either by closing the substream(i.e.connecting it to a [[Sink]])
+        /// are applied to all encountered substreams in the same fashion. Substream mode
+        /// is exited either by closing the substream (i.e.connecting it to a <see cref="Sink"/>)
         /// or by merging the substreams back together; see the <see cref="SubFlow{TOut,TMat,TClosed}.To{TMat2}"/> and <see cref="SubFlow{TOut,TMat,TClosed}.MergeSubstreams"/> methods
         /// on <see cref="SubFlow{TOut,TMat,TClosed}"/> for more information.
         ///
@@ -1604,7 +1657,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1647,7 +1700,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1805,6 +1858,9 @@ namespace Akka.Streams.Dsl
         /// 
         /// By default element and completion signals are logged on debug level, and errors are logged on Error level.
         /// This can be adjusted according to your needs by providing a custom <see cref="Attributes.LogLevels"/> attribute on the given Flow.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when the mapping function returns an element
         /// </para>

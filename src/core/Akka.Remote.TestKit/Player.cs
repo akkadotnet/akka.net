@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
@@ -171,6 +172,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
+    [InternalApi]
     class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {

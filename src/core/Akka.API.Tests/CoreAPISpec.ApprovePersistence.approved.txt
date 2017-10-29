@@ -408,6 +408,7 @@ namespace Akka.Persistence
             public long AutoUpdateReplayMax { get; }
         }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public class Persistent : Akka.Persistence.IPersistentRepresentation, Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.IPersistentRepresentation>
     {
         public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null) { }
@@ -780,7 +781,7 @@ namespace Akka.Persistence.Fsm
         {
             string Identifier { get; }
         }
-        public class PersistentFSMSnapshot<TD>
+        public class PersistentFSMSnapshot<TD> : Akka.Persistence.Serialization.IMessage
         {
             public PersistentFSMSnapshot(string stateIdentifier, TD data, System.Nullable<System.TimeSpan> timeout) { }
             public TD Data { get; }
@@ -807,7 +808,7 @@ namespace Akka.Persistence.Fsm
             public override string ToString() { }
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Using(TD nextStateData) { }
         }
-        public class StateChangeEvent
+        public class StateChangeEvent : Akka.Persistence.Serialization.IMessage
         {
             public StateChangeEvent(string stateIdentifier, System.Nullable<System.TimeSpan> timeout) { }
             public string StateIdentifier { get; }
@@ -1082,6 +1083,7 @@ namespace Akka.Persistence.Journal
     public abstract class WriteJournalBase : Akka.Actor.ActorBase
     {
         protected WriteJournalBase() { }
+        [Akka.Annotations.InternalApiAttribute()]
         protected System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> AdaptFromJournal(Akka.Persistence.IPersistentRepresentation representation) { }
         protected Akka.Persistence.IPersistentRepresentation AdaptToJournal(Akka.Persistence.IPersistentRepresentation representation) { }
         protected System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> PreparePersistentBatch(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> resequenceables) { }
@@ -1090,6 +1092,20 @@ namespace Akka.Persistence.Journal
 namespace Akka.Persistence.Serialization
 {
     public interface IMessage { }
+    public sealed class PersistenceMessageSerializer : Akka.Serialization.Serializer
+    {
+        public PersistenceMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public class PersistenceSnapshotSerializer : Akka.Serialization.Serializer
+    {
+        public PersistenceSnapshotSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
     public sealed class Snapshot
     {
         public Snapshot(object data) { }

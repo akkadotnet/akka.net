@@ -217,13 +217,14 @@ namespace Akka.Persistence.Journal
             var eventStream = Context.System.EventStream;
             _breaker.WithCircuitBreaker(() => DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr))
                 .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? new DeleteMessagesSuccess(message.ToSequenceNr) as object
+                        ? new DeleteMessagesSuccess(message.ToSequenceNr, message.CorrelationId) as object
                         : new DeleteMessagesFailure(
                             t.IsFaulted
                                 ? TryUnwrapException(t.Exception)
                                 : new OperationCanceledException(
                                     "DeleteMessagesToAsync canceled, possibly due to timing out."),
-                            message.ToSequenceNr),
+                            message.ToSequenceNr,
+                            message.CorrelationId),
                     _continuationOptions)
                 .PipeTo(message.PersistentActor)
                 .ContinueWith(t =>
@@ -267,7 +268,7 @@ namespace Akka.Persistence.Journal
                                 {
                                     foreach (var adaptedRepresentation in AdaptFromJournal(p))
                                     {
-                                        replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
+                                        replyTo.Tell(new ReplayedMessage(adaptedRepresentation, message.CorrelationId), ActorRefs.NoSender);
                                     }
                                 }
                             })
@@ -291,8 +292,8 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
             promise.Task
                 .ContinueWith(t => !t.IsFaulted
-                    ? new RecoverySuccess(t.Result) as IJournalResponse
-                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception)), _continuationOptions)
+                    ? new RecoverySuccess(t.Result, message.CorrelationId) as IJournalResponse
+                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception), message.CorrelationId), _continuationOptions)
                 .PipeTo(replyTo)
                 .ContinueWith(t =>
                 {
@@ -375,7 +376,7 @@ namespace Akka.Persistence.Journal
                     }
                     else
                     {
-                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
+                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.CorrelationId);
                         _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor,
                             resequencable.Sender));
                         i++;
@@ -393,8 +394,8 @@ namespace Akka.Persistence.Journal
 
                         _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
                         resequence((x, exception) => exception == null
-                            ? (object)new WriteMessageSuccess(x, message.ActorInstanceId)
-                            : new WriteMessageRejected(x, exception, message.ActorInstanceId), t.Result);
+                            ? (object)new WriteMessageSuccess(x, message.CorrelationId)
+                            : new WriteMessageRejected(x, exception, message.CorrelationId), t.Result);
                     }
                     else
                     {
@@ -405,7 +406,7 @@ namespace Akka.Persistence.Journal
                                 : new OperationCanceledException(
                                     "WriteMessagesAsync canceled, possibly due to timing out."));
                         _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception), counter, message.PersistentActor, self));
-                        resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
+                        resequence((x, _) => new WriteMessageFailure(x, exception, message.CorrelationId), null);
                     }
                 }, _continuationOptions);
         }

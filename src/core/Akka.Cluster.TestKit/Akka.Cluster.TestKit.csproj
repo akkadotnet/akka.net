@@ -12,7 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
@@ -26,10 +25,6 @@
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.6|AnyCPU'">
-    <Optimize>False</Optimize>
   </PropertyGroup>
 
 </Project>

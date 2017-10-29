@@ -127,6 +127,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
@@ -263,6 +264,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
@@ -334,6 +336,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables

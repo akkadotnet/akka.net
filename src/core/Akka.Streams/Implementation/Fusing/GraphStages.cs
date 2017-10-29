@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -68,6 +69,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class GraphStageModule : AtomicModule
     {
         /// <summary>
@@ -129,6 +131,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
     {
         /// <summary>
@@ -207,6 +210,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Detacher<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
@@ -647,6 +651,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// This source is not reusable, it is only created internally.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
     {
         #region internal classes
@@ -881,6 +886,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// 
     /// Discards all received elements.
     /// </summary>
+    [InternalApi]
     public sealed class IgnoreSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task>
     {
         #region Internal classes

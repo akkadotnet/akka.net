@@ -127,7 +127,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerComplete;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -201,7 +201,7 @@ namespace Akka.Streams.Dsl
     public sealed class Merge<T> : Merge<T, T>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{T}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -372,7 +372,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerClose;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergePreferred{T}"/> class.
         /// </summary>
         /// <param name="secondaryPorts">TBD</param>
         /// <param name="eagerClose">TBD</param>
@@ -421,6 +421,178 @@ namespace Akka.Streams.Dsl
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
+    }
+
+    /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking from prioritized once when several have elements ready).
+    /// A <see cref="MergePrioritized{T}" /> has one <see cref="MergePrioritized{T}.Out" /> port, one or more input port with their priorities.
+    /// <para>
+    /// Emits when one of the inputs has an element available, preferring
+    /// a input based on its priority if multiple have elements available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true), default value is `false`
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    public sealed class MergePrioritized<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        internal IList<int> Priorities { get; }
+        internal bool EagerComplete { get; }
+        internal int InputPorts { get; }
+
+        #region internal classes
+        internal sealed class MergePrioritizedLogic : OutGraphStageLogic
+        {
+            private readonly MergePrioritized<T> _stage;
+            private List<FixedSizeBuffer<Inlet<T>>> allBuffers;
+            private int runningUpstreams;
+            private Random randomGen = new Random();
+
+            public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                allBuffers = new List<FixedSizeBuffer<Inlet<T>>>(stage.Priorities.Count);
+                foreach (int priority in stage.Priorities)
+                {
+                    allBuffers.Add(FixedSizeBuffer.Create<Inlet<T>>(priority));
+                }
+
+                runningUpstreams = stage.InputPorts;
+
+                for (int i = 0; i < stage.In.Count; i++)
+                {
+                    var inlet = stage.In[i];
+                    var buffer = allBuffers[i];
+
+                    SetHandler(inlet, onPush: () =>
+                    {
+                        if (IsAvailable(_stage.Out) && !HasPending)
+                        {
+                            Push(_stage.Out, Grab(inlet));
+                            TryPull(inlet);
+                        }
+                        else
+                        {
+                            buffer.Enqueue(inlet);
+                        }
+                    }, onUpstreamFinish: () =>
+                    {
+                        if (_stage.EagerComplete)
+                        {
+                            _stage.In.ForEach(Cancel);
+                            runningUpstreams = 0;
+                            if (!HasPending) CompleteStage();
+                        }
+                        else
+                        {
+                            runningUpstreams -= 1;
+                            if (UpstreamsClosed && !HasPending) CompleteStage();
+                        }
+                    });
+                }
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void PreStart() => _stage.In.ForEach(TryPull);
+
+            public override void OnPull()
+            {
+                if (HasPending)
+                    DequeueAndDispatch();
+            }
+
+            public bool HasPending => allBuffers.Any(c => c.NonEmpty);
+
+            public bool UpstreamsClosed => runningUpstreams == 0;
+
+            private void DequeueAndDispatch()
+            {
+                var input = SelectNextElement();
+                Push(_stage.Out, Grab(input));
+                if (UpstreamsClosed && !HasPending)
+                    CompleteStage();
+                else
+                    TryPull(input);
+            }
+
+            private Inlet<T> SelectNextElement()
+            {
+                var tp = 0;
+                var ix = 0;
+
+                while (ix < _stage.In.Count)
+                {
+                    if (allBuffers[ix].NonEmpty)
+                    {
+                        tp += _stage.Priorities[ix];
+                    }
+                    ix += 1;
+                }
+
+                int r = randomGen.Next(tp);
+                Inlet<T> next = null;
+                ix = 0;
+
+                while (ix < _stage.In.Count && next == null)
+                {
+                    if (allBuffers[ix].NonEmpty)
+                    {
+                        r -= _stage.Priorities[ix];
+                        if (r < 0)
+                            next = allBuffers[ix].Dequeue();
+                    }
+                    ix += 1;
+                }
+
+                return next;
+            }
+
+            public override string ToString() => "MergePrioritized";
+        }
+        #endregion
+
+        /// <summary>
+        /// Create a new <see cref="MergePrioritized{T}" /> with specified number of input ports.
+        /// </summary>
+        /// <param name="priorities">Priorities of the input ports</param>
+        /// <param name="eagerComplete">If true, the merge will complete as soon as one of its inputs completes</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="priorities"/> is less or equal zero.
+        /// </exception>
+        public MergePrioritized(IEnumerable<int> priorities, bool eagerComplete = false)
+        {
+            Priorities = priorities.ToList();
+            EagerComplete = eagerComplete;
+            InputPorts = Priorities.Count;
+            if (InputPorts <= 0)
+                throw new ArgumentException("A Merge must have one or more input ports");
+            if (!Priorities.All(x => x > 0))
+                throw new ArgumentException("Priorities should be positive integers");
+
+            var input = new List<Inlet<T>>();
+            for (int i = 1; i <= InputPorts; i++)
+            {
+                input.Add(new Inlet<T>("MergePrioritized.in" + i));
+            }
+            In = input;
+
+            Out = new Outlet<T>("MergePrioritized.out");
+            Shape = new UniformFanInShape<T, T>(Out, In.ToArray());
+        }
+
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MergePrioritized");
+
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        public IReadOnlyList<Inlet<T>> In { get; }
+
+        public Outlet<T> Out { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new MergePrioritizedLogic(this);
     }
 
     /// <summary>
@@ -695,7 +867,7 @@ namespace Akka.Streams.Dsl
         private readonly Func<T, T, int> _compare;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergeSorted{T}"/> class.
         /// </summary>
         /// <param name="compare">TBD</param>
         public MergeSorted(Func<T, T, int> compare)
@@ -826,7 +998,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerCancel;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Broadcast{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="eagerCancel">TBD</param>
@@ -995,7 +1167,7 @@ namespace Akka.Streams.Dsl
         private readonly Func<T, int> _partitioner;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Partition{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="partitioner">TBD</param>
@@ -1159,7 +1331,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _waitForAllDownstreams;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Balance{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="waitForAllDownstreams">TBD</param>
@@ -1233,7 +1405,7 @@ namespace Akka.Streams.Dsl
     public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
         public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
 
@@ -1258,7 +1430,7 @@ namespace Akka.Streams.Dsl
     public sealed partial class ZipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="ZipWith"/>.
         /// </summary>
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
@@ -1271,7 +1443,7 @@ namespace Akka.Streams.Dsl
     /// <para>
     /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// Backpressures when any of the outputs backpressures
+    /// Backpressures when any of the outputs backpressure
     /// <para>
     /// Completes when upstream completes
     /// </para>
@@ -1282,7 +1454,7 @@ namespace Akka.Streams.Dsl
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
         public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
 
@@ -1307,7 +1479,7 @@ namespace Akka.Streams.Dsl
     public partial class UnzipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="UnzipWith"/>.
         /// </summary>
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
@@ -1344,7 +1516,7 @@ namespace Akka.Streams.Dsl
     public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipN{T}"/> class.
         /// </summary>
         /// <param name="n">TBD</param>
         public ZipN(int n) : base(x => x, n)
@@ -1453,7 +1625,7 @@ namespace Akka.Streams.Dsl
         private readonly int _n;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipWithN{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="zipper">TBD</param>
         /// <param name="n">TBD</param>
@@ -1585,7 +1757,7 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Concat{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <exception cref="ArgumentException">
@@ -1725,7 +1897,7 @@ namespace Akka.Streams.Dsl
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="OrElse{T}"/> class.
         /// </summary>
         public OrElse()
         {

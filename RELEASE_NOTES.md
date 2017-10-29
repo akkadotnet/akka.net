@@ -1,3 +1,71 @@
+#### 1.3.3 October 24 2017 ####
+Placeholder
+
+#### 1.3.2 October 20 2017 ####
+**Maintenance Release for Akka.NET 1.3**
+
+**Updates and bugfixes**:
+- Bugfix: Akka incorrectly schedules continuations after .Ask, causing deadlocks and/or delays
+- Bugfix: ByteString.ToString is sometimes broken for Unicode encoding
+- Bugfix: ClusterShardingMessageSerializer Exception after upgrade from 1.2.0 to 1.3.1
+- Bugfix: Fix an inconstant ToString on ConsistentRoutee when the node is remote vs. local
+- Various documentation fixes
+- Akka.Streams: Implement MergePrioritized
+- Akka.Streams: Implement Restart Flow/Source/Sink
+- Akka.TestKit.Xunit: updated `xunit` dependency to 2.3.0 stable.
+- Akka.Cluster.TestKit: removed dependency on Akka.Tests.Shared.Internals
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 9 | 137 | 59 | Aaron Stannard |
+| 8 | 2713 | 997 | Alex Valuyskiy |
+| 3 | 486 | 95 | Bartosz Sypytkowski |
+| 3 | 12 | 12 | Sebastien Bacquet |
+| 2 | 33 | 7 | ravengerUA |
+| 2 | 184 | 102 | Arjen Smits |
+| 1 | 71 | 7 | Adam Friedman |
+| 1 | 7 | 4 | Sam Neirinck |
+| 1 | 604 | 481 | zbynek001 |
+| 1 | 6 | 6 | Kenneth Ito |
+| 1 | 42 | 3 | Lukas Rieger |
+| 1 | 40 | 2 | Joshua Benjamin |
+| 1 | 4 | 5 | derrickcrowne |
+| 1 | 3 | 2 | Mikhail Moussikhine |
+| 1 | 20 | 0 | Arturo Sevilla |
+| 1 | 2 | 0 | Paweł Bańka |
+| 1 | 17 | 11 | planerist |
+| 1 | 1 | 4 | lesscode |
+
+
+
+You can [view the full v1.3.2 change set here](https://github.com/akkadotnet/akka.net/milestone/20).
+
+#### 1.3.1 September 5 2017 ####
+**Maintenance Release for Akka.NET 1.3**
+
+**Updates and bugfixes**:
+
+- Bugfix: Hyperion NuGet package restore creating duplicate assemblies for the same version inside Akka
+- Various documentation fixes and updates
+- Bugfix: issue where data sent via UDP when `ByteString` payload had buffers with length more than 1, `UdpSender` only wrote the first part of the buffers and dropped the rest.
+- Bugfix: Akka.IO.Tcp failed to write some outgoing messages.
+- Improved support for OSX & Rider
+- Bugfix: Akka.Persistence support for `SerializerWithStringManifest` required by Akka.Cluster.Sharding and Akka.Cluster.Tools
+	- Akka.Persistence.Sqlite and Akka.Persistence.SqlServer were unable to support `SerializerWithStringManifest`, so using Akka.Cluster.Sharding with Sql plugins would not work.
+- Bugfix: Akka.Streams generic type parameters of the flow returned from current implementation of Bidiflow's JoinMat method were incorrect.
+- Bugfix: `PersistenceMessageSerializer` was failing with the wrong exceptoin when a non-supported type was provided.
+
+**Akka.Persistence backwards compability warning**:
+
+- Akka.Persistence.Sql introduces an additional field to the schema used by Sql-based plugins to allow for the use of `SerializerWithStringManifest` called `serializer_id`.  It requires any previous Sql schema to be updated to have this field.  Details are included in the Akka.Persistence.Sqlite plugin README.md file.  Users of the Akka.Persistence.Sqlite plugin must alter their existing databases to add the field `serializer_id int (4)`:
+
+```
+ALTER TABLE {your_event_journal_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+ALTER TABLE {your_snapshot_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+```
+
+[See the full set of Akka.NET 1.3.1 fixes here](https://github.com/akkadotnet/akka.net/milestone/19).
+
 #### 1.3.0 August 11 2017 ####
 **Feature Release for Akka.NET**
 Akka.NET 1.3.0 is a major feature release that introduces the significant changes to Akka.NET and its runtime.

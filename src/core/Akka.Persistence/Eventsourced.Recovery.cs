@@ -69,7 +69,7 @@ namespace Akka.Persistence
             var timeout = Extension.JournalConfigFor(JournalPluginId).GetTimeSpan("recovery-event-timeout", null, false);
             var timeoutCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new RecoveryTick(true), Self);
 
-            Receive recoveryBehavior = message =>
+            bool RecoveryBehavior(object message)
             {
                 Receive receiveRecover = ReceiveRecover;
                 if (message is IPersistentRepresentation && IsRecovering)
@@ -79,7 +79,7 @@ namespace Akka.Persistence
                 else if (message is RecoveryCompleted)
                     return receiveRecover(RecoveryCompleted.Instance);
                 else return false;
-            };
+            }
 
             return new EventsourcedState("recovery started - replay max: " + maxReplays, true, (receive, message) =>
             {
@@ -93,10 +93,10 @@ namespace Akka.Persistence
                             var snapshot = res.Snapshot;
                             LastSequenceNr = snapshot.Metadata.SequenceNr;
                             // Since we are recovering we can ignore the receive behavior from the stack
-                            base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                            base.AroundReceive(RecoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
                         }
 
-                        ChangeState(Recovering(recoveryBehavior, timeout));
+                        ChangeState(Recovering(RecoveryBehavior, timeout));
                         Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                     }
                     else if (message is LoadSnapshotFailed failed)
@@ -139,7 +139,7 @@ namespace Akka.Persistence
 
         private void ReturnRecoveryPermit()
         {
-            Extension.RecoveryPermitter().Tell(Akka.Persistence.ReturnRecoveryPermit.Instance, Self);
+            Extension.RecoveryPermitter.Tell(Akka.Persistence.ReturnRecoveryPermit.Instance, Self);
         }
 
         /// <summary>
@@ -355,7 +355,7 @@ namespace Akka.Persistence
             if (message is WriteMessageSuccess)
             {
                 var m = (WriteMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     UpdateLastSequenceNr(m.Persistent);
                     try
@@ -373,7 +373,7 @@ namespace Akka.Persistence
             else if (message is WriteMessageRejected)
             {
                 var m = (WriteMessageRejected)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     var p = m.Persistent;
                     UpdateLastSequenceNr(p);
@@ -384,7 +384,7 @@ namespace Akka.Persistence
             else if (message is WriteMessageFailure)
             {
                 var m = (WriteMessageFailure)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     var p = m.Persistent;
                     onWriteMessageComplete(false);
@@ -401,7 +401,7 @@ namespace Akka.Persistence
             else if (message is LoopMessageSuccess)
             {
                 var m = (LoopMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     try
                     {

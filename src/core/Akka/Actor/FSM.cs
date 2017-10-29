@@ -441,6 +441,7 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             /// <param name="stopReason">TBD</param>
             /// <param name="replies">TBD</param>
+            /// <param name="notifies">TBD</param>
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, IReadOnlyList<object> replies = null, bool notifies = true)
             {
                 Replies = replies ?? new List<object>();

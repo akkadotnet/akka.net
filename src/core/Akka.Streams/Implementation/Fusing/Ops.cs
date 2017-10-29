@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -30,6 +31,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Select<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -123,6 +125,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Where<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -199,6 +202,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class TakeWhile<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -256,6 +260,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         public TakeWhile(Predicate<T> predicate, bool inclusive)
         {
             _inclusive = inclusive;
@@ -288,6 +293,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class SkipWhile<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -373,6 +379,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public abstract class SupervisedGraphStageLogic : GraphStageLogic
     {
         private readonly Lazy<Decider> _decider;
@@ -450,6 +457,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -549,6 +557,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Recover<T> : SimpleLinearGraphStage<T>
     {
         #region Logic 
@@ -644,6 +653,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// would log the e2 error.
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [InternalApi]
     public sealed class SelectError<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -688,6 +698,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Take<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -766,6 +777,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Skip<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -837,6 +849,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Scan<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic 
@@ -969,6 +982,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class ScanAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -1152,6 +1166,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -1276,6 +1291,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class AggregateAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -1448,6 +1464,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Intersperse<T> : SimpleLinearGraphStage<T>
     {
         #region internal class
@@ -1563,6 +1580,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Grouped<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region Logic
@@ -1676,6 +1694,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class LimitWeighted<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -1773,6 +1792,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Sliding<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region Logic
@@ -1897,6 +1917,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Buffer<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -2050,6 +2071,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Action _success;
@@ -2103,6 +2125,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -2328,6 +2351,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -2458,6 +2482,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -2643,6 +2668,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -2791,6 +2817,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
         private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(
@@ -2955,6 +2982,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class GroupedWithin<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region internal classes
@@ -3105,6 +3133,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Delay<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
@@ -3284,6 +3313,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class TakeWithin<T> : SimpleLinearGraphStage<T>
     {
         #region internal class
@@ -3340,6 +3370,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _timeout;
@@ -3403,6 +3434,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
@@ -3508,6 +3540,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
     {
         #region internal classes
@@ -3630,6 +3663,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
