@@ -10,25 +10,8 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// Event store component, that can be embedded into custom actors. It doesn't provide any 
-    /// thread safety guarantees and should by no means be called from multiple threads.
-    /// </summary>
-    public interface IEventStore
+    public interface ISnapshotStore<TState>
     {
-        /// <summary>
-        /// Id of the persistent entity for which messages should be replayed.
-        /// </summary>
-        string PersistenceId { get; }
-
-        /// <summary>
-        /// Highest received sequence number so far or `0L` if this actor 
-        /// hasn't replayed  or stored any persistent events yet.
-        /// </summary>
-        long LastSequenceNr { get; set; }
-
-        #region snapshot API
-
         /// <summary>
         /// Instructs the event store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
@@ -43,7 +26,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Asynchronously saves <paramref name="snapshot"/>. It cannot be null.
         /// </summary>
-        Task SaveSnapshot<TSnapshot>(TSnapshot snapshot, CancellationToken cancellation = default(CancellationToken));
+        Task SaveSnapshot(TState snapshot, CancellationToken cancellation = default(CancellationToken));
 
         /// <summary>
         /// Asynchronously deletes a snapshot identified by <paramref name="sequenceNr"/>.
@@ -59,8 +42,24 @@ namespace Akka.Persistence
         /// <param name="cancellation"></param>
         /// <returns></returns>
         Task DeleteSnapshots(SnapshotSelectionCriteria criteria, CancellationToken cancellation = default(CancellationToken));
+    }
 
-        #endregion
+    /// <summary>
+    /// Event store component, that can be embedded into custom actors. It doesn't provide any 
+    /// thread safety guarantees and should by no means be called from multiple threads.
+    /// </summary>
+    public interface IEventJournal<TEvent>
+    {
+        /// <summary>
+        /// Id of the persistent entity for which messages should be replayed.
+        /// </summary>
+        string PersistenceId { get; }
+
+        /// <summary>
+        /// Highest received sequence number so far or `0L` if this actor 
+        /// hasn't replayed  or stored any persistent events yet.
+        /// </summary>
+        long LastSequenceNr { get; set; }
 
         #region event API
 
@@ -75,15 +74,14 @@ namespace Akka.Persistence
         /// Returns an asynchronous enumerator that can be used to replay a collection of events
         /// fitting into boundaries set by <paramref name="fromSequenceNr"/> and <paramref name="toSequenceNr"/>.
         /// </summary>
-        Task ReplayEvents<T>(long fromSequenceNr, long toSequenceNr, int max, Action<T> onEvent, CancellationToken cancellation = default(CancellationToken));
+        Task ReplayEvents(long fromSequenceNr, long toSequenceNr, int max, Action<TEvent> onEvent, CancellationToken cancellation = default(CancellationToken));
 
         /// <summary>
         /// Asynchronously persists an <paramref name="event"/>.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="event"></param>
         /// <returns></returns>
-        Task PersistEvent<T>(T @event, CancellationToken cancellation = default(CancellationToken));
+        Task PersistEvent(TEvent @event, CancellationToken cancellation = default(CancellationToken));
 
         /// <summary>
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
@@ -91,7 +89,7 @@ namespace Akka.Persistence
         /// <typeparam name="T"></typeparam>
         /// <param name="events"></param>
         /// <returns></returns>
-        Task PersistAllEvents<T>(IEnumerable<T> events, CancellationToken cancellation = default(CancellationToken));
+        Task PersistAllEvents(IEnumerable<TEvent> events, CancellationToken cancellation = default(CancellationToken));
 
         /// <summary>
         /// Asynchronously and permanently deletes all persistent messages with sequence 
@@ -104,7 +102,12 @@ namespace Akka.Persistence
         #endregion
     }
 
-    internal sealed class EventStoreRef : IEventStore, IActorRef
+    public interface IEventStore<TState, TEvent> : ISnapshotStore<TState>, IEventJournal<TEvent>
+    {
+        
+    }
+
+    internal sealed class EventStoreRef<TState, TEvent> : IEventStore<TState, TEvent>, IActorRef
     {
         #region internal classes
 
@@ -148,7 +151,7 @@ namespace Akka.Persistence
             LastSequenceNr = 0;
         }
 
-        #region IEventStore interface
+        #region IEventJournal interface
 
         public string PersistenceId { get; }
 
@@ -160,7 +163,7 @@ namespace Akka.Persistence
             _eventJournal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, this, correlationId), this);
             return SetupCompletion(correlationId, cancellation);
         }
-
+        
         public Task DeleteSnapshot(long sequenceNr, CancellationToken cancellation = default(CancellationToken))
         {
             var correlationId = CreateCorrelationId();
@@ -198,7 +201,7 @@ namespace Akka.Persistence
             return result as SnapshotOffer;
         }
 
-        public Task PersistAllEvents<T>(IEnumerable<T> events, CancellationToken cancellation = default(CancellationToken))
+        public Task PersistAllEvents(IEnumerable<TEvent> events, CancellationToken cancellation = default(CancellationToken))
         {
             if (events == null) throw new ArgumentNullException(nameof(events));
 
@@ -217,7 +220,7 @@ namespace Akka.Persistence
             return SetupCompletion(correlationId, cancellation);
         }
 
-        public Task PersistEvent<T>(T e, CancellationToken cancellation = default(CancellationToken))
+        public Task PersistEvent(TEvent e, CancellationToken cancellation = default(CancellationToken))
         {
             if (e == null) throw new ArgumentNullException(nameof(e));
 
@@ -230,7 +233,7 @@ namespace Akka.Persistence
             return SetupCompletion(correlationId, cancellation);
         }
 
-        public Task ReplayEvents<T>(long fromSequenceNr, long toSequenceNr, int max, Action<T> handler, CancellationToken cancellation = default(CancellationToken))
+        public Task ReplayEvents(long fromSequenceNr, long toSequenceNr, int max, Action<TEvent> handler, CancellationToken cancellation = default(CancellationToken))
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
@@ -240,7 +243,7 @@ namespace Akka.Persistence
             return SetupCompletion(correlationId, cancellation);
         }
 
-        public Task SaveSnapshot<TSnapshot>(TSnapshot snapshot, CancellationToken cancellation = default(CancellationToken))
+        public Task SaveSnapshot(TState snapshot, CancellationToken cancellation = default(CancellationToken))
         {
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
 
@@ -255,14 +258,14 @@ namespace Akka.Persistence
 
         ActorPath IActorRef.Path => throw new NotImplementedException();
 
-        int IComparable<IActorRef>.CompareTo(IActorRef other) => other is EventStoreRef es ? string.Compare(this.PersistenceId, es.PersistenceId) : -1;
+        int IComparable<IActorRef>.CompareTo(IActorRef other) => other is EventStoreRef<TState, TEvent> es ? string.Compare(this.PersistenceId, es.PersistenceId) : -1;
 
-        int IComparable.CompareTo(object obj) => obj is EventStoreRef es ? string.Compare(this.PersistenceId, es.PersistenceId) : -1;
+        int IComparable.CompareTo(object obj) => obj is EventStoreRef<TState, TEvent> es ? string.Compare(this.PersistenceId, es.PersistenceId) : -1;
 
         bool IEquatable<IActorRef>.Equals(IActorRef other)
         {
             if (ReferenceEquals(other, null)) return false;
-            return other is EventStoreRef es && this.PersistenceId == es.PersistenceId;
+            return other is EventStoreRef<TState, TEvent> es && this.PersistenceId == es.PersistenceId;
         }
 
         void ICanTell.Tell(object message, IActorRef sender)
@@ -287,8 +290,8 @@ namespace Akka.Persistence
                         var completion = GetCompletion(granted.CorrelationId);
                         if (completion != null)
                         {
-                            IDisposable token = new RecoveryPermitToken(_persistence.RecoveryPermitter);
-                            completion.TrySetResult(token);
+                            IDisposable lease = new RecoveryPermitToken(_persistence.RecoveryPermitter);
+                            completion.TrySetResult(lease);
                         }
                         break;
                     }
@@ -342,7 +345,7 @@ namespace Akka.Persistence
         }
 
         ISurrogate ISurrogated.ToSurrogate(ActorSystem system) =>
-            throw new NotSupportedException($"{nameof(EventStoreRef)} instance serialization is not supported.");
+            throw new NotSupportedException($"{nameof(EventStoreRef<TState, TEvent>)} instance serialization is not supported.");
 
         #endregion
 

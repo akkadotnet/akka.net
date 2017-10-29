@@ -143,7 +143,7 @@ namespace Akka.Persistence
         public string PersistenceId(IActorRef actor) => actor.Path.ToStringWithoutAddress();
 
         /// <summary>
-        /// Returns an <see cref="IEventStore"/> facade that can be used for communicating with eventsourcing capabilities of actor system.
+        /// Returns an <see cref="IEventJournal{TEvent}"/> facade that can be used for communicating with eventsourcing capabilities of actor system.
         /// Component returned this way should not be called from multiple threads at the same time. There should be only one instance of
         /// an eventsourced object per <paramref name="persistenceId"/> in the cluster at the same time.
         /// </summary>
@@ -152,11 +152,11 @@ namespace Akka.Persistence
         /// <param name="journalPluginId"></param>
         /// <param name="snapshotPluginId"></param>
         /// <returns></returns>
-        public IEventStore GetEventStore(string persistenceId, string journalPluginId = null, string snapshotPluginId = null)
+        public IEventStore<TState, TEvent> GetEventStore<TState, TEvent>(string persistenceId, string journalPluginId = null, string snapshotPluginId = null)
         {
             var eventJournal = JournalFor(journalPluginId);
             var snapshotStore = SnapshotStoreFor(snapshotPluginId);
-            return new EventStoreRef(this, persistenceId, eventJournal, snapshotStore);
+            return new EventStoreRef<TState, TEvent>(this, persistenceId, eventJournal, snapshotStore);
         }
 
         /// <summary>

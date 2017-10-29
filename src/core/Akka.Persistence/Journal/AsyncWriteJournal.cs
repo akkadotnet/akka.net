@@ -268,7 +268,7 @@ namespace Akka.Persistence.Journal
                                 {
                                     foreach (var adaptedRepresentation in AdaptFromJournal(p))
                                     {
-                                        replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
+                                        replyTo.Tell(new ReplayedMessage(adaptedRepresentation, message.CorrelationId), ActorRefs.NoSender);
                                     }
                                 }
                             })
@@ -292,8 +292,8 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
             promise.Task
                 .ContinueWith(t => !t.IsFaulted
-                    ? new RecoverySuccess(t.Result) as IJournalResponse
-                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception)), _continuationOptions)
+                    ? new RecoverySuccess(t.Result, message.CorrelationId) as IJournalResponse
+                    : new ReplayMessagesFailure(TryUnwrapException(t.Exception), message.CorrelationId), _continuationOptions)
                 .PipeTo(replyTo)
                 .ContinueWith(t =>
                 {

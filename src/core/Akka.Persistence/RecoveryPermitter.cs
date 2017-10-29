@@ -22,6 +22,7 @@ namespace Akka.Persistence
         }
 
         public object CorrelationId { get; }
+
     }
 
     internal sealed class RecoveryPermitGranted
@@ -75,7 +76,7 @@ namespace Akka.Persistence
                 }
                 else
                 {
-                    RecoveryPermitGranted(Sender, req.CorrelationId);
+                    FinalizeRecoveryPermitGranted(Sender);
                 }
             }
             else if (message is ReturnRecoveryPermit)
@@ -100,7 +101,7 @@ namespace Akka.Persistence
             if (pending.Count > 0)
             {
                 var popRef = pending.Pop();
-                RecoveryPermitGranted(popRef);
+                FinalizeRecoveryPermitGranted(popRef);
             }
 
             if (pending.Count != 0 || _maxPendingStats <= 0)
@@ -110,10 +111,10 @@ namespace Akka.Persistence
             _maxPendingStats = 0;
         }
 
-        private void RecoveryPermitGranted(IActorRef actorRef, object correlationId)
+        private void FinalizeRecoveryPermitGranted(IActorRef actorRef)
         {
             _usedPermits++;
-            actorRef.Tell(new RecoveryPermitGranted(correlationId));
+            actorRef.Tell(RecoveryPermitGranted.Instance);
         }
     }
 }
