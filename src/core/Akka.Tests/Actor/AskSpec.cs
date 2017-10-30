@@ -141,6 +141,23 @@ namespace Akka.Tests.Actor
             waitActor.Tell("ask");
             ExpectMsg("bar");
         }
+
+        [Fact]
+        public void Cancelled_ask_with_timeout_should_raise_timeout_exception()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            Assert.Throws<TimeoutException>(() =>
+            {
+                try
+                {
+                    actor.Ask<string>("timeout", TimeSpan.FromMilliseconds(1)).Wait();
+                }
+                catch (AggregateException e)
+                {
+                    throw e.Flatten().InnerExceptions[0];
+                }
+            });
+        }
     }
 }
 

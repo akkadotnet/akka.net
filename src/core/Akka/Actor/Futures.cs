@@ -148,7 +148,7 @@ namespace Akka.Actor
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetCanceled()));
+                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetException(new TimeoutException())));
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 

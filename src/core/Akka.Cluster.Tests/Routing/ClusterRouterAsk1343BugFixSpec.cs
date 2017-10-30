@@ -102,7 +102,8 @@ namespace Akka.Cluster.Tests.Routing
             }
             catch (Exception ex)
             {
-                Assert.IsType<TaskCanceledException>(ex);
+                Assert.IsType<AggregateException>(ex);
+                Assert.IsType<TimeoutException>(((AggregateException)ex).Flatten().InnerExceptions[0]);
             }
         }
     }
