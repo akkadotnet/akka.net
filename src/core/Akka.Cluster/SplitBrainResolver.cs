@@ -33,11 +33,6 @@ namespace Akka.Cluster
     internal sealed class NetworkPartitionContext
     {
         /// <summary>
-        /// Address of a current cluster node.
-        /// </summary>
-        public Address SelfAddress { get; }
-
-        /// <summary>
         /// A set of nodes, that have been detected as unreachable since cluster state stability has been reached.
         /// </summary>
         public ImmutableSortedSet<Member> Unreachable { get; }
@@ -48,9 +43,8 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableSortedSet<Member> Remaining { get; }
 
-        public NetworkPartitionContext(Address selfAddress, ImmutableSortedSet<Member> unreachable, ImmutableSortedSet<Member> remaining)
+        public NetworkPartitionContext(ImmutableSortedSet<Member> unreachable, ImmutableSortedSet<Member> remaining)
         {
-            SelfAddress = selfAddress;
             Unreachable = unreachable;
             Remaining = remaining;
         }
@@ -99,6 +93,7 @@ namespace Akka.Cluster
                 ? context.Remaining
                 : context.Unreachable;
         }
+        public override string ToString() => $"StaticQuorum(quorumSize: {QuorumSize}, role: {Role})";
     }
 
     internal sealed class KeepMajority : ISplitBrainStrategy
@@ -134,6 +129,8 @@ namespace Akka.Cluster
         private ImmutableSortedSet<Member> MembersWithRole(ImmutableSortedSet<Member> members) => string.IsNullOrEmpty(Role)
             ? members
             : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
+
+        public override string ToString() => $"KeepMajority(role: {Role})";
     }
 
     internal sealed class KeepOldest : ISplitBrainStrategy
@@ -143,7 +140,7 @@ namespace Akka.Cluster
             role: config.GetString("role"))
         { }
 
-        public KeepOldest(bool downIfAlone, string role)
+        public KeepOldest(bool downIfAlone, string role = null)
         {
             DownIfAlone = downIfAlone;
             Role = role;
@@ -154,19 +151,28 @@ namespace Akka.Cluster
 
         public IEnumerable<Member> Apply(NetworkPartitionContext context)
         {
-            var oldest = context.Remaining.Union(context.Unreachable).First();
-            if (context.Remaining.Contains(oldest))
+            var remaining = MembersWithRole(context.Remaining);
+            var unreachable = MembersWithRole(context.Unreachable);
+
+            var oldest = remaining.Union(unreachable).ToImmutableSortedSet(Member.AgeOrdering).First();
+            if (remaining.Contains(oldest))
             {
-                if (DownIfAlone && context.Remaining.Count == 1) // oldest is current node, and it's alone
-                {
-                    yield return oldest;
-                }
+                return DownIfAlone && context.Remaining.Count == 1 // oldest is current node, and it's alone
+                    ? context.Remaining 
+                    : context.Unreachable;
             }
             else if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
             {
-                yield return oldest;
+                return context.Unreachable;
             }
+            else return context.Remaining;
         }
+
+        private ImmutableSortedSet<Member> MembersWithRole(ImmutableSortedSet<Member> members) => string.IsNullOrEmpty(Role)
+            ? members
+            : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
+
+        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: {Role})";
     }
 
     internal sealed class KeepReferee : ISplitBrainStrategy
@@ -194,6 +200,8 @@ namespace Akka.Cluster
             else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes 
             else return context.Unreachable;
         }
+
+        public override string ToString() => $"KeepReferee(refereeAddress: {Address}, downIfLessThanNodes: {DownAllIfLessThanNodes})";
     }
 
     internal sealed class SplitBrainDecider : UntypedActor
@@ -300,14 +308,14 @@ namespace Akka.Cluster
 
         private void HandleStabilityReached()
         {
-            var context = new NetworkPartitionContext(_cluster.SelfAddress, _unreachable, _reachable);
+            var context = new NetworkPartitionContext(_unreachable, _reachable);
             var nodesToDown = _strategy.Apply(context).ToImmutableArray();
 
             if (nodesToDown.Length > 0)
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info("A network partition has been detected. Split brain resolver decided to down following nodes: [{0}]", string.Join(", ", nodesToDown));
+                    Log.Info("A network partition has been detected. {0} decided to down following nodes: [{0}]", _strategy, string.Join(", ", nodesToDown));
                 }
 
                 foreach (var member in nodesToDown)
