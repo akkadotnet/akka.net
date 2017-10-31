@@ -27,14 +27,180 @@ namespace Akka.Cluster
         }
 
         public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
-        public Props DowningActorProps => SplitBrainStrategy.Props(_splitBrainResolverConfig);
+        public Props DowningActorProps => SplitBrainDecider.Props(_splitBrainResolverConfig);
     }
 
-    internal abstract class SplitBrainStrategy : UntypedActor
+    internal sealed class NetworkPartitionContext
+    {
+        /// <summary>
+        /// Address of a current cluster node.
+        /// </summary>
+        public Address SelfAddress { get; }
+
+        /// <summary>
+        /// A set of nodes, that have been detected as unreachable since cluster state stability has been reached.
+        /// </summary>
+        public ImmutableSortedSet<Member> Unreachable { get; }
+
+        /// <summary>
+        /// A set of nodes, that have been connected to a current cluster node since the last cluster state
+        /// stability has been reached.
+        /// </summary>
+        public ImmutableSortedSet<Member> Remaining { get; }
+
+        public NetworkPartitionContext(Address selfAddress, ImmutableSortedSet<Member> unreachable, ImmutableSortedSet<Member> remaining)
+        {
+            SelfAddress = selfAddress;
+            Unreachable = unreachable;
+            Remaining = remaining;
+        }
+    }
+
+    /// <summary>
+    /// A split brain resolver strategy used to determine which nodes should be downed when a network partition has been detected.
+    /// </summary>
+    internal interface ISplitBrainStrategy
+    {
+        /// <summary>
+        /// This strategy is expected to be applied among nodes with that role.
+        /// </summary>
+        string Role { get; }
+
+        /// <summary>
+        /// Determines a behavior of the current cluster node in the face of network partition.
+        /// Returns a list of cluster nodes to be downed (by the current node).
+        /// </summary>
+        IEnumerable<Member> Apply(NetworkPartitionContext context);
+    }
+
+    internal sealed class StaticQuorum : ISplitBrainStrategy
+    {
+        public StaticQuorum(Config config) : this(
+           quorumSize: config.GetInt("quorum-size"),
+           role: config.GetString("role"))
+        { }
+
+        public StaticQuorum(int quorumSize, string role)
+        {
+            QuorumSize = quorumSize;
+            Role = role;
+        }
+
+        public int QuorumSize { get; }
+        public string Role { get; }
+
+        public IEnumerable<Member> Apply(NetworkPartitionContext context)
+        {
+            var remainingCount = string.IsNullOrEmpty(Role)
+                ? context.Remaining.Count
+                : context.Remaining.Count(m => m.HasRole(Role));
+
+            return remainingCount < QuorumSize
+                ? context.Remaining
+                : context.Unreachable;
+        }
+    }
+
+    internal sealed class KeepMajority : ISplitBrainStrategy
+    {
+        public KeepMajority(Config config) : this(
+            role: config.GetString("role"))
+        { }
+
+        public KeepMajority(string role = null)
+        {
+            Role = role;
+        }
+
+        public string Role { get; }
+
+        public IEnumerable<Member> Apply(NetworkPartitionContext context)
+        {
+            var remaining = MembersWithRole(context.Remaining);
+            var unreachable = MembersWithRole(context.Unreachable);
+
+            if (remaining.Count < unreachable.Count) return context.Remaining;
+            else if (remaining.Count > unreachable.Count) return context.Unreachable;
+            else
+            {
+                // if the parts are of equal size the part containing the node with the lowest address is kept.
+                var oldest = remaining.Union(unreachable).First();
+                return remaining.Contains(oldest) 
+                    ? context.Unreachable 
+                    : context.Remaining;
+            }
+        }
+
+        private ImmutableSortedSet<Member> MembersWithRole(ImmutableSortedSet<Member> members) => string.IsNullOrEmpty(Role)
+            ? members
+            : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
+    }
+
+    internal sealed class KeepOldest : ISplitBrainStrategy
+    {
+        public KeepOldest(Config config) : this(
+            downIfAlone: config.GetBoolean("down-if-alone"),
+            role: config.GetString("role"))
+        { }
+
+        public KeepOldest(bool downIfAlone, string role)
+        {
+            DownIfAlone = downIfAlone;
+            Role = role;
+        }
+
+        public string Role { get; }
+        public bool DownIfAlone { get; }
+
+        public IEnumerable<Member> Apply(NetworkPartitionContext context)
+        {
+            var oldest = context.Remaining.Union(context.Unreachable).First();
+            if (context.Remaining.Contains(oldest))
+            {
+                if (DownIfAlone && context.Remaining.Count == 1) // oldest is current node, and it's alone
+                {
+                    yield return oldest;
+                }
+            }
+            else if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
+            {
+                yield return oldest;
+            }
+        }
+    }
+
+    internal sealed class KeepReferee : ISplitBrainStrategy
+    {
+        public KeepReferee(Config config) : this(
+            address: Address.Parse(config.GetString("address")),
+            downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes"))
+        { }
+
+        public KeepReferee(Address address, int downAllIfLessThanNodes)
+        {
+            Address = address;
+            DownAllIfLessThanNodes = downAllIfLessThanNodes;
+        }
+
+        public Address Address { get; }
+        public int DownAllIfLessThanNodes { get; }
+        public string Role => null;
+
+        public IEnumerable<Member> Apply(NetworkPartitionContext context)
+        {
+            var isRefereeReachable = context.Remaining.Any(m => m.Address == Address);
+
+            if (!isRefereeReachable) return context.Remaining; // referee is unreachable
+            else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes 
+            else return context.Unreachable;
+        }
+    }
+
+    internal sealed class SplitBrainDecider : UntypedActor
     {
         #region internal classes
 
-        protected sealed class StabilityReached
+        private sealed class StabilityReached
         {
             public static readonly StabilityReached Instance = new StabilityReached();
             private StabilityReached() { }
@@ -42,48 +208,50 @@ namespace Akka.Cluster
 
         #endregion
 
-        public static Actor.Props Props(Config config)
-        {
-            var stabilityTimeout = config.GetTimeSpan("stable-after");
-            var activeStrategy = config.GetString("active-strategy");
-            switch (activeStrategy)
-            {
-                case "static-quorum": return Actor.Props.Create(() => new StaticQuorum(config.GetConfig("static-quorum"), stabilityTimeout)).WithDeploy(Deploy.Local);
-                case "keep-majority": return Actor.Props.Create(() => new KeepMajority(config.GetConfig("keep-majority"), stabilityTimeout)).WithDeploy(Deploy.Local);
-                case "keep-oldest": return Actor.Props.Create(() => new KeepOldest(config.GetConfig("keep-oldest"), stabilityTimeout)).WithDeploy(Deploy.Local);
-                case "keep-referee": return Actor.Props.Create(() => new KeepReferee(config.GetConfig("keep-referee"), stabilityTimeout)).WithDeploy(Deploy.Local);
-                default: throw new ConfigurationException($"Unrecognized value [{activeStrategy}] of `akka.cluster.split-brain-resolver.active-strategy`. Supported options are: static-quorum | keep-majority | keep-oldest | keep-referee.");
-            }
-        }
+        public static Actor.Props Props(Config config) => Actor.Props.Create(() => new SplitBrainDecider(config)).WithDeploy(Deploy.Local);
 
-        protected readonly Cluster Cluster;
-        protected readonly TimeSpan StabilityTimeout;
+        private readonly Cluster _cluster;
+        private readonly TimeSpan _stabilityTimeout;
+        private readonly ISplitBrainStrategy _strategy;
 
         private ImmutableSortedSet<Member> _reachable = ImmutableSortedSet<Member>.Empty;
         private ImmutableSortedSet<Member> _unreachable = ImmutableSortedSet<Member>.Empty;
         private ICancelable _stabilityTask;
         private ILoggingAdapter _log;
 
-        protected SplitBrainStrategy(TimeSpan stabilityTimeout)
+        public SplitBrainDecider(Config config)
         {
-            StabilityTimeout = stabilityTimeout;
-            Cluster = Cluster.Get(Context.System);
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            _stabilityTimeout = config.GetTimeSpan("stable-after");
+            _strategy = ResolveSplitBrainStrategy(config);
+            _cluster = Cluster.Get(Context.System);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
+        {
+            var activeStrategy = config.GetString("active-strategy");
+            switch (activeStrategy)
+            {
+                case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
+                case "keep-majority": return new KeepMajority(config.GetConfig("keep-majority"));
+                case "keep-oldest": return new KeepOldest(config.GetConfig("keep-oldest"));
+                case "keep-referee": return new KeepReferee(config.GetConfig("keep-referee"));
+                default: throw new ArgumentException($"`akka.cluster.split-brain-resolver.active-strategy` setting not recognized: [{activeStrategy}]. Available options are: static-quorum, keep-majority, keep-oldest, keep-referee.");
+            }
+        }
 
-        protected abstract string Role { get; }
-        protected abstract void ApplyStrategy(ImmutableSortedSet<Member> reachable, ImmutableSortedSet<Member> unreachable);
+        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         protected override void PreStart()
         {
             base.PreStart();
-            Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
         }
 
         protected override void PostStop()
         {
-            Cluster.Unsubscribe(Self);
+            _cluster.Unsubscribe(Self);
             base.PostStop();
         }
 
@@ -93,17 +261,17 @@ namespace Akka.Cluster
             {
                 case ClusterEvent.CurrentClusterState state:
                     ResetStabilityTimeout();
-                    _reachable = state.Members.Where(m => m.Status == MemberStatus.Up && HasRole(m)).ToImmutableSortedSet(Member.AgeOrdering);
-                    _unreachable = state.Unreachable.Where(HasRole).ToImmutableSortedSet(Member.AgeOrdering);
+                    _reachable = state.Members.Where(m => m.Status == MemberStatus.Up).ToImmutableSortedSet(Member.AgeOrdering);
+                    _unreachable = state.Unreachable.ToImmutableSortedSet(Member.AgeOrdering);
                     return;
                 case ClusterEvent.IMemberEvent memberEvent:
                     ResetStabilityTimeout();
                     switch (memberEvent)
                     {
-                        case ClusterEvent.MemberUp up when HasRole(up.Member):
+                        case ClusterEvent.MemberUp up:
                             _reachable = _reachable.Add(up.Member);
                             break;
-                        case ClusterEvent.MemberRemoved removed when HasRole(removed.Member):
+                        case ClusterEvent.MemberRemoved removed:
                             _reachable = _reachable.Remove(removed.Member);
                             _unreachable = _unreachable.Remove(removed.Member);
                             break;
@@ -113,257 +281,46 @@ namespace Akka.Cluster
                     ResetStabilityTimeout();
                     switch (reachabilityEvent)
                     {
-                        case ClusterEvent.ReachableMember reachable when HasRole(reachable.Member):
+                        case ClusterEvent.ReachableMember reachable:
                             _reachable = _reachable.Add(reachable.Member);
                             _unreachable = _unreachable.Remove(reachable.Member);
                             break;
-                        case ClusterEvent.UnreachableMember unreachable when HasRole(unreachable.Member):
+                        case ClusterEvent.UnreachableMember unreachable:
                             _reachable = _reachable.Remove(unreachable.Member);
                             _unreachable = _unreachable.Add(unreachable.Member);
                             break;
                     }
                     return;
                 case StabilityReached _:
-                    ApplyStrategy(_reachable, _unreachable);
+                    HandleStabilityReached();
+
                     return;
+            }
+        }
+
+        private void HandleStabilityReached()
+        {
+            var context = new NetworkPartitionContext(_cluster.SelfAddress, _unreachable, _reachable);
+            var nodesToDown = _strategy.Apply(context).ToImmutableArray();
+
+            if (nodesToDown.Length > 0)
+            {
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info("A network partition has been detected. Split brain resolver decided to down following nodes: [{0}]", string.Join(", ", nodesToDown));
+                }
+
+                foreach (var member in nodesToDown)
+                {
+                    _cluster.Down(member.Address);
+                }
             }
         }
 
         private void ResetStabilityTimeout()
         {
             _stabilityTask?.Cancel();
-            _stabilityTask = Context.System.Scheduler.ScheduleTellOnceCancelable(StabilityTimeout, Self, StabilityReached.Instance, ActorRefs.NoSender);
-        }
-
-        private bool HasRole(Member member) => string.IsNullOrEmpty(Role) || member.HasRole(Role);
-    }
-
-    internal sealed class StaticQuorum : SplitBrainStrategy
-    {
-        #region internal classes
-
-        public sealed class Settings
-        {
-            public static Settings Create(Config config)
-            {
-                if (config == null) throw new ArgumentNullException(nameof(config));
-
-                return new Settings(
-                    quorumSize: config.GetInt("quorum-size"),
-                    role: config.GetString("role", string.Empty));
-            }
-
-            public Settings(int quorumSize, string role)
-            {
-                QuorumSize = quorumSize;
-                Role = role;
-            }
-
-            /// <summary>
-            /// Minimum number of nodes that the cluster must have.
-            /// </summary>
-            public int QuorumSize { get; }
-
-            /// <summary>
-            /// If the 'role' is defined the decision is based only on members with that 'role'.
-            /// </summary>
-            public string Role { get; }
-        }
-
-        #endregion
-
-        private readonly Settings _settings;
-        protected override string Role => _settings.Role;
-
-        public StaticQuorum(Settings settings, TimeSpan stabilityTimeout) : base(stabilityTimeout)
-        {
-            _settings = settings;
-        }
-
-        public StaticQuorum(Config config, TimeSpan stabilityTimeout) : this(Settings.Create(config), stabilityTimeout)
-        {
-        }
-
-        protected override void ApplyStrategy(ImmutableSortedSet<Member> reachable, ImmutableSortedSet<Member> unreachable)
-        {
-            if (reachable.Count < _settings.QuorumSize)
-            {
-                Log.Info("Static quorum failed - only {0} of min. {1} of expected nodes were reachable. Shutting down cluster node.", reachable.Count, _settings.QuorumSize);
-                Cluster.Down(Cluster.SelfAddress);
-            }
-        }
-    }
-
-    internal sealed class KeepMajority : SplitBrainStrategy
-    {
-        #region internal classes
-
-        public sealed class Settings
-        {
-            public static Settings Create(Config config)
-            {
-                if (config == null) throw new ArgumentNullException(nameof(config));
-
-                return new Settings(
-                    role: config.GetString("role", string.Empty));
-            }
-
-            public Settings(string role)
-            {
-                Role = role;
-            }
-
-            /// <summary>
-            /// If the 'role' is defined the decision is based only on members with that 'role'.
-            /// </summary>
-            public string Role { get; }
-        }
-
-        #endregion
-
-        private readonly Settings _settings;
-        protected override string Role => _settings.Role;
-
-        public KeepMajority(Settings settings, TimeSpan stabilityTimeout) : base(stabilityTimeout)
-        {
-            _settings = settings;
-        }
-
-        public KeepMajority(Config config, TimeSpan stabilityTimeout) : this(Settings.Create(config), stabilityTimeout)
-        {
-        }
-
-        protected override void ApplyStrategy(ImmutableSortedSet<Member> reachable, ImmutableSortedSet<Member> unreachable)
-        {
-            if (reachable.Count < unreachable.Count)
-            {
-                Log.Info("Failed to reach majority of the nodes. Reachable members: {0}. Unreachable members: {1}. Shutting down cluster node.", reachable.Count, unreachable.Count);
-                Cluster.Down(Cluster.SelfAddress);
-            }
-        }
-    }
-
-    internal sealed class KeepOldest : SplitBrainStrategy
-    {
-        #region internal classes
-
-        public sealed class Settings
-        {
-            public static Settings Create(Config config)
-            {
-                if (config == null) throw new ArgumentNullException(nameof(config));
-
-                return new Settings(
-                    downIfAlone: config.GetBoolean("down-if-alone", true),
-                    role: config.GetString("role", string.Empty));
-            }
-
-            public Settings(bool downIfAlone, string role)
-            {
-                DownIfAlone = downIfAlone;
-                Role = role;
-            }
-
-            /// <summary>
-            /// Enable downing of the oldest node when it is partitioned from all other nodes.
-            /// </summary>
-            public bool DownIfAlone { get; }
-
-            /// <summary>
-            /// If the 'role' is defined the decision is based only on members with that 'role',
-            /// i.e. using the oldest member (singleton) within the nodes with that role.
-            /// </summary>
-            public string Role { get; }
-        }
-
-        #endregion
-
-        private readonly Settings _settings;
-        protected override string Role => _settings.Role;
-
-        public KeepOldest(Settings settings, TimeSpan stabilityTimeout) : base(stabilityTimeout)
-        {
-            _settings = settings;
-        }
-
-        public KeepOldest(Config config, TimeSpan stabilityTimeout) : this(Settings.Create(config), stabilityTimeout)
-        {
-        }
-
-        protected override void ApplyStrategy(ImmutableSortedSet<Member> reachable, ImmutableSortedSet<Member> unreachable)
-        {
-            var oldestReachable = reachable.FirstOrDefault();
-            var oldestUnreachable = unreachable.FirstOrDefault();
-
-            if (oldestReachable == null) Down(Cluster.SelfAddress);
-            else if (oldestUnreachable != null && oldestUnreachable.IsOlderThan(oldestReachable))
-            {
-                if (_settings.DownIfAlone && unreachable.Count == 1)
-                {
-                    // the oldest node is the only one unreachable
-                    Down(oldestUnreachable.Address);
-                    return;
-                }
-                
-                Down(Cluster.SelfAddress);
-            }
-        }
-
-        private void Down(Address address)
-        {
-            Log.Info("Oldest node was not reached, shutting down {0}", address);
-            Cluster.Down(address);
-        }
-    }
-
-    internal sealed class KeepReferee : SplitBrainStrategy
-    {
-        #region internal classes
-
-        public sealed class Settings
-        {
-            public static Settings Create(Config config)
-            {
-                if (config == null) throw new ArgumentNullException(nameof(config));
-
-                return new Settings(
-                    refereeAddress: Address.Parse(config.GetString("address")), 
-                    downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes", 1));
-            }
-
-            public Settings(Address refereeAddress, int downAllIfLessThanNodes)
-            {
-                ReferreeAddress = refereeAddress;
-                DownAllIfLessThanNodes = downAllIfLessThanNodes;
-            }
-
-            public Address ReferreeAddress { get; }
-            public int DownAllIfLessThanNodes { get; }
-        }
-
-        #endregion
-
-        private readonly Settings _settings;
-        protected override string Role => null;
-
-        public KeepReferee(Settings settings, TimeSpan stabilityTimeout) : base(stabilityTimeout)
-        {
-            _settings = settings;
-        }
-
-        public KeepReferee(Config config, TimeSpan stabilityTimeout) : this(Settings.Create(config), stabilityTimeout)
-        {
-        }
-
-        protected override void ApplyStrategy(ImmutableSortedSet<Member> reachable, ImmutableSortedSet<Member> unreachable)
-        {
-            var refereeReachable = reachable.Select(m => m.Address).Contains(_settings.ReferreeAddress);
-
-            if (!refereeReachable || reachable.Count < _settings.DownAllIfLessThanNodes)
-            {
-                Log.Info("A referee node address {0} was not reached or a reachable number of nodes ({1}) didn't pass required threshold ({2}). Shutting down cluster node.", _settings.ReferreeAddress, reachable.Count, _settings.DownAllIfLessThanNodes);
-                Cluster.Down(Cluster.SelfAddress);
-            }
+            _stabilityTask = Context.System.Scheduler.ScheduleTellOnceCancelable(_stabilityTimeout, Self, StabilityReached.Instance, ActorRefs.NoSender);
         }
     }
 }

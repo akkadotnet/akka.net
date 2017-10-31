@@ -5,16 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using Akka.Actor;
-using Akka.TestKit;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
 {
     public class SplitBrainResolverSpec
     {
-        
     }
 }
