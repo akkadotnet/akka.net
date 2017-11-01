@@ -18,16 +18,34 @@ namespace Akka.Cluster
     public sealed class SplitBrainResolver : IDowningProvider
     {
         private readonly ClusterSettings _clusterSettings;
-        private readonly Config _splitBrainResolverConfig;
 
         public SplitBrainResolver(ActorSystem system)
         {
             _clusterSettings = Cluster.Get(system).Settings;
-            _splitBrainResolverConfig = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
+            var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
+
+            StableAfter = config.GetTimeSpan("stable-after");
+            Strategy = ResolveSplitBrainStrategy(config);
         }
 
         public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
-        public Props DowningActorProps => SplitBrainDecider.Props(_splitBrainResolverConfig);
+        public TimeSpan StableAfter { get; }
+        public Props DowningActorProps => SplitBrainDecider.Props(StableAfter, Strategy);
+
+        internal ISplitBrainStrategy Strategy { get; }
+
+        private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
+        {
+            var activeStrategy = config.GetString("active-strategy");
+            switch (activeStrategy)
+            {
+                case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
+                case "keep-majority": return new KeepMajority(config.GetConfig("keep-majority"));
+                case "keep-oldest": return new KeepOldest(config.GetConfig("keep-oldest"));
+                case "keep-referee": return new KeepReferee(config.GetConfig("keep-referee"));
+                default: throw new ArgumentException($"`akka.cluster.split-brain-resolver.active-strategy` setting not recognized: [{activeStrategy}]. Available options are: static-quorum, keep-majority, keep-oldest, keep-referee.");
+            }
+        }
     }
 
     internal sealed class NetworkPartitionContext
@@ -136,7 +154,7 @@ namespace Akka.Cluster
     internal sealed class KeepOldest : ISplitBrainStrategy
     {
         public KeepOldest(Config config) : this(
-            downIfAlone: config.GetBoolean("down-if-alone"),
+            downIfAlone: config.GetBoolean("down-if-alone", true),
             role: config.GetString("role"))
         { }
 
@@ -179,7 +197,7 @@ namespace Akka.Cluster
     {
         public KeepReferee(Config config) : this(
             address: Address.Parse(config.GetString("address")),
-            downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes"))
+            downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes", 1))
         { }
 
         public KeepReferee(Address address, int downAllIfLessThanNodes)
@@ -216,7 +234,8 @@ namespace Akka.Cluster
 
         #endregion
 
-        public static Actor.Props Props(Config config) => Actor.Props.Create(() => new SplitBrainDecider(config)).WithDeploy(Deploy.Local);
+        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) => 
+            Actor.Props.Create(() => new SplitBrainDecider(stableAfter, strategy)).WithDeploy(Deploy.Local);
 
         private readonly Cluster _cluster;
         private readonly TimeSpan _stabilityTimeout;
@@ -227,26 +246,13 @@ namespace Akka.Cluster
         private ICancelable _stabilityTask;
         private ILoggingAdapter _log;
 
-        public SplitBrainDecider(Config config)
+        public SplitBrainDecider(TimeSpan stableAfter, ISplitBrainStrategy strategy)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (strategy == null) throw new ArgumentNullException(nameof(strategy));
 
-            _stabilityTimeout = config.GetTimeSpan("stable-after");
-            _strategy = ResolveSplitBrainStrategy(config);
+            _stabilityTimeout = stableAfter;
+            _strategy = strategy;
             _cluster = Cluster.Get(Context.System);
-        }
-
-        private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
-        {
-            var activeStrategy = config.GetString("active-strategy");
-            switch (activeStrategy)
-            {
-                case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
-                case "keep-majority": return new KeepMajority(config.GetConfig("keep-majority"));
-                case "keep-oldest": return new KeepOldest(config.GetConfig("keep-oldest"));
-                case "keep-referee": return new KeepReferee(config.GetConfig("keep-referee"));
-                default: throw new ArgumentException($"`akka.cluster.split-brain-resolver.active-strategy` setting not recognized: [{activeStrategy}]. Available options are: static-quorum, keep-majority, keep-oldest, keep-referee.");
-            }
         }
 
         public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
