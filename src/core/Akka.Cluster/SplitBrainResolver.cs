@@ -111,7 +111,7 @@ namespace Akka.Cluster
                 ? context.Remaining
                 : context.Unreachable;
         }
-        public override string ToString() => $"StaticQuorum(quorumSize: {QuorumSize}, role: {Role})";
+        public override string ToString() => $"StaticQuorum(quorumSize: {QuorumSize}, role: '{Role}')";
     }
 
     internal sealed class KeepMajority : ISplitBrainStrategy
@@ -148,7 +148,7 @@ namespace Akka.Cluster
             ? members
             : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
 
-        public override string ToString() => $"KeepMajority(role: {Role})";
+        public override string ToString() => $"KeepMajority(role: '{Role}')";
     }
 
     internal sealed class KeepOldest : ISplitBrainStrategy
@@ -190,7 +190,7 @@ namespace Akka.Cluster
             ? members
             : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
 
-        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: {Role})";
+        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: '{Role})'";
     }
 
     internal sealed class KeepReferee : ISplitBrainStrategy
@@ -307,13 +307,17 @@ namespace Akka.Cluster
                     return;
                 case StabilityReached _:
                     HandleStabilityReached();
-
                     return;
             }
         }
 
         private void HandleStabilityReached()
         {
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("A network partition detected - unreachable nodes: [{0}], remaining: [{1}]", string.Join(", ", _unreachable.Select(m => m.Address)), string.Join(", ", _reachable.Select(m => m.Address)));
+            }
+
             var context = new NetworkPartitionContext(_unreachable, _reachable);
             var nodesToDown = _strategy.Apply(context).ToImmutableArray();
 
@@ -321,7 +325,7 @@ namespace Akka.Cluster
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info("A network partition has been detected. {0} decided to down following nodes: [{0}]", _strategy, string.Join(", ", nodesToDown));
+                    Log.Info("A network partition has been detected. {0} decided to down following nodes: [{1}]", _strategy, string.Join(", ", nodesToDown));
                 }
 
                 foreach (var member in nodesToDown)

@@ -12,6 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -81,6 +82,13 @@ namespace Akka.Cluster.Tests.MultiNode
 
             EnterBarrier("before-split");
 
+            var downed = false;
+
+            RunOn(() =>
+            {
+                Cluster.RegisterOnMemberRemoved(() => downed = true);
+            }, minority);
+
             RunOn(() =>
             {
                 foreach (var a in majority)
@@ -92,26 +100,15 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                foreach (var role in minority)
-                {
-                    MarkNodeAsUnavailable(GetAddress(role));
-                }
-                
                 // side with majority of the nodes must stay up
                 AwaitMembersUp(majority.Length, canNotBePartOfMemberRing: minority.Select(GetAddress).ToImmutableHashSet());
                 AssertLeader(majority);
             }, majority);
-
+            
             RunOn(() =>
             {
-                foreach (var role in majority)
-                {
-                    MarkNodeAsUnavailable(GetAddress(role));
-                }
-
-                // side with majority of the nodes must stay up
-                AwaitMembersUp(majority.Length, canNotBePartOfMemberRing: minority.Select(GetAddress).ToImmutableHashSet());
-                AssertLeader(majority);
+                // side with majority of the nodes must stay up, minority must go down
+                AwaitAssert(() => downed.Should().BeTrue("cluster node on-removed hook has been triggered"));
             }, minority);
 
             EnterBarrier("after-2");
