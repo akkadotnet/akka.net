@@ -190,6 +190,7 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatServer", "examples\Chat\ChatServer\ChatServer.csproj", "{91B73868-F504-45F2-B49F-9F967D692230}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatClient", "examples\Chat\ChatClient\ChatClient.csproj", "{81D89DA8-A58E-41A8-9558-8289ACE8BF88}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Cluster.Simple", "examples\Cluster\Samples.Cluster.Simple\Samples.Cluster.Simple.csproj", "{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Cluster.Transformation", "examples\Cluster\Roles\Samples.Cluster.Transformation\Samples.Cluster.Transformation.csproj", "{01B074DB-67C8-4600-8CE2-DAAAFC052261}"
