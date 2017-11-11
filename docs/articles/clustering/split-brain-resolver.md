@@ -4,41 +4,51 @@ title: Split Brain Resolver
 ---
 # Split Brain Resolver
 
-When operating an Akka cluster you must consider how to handle [network partitions](https://en.wikipedia.org/wiki/Network_partition) (a.k.a. split brain scenarios) and machine crashes (including .NET CLR/Core and hardware failures). This is crucial for correct behavior if you use Cluster Singleton or Cluster Sharding, especially together with Akka Persistence.
+> Note: while this feature is based on [Lightbend Reactive Platform Split Brain Resolver](https://doc.akka.io/docs/akka/rp-16s01p02/scala/split-brain-resolver.html) feature description, however its implementation is a result of free contribution and interpretation of Akka.NET team. Lightbend doesn't take any responsibility for the state and correctness of it.
 
-> Note: while this feature is based on [Lightbend Reactive Platform Split Brain Resolver](https://doc.akka.io/docs/akka/rp-16s01p02/scala/split-brain-resolver.html) feature description, its implementation is result of free contribution and interpretation of Akka.NET team. Lightbend team doesn't take any responsibility for the state and correctness of it.
+When working with an Akka.NET cluster, you must consider how to handle [network partitions](https://en.wikipedia.org/wiki/Network_partition) (a.k.a. split brain scenarios) and machine crashes (including .NET CLR/Core and hardware failures). This is crucial for correct behavior of your cluster, especially if you use Cluster Singleton or Cluster Sharding.
 
 ## The Problem
 
-A fundamental problem in distributed systems is that network partitions (split brain scenarios) and machine crashes are indistinguishable for the observer, i.e. a node can observe that there is a problem with another node, but it cannot tell if it has crashed and will never be available again or if there is a network issue that might or might not heal again after a while. Temporary and permanent failures are indistinguishable because decisions must be made in finite time, and there always exists a temporary failure that lasts longer than the time limit for the decision.
+One of the common problems present in distributed systems are potential hardware failures. Things like garbage collection pauses, machine crashes or network partitions happen all the time. Moreover it is impossible to distinguish between them. Different cause can have different result on our cluster. A careful balance here is highly desired:
 
-A third type of problem is if a process is unresponsive, e.g. because of overload, CPU starvation or long garbage collection pauses. This is also indistinguishable from network partitions and crashes. The only signal we have for decision is "no reply in given time for heartbeats" and this means that every phenomena causing delays or lost heartbeats are indistinguishable from each other and must be handled in the same way.
+- From one side we may want to detect crashed nodes as fast as possible and remove them from the cluster.
+- However, things like network partitions may be only temporary. For this reason it may be more feasible to wait a while for disconnected nodes in hope, that they will be able to reconnect soon.
 
-When there is a crash we would like to remove the crashed node immediately from the cluster membership. When there is a network partition or unresponsive process we would like to wait for a while in the hope of that it is a transient problem that will heal again, but at some point we must give up and continue with the nodes on one side of the partition and shut down nodes on the other side. Also, certain features are not fully available during partitions so it might not matter that the partition is transient or not if it just takes too long. Those two goals are in conflict with each other and there is a trade-off between how quickly we can remove a crashed node and premature action on transient network partitions.
+Networks partitions also bring different problems - the natural result of such event is a risk of splitting a single cluster into two or more independent ones, unaware of each others existence. This comes with certain risks. Even more, some of the Akka.NET cluster features may be unavailable or malfunctioning in such scenario. 
 
-This is a difficult problem to solve given that the nodes on the different sides of the network partition cannot communicate with each other. We must ensure that both sides can make this decision by themselves and that they take the same decision about which part will keep running and which part will shut itself down.
+To solve this kind of problems we need to determine a common strategy, in which every node will come to the same deterministic conclusion about which node should live and which one should die, even if it won't be able to communicate with others.
 
-The Akka cluster has a failure detector that will notice network partitions and machine crashes (but it cannot distinguish the two). It uses periodic heartbeat messages to check if other nodes are available and healthy. These observations by the failure detector are referred to as a node being *unreachable* and it may become *reachable* again if the failure detector observes that it can communicate with it again.
+Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrary define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
 
-The failure detector in itself is not enough for making the right decision in all situations. The naive approach is to remove an unreachable node from the cluster membership after a timeout. This works great for crashes and short transient network partitions, but not for long network partitions. Both sides of the network partition will see the other side as unreachable and after a while remove it from its cluster membership. Since this happens on both sides the result is that two separate disconnected clusters have been created. This approach is provided by the opt-in (off by default) auto-down feature.
+In the past the only available opt-in stategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowning about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
 
-If you use the timeout based auto-down feature in combination with Cluster Singleton or Cluster Sharding that would mean that two singleton instances or two sharded entities with same identifier would be running. One would be running: one in each cluster. For example when used together with Akka Persistence that could result in that two instances of a persistent actor with the same persistenceId are running and writing concurrently to the same stream of persistent events, which will have fatal consequences when replaying these events.
+Split brain resolver feature brings ability to apply different strategies for managing node lifecycle in face of network issues and machine crashes. It works as a custom downing provider. Therefore in order to use it, **all of your Akka.NET cluster nodes must define it with the same configuration**. Here's how minimal configuration looks like:
 
-The default setting in Akka Cluster is to not remove unreachable nodes automatically and the recommendation is that the decision of what to do should be taken by a human operator or an external monitoring system. This is a valid solution, but not very convenient if you do not have this staff or external system for other reasons.
+```hocon
+akka.cluster {
+  downing-provider-class = "Akka.Cluster.SplitBrainResolver, Akka.Cluster"
+  split-brain-resolver {
+    active-strategy = <your-strategy>
+  }
+}
+```
 
-If the unreachable nodes are not downed at all they will still be part of the cluster membership. Meaning that Cluster Singleton and Cluster Sharding will not failover to another node. While there are unreachable nodes new nodes that are joining the cluster will not be promoted to full worthy members (with status Up). Similarly, leaving members will not be removed until all unreachable nodes have been resolved. In other words, keeping unreachable members for an unbounded time is undesirable.
+Keep in mind that split brain resolver will NOT work when `akka.cluster.auto-down-unreachable-after` is used.
 
-With that introduction of the problem domain it is time to look at the provided strategies for handling network partition, unresponsive nodes and crashed nodes.
 
 ## Strategies
 
-There is not a "one size fits all" solution to this problem. You have to pick a strategy that fits the characteristics of your system. Every strategy has a failure scenario where it makes a "wrong" decision. This section describes the different strategies and guidelines of when to use what.
+This section describes the different split brain resolver strategies. Please keep in mind, that there's no universal solution and each one of them may fail under specific circumstances.
 
-You enable a strategy with the configuration property `akka.cluster.split-brain-resolver.active-strategy`.
+To decide which strategy to use, you can set `akka.cluster.split-brain-resolver.active-strategy` to one of 4 different options:
 
-> NOTE: You must also remove auto-down configuration, remove this property (or set to off): `akka.cluster.auto-down-unreachable-after`
+- `static-quorum`
+- `keep-majority`
+- `keep-oldest`
+- `keep-referee`
 
-All strategies are inactive until the cluster membership and the information about unreachable nodes have been stable for a certain time period. Continuously adding more nodes while there is a network partition does not influence this timeout, since the status of those nodes will not be changed to Up while there are unreachable nodes. Joining nodes are not counted in the logic of the strategies.
+All strategies will be applied only after cluster state has reached stability for specified time treshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
 
 ```hocon
 akka.cluster.split-brain-resolver {
@@ -52,20 +62,9 @@ akka.cluster.split-brain-resolver {
 }   
 ```
 
-Set the `stable-after` to a shorter duration to have quicker removal of crashed nodes, at the price of risking too early action on transient network partitions that otherwise would have healed. Do not set this to a shorter duration than the membership dissemination time in the cluster, which depends on the cluster size. Recommended minimum duration for different cluster sizes:
+There is no simple way to decide the value of `stable-after`, as shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false failures detected - due to temporary network issues. The rule of thumb for this setting is to set `stable-after` to `log10(maxExpectedNumberOfNodes) * 10`.
 
-| Cluster size | `stable-after` |
-|--------------|----------------|
-|       5      |       7s       |
-|      10      |      10s       |
-|      20      |      13s       |
-|      50      |      17s       |
-|     100      |      20s       |
-|    1000      |      30s       |
-
-The different strategies may have additional settings that are described below. It is important that you use the same configuration on all nodes.
-
-The side of the split that decides to shut itself down will use the cluster *down* command to initiate the removal of a cluster member. When that has been spread among the reachable nodes it will be removed from the cluster membership. That does not automatically shut down the `ActorSystem` or exit the process. To implement that you have to use the `RegisterOnMemberRemoved` callback.
+Remember that if a strategy will decide to down a particular node, it won't shutdown the related `ActorSystem`. In order to do so, use cluster removal hook like this:
 
 ```csharp
 Cluster.Get(system).RegisterOnMemberRemoved(() => {
@@ -75,25 +74,18 @@ Cluster.Get(system).RegisterOnMemberRemoved(() => {
 
 ### Static Quorum
 
-The strategy named `static-quorum` will down the unreachable nodes if the number of remaining nodes are greater than or equal to a configured `quorum-size`. Otherwise it will down the reachable nodes, i.e. it will shut down that side of the partition. In other words, the `quorum-size` defines the minimum number of nodes that the cluster must have to be operational.
+The `static-quorum` strategy works well, when you are able to define minimum required cluster size. It will down unreachable nodes if the number of reachable ones is greater than or equal to a configured `quorum-size`. Otherwise reachable ones will be downed.
 
-This strategy is a good choice when you have a fixed number of nodes in the cluster, or when you can define a fixed number of nodes with a certain role.
+When to use it? When you have a cluster with fixed size of nodes or fixed size of nodes with specific role.
 
-For example, in a 9 node cluster you will configure the `quorum-size` to 5. If there is a network split of 4 and 5 nodes the side with 5 nodes will survive and the other 4 nodes will be downed. Thereafter, in the 5 node cluster, no more failures can be handled, because the remaining cluster size would be less than 5. In the case of another failure in that 5 node cluster all nodes will be downed.
+Things to keep in mind:
 
-Therefore it is important that you join new nodes when old nodes have been removed.
+1. If cluster will split into more than 2 parts, each one smaller than the `quorum-size`, this strategy may bring down the whole cluster.
+2. If the cluster will grow 2 times beyond `quorum-size`, there is still a potential risk of having cluster splitting into two if a network partition will occur.
+3. If during cluster initialization some nodes will become unreachable, there is a risk of putting the cluster down - since strategy will apply before cluster will reach quorum size. For this reason it's a good thing to define `akka.cluster.min-nr-of-members` to a higher value than actual `quorum-size`.
+4. Don't forget to add new nodes back once some of them were removed.
 
-Another consequence of this is that if there are unreachable nodes when starting up the cluster, before reaching this limit, the cluster may shut itself down immediately. This is not an issue if you start all nodes at approximately the same time or use the `akka.cluster.min-nr-of-members` to define required number of members before the leader changes member status of 'Joining' members to 'Up' You can tune the timeout after which downing decisions are made using the `stable-after` setting.
-
-Note that **you must NOT add more members to the cluster than quorum-size * 2 - 1**, because then both sides may down each other and thereby form two separate clusters. For example, `quorum-size` configured to 3 in a 6 node cluster may result in a split where each side consists of 3 nodes each, i.e. each side thinks it has enough nodes to continue by itself. A warning is logged if this recommendation is violated. `static-quorum` will never result in two separate clusters as long as you do not violate this rule.
-
-If the cluster is split in 3 (or more) parts each part that is smaller than then configured quorum-size will down itself and possibly shutdown the whole cluster.
-
-If more nodes than the configured `quorum-size` crash at the same time the other running nodes will down themselves because they think that they are not in majority, and thereby the whole cluster is terminated.
-
-The decision can be based on nodes with a configured `role` instead of all nodes in the cluster. This can be useful when some types of nodes are more valuable than others. You might for example have some nodes responsible for persistent data and some nodes with stateless worker services. Then it probably more important to keep as many persistent data nodes as possible even though it means shutting down more worker nodes.
-
-There is another use of the `role` as well. By defining a `role` for a few (e.g. 7) stable nodes in the cluster and using that in the configuration of `static-quorum` you will be able to dynamically add and remove other nodes without this role and still have good decisions of what nodes to keep running and what nodes to shut down in the case of network partitions. The advantage of this approach compared to `keep-majority` (described below) is that you do not risk splitting the cluster in two separate clusters. You must still obey the rule of not starting too many nodes with this role as described above. It also suffers the risk of shutting down all nodes if there is a failure when there are not enough number of nodes with this role remaining in the cluster, as described above.
+This strategy can work over a subset of cluster nodes by defining a specific `role`. This is useful when some of your nodes are more important than others and you can prioritize them during quorum check. You can also use it to to configure a "core" set of nodes, while still being free grow your cluster over initial limit. Of course this will leave your cluster more vulnerable in situation where those "core" nodes will fail.
 
 Configuration:
 
@@ -113,19 +105,17 @@ akka.cluster.split-brain-resolver {
 
 ### Keep Majority
 
-The strategy named `keep-majority` will down the unreachable nodes if the current node is in the majority part based on the last known membership information. Otherwise down the reachable nodes, i.e. the own part. If the parts are of equal size the part containing the node with the lowest address is kept.
+The `keep-majority` strategy will down this part of the cluster, which sees a lesser part of the whole cluster. This choice is made based on the latest known state of the cluster. When cluster will split into two equal parts, the one which contains the lowest address, will survive.
 
-This strategy is a good choice when the number of nodes in the cluster change dynamically and you can therefore not use `static-quorum`.
+When to use it? When your cluster can grow or shrink very dynamically.
 
-There is a small risk that the decision on both sides of the partition is not based on the same information and therefore resulting in different decisions. This can happen when there are membership changes at the same time as the network partition occurs. For example, the status of two members are changed to Up on one side but that information is not disseminated to the other side before the connection is broken. Then one side sees two more nodes and both sides might consider themselves having majority, resulting in that each side downing the other side and thereby forming two separate clusters. It can also happen when some nodes crash after the network partition but before the strategy has decided what to do.
+Keep in mind, that:
 
-In this regard it is more safe to use `static-quorum`, but the advantages of the dynamic nature of this strategy may outweigh the risk.
+1. Two parts of the cluster may make their decision based on the different state of the cluster, as it's relative for each node. In practice, the risk of it is quite small.
+2. If there are more than 2 partitions, and none of them has reached the majority, the whole cluster may go down.
+3. If more than half of the cluster nodes will go down at once, the remaining ones will also down themselves, as they didn't reached the majority (based on the last known cluster state).
 
-Note that if there are more than two partitions and none is in majority each part will shut down itself, terminating the whole cluster.
-
-If more than half of the nodes crash at the same time the other running nodes will down themselves because they think that they are not in majority, and thereby the whole cluster is terminated.
-
-The decision can be based on nodes with a configured `role` instead of all nodes in the cluster. This can be useful when some types of nodes are more valuable than others. You might for example have some nodes responsible for persistent data and some nodes with stateless worker services. Then it probably more important to keep as many persistent data nodes as possible even though it means shutting down more worker nodes.
+Just like in the case of static quorum, you may decide to make decisions based only on a nodes having configured `role`. The advantages here are similar to those of the static quorum.
 
 Configuration:
 
@@ -142,17 +132,18 @@ akka.cluster.split-brain-resolver {
 
 ### Keep Oldest
 
-The strategy named `keep-oldest` will down the part that does not contain the oldest member. The oldest member is interesting because the active Cluster Singleton instance is running on the oldest member.
+The `keep-oldest` strategy, when a network split has happened, will down a part of the cluster which doesn't contain the oldest node. 
 
-There is one exception to this rule if `down-if-alone` is configured to `on`. Then, if the oldest node has partitioned from all other nodes the oldest will down itself and keep all other nodes running. The strategy will not down the single oldest node when it is the only remaining node in the cluster.
+When to use it? This approach is particularly good in combination with Cluster Singleton, which usually is running on the oldest cluster member. It's also usefull, when you have a one starter node configured as `akka.cluster.seed-nodes` for others, which will still allow you to add and remove members using its address.
 
-Note that if the oldest node crashes the others will remove it from the cluster when `down-if-alone` is `on`, otherwise they will down themselves if the oldest node crashes, i.e. shut down the whole cluster together with the oldest node.
+Keep in mind, that:
 
-This strategy is good to use if you use Cluster Singleton and do not want to shut down the node where the singleton instance runs. If the oldest node crashes a new singleton instance will be started on the next oldest node. The drawback is that the strategy may keep only a few nodes in a large cluster. For example, if one part with the oldest consists of 2 nodes and the other part consists of 98 nodes then it will keep 2 nodes and shut down 98 nodes.
+1. When the oldest node will get partitioned from others, it will be downed itself and the next oldest one will pick up its role. This is possible thanks to `down-if-alone` setting. 
+2. If `down-if-alone` option will be set to `off`, a whole cluster will be dependent on the availability of this single node. 
+3. There is a risk, that if partition will split cluster into two unequal parts i.e. 2 nodes with the oldest one present and 20 remaining ones, the majority of the cluster will go down.
+4. Since the oldest node is determined on the latest known state of the cluster, there is a small risk that during partition, two parts of the cluster will both consider themselves having the oldest member on their side. While this is very rare situation, you still may end up having two independent clusters after split occurrence.
 
-There is one risk with this strategy. If the different sides of a partition have different opinions about which is the oldest node they may both shut down themselves or they may both think that they should down the other side and continue running themselves. The latter results in two separate clusters and two running singleton instances, one in each cluster. This can happen in the rare event of the oldest node being removed from one side, but that information has not been disseminated to the other side before the network partition happens. It can also happen when the node crashes after the network partition but before the strategy has decided what to do.
-
-The decision can be based on nodes with a configured `role` instead of all nodes in the cluster, i.e. using the oldest member (singleton) within the nodes with that role.
+Just like in previous cases, a `role` setting can be used to detemine the oldest member across all having specified role.
 
 Configuration:
 
@@ -173,11 +164,16 @@ akka.cluster.split-brain-resolver {
 
 ### Keep Referee
 
-The strategy named `keep-referee` will down the part that does not contain the given referee node.
+The `keep-referee` strategy will simply down the part that does not contain the given referee node.
 
-If the remaining number of nodes are less than the configured `down-all-if-less-than-nodes` all nodes will be downed. If the referee node itself is removed all nodes will be downed.
+When to use it? If you have a single node which is running processes crucial to existence of the entire cluster.
 
-This strategy is good if you have one node that hosts some critical resource and the system cannot run without it. The drawback is that the referee node is a single point of failure, by design. `keep-referee` will never result in two separate clusters.
+Things to keep in mind:
+
+1. With this strategy, cluster will never split into two indenpendent ones, under any circumstances.
+2. A referee node is a single point of failure for the cluster.
+
+You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimun it will down the entire partition even when referee node was reachable.
 
 Configuration:
 
@@ -193,29 +189,18 @@ akka.cluster.split-brain-resolver {
 }
 ```
 
-## Cluster Singleton and Cluster Sharding
+## Relation to Cluster Singleton and Cluster Sharding
 
-The purpose of Cluster Singleton and Cluster Sharding is to run at most one instance of a given actor at any point in time. When such an instance is shut down a new instance is supposed to be started elsewhere in the cluster. It is important that the new instance is not started before the old instance has been stopped. This is especially important when the singleton or the sharded instance is persistent, since there must only be one active writer of the journaled events of a persistent actor instance.
+Cluster singleton actors and sharded entities of cluster sharding have their lifecycle managed automatically. This means that there can be only one instance of a target actor at the same time in the cluster, and when detected dead, it will be resurrected on another node. However it's important the the old instance of the actor must be stopped before new one will be spawned, especially when used together will Akka.Persistence module. Otherwise this may result in corruption of actor's persistent state and violate actor state consistency.
 
-Since the strategies on different sides of a network partition cannot communicate with each other and they may take the decision at slightly different points in time there must be a time based margin that makes sure that the new instance is not started before the old has been stopped. 
-
-You would like to configure this to a short duration to have quick failover, but that will increase the risk of having multiple singleton/sharded instances running at the same time and it may take different amount of time to act on the decision (dissemination of the down/removal). It is recommended to configure this to the same value as the stable-after property. Recommended minimum duration for different cluster sizes:
-
-| Cluster size | `down-removal-margin` |
-|--------------|-----------------------|
-|       5      |           7s          |
-|      10      |          10s          |
-|      20      |          13s          |
-|      50      |          17s          |
-|     100      |          20s          |
-|    1000      |          30s          |
+Since different nodes may apply their split brain decisions at different points in time, it may be good to configure a time margin necessary to make sure, that other nodes will get enough time to apply their strategies. This can be done using `akka.cluster.down-removal-margin` setting. The shorter it is, the faster reaction time of your cluster will be. However it will also increase the risk of having multiple singleton/sharded entity instances at the same time. It's recommended to set this value to be equal `stable-after` option described above.
 
 ### Expected Failover Time
 
-As you have seen there are several configured timeouts that adds to the total failover latency. With default configuration those are:
+If you're going to use a split brain resolver, you can see that the total failover latency is determined by several values. Defaults are:
 
 - failure detection 5 seconds
-- `stable-after` 20 seconds
-- `down-removal-margin` 20 seconds
+- `akka.cluster.split-brain-resolver.stable-after` 20 seconds
+- `akka.cluster.down-removal-margin` 20 seconds
 
-In total you can expect the failover time of a singleton or sharded instance to be around 45 seconds with default configuration. The default configuration is sized for a cluster of 100 nodes. If you have around 10 nodes you can reduce the `stable-after` and `down-removal-margin` to around 10 seconds, resulting in a expected failover time of around 25 seconds.
+This would result in total failover time of 45 seconds. While this value is good for the cluster of 100 nodes, you may decide to lower those values in case of a smaller one i.e. cluster of 20 nodes could work well with timeouts of 13s, which would reduce total failover time to 31 seconds.
