@@ -490,8 +490,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 }
             }
 
-            if (!Refs().Any()) SendToDeadLetters(message);
-            else Refs().ForEach(r => r?.Forward(message));
+            var counter = 0;
+            foreach (var r in Refs())
+            {
+                if (r == null) continue;
+                r.Forward(message);
+                counter++;
+            }
+
+            if (counter == 0) SendToDeadLetters(message);
         }
 
         private void PublishToEachGroup(string path, object message)
