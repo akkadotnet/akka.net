@@ -473,7 +473,7 @@ namespace Akka.Cluster.Sharding
                 if (a.HasLocalScope || nodes.Contains(a))
                     Context.Watch(proxy);
                 else
-                    RegionTerminated(proxy);        // not part of the cluster
+                    RegionProxyTerminated(proxy);        // not part of the cluster
             }
 
             // Let the quick (those not involving failure detection) Terminated messages
