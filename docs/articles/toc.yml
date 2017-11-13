@@ -162,6 +162,8 @@
     href: clustering/cluster-sharding.md
   - name: Distributed Data
     href: clustering/distributed-data.md
+  - name: Split Brain Resolver
+    href: clustering/split-brain-resolver.md
 - name: Utilities
   items:
   - name: Event Bus
