@@ -9,12 +9,14 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
@@ -45,8 +47,8 @@ namespace Akka.Cluster.Tests
 
         internal ClusterReadView ClusterView { get { return _cluster.ReadView; } }
 
-        public ClusterSpec()
-            : base(Config)
+        public ClusterSpec(ITestOutputHelper output)
+            : base(Config, output)
         {
             _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
             _cluster = Cluster.Get(Sys);
@@ -303,6 +305,90 @@ namespace Akka.Cluster.Tests
             finally
             {
                 Shutdown(sys2);
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_be_able_to_JoinAsync()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                _cluster.JoinAsync(_selfAddress).Wait(timeout).Should().BeTrue();
+                LeaderActions();
+                // Member should already be up
+                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
+                ExpectMsg<ClusterEvent.MemberUp>();
+
+            }
+            finally
+            {
+                _cluster.Shutdown();
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_be_able_to_prematurelly_cancel_JoinAsync()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                var cancel = new CancellationToken(true);
+                var task = _cluster.JoinAsync(_selfAddress, cancel);
+
+                Assert.Throws<AggregateException>(() => task.Wait(timeout))
+                    .Flatten()
+                    .InnerException.Should().BeOfType<TaskCanceledException>();
+                    
+                task.IsCanceled.Should().BeTrue();
+            }
+            finally
+            {
+                _cluster.Shutdown();
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_be_able_to_join_async_to_seed_nodes()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                _cluster.JoinSeedNodesAsync(new []{ _selfAddress }).Wait(timeout).Should().BeTrue();
+                LeaderActions();
+                // Member should already be up
+                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
+                ExpectMsg<ClusterEvent.MemberUp>();
+
+            }
+            finally
+            {
+                _cluster.Shutdown();
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_be_able_to_prematurelly_cancel_join_async_seed_nodes()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                var cancel = new CancellationToken(true);
+                var task = _cluster.JoinSeedNodesAsync(new[] { _selfAddress }, cancel);
+
+                Assert.Throws<AggregateException>(() => task.Wait(timeout))
+                    .Flatten()
+                    .InnerException.Should().BeOfType<TaskCanceledException>();
+
+                task.IsCanceled.Should().BeTrue();
+            }
+            finally
+            {
+                _cluster.Shutdown();
             }
         }
 

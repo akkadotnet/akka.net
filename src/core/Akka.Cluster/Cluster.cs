@@ -223,6 +223,32 @@ namespace Akka.Cluster
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
+        /// <summary>
+        /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
+        /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
+        /// once current cluster node will be moved into <see cref="MemberStatus.Up"/> state,
+        /// or cancelled when provided <paramref name="token"/> cancellation triggers. Cancelling this 
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
+        /// leave the cluster gracefully.
+        /// 
+        /// An actor system can only join a cluster once. Additional attempts will be ignored.
+        /// When it has successfully joined it must be restarted to be able to join another
+        /// cluster or to join the same cluster again.
+        /// </summary>
+        /// <param name="address">The address of the node we want to join.</param>
+        /// <param name="token">An optional cancellation token used to cancel returned task before it completes.</param>
+        /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
+        public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
+        {
+            var completion = new TaskCompletionSource<NotUsed>();
+            this.RegisterOnMemberUp(() => completion.SetResult(NotUsed.Instance));
+
+            Join(address);
+
+            return completion.Task.WithCancellation(token);
+        }
+
         private Address FillLocal(Address address)
         {
             // local address might be used if grabbed from IActorRef.Path.Address
@@ -249,6 +275,30 @@ namespace Akka.Cluster
         {
             ClusterCore.Tell(
                 new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
+        }
+
+        /// <summary>
+        /// Joins the specified seed nodes without defining them in config.
+        /// Especially useful from tests when Addresses are unknown before startup time.
+        /// Returns a task, which completes once current cluster node has successfully joined the cluster
+        /// or which cancels, when a cancellation <paramref name="token"/> has been cancelled. Cancelling this 
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
+        /// leave the cluster gracefully.
+        /// 
+        /// An actor system can only join a cluster once. Additional attempts will be ignored.
+        /// When it has successfully joined it must be restarted to be able to join another
+        /// cluster or to join the same cluster again.
+        /// </summary>
+        /// <param name="seedNodes">TBD</param>
+        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
+        {
+            var completion = new TaskCompletionSource<NotUsed>();
+            this.RegisterOnMemberUp(() => completion.SetResult(NotUsed.Instance));
+
+            JoinSeedNodes(seedNodes);
+
+            return completion.Task.WithCancellation(token);
         }
 
         /// <summary>
