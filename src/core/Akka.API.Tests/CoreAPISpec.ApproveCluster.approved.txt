@@ -33,7 +33,9 @@ namespace Akka.Cluster
         public void Down(Akka.Actor.Address address) { }
         public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
         public void Join(Akka.Actor.Address address) { }
+        public System.Threading.Tasks.Task JoinAsync(Akka.Actor.Address address, System.Threading.CancellationToken token = null) { }
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
+        public System.Threading.Tasks.Task JoinSeedNodesAsync(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes, System.Threading.CancellationToken token = null) { }
         public void Leave(Akka.Actor.Address address) { }
         public System.Threading.Tasks.Task LeaveAsync() { }
         public System.Threading.Tasks.Task LeaveAsync(System.Threading.CancellationToken cancellationToken) { }
