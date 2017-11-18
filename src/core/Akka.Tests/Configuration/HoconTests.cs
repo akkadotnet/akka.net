@@ -930,7 +930,7 @@ ip = ""::1""
 }";
             var ex = Assert.Throws<FormatException>(() => { ConfigurationFactory.ParseString(hocon); });
 
-            var expectedMessage = @"Unknown token at position 26: 
+            var expectedMessage = $@"Unknown token at position {hocon.IndexOf('$')}: 
     ask-timeout = $10ms
                   ^    
 ".Replace("\r\n", "\n");
