@@ -143,12 +143,19 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    public enum StateStoreMode
+    {
+        Persistence,
+        DData
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
     {
+
         /// <summary>
         /// Specifies that this entity type requires cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
@@ -174,6 +181,8 @@ namespace Akka.Cluster.Sharding
         /// to persistence used by the entity actors.
         /// </summary>
         public readonly string SnapshotPluginId;
+
+        public readonly StateStoreMode StateStoreMode;
 
         /// <summary>
         /// TBD
@@ -234,6 +243,7 @@ namespace Akka.Cluster.Sharding
                 rememberEntities: config.GetBoolean("remember-entities"),
                 journalPluginId: config.GetString("journal-plugin-id"),
                 snapshotPluginId: config.GetString("snapshot-plugin-id"),
+                stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
                 tunningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings);
         }
@@ -245,6 +255,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="rememberEntities">TBD</param>
         /// <param name="journalPluginId">TBD</param>
         /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="stateStoreMode">TBD</param>
         /// <param name="tunningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
         public ClusterShardingSettings(
@@ -252,6 +263,7 @@ namespace Akka.Cluster.Sharding
             bool rememberEntities,
             string journalPluginId,
             string snapshotPluginId,
+            StateStoreMode stateStoreMode,
             TunningParameters tunningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings)
         {
@@ -259,6 +271,7 @@ namespace Akka.Cluster.Sharding
             RememberEntities = rememberEntities;
             JournalPluginId = journalPluginId;
             SnapshotPluginId = snapshotPluginId;
+            StateStoreMode = stateStoreMode;
             TunningParameters = tunningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
         }
@@ -275,6 +288,7 @@ namespace Akka.Cluster.Sharding
                 rememberEntities: RememberEntities,
                 journalPluginId: JournalPluginId,
                 snapshotPluginId: SnapshotPluginId,
+                stateStoreMode: StateStoreMode,
                 tunningParameters: TunningParameters,
                 coordinatorSingletonSettings: CoordinatorSingletonSettings);
         }
@@ -307,6 +321,11 @@ namespace Akka.Cluster.Sharding
         public ClusterShardingSettings WithSnapshotPluginId(string snapshotPluginId)
         {
             return Copy(snapshotPluginId: snapshotPluginId ?? string.Empty);
+        }
+
+        public ClusterShardingSettings WithStateStoreMode(StateStoreMode mode)
+        {
+            return Copy(stateStoreMode: mode);
         }
 
         /// <summary>
@@ -346,6 +365,7 @@ namespace Akka.Cluster.Sharding
             bool? rememberEntities = null,
             string journalPluginId = null,
             string snapshotPluginId = null,
+            StateStoreMode? stateStoreMode = null,
             TunningParameters tunningParameters = null,
             ClusterSingletonManagerSettings coordinatorSingletonSettings = null)
         {
@@ -354,6 +374,7 @@ namespace Akka.Cluster.Sharding
                 rememberEntities: rememberEntities ?? RememberEntities,
                 journalPluginId: journalPluginId ?? JournalPluginId,
                 snapshotPluginId: snapshotPluginId ?? SnapshotPluginId,
+                stateStoreMode: stateStoreMode ?? StateStoreMode,
                 tunningParameters: tunningParameters ?? TunningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings ?? CoordinatorSingletonSettings);
         }

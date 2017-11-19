@@ -42,19 +42,19 @@ namespace Akka.Cluster.Sharding
     {
         #region shared part
 
-        internal static void Cancel(this IShardCoordinator coordinator)
+        internal static void Cancel<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
             coordinator.RebalanceTask.Cancel();
             coordinator.Cluster.Unsubscribe(coordinator.Self);
         }
 
-        static bool IsMember(this IShardCoordinator coordinator, IActorRef region)
+        static bool IsMember<TCoordinator>(this TCoordinator coordinator, IActorRef region) where TCoordinator : IShardCoordinator
         {
             var addr = region.Path.Address;
             return addr == coordinator.Self.Path.Address || coordinator.Cluster.ReadView.Members.Any(m => m.Address == addr && m.Status == MemberStatus.Up);
         }
 
-        internal static bool Active(this IShardCoordinator coordinator, object message)
+        internal static bool Active<TCoordinator>(this TCoordinator coordinator, object message) where TCoordinator : IShardCoordinator
         {
             switch (message)
             {
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void AllocateShardHomesForRememberEntities(this IShardCoordinator coordinator)
+        private static void AllocateShardHomesForRememberEntities<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
             if (coordinator.Settings.RememberEntities && coordinator.CurrentState.UnallocatedShards.Count > 0)
             {
@@ -103,7 +103,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void SendHostShardMessage(this IShardCoordinator coordinator, String shard, IActorRef region)
+        private static void SendHostShardMessage<TCoordinator>(this TCoordinator coordinator, String shard, IActorRef region) where TCoordinator : IShardCoordinator
         {
             region.Tell(new PersistentShardCoordinator.HostShard(shard));
             var cancel = coordinator.Context.System.Scheduler.ScheduleTellOnceCancelable(
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static void ApplyStateInitialized(this IShardCoordinator coordinator)
+        public static void StateInitialized<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
             foreach (var entry in coordinator.CurrentState.Shards)
                 SendHostShardMessage(coordinator, entry.Key, entry.Value);
@@ -125,7 +125,7 @@ namespace Akka.Cluster.Sharding
             AllocateShardHomesForRememberEntities(coordinator);
         }
 
-        internal static void WatchStateActors(this IShardCoordinator coordinator)
+        internal static void WatchStateActors<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
             // Optimization:
             // Consider regions that don't belong to the current cluster to be terminated.
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Sharding
             coordinator.Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), coordinator.Self, PersistentShardCoordinator.StateInitialized.Instance, ActorRefs.NoSender);
         }
 
-        internal static bool ReceiveTerminated(this IShardCoordinator coordinator, object message)
+        internal static bool ReceiveTerminated<TCoordinator>(this TCoordinator coordinator, object message) where TCoordinator : IShardCoordinator
         {
             switch (message)
             {
@@ -186,7 +186,7 @@ namespace Akka.Cluster.Sharding
             return false;
         }
 
-        private static void HandleGracefulShutdownRequest(this IShardCoordinator coordinator, PersistentShardCoordinator.GracefulShutdownRequest request)
+        private static void HandleGracefulShutdownRequest<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.GracefulShutdownRequest request) where TCoordinator : IShardCoordinator
         {
             if (!coordinator.GracefullShutdownInProgress.Contains(request.ShardRegion))
             {
@@ -199,7 +199,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleRebalanceDone(this IShardCoordinator coordinator, RebalanceDone done)
+        private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, RebalanceDone done) where TCoordinator : IShardCoordinator
         {
             coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.Remove(done.Shard);
             coordinator.Log.Debug("Rebalance shard [{0}] done [{1}]", done.Shard, done.Ok);
@@ -220,7 +220,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleRebalanceTick(this IShardCoordinator coordinator)
+        private static void HandleRebalanceTick<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
             if (coordinator.CurrentState.Regions.Count != 0)
             {
@@ -235,13 +235,13 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleResendShardHost(this IShardCoordinator coordinator, ResendShardHost resend)
+        private static void HandleResendShardHost<TCoordinator>(this TCoordinator coordinator, ResendShardHost resend) where TCoordinator : IShardCoordinator
         {
             if (coordinator.CurrentState.Shards.TryGetValue(resend.Shard, out var region) && region.Equals(resend.Region))
                 SendHostShardMessage(coordinator, resend.Shard, region);
         }
 
-        private static void HandleShardStated(this IShardCoordinator coordinator, PersistentShardCoordinator.ShardStarted message)
+        private static void HandleShardStated<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.ShardStarted message) where TCoordinator : IShardCoordinator
         {
             var shard = message.Shard;
             if (coordinator.UnAckedHostShards.TryGetValue(shard, out var cancel))
@@ -251,7 +251,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleAllocateShardResult(this IShardCoordinator coordinator, PersistentShardCoordinator.AllocateShardResult allocateResult)
+        private static void HandleAllocateShardResult<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.AllocateShardResult allocateResult) where TCoordinator : IShardCoordinator
         {
             if (allocateResult.ShardRegion == null)
                 coordinator.Log.Debug("Shard [{0}] allocation failed. It will be retried", allocateResult.Shard);
@@ -259,7 +259,7 @@ namespace Akka.Cluster.Sharding
                 ContinueGetShardHome(coordinator, allocateResult.Shard, allocateResult.ShardRegion, allocateResult.GetShardHomeSender);
         }
 
-        private static void HandleGetShardHome(this IShardCoordinator coordinator, PersistentShardCoordinator.GetShardHome getShardHome)
+        private static void HandleGetShardHome<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.GetShardHome getShardHome) where TCoordinator : IShardCoordinator
         {
             var shard = getShardHome.Shard;
 
@@ -301,7 +301,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void RegionTerminated(this IShardCoordinator coordinator, IActorRef terminatedRef)
+        private static void RegionTerminated<TCoordinator>(this TCoordinator coordinator, IActorRef terminatedRef) where TCoordinator : IShardCoordinator
         {
             if (coordinator.CurrentState.Regions.TryGetValue(terminatedRef, out var shards))
             {
@@ -320,7 +320,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void RegionProxyTerminated(this IShardCoordinator coordinator, IActorRef proxyRef)
+        private static void RegionProxyTerminated<TCoordinator>(this TCoordinator coordinator, IActorRef proxyRef) where TCoordinator : IShardCoordinator
         {
             if (coordinator.CurrentState.RegionProxies.Contains(proxyRef))
             {
@@ -329,7 +329,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleRegisterProxy(this IShardCoordinator coordinator, PersistentShardCoordinator.RegisterProxy registerProxy)
+        private static void HandleRegisterProxy<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.RegisterProxy registerProxy) where TCoordinator : IShardCoordinator
         {
             var proxy = registerProxy.ShardRegionProxy;
             coordinator.Log.Debug("ShardRegion proxy registered: [{0}]", proxy);
@@ -348,7 +348,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void HandleRegister(this IShardCoordinator coordinator, PersistentShardCoordinator.Register message)
+        private static void HandleRegister<TCoordinator>(this TCoordinator coordinator, PersistentShardCoordinator.Register message) where TCoordinator : IShardCoordinator
         {
             var region = message.ShardRegion;
             if (IsMember(coordinator, region))
@@ -380,7 +380,7 @@ namespace Akka.Cluster.Sharding
             else coordinator.Log.Debug("ShardRegion [{0}] was not registered since the coordinator currently does not know about a node of that region", region);
         }
 
-        private static void HandleGetClusterShardingStats(this IShardCoordinator coordinator, GetClusterShardingStats message)
+        private static void HandleGetClusterShardingStats<TCoordinator>(this TCoordinator coordinator, GetClusterShardingStats message) where TCoordinator : IShardCoordinator
         {
             var sender = coordinator.Sender;
             Task.WhenAll(
@@ -410,7 +410,7 @@ namespace Akka.Cluster.Sharding
             return true;
         }
 
-        private static void ContinueRebalance(this IShardCoordinator coordinator, IImmutableSet<ShardId> shards)
+        private static void ContinueRebalance<TCoordinator>(this TCoordinator coordinator, IImmutableSet<ShardId> shards) where TCoordinator : IShardCoordinator
         {
             foreach (var shard in shards)
             {
@@ -431,7 +431,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void ContinueGetShardHome(this IShardCoordinator coordinator, string shard, IActorRef region, IActorRef getShardHomeSender)
+        private static void ContinueGetShardHome<TCoordinator>(this TCoordinator coordinator, string shard, IActorRef region, IActorRef getShardHomeSender) where TCoordinator : IShardCoordinator
         {
             if (!coordinator.RebalanceInProgress.Contains(shard))
             {

@@ -1173,8 +1173,7 @@ namespace Akka.Cluster.Sharding
         }
 
         #endregion
-
-
+        
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="PersistentShardCoordinator"/> actor.
         /// </summary>
@@ -1182,16 +1181,14 @@ namespace Akka.Cluster.Sharding
         /// <param name="settings">TBD</param>
         /// <param name="allocationStrategy">TBD</param>
         /// <returns>TBD</returns>
-        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
-        {
-            return Actor.Props.Create(() => new PersistentShardCoordinator(typeName, settings, allocationStrategy)).WithDeploy(Deploy.Local);
-        }
+        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy) => 
+            Actor.Props.Create(() => new PersistentShardCoordinator(typeName, settings, allocationStrategy)).WithDeploy(Deploy.Local);
 
         public Cluster Cluster { get; } = Cluster.Get(Context.System);
 
         public readonly int MinMembers;
 
-        private bool allRegionsRegistered = false;
+        private bool _allRegionsRegistered = false;
 
         /// <summary>
         /// TBD
@@ -1205,11 +1202,7 @@ namespace Akka.Cluster.Sharding
         public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> RegionTerminationInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        /// <summary>
-        /// TBD
-        /// </summary>
         public State CurrentState { get; set; }
-
         public ClusterShardingSettings Settings { get; }
         public IShardAllocationStrategy AllocationStrategy { get; }
         public ICancelable RebalanceTask { get; }
@@ -1322,12 +1315,12 @@ namespace Akka.Cluster.Sharding
         public bool HasAllRegionsRegistered()
         {
             // the check is only for startup, i.e. once all have registered we don't check more
-            if (allRegionsRegistered)
+            if (_allRegionsRegistered)
                 return true;
             else
             {
-                allRegionsRegistered = AliveRegions.Count >= MinMembers;
-                return allRegionsRegistered;
+                _allRegionsRegistered = AliveRegions.Count >= MinMembers;
+                return _allRegionsRegistered;
             }
         }
 
@@ -1345,7 +1338,7 @@ namespace Akka.Cluster.Sharding
         {
             if (message is StateInitialized)
             {
-                this.ApplyStateInitialized();
+                this.StateInitialized();
                 Context.Become(msg => this.Active(msg) || HandleSnapshotResult(msg));
                 return true;
             }
