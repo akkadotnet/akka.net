@@ -310,14 +310,19 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
-            object handOffStopMessage)
+            object handOffStopMessage,
+            IActorRef replicator,
+            int majorityMinCap)
         {
-            if (settings.RememberEntities)
-                return Actor.Props.Create(() => new PersistentShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage))
-                .WithDeploy(Deploy.Local);
-            else
-                return Actor.Props.Create(() => new ShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage))
-                  .WithDeploy(Deploy.Local);
+            switch (settings.StateStoreMode)
+            {
+                case StateStoreMode.DData when settings.RememberEntities:
+                    return Actor.Props.Create(() => new DDataShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
+                case StateStoreMode.Persistence when settings.RememberEntities:
+                    return Actor.Props.Create(() => new PersistentShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+                default:
+                    return Actor.Props.Create(() => new ShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+            }
         }
 
 

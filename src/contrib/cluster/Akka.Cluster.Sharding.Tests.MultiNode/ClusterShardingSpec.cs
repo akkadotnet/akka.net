@@ -16,6 +16,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
+using Akka.DistributedData;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
@@ -372,6 +373,10 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier(from.Name + "-joined");
         }
 
+        public IActorRef ReplicatorRef => Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
+            .WithGossipInterval(TimeSpan.FromSeconds(1))
+            .WithMaxDeltaElements(10)), "replicator");
+
         private void CreateCoordinator()
         {
             var typeNames = new[]
@@ -430,7 +435,9 @@ namespace Akka.Cluster.Sharding.Tests
                 "/user/" + typeName + "Coordinator/singleton/coordinator",
                 Counter.ExtractEntityId,
                 Counter.ExtractShardId,
-                PoisonPill.Instance)),
+                PoisonPill.Instance,
+                ReplicatorRef,
+                3)),
                 typeName + "Region");
         }
 
@@ -613,7 +620,9 @@ namespace Akka.Cluster.Sharding.Tests
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
                         extractEntityId: Counter.ExtractEntityId,
-                        extractShardId: Counter.ExtractShardId
+                        extractShardId: Counter.ExtractShardId,
+                        replicator: Sys.DeadLetters,
+                        majorityMinCap: 0
                         ), "regionProxy");
 
                     proxy.Tell(new Counter.Get(1));

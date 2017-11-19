@@ -236,10 +236,12 @@ namespace Akka.Cluster.Sharding
         /// <param name="extractEntityId">TBD</param>
         /// <param name="extractShardId">TBD</param>
         /// <param name="handOffStopMessage">TBD</param>
+        /// <param name="replicator"></param>
+        /// <param name="majorityMinCap"></param>
         /// <returns>TBD</returns>
-        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage)
+        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
-            return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
 
         /// <summary>
@@ -250,10 +252,12 @@ namespace Akka.Cluster.Sharding
         /// <param name="coordinatorPath">TBD</param>
         /// <param name="extractEntityId">TBD</param>
         /// <param name="extractShardId">TBD</param>
+        /// <param name="replicator"></param>
+        /// <param name="majorityMinCap"></param>
         /// <returns>TBD</returns>
-        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, IActorRef replicator, int majorityMinCap)
         {
-            return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
 
         /// <summary>
@@ -284,6 +288,9 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public readonly object HandOffStopMessage;
+
+        private readonly IActorRef _replicator;
+        private readonly int _majorityMinCap;
 
         /// <summary>
         /// TBD
@@ -345,7 +352,9 @@ namespace Akka.Cluster.Sharding
         /// <param name="extractEntityId">TBD</param>
         /// <param name="extractShardId">TBD</param>
         /// <param name="handOffStopMessage">TBD</param>
-        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage)
+        /// <param name="replicator"></param>
+        /// <param name="majorityMinCap"></param>
+        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             TypeName = typeName;
             EntityProps = entityProps;
@@ -354,6 +363,8 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId = extractEntityId;
             ExtractShardId = extractShardId;
             HandOffStopMessage = handOffStopMessage;
+            _replicator = replicator;
+            _majorityMinCap = majorityMinCap;
 
             _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
             SetupCoordinatedShutdown();
@@ -905,7 +916,9 @@ namespace Akka.Cluster.Sharding
                         Settings,
                         ExtractEntityId,
                         ExtractShardId,
-                        HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), name));
+                        HandOffStopMessage,
+                        _replicator,
+                        _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), name));
 
                     ShardsByRef = ShardsByRef.SetItem(shardRef, id);
                     Shards = Shards.SetItem(id, shardRef);
