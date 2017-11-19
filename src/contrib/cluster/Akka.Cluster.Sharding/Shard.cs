@@ -19,7 +19,7 @@ namespace Akka.Cluster.Sharding
     using EntityId = String;
     using Msg = Object;
 
-    public class ShardActor : ActorBase
+    internal sealed class ShardActor : ActorBase
     {
         private readonly Shard _shardSemantic;
 
@@ -56,7 +56,7 @@ namespace Akka.Cluster.Sharding
     /// <summary>
     /// TBD
     /// </summary>
-    public class Shard
+    internal class Shard
     {
         #region messages
 
@@ -479,10 +479,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log
-        {
-            get { return _log ?? (_log = _context.GetLogger()); }
-        }
+        protected ILoggingAdapter Log => _log ?? (_log = _context.GetLogger());
 
         /// <summary>
         /// TBD
@@ -508,7 +505,7 @@ namespace Akka.Cluster.Sharding
         /// <typeparam name="T">TBD</typeparam>>
         /// <param name="evt">TBD</param>
         /// <param name="handler">TBD</param>
-        protected virtual void ProcessChange<T>(T evt, Action<T> handler)
+        protected virtual void ProcessChange<T>(T evt, Action<T> handler) where T: StateChange
         {
             handler(evt);
         }

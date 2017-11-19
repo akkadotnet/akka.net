@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     using EntryId = String;
     using Msg = Object;
 
-    public class PersistentShardActor : PersistentActor, IPersistentActorContext
+    public sealed class PersistentShardActor : PersistentActor, IPersistentActorContext
     {
         private readonly PersistentShard _shardSemantic;
 
@@ -60,7 +60,7 @@ namespace Akka.Cluster.Sharding
         }
     }
 
-    public interface IPersistentActorContext
+    internal interface IPersistentActorContext
     {
         long LastSequenceNr { get; }
         long SnapshotSequenceNr { get; }
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Sharding
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
     /// </summary>
-    public class PersistentShard : Shard
+    internal sealed class PersistentShard : Shard
     {
         private readonly IPersistentActorContext _persistent;
 

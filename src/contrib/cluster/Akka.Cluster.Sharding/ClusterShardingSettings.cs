@@ -70,6 +70,11 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public readonly int LeastShardAllocationMaxSimultaneousRebalance;
+
+        public readonly TimeSpan WaitingForStateTimeout;
+
+        public readonly TimeSpan UpdatingStateTimeout;
+
         public readonly string EntityRecoveryStrategy;
         public readonly TimeSpan EntityRecoveryConstantRateStrategyFrequency;
         public readonly int EntityRecoveryConstantRateStrategyNumberOfEntities;
@@ -109,6 +114,8 @@ namespace Akka.Cluster.Sharding
             int keepNrOfBatches,
             int leastShardAllocationRebalanceThreshold,
             int leastShardAllocationMaxSimultaneousRebalance,
+            TimeSpan waitingForStateTimeout,
+            TimeSpan updatingStateTimeout,
             string entityRecoveryStrategy,
             TimeSpan entityRecoveryConstantRateStrategyFrequency,
             int entityRecoveryConstantRateStrategyNumberOfEntities)
@@ -128,6 +135,8 @@ namespace Akka.Cluster.Sharding
             KeepNrOfBatches = keepNrOfBatches;
             LeastShardAllocationRebalanceThreshold = leastShardAllocationRebalanceThreshold;
             LeastShardAllocationMaxSimultaneousRebalance = leastShardAllocationMaxSimultaneousRebalance;
+            WaitingForStateTimeout = waitingForStateTimeout;
+            UpdatingStateTimeout = updatingStateTimeout;
             EntityRecoveryStrategy = entityRecoveryStrategy;
             EntityRecoveryConstantRateStrategyFrequency = entityRecoveryConstantRateStrategyFrequency;
             EntityRecoveryConstantRateStrategyNumberOfEntities = entityRecoveryConstantRateStrategyNumberOfEntities;
@@ -210,6 +219,8 @@ namespace Akka.Cluster.Sharding
                 keepNrOfBatches: config.GetInt("keep-nr-of-batches"),
                 leastShardAllocationRebalanceThreshold: config.GetInt("least-shard-allocation-strategy.rebalance-threshold"),
                 leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"),
+                waitingForStateTimeout: config.GetTimeSpan("waiting-for-state-timeout"),
+                updatingStateTimeout: config.GetTimeSpan("updating-state-timeout"),
                 entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
                 entityRecoveryConstantRateStrategyFrequency: config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"),
                 entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
