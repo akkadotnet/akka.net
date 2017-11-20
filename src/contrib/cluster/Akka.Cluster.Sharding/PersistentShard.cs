@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Persistence;
 using Akka.Util.Internal;
 using System.Threading.Tasks;
+using Akka.Event;
 
 namespace Akka.Cluster.Sharding
 {
@@ -18,87 +19,35 @@ namespace Akka.Cluster.Sharding
     using EntryId = String;
     using Msg = Object;
 
-    public sealed class PersistentShardActor : PersistentActor, IPersistentActorContext
-    {
-        private readonly PersistentShard _shardSemantic;
-
-        public PersistentShardActor(
-            string typeName,
-            string shardId,
-            Props entityProps,
-            ClusterShardingSettings settings,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
-            object handOffStopMessage)
-        {
-            _shardSemantic = new PersistentShard(
-                context: Context,
-                persistentContext: this,
-                unhandled: Unhandled,
-                typeName: typeName,
-                shardId: shardId,
-                entityProps: entityProps,
-                settings: settings,
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId,
-                handOffStopMessage: handOffStopMessage);
-
-            JournalPluginId = _shardSemantic.JournalPluginId;
-            SnapshotPluginId = _shardSemantic.SnapshotPluginId;
-        }
-
-        public override string PersistenceId => _shardSemantic.PersistenceId;
-
-        protected override bool ReceiveCommand(object message)
-        {
-            return _shardSemantic.ReceiveCommand(message);
-        }
-
-        protected override bool ReceiveRecover(object message)
-        {
-            return _shardSemantic.ReceiveRecover(message);
-        }
-    }
-
-    internal interface IPersistentActorContext
-    {
-        long LastSequenceNr { get; }
-        long SnapshotSequenceNr { get; }
-
-        void Persist<TEvent>(TEvent @event, Action<TEvent> handler);
-        void DeleteMessages(long toSequenceNr);
-        void SaveSnapshot(object snapshot);
-        void DeleteSnapshot(long sequenceNr);
-        void DeleteSnapshots(SnapshotSelectionCriteria criteria);
-    }
-
     /// <summary>
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
     /// </summary>
-    internal sealed class PersistentShard : Shard
+    internal sealed class PersistentShard : PersistentActor, IShard
     {
-        private readonly IPersistentActorContext _persistent;
+        IActorContext IShard.Context => Context;
+        IActorRef IShard.Self => Self;
+        IActorRef IShard.Sender => Sender;
+        ILoggingAdapter IShard.Log => base.Log;
+        void IShard.Unhandled(object message) => base.Unhandled(message);
 
-        private readonly string _persistenceId;
+        public string TypeName { get; }
+        public string ShardId { get; }
+        public Props EntityProps { get; }
+        public ClusterShardingSettings Settings { get; }
+        public ExtractEntityId ExtractEntityId { get; }
+        public ExtractShardId ExtractShardId { get; }
+        public object HandOffStopMessage { get; }
+        public IActorRef HandOffStopper { get; set; }
+        public Shard.ShardState State { get; set; } = Shard.ShardState.Empty;
+        public ImmutableDictionary<string, IActorRef> RefById { get; set; } = ImmutableDictionary<string, IActorRef>.Empty;
+        public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
+        public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
+        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistentContext">TBD</param>
-        /// <param name="unhandled">TBD</param>
-        /// <param name="typeName">TBD</param>
-        /// <param name="shardId">TBD</param>
-        /// <param name="entityProps">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="extractEntityId">TBD</param>
-        /// <param name="extractShardId">TBD</param>
-        /// <param name="handOffStopMessage">TBD</param>
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; } 
+
         public PersistentShard(
-            IActorContext context,
-            IPersistentActorContext persistentContext,
-            Action<object> unhandled,
             string typeName,
             string shardId,
             Props entityProps,
@@ -106,29 +55,29 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
             object handOffStopMessage)
-            : base(context, unhandled, typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)
         {
-            _persistent = persistentContext;
-            _persistenceId = "/sharding/" + TypeName + "Shard/" + ShardId;
+            TypeName = typeName;
+            ShardId = shardId;
+            EntityProps = entityProps;
+            Settings = settings;
+            ExtractEntityId = extractEntityId;
+            ExtractShardId = extractShardId;
+            HandOffStopMessage = handOffStopMessage;
+
+            PersistenceId = "/sharding/" + TypeName + "Shard/" + ShardId;
+            JournalPluginId = settings.JournalPluginId;
+            SnapshotPluginId = settings.SnapshotPluginId;
+            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+                ? EntityRecoveryStrategy.ConstantStrategy(
+                    Context.System,
+                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                : EntityRecoveryStrategy.AllStrategy;
         }
 
-        public string PersistenceId => _persistenceId;
-        public string JournalPluginId => Settings.JournalPluginId;
-        public string SnapshotPluginId => Settings.SnapshotPluginId;
+        public override string PersistenceId { get; }
 
-        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy => Settings.TunningParameters.EntityRecoveryStrategy == "constant"
-            ? EntityRecoveryStrategy.ConstantStrategy(
-                _context.System,
-                Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
-                Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
-            : EntityRecoveryStrategy.AllStrategy;
-
-        public override void Initialized()
-        {
-            // would be initialized after recovery completed
-        }
-
-        public bool ReceiveCommand(object message)
+        protected override bool ReceiveCommand(object message)
         {
             switch (message)
             {
@@ -146,7 +95,7 @@ namespace Akka.Cluster.Sharding
                     var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
                     if (deleteToSequenceNr > 0)
                     {
-                        _persistent.DeleteMessages(deleteToSequenceNr);
+                        DeleteMessages(deleteToSequenceNr);
                     }
                     break;
                 case SaveSnapshotFailure m:
@@ -154,7 +103,7 @@ namespace Akka.Cluster.Sharding
                     break;
                 case DeleteMessagesSuccess m:
                     Log.Debug("PersistentShard messages to {0} deleted successfully", m.ToSequenceNr);
-                    _persistent.DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
                     break;
 
                 case DeleteMessagesFailure m:
@@ -167,67 +116,54 @@ namespace Akka.Cluster.Sharding
                     Log.Warning("PersistentShard snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
                     break;
                 default:
-                    return HandleCommand(message);
+                    return this.HandleCommand(message);
             }
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        public bool ReceiveRecover(object message)
+        protected override bool ReceiveRecover(object message)
         {
             switch (message)
             {
-                case EntityStarted started:
-                    State = new ShardState(State.Entries.Add(started.EntityId));
+                case Shard.EntityStarted started:
+                    State = new Shard.ShardState(State.Entries.Add(started.EntityId));
                     return true;
-                case EntityStopped stopped:
-                    State = new ShardState(State.Entries.Remove(stopped.EntityId));
+                case Shard.EntityStopped stopped:
+                    State = new Shard.ShardState(State.Entries.Remove(stopped.EntityId));
                     return true;
-                case SnapshotOffer offer when offer.Snapshot is ShardState:
-                    State = (ShardState)offer.Snapshot;
+                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState:
+                    State = (Shard.ShardState)offer.Snapshot;
                     return true;
                 case RecoveryCompleted _:
                     RestartRememberedEntities();
-                    base.Initialized();
+                    this.Initialized();
                     Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
                     return true;
             }
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        protected override void ProcessChange<T>(T evt, Action<T> handler)
+        private void RestartRememberedEntities()
         {
-            SaveSnapshotWhenNeeded();
-            _persistent.Persist(evt, handler);
+            RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
+                scheduledRecovery.ContinueWith(t => new Shard.RestartEntities(t.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self, Self));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected void SaveSnapshotWhenNeeded()
+        public void SaveSnapshotWhenNeeded()
         {
-            if (_persistent.LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && _persistent.LastSequenceNr != 0)
+            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
-                Log.Debug("Saving snapshot, sequence number [{0}]", _persistent.SnapshotSequenceNr);
-                _persistent.SaveSnapshot(State);
+                Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
+                SaveSnapshot(State);
             }
         }
+        public void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange
+        {
+            SaveSnapshotWhenNeeded();
+            Persist(evt, handler);
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tref">TBD</param>
-        protected override void EntityTerminated(IActorRef tref)
+        public void EntityTerminated(IActorRef tref)
         {
             if (IdByRef.TryGetValue(tref, out var id))
             {
@@ -239,49 +175,35 @@ namespace Akka.Cluster.Sharding
                     //Note; because we're not persisting the EntityStopped, we don't need
                     // to persist the EntityStarted either.
                     Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
-                    SendMessageBuffer(new EntityStarted(id));
+                    this.SendMessageBuffer(new Shard.EntityStarted(id));
                 }
                 else
                 {
                     if (!Passivating.Contains(tref))
                     {
                         Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
-                        _context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, _context.Self, new RestartEntity(id), ActorRefs.NoSender);
+                        Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
                     }
                     else
-                        ProcessChange(new EntityStopped(id), PassivateCompleted);
+                        ProcessChange(new Shard.EntityStopped(id), this.PassivateCompleted);
                 }
 
                 Passivating = Passivating.Remove(tref);
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="id">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="payload">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
-        protected override void DeliverTo(string id, object message, object payload, IActorRef sender)
+        public void DeliverTo(string id, object message, object payload, IActorRef sender)
         {
             var name = Uri.EscapeDataString(id);
-            var child = _context.Child(name);
+            var child = Context.Child(name);
             if (Equals(child, ActorRefs.Nobody))
             {
                 // Note; we only do this if remembering, otherwise the buffer is an overhead
                 MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
-                ProcessChange(new EntityStarted(id), SendMessageBuffer);
+                ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
             }
             else
                 child.Tell(payload, sender);
-        }
-
-        private void RestartRememberedEntities()
-        {
-            RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
-                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(_context.Self, _context.Self));
         }
     }
 }

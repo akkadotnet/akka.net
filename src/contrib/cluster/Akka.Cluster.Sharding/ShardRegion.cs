@@ -909,7 +909,7 @@ namespace Akka.Cluster.Sharding
                     Log.Debug("Starting shard [{0}] in region", id);
 
                     var name = Uri.EscapeDataString(id);
-                    var shardRef = Context.Watch(Context.ActorOf(Shard.Props(
+                    var shardRef = Context.Watch(Context.ActorOf(Akka.Cluster.Sharding.Shards.Props(
                         TypeName,
                         id,
                         EntityProps,

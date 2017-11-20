@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ShardCoordinators.cs" company="Akka.NET Project">
+// <copyright file="ShardCoordinator.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -38,7 +38,7 @@ namespace Akka.Cluster.Sharding
         bool HasAllRegionsRegistered();
     }
 
-    internal static class ShardCoordinators
+    internal static class ShardCoordinator
     {
         #region shared part
 

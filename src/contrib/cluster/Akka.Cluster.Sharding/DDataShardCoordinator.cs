@@ -255,7 +255,7 @@ namespace Akka.Cluster.Sharding
                 _shards = changed.Get(_allShardsKey).Elements;
                 return true;
             }
-            else return ShardCoordinators.Active(this, message);
+            else return ShardCoordinator.Active(this, message);
         }
 
         public void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : PersistentShardCoordinator.IDomainEvent
