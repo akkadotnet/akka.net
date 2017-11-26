@@ -242,7 +242,9 @@ namespace Akka.Cluster
         public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
         {
             var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.SetResult(NotUsed.Instance));
+            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
+            this.RegisterOnMemberRemoved(() => completion.TrySetException(
+                new ClusterJoinFailedException($"Node has been removed from the cluster before it managed to join {address}.")));
 
             Join(address);
 
@@ -294,7 +296,9 @@ namespace Akka.Cluster
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
         {
             var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.SetResult(NotUsed.Instance));
+            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
+            this.RegisterOnMemberRemoved(() => completion.TrySetException(
+                new ClusterJoinFailedException($"Node has been removed from the cluster before it managed to join any of the seed nodes: {string.Join(", ", seedNodes)}.")));
 
             JoinSeedNodes(seedNodes);
 
@@ -576,6 +580,16 @@ namespace Akka.Cluster
         internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
+        }
+    }
+
+    /// <summary>
+    /// Exception thrown, when <see cref="Cluster.JoinAsync"/> or <see cref="Cluster.JoinSeedNodesAsync"/> fails to succeed.
+    /// </summary>
+    public class ClusterJoinFailedException : AkkaException
+    {
+        public ClusterJoinFailedException(string message) : base(message)
+        {
         }
     }
 }
