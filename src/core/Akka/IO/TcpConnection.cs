@@ -830,7 +830,8 @@ namespace Akka.IO
             {
                 try
                 {
-                    PendingWrite WriteToChannel(ByteString data)
+                    var data = _buffer;
+                    while(true)
                     {
                         var bytesWritten = _connection.Socket.Send(data.Buffers);
                         if (_connection.traceLogging)
@@ -838,7 +839,7 @@ namespace Akka.IO
                         if (bytesWritten < data.Count)
                         {
                             // we weren't able to write all bytes from the buffer, so we need to try again later
-                            return WriteToChannel(data.Slice(bytesWritten));
+                            data = data.Slice(bytesWritten);
                         }
                         else // finished writing
                         {
@@ -847,8 +848,6 @@ namespace Akka.IO
                             return _connection.CreatePendingWrite(Commander, _tail, info);
                         }
                     }
-
-                    return WriteToChannel(_buffer);
 
                 }
                 catch (SocketException e)
