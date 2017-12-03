@@ -74,6 +74,24 @@ namespace Akka.Configuration.Hocon
             return false;
         }
 
+        protected string PickErrorLine(out int index)
+        {
+            index = _index;
+            var from = _text.LastIndexOf(Environment.NewLine, _index);
+            if (from == -1) from = 0; else from += Environment.NewLine.Length;
+            var to = _text.IndexOf(Environment.NewLine, _index);
+            if (to == -1) to = _text.Length;
+
+            var sb = new StringBuilder((to - from) * 2 + 4).AppendLine(_text.Substring(from, to - from));
+            for (int i = from; i < to; i++)
+            {
+                if (i == index) sb.Append('^');
+                else sb.Append(' ');
+            }
+
+            return sb.AppendLine().ToString();
+        }
+
         /// <summary>
         /// Retrieves a string of the given length from the current position of the tokenizer.
         /// </summary>
@@ -252,7 +270,8 @@ namespace Akka.Configuration.Hocon
             {
                 return new Token(TokenType.EoF);
             }
-            throw new FormatException("unknown token");
+            var line = PickErrorLine(out var index);
+            throw new FormatException($"Unknown token at position {index}: \n{line}");
         }
 
         private bool IsStartOfQuotedKey()

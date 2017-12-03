@@ -807,7 +807,7 @@ namespace Akka.Cluster.Sharding
                             updatedShards = updatedShards.Remove(shard);
 
                             Regions = updatedShards.Count == 0
-                                ? Regions = Regions.Remove(regionRef)
+                                ? Regions.Remove(regionRef)
                                 : Regions.SetItem(regionRef, updatedShards);
 
                             RegionByShard = RegionByShard.Remove(shard);

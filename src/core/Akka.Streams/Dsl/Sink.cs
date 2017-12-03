@@ -222,7 +222,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -233,7 +233,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be return a default value.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -384,15 +384,21 @@ namespace Akka.Streams.Dsl
                 .Named("AggregateAsyncSink");
 
         /// <summary>
+        /// <para>
         /// A <see cref="Sink{TIn,Task}"/> that will invoke the given <paramref name="reduce"/> for every received element, giving it its previous
         /// output (from the second element) and the element as input.
         /// The returned <see cref="Task{TIn}"/> will be completed with value of the final
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream. 
-        /// 
+        /// </para>
+        /// <para>
         /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <param name="reduce">TBD</param>
@@ -504,13 +510,18 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>() => FromGraph(new QueueSink<TIn>());
 
         /// <summary>
+        /// <para>
         /// Creates a real <see cref="Sink{TIn,TMat}"/> upon receiving the first element. Internal <see cref="Sink{TIn,TMat}"/> will not be created if there are no elements,
         /// because of completion or error.
-        /// 
+        /// </para>
+        /// <para>
         /// If <paramref name="sinkFactory"/> throws an exception and the supervision decision is <see cref="Supervision.Directive.Stop"/> 
         /// the <see cref="Task"/> will be completed with failure. For all other supervision options it will try to create sink with next element.
-        /// 
+        /// </para>
         /// <paramref name="fallback"/> will be executed when there was no elements and completed is received from upstream.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>

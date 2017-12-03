@@ -50,7 +50,6 @@ namespace Akka.Tests.Configuration
             settings.SerializeAllMessages.ShouldBeFalse();
             settings.SerializeAllCreators.ShouldBeFalse();
             settings.UnstartedPushTimeout.Seconds.ShouldBe(10);
-
             settings.DefaultVirtualNodesFactor.ShouldBe(10);
 
             settings.AddLoggingReceive.ShouldBeFalse();

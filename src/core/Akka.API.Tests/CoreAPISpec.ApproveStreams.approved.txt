@@ -618,6 +618,7 @@ namespace Akka.Streams
     {
         void Complete();
         void Fail(System.Exception ex);
+        new System.Threading.Tasks.Task WatchCompletionAsync();
     }
     public interface ITransformerLike<in TIn, out TOut>
     {

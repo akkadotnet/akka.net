@@ -785,7 +785,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
         /// Interaction with resource happens in a blocking way.
-        ///
+        /// <para>
         /// Example:
         /// {{{
         /// Source.unfoldResource(
@@ -793,15 +793,22 @@ namespace Akka.Streams.Dsl
         ///   reader => Option(reader.readLine()),
         ///   reader => reader.close())
         /// }}}
-        ///
+        /// </para>
+        /// <para>
         /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function. All exceptions thrown by <paramref name="create"/>
         /// or <paramref name="close"/> will fail the stream.
-        ///
+        /// </para>
+        /// <para>
         /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create blocking IO again. Default strategy is <see cref="Supervision.Directive.Stop"/> which means
         /// that stream will be terminated on error in `read` function by default.
-        ///
+        /// </para>
+        /// <para>
         /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
         /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TSource">TBD</typeparam>
@@ -817,17 +824,25 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// <para>
         /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
         /// It's similar to <see cref="UnfoldResource{T,TSource}"/> but takes functions that return <see cref="Task"/>s instead of plain values.
-        ///
+        /// </para>
+        /// <para>
         /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function or failures of produced <see cref="Task"/>s.
         /// All exceptions thrown by <paramref name="create"/> or <paramref name="close"/> as well as fails of returned futures will fail the stream.
-        ///
+        /// </para>
+        /// <para>
         /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create resource .Default strategy is <see cref="Supervision.Directive.Stop"/> which means
         /// that stream will be terminated on error in <paramref name="read"/> function (or task) by default.
-        ///
+        /// </para>
+        /// <para>
         /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
         /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TSource">TBD</typeparam>

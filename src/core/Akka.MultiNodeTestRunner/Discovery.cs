@@ -103,18 +103,27 @@ namespace Akka.MultiNodeTestRunner
         private ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
+            var current = configUser;
+            while (current != null)
+            {
 
 #if CORECLR
-            var ctorWithConfig = configUser
-                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
-            return ctorWithConfig ?? FindConfigConstructor(configUser.GetTypeInfo().BaseType);
+                var ctorWithConfig = configUser
+                    .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
+            
+                current = current.GetTypeInfo().BaseType;
 #else
-            var ctorWithConfig = configUser
-                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
-            return ctorWithConfig ?? FindConfigConstructor(configUser.BaseType);
+                var ctorWithConfig = configUser
+                    .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
+
+                current = current.BaseType;
 #endif
+                if (ctorWithConfig != null) return ctorWithConfig;
+            }
+
+            throw new ArgumentException($"[{configUser}] or one of its base classes must specify constructor, which first parameter is a subclass of {baseConfigType}");
         }
 
         private object[] ConfigConstructorParamValues(Type configType)

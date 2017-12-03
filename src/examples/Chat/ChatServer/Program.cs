@@ -41,7 +41,7 @@ akka {
         }
     }
 
-    class ChatServerActor : TypedActor , 
+    class ChatServerActor : TypedActor,
         IHandle<SayRequest>,
         IHandle<ConnectRequest>,
         IHandle<NickRequest>,
@@ -54,7 +54,7 @@ akka {
 
         public void Handle(SayRequest message)
         {
-          //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
+            //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
             var response = new SayResponse
             {
                 Username = message.Username,
@@ -65,7 +65,7 @@ akka {
 
         public void Handle(ConnectRequest message)
         {
-         //   Console.WriteLine("User {0} has connected", message.Username);
+            //   Console.WriteLine("User {0} has connected", message.Username);
             _clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {
@@ -86,12 +86,12 @@ akka {
 
         public void Handle(Disconnect message)
         {
-            
+
         }
 
         public void Handle(ChannelsRequest message)
         {
-            
+
         }
     }
 }
