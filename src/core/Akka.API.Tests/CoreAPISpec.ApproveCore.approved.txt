@@ -2330,6 +2330,7 @@ namespace Akka.Configuration.Hocon
         public bool Matches(string pattern) { }
         public bool Matches(params string[] patterns) { }
         public char Peek() { }
+        protected string PickErrorLine(out int index) { }
         public void Pop() { }
         public void PullWhitespace() { }
         public void Push() { }

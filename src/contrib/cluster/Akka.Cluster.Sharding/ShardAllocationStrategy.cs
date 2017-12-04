@@ -25,7 +25,7 @@ namespace Akka.Cluster.Sharding
         /// Invoked when the location of a new shard is to be decided.
         /// </summary>
         /// <param name="requester">
-        /// Actor reference to the <see cref="ShardRegion"/> that requested the location of the shard, can be returned 
+        /// Actor reference to the <see cref="ShardRegion"/> that requested the location of the shard, can be returned
         /// if preference should be given to the node where the shard was first accessed.
         /// </param>
         /// <param name="shardId">The id of the shard to allocate.</param>
@@ -52,8 +52,8 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// The default implementation of <see cref="Akka.Cluster.Sharding.LeastShardAllocationStrategy"/> allocates new shards 
-    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards. It picks shards 
+    /// The default implementation of <see cref="Akka.Cluster.Sharding.LeastShardAllocationStrategy"/> allocates new shards
+    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards. It picks shards
     /// for rebalancing handoff from the <see cref="ShardRegion"/> with most number of previously allocated shards.
     /// They will then be allocated to the <see cref="ShardRegion"/> with least number of previously allocated shards,
     /// i.e. new members in the cluster. There is a configurable threshold of how large the difference
@@ -104,9 +104,10 @@ namespace Akka.Cluster.Sharding
                     currentShardAllocations.Select(kv => kv.Value.Where(s => !rebalanceInProgress.Contains(s)).ToArray());
                 var mostShards = GetMaxBy(shards, x => x.Length);
 
-                if (mostShards.Length - leastShardsRegion.Value.Count >= _rebalanceThreshold)
+                var difference = mostShards.Length - leastShardsRegion.Value.Count;
+                if (difference >= _rebalanceThreshold)
                 {
-                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.Take(_maxSimultaneousRebalance - rebalanceInProgress.Count).ToImmutableHashSet());
+                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.Take(Math.Min(difference, _maxSimultaneousRebalance - rebalanceInProgress.Count)).ToImmutableHashSet());
                 }
             }
 
