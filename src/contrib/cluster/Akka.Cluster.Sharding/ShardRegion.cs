@@ -7,10 +7,10 @@
 
 using System;
 using System.Collections.Generic;
-using Akka.Actor;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 
@@ -72,13 +72,15 @@ namespace Akka.Cluster.Sharding
         public sealed class StartEntity : IClusterShardingSerializable
         {
             /// <summary>
-            /// TBD
+            /// An identifier of an entity to be started. Unique in scope of a given shard.
             /// </summary>
             public readonly EntityId EntityId;
+
             /// <summary>
-            /// TBD
+            /// Creates a new instance of a <see cref="StartEntity"/> class, used for requesting
+            /// to start an entity with provided <paramref name="entityId"/>.
             /// </summary>
-            /// <param name="entityId">TBD</param>
+            /// <param name="entityId">An identifier of an entity to be started on a given shard.</param>
             public StartEntity(EntityId entityId)
             {
                 EntityId = entityId;
@@ -110,26 +112,28 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Sent back when a `ShardRegion.StartEntity` message was received and triggered the entity
+        /// Sent back when a <see cref="StartEntity"/> message was received and triggered the entity
         /// to start(it does not guarantee the entity successfully started)
         /// </summary>
         [Serializable]
         public sealed class StartEntityAck : IClusterShardingSerializable
         {
             /// <summary>
-            /// TBD
+            /// An identifier of a newly started entity. Unique in scope of a given shard.
             /// </summary>
             public readonly EntityId EntityId;
 
             /// <summary>
-            /// TBD
+            /// An identifier of a shard, on which an entity identified by <see cref="EntityId"/> is hosted.
             /// </summary>
             public readonly ShardId ShardId;
+
             /// <summary>
-            /// TBD
+            /// Creates a new instance of a <see cref="StartEntityAck"/> class, used to confirm that 
+            /// <see cref="StartEntity"/> request has succeed.
             /// </summary>
-            /// <param name="entityId">TBD</param>
-            /// <param name="shardId">TBD</param>
+            /// <param name="entityId">An identifier of a newly started entity.</param>
+            /// <param name="shardId">An identifier of a shard hosting started entity.</param>
             public StartEntityAck(EntityId entityId, ShardId shardId)
             {
                 EntityId = entityId;
@@ -179,7 +183,7 @@ namespace Akka.Cluster.Sharding
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <returns>TBD</returns>
-            public static Actor.Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
+            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
             {
                 return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage)).WithDeploy(Deploy.Local);
             }
@@ -334,9 +338,9 @@ namespace Akka.Cluster.Sharding
         protected IImmutableSet<IActorRef> HandingOff = ImmutableHashSet<IActorRef>.Empty;
 
         private readonly ICancelable _retryTask;
-        private IActorRef _coordinator = null;
-        private int _retryCount = 0;
-        private bool _loggedFullBufferWarning = false;
+        private IActorRef _coordinator;
+        private int _retryCount;
+        private bool _loggedFullBufferWarning;
         private const int RetryCountThreshold = 5;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
@@ -402,7 +406,7 @@ namespace Akka.Cluster.Sharding
             get
             {
                 var firstMember = MembersByAge.FirstOrDefault();
-                return firstMember == null ? null : Context.ActorSelection(firstMember.Address.ToString() + CoordinatorPath);
+                return firstMember == null ? null : Context.ActorSelection(firstMember.Address + CoordinatorPath);
             }
         }
 
@@ -415,14 +419,14 @@ namespace Akka.Cluster.Sharding
             {
                 if (EntityProps != null && !EntityProps.Equals(Actor.Props.None))
                     return new PersistentShardCoordinator.Register(Self);
-                else return new PersistentShardCoordinator.RegisterProxy(Self);
+                return new PersistentShardCoordinator.RegisterProxy(Self);
             }
         }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
-            Cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
@@ -453,8 +457,8 @@ namespace Akka.Cluster.Sharding
             {
                 if (Log.IsDebugEnabled)
                     Log.Debug("Coordinator moved from [{0}] to [{1}]",
-                        before == null ? string.Empty : before.Address.ToString(),
-                        after == null ? string.Empty : after.Address.ToString());
+                        before?.Address.ToString() ?? string.Empty,
+                        after?.Address.ToString() ?? string.Empty);
 
                 _coordinator = null;
                 Register();
@@ -513,8 +517,7 @@ namespace Akka.Cluster.Sharding
         private void Register()
         {
             var coordinator = CoordinatorSelection;
-            if (coordinator != null)
-                coordinator.Tell(RegistrationMessage);
+            coordinator?.Tell(RegistrationMessage);
 
             if (ShardBuffers.Count != 0 && _retryCount >= RetryCountThreshold)
                 Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages.",
@@ -549,9 +552,8 @@ namespace Akka.Cluster.Sharding
                     if (!ShardBuffers.TryGetValue(shardId, out var buffer))
                     {
                         buffer = ImmutableList<KeyValuePair<object, IActorRef>>.Empty;
-                        Log.Debug("Request shard [{0}] home", shardId);
-                        if (_coordinator != null)
-                            _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(shardId));
+                        Log.Debug("Request shard [{0}]", shardId);
+                        _coordinator?.Tell(new PersistentShardCoordinator.GetShardHome(shardId));
                     }
 
                     Log.Debug("Buffer message for shard [{0}]. Total [{1}] buffered messages.", shardId, buffer.Count + 1);
@@ -597,9 +599,8 @@ namespace Akka.Cluster.Sharding
                     {
                         if (!ShardBuffers.ContainsKey(shardId))
                         {
-                            Log.Debug("Request shard [{0}] home", shardId);
-                            if (_coordinator != null)
-                                _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(shardId));
+                            Log.Debug("Request shard [{0}]", shardId);
+                            _coordinator?.Tell(new PersistentShardCoordinator.GetShardHome(shardId));
                         }
 
                         BufferMessage(shardId, message, sender);
@@ -782,7 +783,7 @@ namespace Akka.Cluster.Sharding
                         if (region.Equals(Self) && !home.Ref.Equals(Self))
                         {
                             // should not happen, inconsistency between ShardRegion and PersistentShardCoordinator
-                            throw new IllegalStateException(string.Format("Unexpected change of shard [{0}] from self to [{1}]", home.Shard, home.Ref));
+                            throw new IllegalStateException($"Unexpected change of shard [{home.Shard}] from self to [{home.Ref}]");
                         }
                     }
 
@@ -909,7 +910,7 @@ namespace Akka.Cluster.Sharding
                     Log.Debug("Starting shard [{0}] in region", id);
 
                     var name = Uri.EscapeDataString(id);
-                    var shardRef = Context.Watch(Context.ActorOf(Akka.Cluster.Sharding.Shards.Props(
+                    var shardRef = Context.Watch(Context.ActorOf(Sharding.Shards.Props(
                         TypeName,
                         id,
                         EntityProps,

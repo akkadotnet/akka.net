@@ -271,12 +271,12 @@ namespace Akka.Cluster.Sharding
         public sealed class Register : ICoordinatorCommand, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Reference to a shard region actor.
             /// </summary>
             public readonly IActorRef ShardRegion;
 
             /// <summary>
-            /// TBD
+            /// Creates a new <see cref="Register"/> request for a given <paramref name="shardRegion"/>.
             /// </summary>
             /// <param name="shardRegion">TBD</param>
             public Register(IActorRef shardRegion)
@@ -306,6 +306,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"Register({ShardRegion})";
+
             #endregion
         }
 
@@ -316,12 +319,12 @@ namespace Akka.Cluster.Sharding
         public sealed class RegisterProxy : ICoordinatorCommand, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Reference to a shard region proxy actor.
             /// </summary>
             public readonly IActorRef ShardRegionProxy;
 
             /// <summary>
-            /// TBD
+            /// Creates a new <see cref="RegisterProxy"/> request for a given <paramref name="shardRegionProxy"/>.
             /// </summary>
             /// <param name="shardRegionProxy">TBD</param>
             public RegisterProxy(IActorRef shardRegionProxy)
@@ -350,6 +353,9 @@ namespace Akka.Cluster.Sharding
                     return ShardRegionProxy?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegisterProxy({ShardRegionProxy})";
 
             #endregion
         }
@@ -394,6 +400,9 @@ namespace Akka.Cluster.Sharding
                     return Coordinator?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegisterAck({Coordinator})";
 
             #endregion
         }
@@ -440,6 +449,9 @@ namespace Akka.Cluster.Sharding
                     return Shard?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"GetShardHome({Shard})";
 
             #endregion
         }
@@ -495,6 +507,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHome(shardId:{Shard}, ref:{Ref})";
+
             #endregion
         }
 
@@ -540,6 +555,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"HostShard({Shard})";
+
             #endregion
         }
 
@@ -584,6 +602,9 @@ namespace Akka.Cluster.Sharding
                     return Shard?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardStarted({Shard})";
 
             #endregion
         }
@@ -635,6 +656,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"BeginHandOff({Shard})";
+
             #endregion
         }
 
@@ -679,6 +703,9 @@ namespace Akka.Cluster.Sharding
                     return Shard?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"BeginHandOffAck({Shard})";
 
             #endregion
         }
@@ -728,6 +755,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"HandOff({Shard})";
+
             #endregion
         }
 
@@ -773,6 +803,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardStopped({Shard})";
+
             #endregion
         }
 
@@ -807,6 +840,9 @@ namespace Akka.Cluster.Sharding
                 ShardRegion = shardRegion;
                 GetShardHomeSender = getShardHomeSender;
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"AllocateShardResult(shard:{Shard}, shardRegion:{ShardRegion}, sender:{GetShardHomeSender})";
         }
 
         /// <summary>
@@ -828,6 +864,9 @@ namespace Akka.Cluster.Sharding
             {
                 Shards = shards;
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RebalanceResult({string.Join(", ", Shards)})";
         }
 
         /// <summary>
@@ -871,6 +910,9 @@ namespace Akka.Cluster.Sharding
                     return ShardRegion?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"GracefulShutdownRequest({ShardRegion})";
 
             #endregion
         }
@@ -922,6 +964,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionRegistered({Region})";
+
             #endregion
         }
 
@@ -966,6 +1011,9 @@ namespace Akka.Cluster.Sharding
                     return RegionProxy?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionProxyRegistered({RegionProxy})";
 
             #endregion
         }
@@ -1012,6 +1060,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionTerminated({Region})";
+
             #endregion
         }
 
@@ -1056,6 +1107,9 @@ namespace Akka.Cluster.Sharding
                     return RegionProxy?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardRegionProxyTerminated({RegionProxy})";
 
             #endregion
         }
@@ -1111,6 +1165,9 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHomeAllocated(shard:{Shard}, region:{Region})";
+
             #endregion
         }
 
@@ -1155,6 +1212,9 @@ namespace Akka.Cluster.Sharding
                     return Shard?.GetHashCode() ?? 0;
                 }
             }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"ShardHomeDeallocated({Shard})";
 
             #endregion
         }
@@ -1223,6 +1283,7 @@ namespace Akka.Cluster.Sharding
             Settings = settings;
             PersistenceId = Self.Path.ToStringWithoutAddress();
 
+            Log = Context.GetLogger();
             CurrentState = State.Empty.WithRememberEntities(settings.RememberEntities);
 
             AllocationStrategy = allocationStrategy;

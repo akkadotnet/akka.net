@@ -436,7 +436,9 @@ namespace Akka.Cluster.Sharding
             if (!coordinator.RebalanceInProgress.Contains(shard))
             {
                 if (coordinator.CurrentState.Shards.TryGetValue(shard, out var aref))
+                {
                     getShardHomeSender.Tell(new PersistentShardCoordinator.ShardHome(shard, aref));
+                }
                 else
                 {
                     if (coordinator.CurrentState.Regions.ContainsKey(region) && !coordinator.GracefullShutdownInProgress.Contains(region))
