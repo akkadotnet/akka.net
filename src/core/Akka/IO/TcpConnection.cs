@@ -85,6 +85,7 @@ namespace Akka.IO
         protected readonly Socket Socket;
         protected SocketAsyncEventArgs ReceiveArgs;
         protected SocketAsyncEventArgs SendArgs;
+        protected SocketAsyncEventArgs ConnectArgs;
 
         protected readonly ILoggingAdapter Log = Context.GetLogger();
         private readonly bool pullMode;
@@ -559,6 +560,12 @@ namespace Akka.IO
             {
                 Tcp.SocketEventArgsPool.Release(SendArgs);
                 SendArgs = null;
+            }
+
+            if (ConnectArgs != null)
+            {
+                Tcp.SocketEventArgsPool.Release(ConnectArgs);
+                ConnectArgs = null;
             }
         }
 

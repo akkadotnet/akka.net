@@ -124,13 +124,13 @@ namespace Akka.IO
             {
                 Log.Debug("Attempting connection to [{0}]", address);
 
-                var connectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
-                connectArgs.RemoteEndPoint = address;
+                ConnectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+                ConnectArgs.RemoteEndPoint = address;
                 // we don't setup buffer here, it shouldn't be necessary just for connection
-                if (!Socket.ConnectAsync(connectArgs))
+                if (!Socket.ConnectAsync(ConnectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(Connecting(Tcp.Settings.FinishConnectRetries, connectArgs, fallbackAddress));
+                Become(Connecting(Tcp.Settings.FinishConnectRetries, ConnectArgs, fallbackAddress));
             });
         }
 
