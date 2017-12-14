@@ -70,9 +70,7 @@ namespace Akka.IO
             }
             catch (InvalidOperationException)
             {
-                // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
-                e.Dispose();
-                active--;
+                // it can be that for some reason socket is in use and haven't closed yet
             }
         }
 
