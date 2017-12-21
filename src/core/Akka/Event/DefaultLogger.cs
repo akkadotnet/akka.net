@@ -23,13 +23,13 @@ namespace Akka.Event
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if(message is InitializeLogger)
+            if (message is InitializeLogger)
             {
                 Sender.Tell(new LoggerInitialized());
                 return true;
             }
             var logEvent = message as LogEvent;
-            if (logEvent == null) 
+            if (logEvent == null)
                 return false;
 
             Print(logEvent);
@@ -42,14 +42,7 @@ namespace Akka.Event
         /// <param name="logEvent">The log event that is to be output.</param>
         protected virtual void Print(LogEvent logEvent)
         {
-            try
-            {
-                StandardOutLogger.PrintLogEvent(logEvent);
-            }
-            catch (FormatException formatException)
-            {
-                
-            }
+            StandardOutLogger.PrintLogEvent(logEvent);
         }
     }
 }
