@@ -103,7 +103,7 @@ namespace Tutorials.Tutorial4
 
                 repliesSoFar.Add(deviceId, reading);
 
-                if (repliesSoFar.Count == 0)
+                if (stillWaiting.Count == 0)
                 {
                     Requester.Tell(new RespondAllTemperatures(RequestId, repliesSoFar));
                     Context.Stop(Self);
