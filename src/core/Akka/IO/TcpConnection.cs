@@ -622,8 +622,10 @@ namespace Akka.IO
             if (IsWritePending)
             {
                 pendingWrite.Release(); // we should release ConnectionInfo event args (if they're not released already)
-                ReleaseSocketAsyncEventArgs();
             }
+
+            // always try to release SocketAsyncEventArgs to avoid memory leaks
+            ReleaseSocketAsyncEventArgs();
 
             if (closedMessage != null)
             {
