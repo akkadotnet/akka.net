@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Dispatch;
 
@@ -41,7 +42,14 @@ namespace Akka.Event
         /// <param name="logEvent">The log event that is to be output.</param>
         protected virtual void Print(LogEvent logEvent)
         {
-            StandardOutLogger.PrintLogEvent(logEvent);
+            try
+            {
+                StandardOutLogger.PrintLogEvent(logEvent);
+            }
+            catch (FormatException formatException)
+            {
+                
+            }
         }
     }
 }
