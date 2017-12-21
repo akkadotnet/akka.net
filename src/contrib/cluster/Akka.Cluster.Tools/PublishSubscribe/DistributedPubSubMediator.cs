@@ -345,6 +345,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (IsMatchingRole(up.Member)) _nodes.Add(up.Member.Address);
             });
+            Receive<ClusterEvent.MemberWeaklyUp>(weaklyUp =>
+            {
+                if (IsMatchingRole(weaklyUp.Member)) _nodes.Add(weaklyUp.Member.Address);
+            });
             Receive<ClusterEvent.MemberLeft>(left =>
             {
                 if (IsMatchingRole(left.Member))
