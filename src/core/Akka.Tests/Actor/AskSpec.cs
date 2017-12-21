@@ -10,10 +10,10 @@ using Xunit;
 using Akka.Actor;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Actor
 {
-    
     public class AskSpec : AkkaSpec
     {
         public class SomeActor : UntypedActor
@@ -66,52 +66,63 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Can_Ask_actor()
+        public async Task Can_Ask_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            actor.Ask<string>("answer").Result.ShouldBe("answer");
+            var res = await actor.Ask<string>("answer");
+            res.ShouldBe("answer");
         }
 
         [Fact]
-        public void Can_Ask_actor_with_timeout()
+        public async Task Can_Ask_actor_with_timeout()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            actor.Ask<string>("answer",TimeSpan.FromSeconds(10)).Result.ShouldBe("answer");
+            var res = await actor.Ask<string>("answer", TimeSpan.FromSeconds(10));
+            res.ShouldBe("answer");
         }
 
         [Fact]
-        public void Can_get_timeout_when_asking_actor()
+        public async Task Can_get_timeout_when_asking_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait(); });
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)));
         }
 
         [Fact]
-        public void Can_cancel_when_asking_actor()
-        {            
-            var actor = Sys.ActorOf<SomeActor>();
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token).Wait(); });
-            Assert.True(cts.IsCancellationRequested);
-        }
-        [Fact]
-        public void Cancelled_ask_with_null_timeout_should_remove_temp_actor()
+        public async Task Can_cancel_when_asking_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-            Assert.Throws<AggregateException>(() => { actor.Ask<string>("cancel", cts.Token).Wait(); });
-            Assert.True(cts.IsCancellationRequested);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+            {
+                await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token));
+            }
+        }
+
+        [Fact]
+        public async Task Cancelled_ask_with_null_timeout_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100)))
+            {
+                await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("cancel", cts.Token));
+            }
+
             Are_Temp_Actors_Removed(actor);
         }
+
         [Fact]
-        public void Cancelled_ask_with_timeout_should_remove_temp_actor()
+        public async Task Cancelled_ask_with_timeout_should_remove_temp_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-            Assert.Throws<AggregateException>(() => { actor.Ask<string>("cancel", TimeSpan.FromSeconds(30), cts.Token).Wait(); });
-            Assert.True(cts.IsCancellationRequested);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100)))
+            {
+                await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("cancel", TimeSpan.FromSeconds(30), cts.Token));
+            }
+
             Are_Temp_Actors_Removed(actor);
         }
+
         private void Are_Temp_Actors_Removed(IActorRef actor)
         {
             var actorCell = actor as ActorRefWithCell;
@@ -126,7 +137,7 @@ namespace Akka.Tests.Actor
                 container.ForEachChild(x => childCounter++);
                 Assert.True(childCounter == 0, "Temp actors not all removed.");
             });
-            
+
         }
 
         /// <summary>
