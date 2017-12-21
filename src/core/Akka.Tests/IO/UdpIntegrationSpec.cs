@@ -16,6 +16,7 @@ using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using FsCheck;
 
 namespace Akka.Tests.IO
 {
@@ -28,9 +29,7 @@ namespace Akka.Tests.IO
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
-                    akka.io.udp.direct-buffer-size = 1024
-                    akka.io.udp.trace-logging = on
-                    akka.loglevel = DEBUG", output)
+                    akka.io.udp.direct-buffer-size = 1024", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
         }
@@ -38,7 +37,7 @@ namespace Akka.Tests.IO
         private IActorRef BindUdp(IPEndPoint address, IActorRef handler)
         {
             var commander = CreateTestProbe();
-            commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
+            commander.Send(Sys.Udp(), new Udp.Bind(handler, address));
             commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address));
             return commander.Sender;
         }
@@ -142,6 +141,54 @@ namespace Akka.Tests.IO
                 if (i % 2 == 0) CheckSendingToServer(i);
                 else CheckSendingToClient(i);
             }
+        }
+
+        [Fact]
+        public void The_UDP_Fire_and_Forget_implementation_must_be_able_to_send_several_packets_in_a_row()
+        {
+            var serverAddress = _addresses[0];
+            var clientAddress = _addresses[1];
+            var server = BindUdp(serverAddress, TestActor);
+            var client = BindUdp(clientAddress, TestActor);
+
+            void CheckSendingToClient(ByteString expected)
+            {
+                ExpectMsg<Udp.Received>(x =>
+                {
+                    x.Data.ShouldBe(expected);
+                    x.Sender.Is(serverAddress).ShouldBeTrue($"{x.Sender} was expected to be {serverAddress}");
+                });
+            }
+
+            void CheckSendingToServer(ByteString expected)
+            {
+                ExpectMsg<Udp.Received>(x =>
+                {
+                    x.Data.ShouldBe(expected);
+                    x.Sender.Is(clientAddress).ShouldBeTrue($"{x.Sender} was expected to be {clientAddress}");
+                });
+            }
+
+            var data = new[]
+            {
+                ByteString.FromString("a"),
+                ByteString.FromString("bb"),
+                ByteString.FromString("ccc"),
+                ByteString.FromString("dddd"),
+                ByteString.FromString("eeeee"),
+                ByteString.FromString("ffffff"),
+                ByteString.FromString("ggggggg"),
+                ByteString.FromString("hhhhhhhh"),
+                ByteString.FromString("iiiiiiiii"),
+                ByteString.FromString("jjjjjjjjjj")
+            };
+
+            var iterations = data.Length;
+            for (int i = 0; i < iterations; i++) client.Tell(Udp.Send.Create(data[i], serverAddress));
+            for (int i = 0; i < iterations; i++) CheckSendingToServer(data[i]);
+
+            for (int i = 0; i < iterations; i++) server.Tell(Udp.Send.Create(data[i], clientAddress));
+            for (int i = 0; i < iterations; i++) CheckSendingToClient(data[i]);
         }
 
         [Fact]
