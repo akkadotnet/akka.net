@@ -173,7 +173,7 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
-                    var replicator = DistributedData.DistributedData.Get(Context.System).Replicator;
+                    var replicator = Replicator(settings);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -247,6 +247,25 @@ namespace Akka.Cluster.Sharding
                     Sender.Tell(new Status.Failure(ex));
                 }
             });
+        }
+
+        private IActorRef Replicator(ClusterShardingSettings settings)
+        {
+            if (settings.StateStoreMode == StateStoreMode.DData)
+            {
+                // one replicator per role
+                if (_replicatorsByRole.TryGetValue(settings.Role, out var aref)) return aref;
+                else
+                {
+                    var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
+                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(_replicatorSettings.WithRole(settings.Role)), name);
+
+                    _replicatorsByRole = _replicatorsByRole.SetItem(settings.Role, replicatorRef);
+                    return replicatorRef;
+                }
+            }
+            else
+                return Context.System.DeadLetters;
         }
 
         private string CoordinatorPath(string encName)
