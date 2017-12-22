@@ -29,19 +29,19 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; private set; }
+        public RoleName Controller { get; }
 
-        public RoleName First { get; private set; }
+        public RoleName First { get; }
 
-        public RoleName Second { get; private set; }
+        public RoleName Second { get; }
 
-        public RoleName Third { get; private set; }
+        public RoleName Third { get; }
 
-        public RoleName Fourth { get; private set; }
+        public RoleName Fourth { get; }
 
-        public RoleName Fifth { get; private set; }
+        public RoleName Fifth { get; }
 
-        public RoleName Sixth { get; private set; }
+        public RoleName Sixth { get; }
 
         public ClusterShardingSpecConfig(/*string entityRecoveryStrategy*/)
         {
@@ -66,6 +66,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.roles = [""backend""]
+                    akka.cluster.distributed-data.gossip-interval = 1s
                     akka.cluster.sharding {
                         retry-interval = 1 s
                         handoff-timeout = 10 s
@@ -80,6 +81,10 @@ namespace Akka.Cluster.Sharding.Tests
                         least-shard-allocation-strategy {
                             rebalance-threshold = 2
                             max-simultaneous-rebalance = 1
+                        }
+                        distributed-data.durable.lmdb {
+                          dir = target/ClusterShardingSpec/sharding-ddata
+                          map-size = 10 MiB
                         }
                     }
 
@@ -101,6 +106,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }
                 "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
