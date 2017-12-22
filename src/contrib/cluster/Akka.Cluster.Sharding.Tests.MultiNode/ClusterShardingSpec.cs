@@ -364,9 +364,14 @@ namespace Akka.Cluster.Sharding.Tests
             _persistentRegion = new Lazy<IActorRef>(() => CreateRegion("RememberCounter", true));
             _rebalancingPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("RebalancingRememberCounter", true));
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
+
+            ReplicatorRef = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
+                .WithGossipInterval(TimeSpan.FromSeconds(1))
+                .WithMaxDeltaElements(10)), "replicator");
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
+        protected override int InitialParticipantsValueFactory => Roles.Count;
+        public IActorRef ReplicatorRef { get; }
 
         private void Join(RoleName from, RoleName to)
         {
@@ -378,10 +383,6 @@ namespace Akka.Cluster.Sharding.Tests
 
             EnterBarrier(from.Name + "-joined");
         }
-
-        public IActorRef ReplicatorRef => Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
-            .WithGossipInterval(TimeSpan.FromSeconds(1))
-            .WithMaxDeltaElements(10)), "replicator");
 
         private void CreateCoordinator()
         {
