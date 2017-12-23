@@ -95,12 +95,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
     {
         public PersistentClusterShardingRememberEntitiesNewExtractorSpec() : this(new PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig()) { }
-        public PersistentClusterShardingRememberEntitiesNewExtractorSpec(PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesNewExtractorSpec)) { }
+        protected PersistentClusterShardingRememberEntitiesNewExtractorSpec(PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesNewExtractorSpec)) { }
     }
     public class DDataClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
     {
         public DDataClusterShardingRememberEntitiesNewExtractorSpec() : this(new DDataClusterShardingRememberEntitiesNewExtractorSpecConfig()) { }
-        public DDataClusterShardingRememberEntitiesNewExtractorSpec(DDataClusterShardingRememberEntitiesNewExtractorSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesNewExtractorSpec)) { }
+        protected DDataClusterShardingRememberEntitiesNewExtractorSpec(DDataClusterShardingRememberEntitiesNewExtractorSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesNewExtractorSpec)) { }
     }
     public abstract class ClusterShardingRememberEntitiesNewExtractorSpec : MultiNodeClusterSpec
     {
@@ -173,16 +173,11 @@ namespace Akka.Cluster.Sharding.Tests
             };
 
             IsDDataMode = config.Mode == "ddata";
-        }
-        protected bool IsDDataMode { get; }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
-
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

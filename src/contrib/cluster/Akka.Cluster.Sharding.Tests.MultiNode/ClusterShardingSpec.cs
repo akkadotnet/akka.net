@@ -336,22 +336,22 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingSpec : ClusterShardingSpec
     {
         public PersistentClusterShardingSpec() : this(new PersistentClusterShardingSpecConfig()) { }
-        public PersistentClusterShardingSpec(PersistentClusterShardingSpecConfig config) : base(config, typeof(PersistentClusterShardingSpec)) { }
+        protected PersistentClusterShardingSpec(PersistentClusterShardingSpecConfig config) : base(config, typeof(PersistentClusterShardingSpec)) { }
     }
     public class PersistentClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
     {
         public PersistentClusterShardingWithEntityRecoverySpec() : this(new PersistentClusterShardingWithEntityRecoverySpecConfig()) { }
-        public PersistentClusterShardingWithEntityRecoverySpec(PersistentClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(PersistentClusterShardingWithEntityRecoverySpec)) { }
+        protected PersistentClusterShardingWithEntityRecoverySpec(PersistentClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(PersistentClusterShardingWithEntityRecoverySpec)) { }
     }
     public class DDataClusterShardingSpec : ClusterShardingSpec
     {
         public DDataClusterShardingSpec() : this(new DDataClusterShardingSpecConfig()) { }
-        public DDataClusterShardingSpec(DDataClusterShardingSpecConfig config) : base(config, typeof(DDataClusterShardingSpec)) { }
+        protected DDataClusterShardingSpec(DDataClusterShardingSpecConfig config) : base(config, typeof(DDataClusterShardingSpec)) { }
     }
     public class DDataClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
     {
         public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
-        public DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
+        protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
     }
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
@@ -388,19 +388,16 @@ namespace Akka.Cluster.Sharding.Tests
 
             IsDDataMode = config.Mode == "ddata";
 
+            DeleteStorageLocations();
+
             ReplicatorRef = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
                 .WithGossipInterval(TimeSpan.FromSeconds(1))
                 .WithMaxDeltaElements(10)), "replicator");
-        }
-        protected bool IsDDataMode { get; }
 
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            DeleteStorageLocations();
             EnterBarrier("startup");
         }
-
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

@@ -67,6 +67,10 @@ namespace Akka.Cluster.Sharding.Tests
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
+                    }}
+                    akka.cluster.sharding.distributed-data.durable.lmdb {{
+                      dir = ""target/ClusterShardingFailureSpec/sharding-ddata""
+                      map-size = 10000000
                     }}"))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
@@ -87,12 +91,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingFailureSpec : ClusterShardingFailureSpec
     {
         public PersistentClusterShardingFailureSpec() : this(new PersistentClusterShardingFailureSpecConfig()) { }
-        public PersistentClusterShardingFailureSpec(PersistentClusterShardingFailureSpecConfig config) : base(config, typeof(PersistentClusterShardingFailureSpec)) { }
+        protected PersistentClusterShardingFailureSpec(PersistentClusterShardingFailureSpecConfig config) : base(config, typeof(PersistentClusterShardingFailureSpec)) { }
     }
     public class DDataClusterShardingFailureSpec : ClusterShardingFailureSpec
     {
         public DDataClusterShardingFailureSpec() : this(new DDataClusterShardingFailureSpecConfig()) { }
-        public DDataClusterShardingFailureSpec(DDataClusterShardingFailureSpecConfig config) : base(config, typeof(DDataClusterShardingFailureSpec)) { }
+        protected DDataClusterShardingFailureSpec(DDataClusterShardingFailureSpecConfig config) : base(config, typeof(DDataClusterShardingFailureSpec)) { }
     }
     public abstract class ClusterShardingFailureSpec : MultiNodeClusterSpec
     {
@@ -184,17 +188,13 @@ namespace Akka.Cluster.Sharding.Tests
             };
 
             IsDDataMode = config.Mode == "ddata";
-        }
 
-        protected bool IsDDataMode { get; }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
 
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

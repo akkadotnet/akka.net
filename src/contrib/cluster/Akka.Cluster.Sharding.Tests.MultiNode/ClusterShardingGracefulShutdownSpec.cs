@@ -76,12 +76,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
         public PersistentClusterShardingGracefulShutdownSpec() : this(new PersistentClusterShardingGracefulShutdownSpecConfig()) { }
-        public PersistentClusterShardingGracefulShutdownSpec(PersistentClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+        protected PersistentClusterShardingGracefulShutdownSpec(PersistentClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
     }
     public class DDataClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
         public DDataClusterShardingGracefulShutdownSpec() : this(new DDataClusterShardingGracefulShutdownSpecConfig()) { }
-        public DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
     }
     public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
@@ -127,16 +127,11 @@ namespace Akka.Cluster.Sharding.Tests
             };
 
             IsDDataMode = config.Mode == "ddata";
-        }
-        protected bool IsDDataMode { get; }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
-
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

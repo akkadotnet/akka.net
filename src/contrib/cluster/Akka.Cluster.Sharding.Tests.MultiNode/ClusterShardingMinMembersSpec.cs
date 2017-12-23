@@ -82,12 +82,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
     {
         public PersistentClusterShardingMinMembersSpec() :this(new PersistentClusterShardingMinMembersSpecConfig()) { }
-        public PersistentClusterShardingMinMembersSpec(PersistentClusterShardingMinMembersSpecConfig config) : base(config, typeof(PersistentClusterShardingMinMembersSpec)) { }
+        protected PersistentClusterShardingMinMembersSpec(PersistentClusterShardingMinMembersSpecConfig config) : base(config, typeof(PersistentClusterShardingMinMembersSpec)) { }
     }
     public class DDataClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
     {
         public DDataClusterShardingMinMembersSpec() : this(new DDataClusterShardingMinMembersSpecConfig()) { }
-        public DDataClusterShardingMinMembersSpec(DDataClusterShardingMinMembersSpecConfig config) : base(config, typeof(DDataClusterShardingMinMembersSpec)) { }
+        protected DDataClusterShardingMinMembersSpec(DDataClusterShardingMinMembersSpecConfig config) : base(config, typeof(DDataClusterShardingMinMembersSpec)) { }
     }
     public abstract class ClusterShardingMinMembersSpec : MultiNodeClusterSpec
     {
@@ -131,18 +131,13 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
             };
-
             IsDDataMode = config.Mode == "ddata";
-        }
-        protected bool IsDDataMode { get; }
 
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
-
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

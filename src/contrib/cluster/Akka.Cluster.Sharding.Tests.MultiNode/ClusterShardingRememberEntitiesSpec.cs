@@ -86,12 +86,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
         public PersistentClusterShardingRememberEntitiesSpec() : this(new PersistentClusterShardingRememberEntitiesSpecConfig()) { }
-        public PersistentClusterShardingRememberEntitiesSpec(PersistentClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
+        protected PersistentClusterShardingRememberEntitiesSpec(PersistentClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
     }
     public class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
         public DDataClusterShardingRememberEntitiesSpec() : this(new DDataClusterShardingRememberEntitiesSpecConfig()) { }
-        public DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
+        protected DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
     }
     public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterSpec
     {
@@ -151,17 +151,12 @@ namespace Akka.Cluster.Sharding.Tests
             };
 
             IsDDataMode = config.Mode == "ddata";
-        }
-
-        protected bool IsDDataMode { get; }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
 
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();

@@ -82,12 +82,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistentClusterShardingLeavingSpec : ClusterShardinLeavingSpec
     {
         public PersistentClusterShardingLeavingSpec() : this(new PersistentClusterShardingLeavingSpecConfig()) { }
-        public PersistentClusterShardingLeavingSpec(PersistentClusterShardingLeavingSpecConfig config) : base(config, typeof(PersistentClusterShardingLeavingSpec)) { }
+        protected PersistentClusterShardingLeavingSpec(PersistentClusterShardingLeavingSpecConfig config) : base(config, typeof(PersistentClusterShardingLeavingSpec)) { }
     }
     public class DDataClusterShardingLeavingSpec : ClusterShardinLeavingSpec
     {
         public DDataClusterShardingLeavingSpec() : this(new DDataClusterShardingLeavingSpecConfig()) { }
-        public DDataClusterShardingLeavingSpec(DDataClusterShardingLeavingSpecConfig config) : base(config, typeof(DDataClusterShardingLeavingSpec)) { }
+        protected DDataClusterShardingLeavingSpec(DDataClusterShardingLeavingSpecConfig config) : base(config, typeof(DDataClusterShardingLeavingSpec)) { }
     }
     public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
     {
@@ -160,20 +160,15 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
             };
-
             IsDDataMode = config.Mode == "ddata";
-        }
 
-        protected override int InitialParticipantsValueFactory => Roles.Count;
-        protected bool IsDDataMode { get; }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
             DeleteStorageLocations();
             EnterBarrier("startup");
         }
 
+        protected override int InitialParticipantsValueFactory => Roles.Count;
+        protected bool IsDDataMode { get; }
+        
         protected override void AfterTermination()
         {
             base.AfterTermination();
