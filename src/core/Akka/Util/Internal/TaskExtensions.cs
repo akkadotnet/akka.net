@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Annotations;
 
 namespace Akka.Util.Internal
@@ -21,37 +23,27 @@ namespace Akka.Util.Internal
     public static class TaskExtensions
     {
         /// <summary>
-        /// TBD
+        /// Casts an asynchronous result of type <typeparamref name="TSource"/> from given task
+        /// onto the task with result type of <typeparamref name="TResult"/>. Additionally if
+        /// source is an Akka <see cref="Status.Failure"/> message will be unwrapped and delivered error
+        /// will be rethrown if that situation occurs.
         /// </summary>
-        /// <typeparam name="TTask">TBD</typeparam>
-        /// <typeparam name="TResult">TBD</typeparam>
+        /// <typeparam name="TSource">Incoming returned type param wrapped within a task.</typeparam>
+        /// <typeparam name="TResult">Expected result type param returned asynchronously as a task.</typeparam>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public static Task<TResult> CastTask<TTask, TResult>(this Task<TTask> task)
+        public static async Task<TResult> CastTask<TSource, TResult>(this Task<TSource> task)
         {
-            if (task.IsCompleted)
-                return Task.FromResult((TResult) (object)task.Result);
-            var tcs = new TaskCompletionSource<TResult>();
-            if (task.IsFaulted)
-                tcs.SetException(task.Exception);
-            else
-                task.ContinueWith(_ =>
-                {
-                    if (task.IsFaulted || task.Exception != null)
-                        tcs.SetException(task.Exception);
-                    else if (task.IsCanceled)
-                        tcs.SetCanceled();
-                    else
-                        try
-                        {
-                            tcs.SetResult((TResult) (object) task.Result);
-                        }
-                        catch (Exception e)
-                        {
-                            tcs.SetException(e);
-                        }
-                }, TaskContinuationOptions.ExecuteSynchronously);
-            return tcs.Task;
+            object result = await task;
+
+            // special case for Ask<> method - if a Failure message is returned, rethrow it as failed
+            // task (unless an user explicitly said, he expected a Failure message to be returned)
+            if (result is Status.Failure failure && typeof(TResult) != typeof(Status.Failure))
+            {
+                ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                return default(TResult);
+            }
+            else return (TResult)result;
         }
 
         /// <summary>

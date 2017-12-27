@@ -1648,13 +1648,13 @@ namespace Akka.Actor
     public abstract class Status
     {
         protected Status() { }
-        public class Failure : Akka.Actor.Status
+        public sealed class Failure : Akka.Actor.Status
         {
             public readonly System.Exception Cause;
             public Failure(System.Exception cause) { }
             public override string ToString() { }
         }
-        public class Success : Akka.Actor.Status
+        public sealed class Success : Akka.Actor.Status
         {
             public readonly object Status;
             public Success(object status) { }
@@ -4890,7 +4890,7 @@ namespace Akka.Util.Internal
     [Akka.Annotations.InternalApiAttribute()]
     public class static TaskExtensions
     {
-        public static System.Threading.Tasks.Task<TResult> CastTask<TTask, TResult>(this System.Threading.Tasks.Task<TTask> task) { }
+        public static async System.Threading.Tasks.Task<TResult> CastTask<TSource, TResult>(this System.Threading.Tasks.Task<TSource> task) { }
         public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
     }
 }

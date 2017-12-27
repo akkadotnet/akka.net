@@ -20,7 +20,7 @@ namespace Akka.Actor
         /// <summary>
         /// Indicates the success of some operation which has been performed
         /// </summary>
-        public class Success : Status
+        public sealed class Success : Status
         {
             /// <summary>
             /// TBD
@@ -41,7 +41,7 @@ namespace Akka.Actor
         /// Indicates the failure of some operation that was requested and includes an
         /// <see cref="Exception"/> describing the underlying cause of the problem.
         /// </summary>
-        public class Failure : Status
+        public sealed class Failure : Status
         {
             /// <summary>
             /// The cause of the failure
