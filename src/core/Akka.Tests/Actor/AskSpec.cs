@@ -156,10 +156,10 @@ namespace Akka.Tests.Actor
         public void Generic_Ask_when_Failure_is_returned_should_throw_error_payload_and_preserve_stack_trace()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var aggregateException = Assert.ThrowsAsync<AggregateException>(async () =>
+            var aggregateException = Assert.Throws<AggregateException>(() =>
             {
-                var result = await actor.Ask<string>("throw");
-            }).Result;
+                var result = actor.Ask<string>("throw", timeout: TimeSpan.FromSeconds(3)).Result;
+            });
             var exception = aggregateException.Flatten().InnerException;
             exception.GetType().ShouldBe(typeof(ExpectedTestException));
             exception.Message.ShouldBe("BOOM!");
@@ -170,7 +170,7 @@ namespace Akka.Tests.Actor
         public void Generic_Ask_when_Failure_is_and_Failure_was_expected_should_not_throw()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var result = actor.Ask<Status.Failure>("throw").Result;
+            var result = actor.Ask<Status.Failure>("throw", timeout: TimeSpan.FromSeconds(3)).Result;
             var exception = ((AggregateException)result.Cause).Flatten().InnerException;
             exception.GetType().ShouldBe(typeof(ExpectedTestException));
             exception.Message.ShouldBe("BOOM!");
