@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using Akka.IO;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -199,13 +198,13 @@ namespace Akka.Streams.Dsl
                     _firstSeparatorByte = stage._separatorBytes[0];
                     _buffer = ByteString.Empty;
 
-                    SetHandler(stage.In, this);
-                    SetHandler(stage.Out, this);
+                    SetHandler(stage._in, this);
+                    SetHandler(stage._out, this);
                 }
 
                 public override void OnPush()
                 {
-                    _buffer += Grab(_stage.In);
+                    _buffer += Grab(_stage._in);
                     DoParse();
                 }
 
@@ -213,7 +212,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (_buffer.IsEmpty)
                         CompleteStage();
-                    else if (IsAvailable(_stage.Out))
+                    else if (IsAvailable(_stage._out))
                         DoParse();
 
                     // else swallow the termination and wait for pull 
@@ -223,11 +222,11 @@ namespace Akka.Streams.Dsl
 
                 private void TryPull()
                 {
-                    if (IsClosed(_stage.In))
+                    if (IsClosed(_stage._in))
                     {
                         if (_stage._allowTruncation)
                         {
-                            Push(_stage.Out, _buffer);
+                            Push(_stage._out, _buffer);
                             CompleteStage();
                         }
                         else
@@ -236,7 +235,7 @@ namespace Akka.Streams.Dsl
                                     "Stream finished but there was a truncated final frame in the buffer"));
                     }
                     else
-                        Pull(_stage.In);
+                        Pull(_stage._in);
                 }
 
                 private void DoParse()
@@ -274,9 +273,9 @@ namespace Akka.Streams.Dsl
                             var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
                             _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
                             _nextPossibleMatch = 0;
-                            Push(_stage.Out, parsedFrame);
+                            Push(_stage._out, parsedFrame);
 
-                            if (IsClosed(_stage.In) && _buffer.IsEmpty)
+                            if (IsClosed(_stage._in) && _buffer.IsEmpty)
                                 CompleteStage();
                         }
                         else
@@ -303,12 +302,12 @@ namespace Akka.Streams.Dsl
                 _maximumLineBytes = maximumLineBytes;
                 _allowTruncation = allowTruncation;
 
-                Shape = new FlowShape<ByteString, ByteString>(In, Out);
+                Shape = new FlowShape<ByteString, ByteString>(_in, _out);
             }
             
-            private Inlet<ByteString> In = new Inlet<ByteString>("DelimiterFraming.in");
+            private readonly Inlet<ByteString> _in = new Inlet<ByteString>("DelimiterFraming.in");
 
-            private Outlet<ByteString> Out = new Outlet<ByteString>("DelimiterFraming.in");
+            private readonly Outlet<ByteString> _out = new Outlet<ByteString>("DelimiterFraming.in");
 
             public override FlowShape<ByteString, ByteString> Shape { get; }
 
