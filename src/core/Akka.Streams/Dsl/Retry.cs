@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -40,6 +41,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TS">state to create a new `(I,S)` to retry with</typeparam>
         /// <typeparam name="TO">output elements type</typeparam>
         /// <typeparam name="TM">materialized value type</typeparam>
+        [ApiMayChange]
         public static IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> Create<TI, TS, TO, TM>(
             IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> flow, Func<TS, Tuple<TI, TS>> retryWith)
         {
@@ -81,7 +83,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TS">state to create a new `(I,S)` to retry with</typeparam>
         /// <typeparam name="TO">output elements type</typeparam>
         /// <typeparam name="TM">materialized value type</typeparam>
-        /// <returns></returns>
+        [ApiMayChange]
         public static IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> Concat<TI, TS, TO, TM>(long limit,
             IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> flow, Func<TS, IEnumerable<Tuple<TI, TS>>> retryWith)
         {
