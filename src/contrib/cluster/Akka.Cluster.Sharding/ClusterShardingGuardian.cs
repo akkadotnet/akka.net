@@ -254,13 +254,14 @@ namespace Akka.Cluster.Sharding
             if (settings.StateStoreMode == StateStoreMode.DData)
             {
                 // one replicator per role
-                if (_replicatorsByRole.TryGetValue(settings.Role, out var aref)) return aref;
+                var role = settings.Role ?? string.Empty;
+                if (_replicatorsByRole.TryGetValue(role, out var aref)) return aref;
                 else
                 {
                     var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
                     var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(_replicatorSettings.WithRole(settings.Role)), name);
 
-                    _replicatorsByRole = _replicatorsByRole.SetItem(settings.Role, replicatorRef);
+                    _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
                     return replicatorRef;
                 }
             }
