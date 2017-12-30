@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Streams.Implementation.Stages;
 using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
