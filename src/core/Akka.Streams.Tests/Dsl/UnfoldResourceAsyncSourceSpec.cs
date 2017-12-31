@@ -360,7 +360,7 @@ namespace Akka.Streams.Tests.Dsl
             var c = this.CreateManualSubscriberProbe<string>();
             p.Subscribe(c);
             materializer.Shutdown();
-            closeLatch.Ready(RemainingOrDefault);
+            closeLatch.Ready(TimeSpan.FromSeconds(10));
         }
 
         protected override void AfterAll()

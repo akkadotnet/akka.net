@@ -52,8 +52,8 @@ namespace Akka.Streams.Tests.Dsl
             var probe = this.CreatePublisherProbe<int>();
             var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
             materializer.Shutdown();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Exception.Should().BeOfType<AbruptTerminationException>();
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

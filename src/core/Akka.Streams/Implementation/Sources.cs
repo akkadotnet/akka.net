@@ -559,7 +559,6 @@ namespace Akka.Streams.Implementation
             private TaskCompletionSource<TSource> _resource;
             private Action<Either<Option<TOut>, Exception>> _createdCallback;
             private Action<Tuple<Action, Task>> _closeCallback;
-            private Action<Tuple<TSource, Action<TSource>>> _onResourceReadyCallback;
             private bool _open;
 
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
@@ -586,7 +585,7 @@ namespace Akka.Streams.Implementation
                     {
                         void Continune(Task<Option<TOut>> t)
                         {
-                            if (t.IsCompleted && !t.IsCanceled)
+                            if (!t.IsFaulted && !t.IsCanceled)
                                 _createdCallback(new Left<Option<TOut>, Exception>(t.Result));
                             else
                                 _createdCallback(new Right<Option<TOut>, Exception>(t.Exception));
@@ -628,16 +627,18 @@ namespace Akka.Streams.Implementation
                 void CloseHandler(Tuple<Action, Task> t)
                 {
                     if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
+                    {
+                        _open = false;
                         t.Item1();
+                    }
                     else
+                    {
+                        _open = false;
                         FailStage(t.Item2.Exception);
+                    }
                 }
 
                 _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(CloseHandler);
-
-                void ReadyHandler(Tuple<TSource, Action<TSource>> t) => t.Item2(t.Item1);
-
-                _onResourceReadyCallback = GetAsyncCallback<Tuple<TSource, Action<TSource>>>(ReadyHandler);
             }
 
             private void CreateStream(bool withPull)
@@ -661,10 +662,11 @@ namespace Akka.Streams.Implementation
                 {
                     void Continue(Task<TSource> t)
                     {
-                        if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                            cb(new Left<TSource, Exception>(t.Result));
-                        else
+
+                        if (t.IsCanceled || t.IsFaulted)
                             cb(new Right<TSource, Exception>(t.Exception));
+                        else
+                            cb(new Left<TSource, Exception>(t.Result));
                     }
 
                     _source._create().ContinueWith(Continue);
@@ -675,16 +677,11 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void OnResourceReady(Action<TSource> action)
+            private void OnResourceReady(Action<TSource> action) => _resource.Task.ContinueWith(t =>
             {
-                void Continue(Task<TSource> t)
-                {
-                    if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                        _onResourceReadyCallback(Tuple.Create(t.Result, action));
-                }
-
-                _resource.Task.ContinueWith(Continue);
-            }
+                if (!t.IsFaulted && !t.IsCanceled)
+                    action(t.Result);
+            });
 
             private void ErrorHandler(Exception ex)
             {
@@ -709,17 +706,17 @@ namespace Akka.Streams.Implementation
             private void CloseAndThen(Action action)
             {
                 SetKeepGoing(true);
-
+                
                 void Ready(TSource source)
                 {
                     try
                     {
-                        void Continue(Task t) => _closeCallback(Tuple.Create(action, t));
-                        _source._close(source).ContinueWith(Continue);
+                        _source._close(source).ContinueWith(t=> _closeCallback(Tuple.Create(action, t)));
                     }
                     catch (Exception ex)
                     {
-                        FailStage(ex);
+                        var fail = GetAsyncCallback(() => FailStage(ex));
+                        fail();
                     }
                     finally
                     {

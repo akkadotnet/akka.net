@@ -293,6 +293,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public Logic(PostStopSnitchFlow stage) : base(stage.Shape)
                 {
                     _stage = stage;
+
+                    SetHandler(stage.Inlet, this);
+                    SetHandler(stage.Outlet, this);
                 }
 
                 public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));

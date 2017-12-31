@@ -110,17 +110,17 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_with_OnComplete_must_yield_error_on_abrupt_termination()
         {
             var materializer = ActorMaterializer.Create(Sys);
-            var onCompleteProbe = this.CreateTestProbe();
+            var onCompleteProbe = CreateTestProbe();
             var publisher = this.CreateManualPublisherProbe<int>();
 
             Source.FromPublisher(publisher).To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"),
-                ex => onCompleteProbe.Ref.Tell(ex)))
+                    ex => onCompleteProbe.Ref.Tell(ex)))
                 .Run(materializer);
             var proc = publisher.ExpectSubscription();
             proc.ExpectRequest();
             materializer.Shutdown();
 
-            onCompleteProbe.ExpectMsg<Failure>();
+            onCompleteProbe.ExpectMsg<AbruptTerminationException>();
         }
     }
 }

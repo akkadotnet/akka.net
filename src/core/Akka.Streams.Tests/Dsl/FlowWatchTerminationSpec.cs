@@ -137,13 +137,12 @@ namespace Akka.Streams.Tests.Dsl
             var materializer = ActorMaterializer.Create(Sys);
 
             var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(materializer);
-            var p = t.Item1;
             var task = t.Item2;
 
             materializer.Shutdown();
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Exception.Should().BeOfType<AbruptTerminationException>();
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

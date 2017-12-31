@@ -139,8 +139,8 @@ namespace Akka.Streams.Tests.Dsl
 
             // this one always fails with the AbruptTerminationException rather than the
             // AbruptStageTerminationException for some reason
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Exception.Should().BeOfType<AbruptTerminationException>();
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

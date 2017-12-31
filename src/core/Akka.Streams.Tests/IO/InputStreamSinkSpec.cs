@@ -372,7 +372,7 @@ namespace Akka.Streams.Tests.IO
             var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
             materializer.Shutdown();
 
-            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<IOException>();
+            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<AbruptTerminationException>();
         }
 
         private static ByteString RandomByteString(int size)

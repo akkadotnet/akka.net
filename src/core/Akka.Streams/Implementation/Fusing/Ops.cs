@@ -2082,6 +2082,9 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(OnCompleted<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
+
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
 
             public override void OnPush() => Pull(_stage.In);
@@ -2104,7 +2107,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PostStop()
             {
-                if(_completionSignalled)
+                if(!_completionSignalled)
                     _stage._failure(new AbruptStageTerminationException(this));
             }
         }
