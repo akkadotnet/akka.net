@@ -1,4 +1,4 @@
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("123b83e9-21f8-49a8-888a-3b1212ff21dc")]
