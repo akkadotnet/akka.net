@@ -497,6 +497,7 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact]
         public void ClusterSharding_specs()
         {
+            // must be done also in ddata mode since Counter is PersistentActor
             ClusterSharding_should_setup_shared_journal();
             ClusterSharding_should_work_in_single_node_cluster();
             ClusterSharding_should_use_second_node();
@@ -511,11 +512,14 @@ namespace Akka.Cluster.Sharding.Tests
 
             ClusterSharding_should_be_easy_API_for_starting();
 
-            PersistentClusterShards_should_recover_entities_upon_restart();
-            PersistentClusterShards_should_permanently_stop_entities_which_passivate();
-            PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
-            PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
-            PersistentClusterShards_should_ensure_rebalance_restarts_shards();
+            if (!IsDDataMode)
+            {
+                PersistentClusterShards_should_recover_entities_upon_restart();
+                PersistentClusterShards_should_permanently_stop_entities_which_passivate();
+                PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
+                PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
+                PersistentClusterShards_should_ensure_rebalance_restarts_shards();
+            }
         }
 
         public void ClusterSharding_should_setup_shared_journal()
