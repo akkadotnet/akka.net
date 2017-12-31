@@ -371,10 +371,7 @@ namespace Akka.Streams.Stage
             /// </exception>
             public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
-                if (timerKey == null)
-                    throw new ArgumentNullException(nameof(timerKey), "Timer key cannot be null");
-
-                TimerKey = timerKey;
+                TimerKey = timerKey ?? throw new ArgumentNullException(nameof(timerKey), "Timer key cannot be null");
                 TimerId = timerId;
                 IsRepeating = isRepeating;
             }
@@ -869,8 +866,7 @@ namespace Akka.Streams.Stage
                 // only used in StageLogic, i.e. thread safe
                 if (_log == null)
                 {
-                    var provider = Materializer as IMaterializerLoggingProvider;
-                    if (provider != null)
+                    if (Materializer is IMaterializerLoggingProvider provider)
                         _log = provider.MakeLogger(LogSource);
                     else
                         _log = NoLogger.Instance;
@@ -885,7 +881,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <param name="handler">TBD</param>
-        protected internal void SetHandler(Inlet inlet, IInHandler handler)
+        protected internal void SetHandler<T>(Inlet<T> inlet, IInHandler handler)
         {
             Handlers[inlet.Id] = handler;
             _interpreter?.SetHandler(GetConnection(inlet), handler);
@@ -899,9 +895,9 @@ namespace Akka.Streams.Stage
         /// <param name="onUpstreamFinish">TBD</param>
         /// <param name="onUpstreamFailure">TBD</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <see cref="onPush"/> is undefined.
+        /// This exception is thrown when the specified <paramref name="onPush"/> is undefined.
         /// </exception>
-        protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
+        protected internal void SetHandler<T>(Inlet<T> inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null)
                 throw new ArgumentNullException(nameof(onPush), "GraphStageLogic onPush handler must be provided");
@@ -914,18 +910,25 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <returns>TBD</returns>
-        protected IInHandler GetHandler(Inlet inlet) => (IInHandler)Handlers[inlet.Id];
+        protected IInHandler GetHandler<T>(Inlet<T> inlet) => (IInHandler)Handlers[inlet.Id];
 
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <param name="handler">TBD</param>
-        protected internal void SetHandler(Outlet outlet, IOutHandler handler)
+        private void SetHandler(Outlet outlet, IOutHandler handler)
         {
             Handlers[outlet.Id + InCount] = handler;
             _interpreter?.SetHandler(GetConnection(outlet), handler);
         }
+
+        /// <summary>
+        /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
+        /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <param name="handler">TBD</param>
+        protected internal void SetHandler<T>(Outlet<T> outlet, IOutHandler handler) => SetHandler((Outlet)outlet, handler);
 
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
@@ -936,7 +939,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="onPull"/> is undefined.
         /// </exception>
-        protected internal void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
+        protected internal void SetHandler<T>(Outlet<T> outlet, Action onPull, Action onDownstreamFinish = null)
         {
             if (onPull == null)
                 throw new ArgumentNullException(nameof(onPull), "GraphStageLogic onPull handler must be provided");
@@ -948,7 +951,14 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
-        protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
+        private IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
+
+        /// <summary>
+        /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
+        /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <returns>TBD</returns>
+        protected IOutHandler GetHandler<T>(Outlet<T> outlet) => GetHandler((Outlet)outlet);
 
         private Connection GetConnection(Inlet inlet) => PortToConn[inlet.Id];
 
@@ -969,7 +979,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="inlet"/> is closed or already pulled.
         /// </exception>
-        protected internal void Pull(Inlet inlet)
+        private void Pull(Inlet inlet)
         {
             var connection = GetConnection(inlet);
             var portState = connection.PortState;
@@ -1008,28 +1018,19 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="inlet">TBD</param>
-        protected internal void TryPull(Inlet inlet)
+        protected internal void TryPull<T>(Inlet<T> inlet)
         {
             if (!IsClosed(inlet))
                 Pull(inlet);
         }
 
         /// <summary>
-        /// Requests an element on the given port unless the port is already closed.
-        /// Calling this method twice before an element arrived will fail.
-        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
-        /// query whether pull is allowed to be called or not.
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="inlet">TBD</param>
-        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull((Inlet)inlet);
-
-        /// <summary>
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
         /// </summary>
         /// <param name="inlet">TBD</param>
-        protected void Cancel(Inlet inlet) => Interpreter.Cancel(GetConnection(inlet));
+        protected void Cancel<T>(Inlet<T> inlet) => Interpreter.Cancel(GetConnection(inlet));
 
         /// <summary>
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
@@ -1044,7 +1045,7 @@ namespace Akka.Streams.Stage
         /// This exception is thrown when the specified <paramref name="inlet"/> is empty.
         /// </exception>
         /// <returns>TBD</returns>
-        protected internal T Grab<T>(Inlet inlet)
+        private T Grab<T>(Inlet inlet)
         {
             var connection = GetConnection(inlet);
             var element = connection.Slot;
@@ -1086,8 +1087,16 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <returns>TBD</returns>
-        protected bool HasBeenPulled(Inlet inlet) 
+        private bool HasBeenPulled(Inlet inlet)
             => (GetConnection(inlet).PortState & (InReady | InClosed)) == 0;
+
+        /// <summary>
+        /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
+        /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
+        /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
+        protected bool HasBeenPulled<T>(Inlet<T> inlet) => HasBeenPulled((Inlet)inlet);
 
         /// <summary>
         /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
@@ -1097,7 +1106,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <returns>TBD</returns>
-        protected internal bool IsAvailable(Inlet inlet)
+        private bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
             var normalArrived = (connection.PortState & (InReady | InFailed)) == InReady;
@@ -1109,23 +1118,38 @@ namespace Akka.Streams.Stage
             }
             
             // slow path on failure
-            if ((connection.PortState & (InReady | InFailed)) ==
-                (InReady | InFailed))
+            if ((connection.PortState & (InReady | InFailed)) == (InReady | InFailed))
             {
-                var failed = connection.Slot as GraphInterpreter.Failed;
                 // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return failed != null && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
+                return connection.Slot is GraphInterpreter.Failed failed && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
             }
 
             return false;
         }
 
         /// <summary>
+        /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
+        /// element. After calling <see cref="Grab{T}(Inlet{T})"/> this method will return false.
+        /// 
+        /// If this method returns true then <see cref="HasBeenPulled"/> will return false for that same port.
+        /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
+        protected internal bool IsAvailable<T>(Inlet<T> inlet) => IsAvailable((Inlet)inlet);
+
+        /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pulled.
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <returns>TBD</returns>
-        protected bool IsClosed(Inlet inlet) => (GetConnection(inlet).PortState & InClosed) != 0;
+        private bool IsClosed(Inlet inlet) => (GetConnection(inlet).PortState & InClosed) != 0;
+
+        /// <summary>
+        /// Indicates whether the port has been closed. A closed port cannot be pulled.
+        /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
+        protected bool IsClosed<T>(Inlet<T> inlet) => IsClosed((Inlet)inlet);
 
         /// <summary>
         /// Emits an element through the given output port. Calling this method twice before a <see cref="Pull{T}(Inlet{T})"/> has been arrived
@@ -1138,7 +1162,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="outlet"/> is closed or already pulled.
         /// </exception>
-        protected internal void Push<T>(Outlet outlet, T element)
+        protected internal void Push<T>(Outlet<T> outlet, T element)
         {
             var connection = GetConnection(outlet);
             var portState = connection.PortState;
@@ -1173,12 +1197,12 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enabled">TBD</param>
         protected void SetKeepGoing(bool enabled) => Interpreter.SetKeepGoing(this, enabled);
-
+        
         /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
         /// </summary>
         /// <param name="outlet">TBD</param>
-        protected void Complete(Outlet outlet)
+        private void Complete(Outlet outlet)
         {
             if (GetHandler(outlet) is Emitting e)
                 e.AddFollowUp(new EmittingCompletion(e.Out, e.Previous, this));
@@ -1187,11 +1211,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Signals that there will be no more elements emitted on the given port.
+        /// </summary>
+        /// <param name="outlet">TBD</param>
+        protected void Complete<T>(Outlet<T> outlet) => Complete((Outlet)outlet);
+
+        /// <summary>
         /// Signals failure through the given port.
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <param name="reason">TBD</param>
-        protected void Fail(Outlet outlet, Exception reason) => Interpreter.Fail(GetConnection(outlet), reason);
+        protected void Fail<T>(Outlet<T> outlet, Exception reason) => Interpreter.Fail(GetConnection(outlet), reason);
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
@@ -1216,7 +1246,7 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail"/> on all the input or output ports that have been called,
+        /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail{T}"/> on all the input or output ports that have been called,
         /// then stops the stage, then <see cref="PostStop"/> is called.
         /// </summary>
         /// <param name="reason">TBD</param>
@@ -1238,7 +1268,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
-        protected internal bool IsAvailable(Outlet outlet) 
+        protected internal bool IsAvailable<T>(Outlet<T> outlet) 
             => (GetConnection(outlet).PortState & (OutReady | OutClosed)) == OutReady;
 
         /// <summary>
@@ -1246,7 +1276,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
-        protected bool IsClosed(Outlet outlet) 
+        protected bool IsClosed<T>(Outlet<T> outlet) 
             => (GetConnection(outlet).PortState & OutClosed) != 0;
 
         /// <summary>
@@ -2134,7 +2164,9 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public static readonly EagerTerminateInput Instance = new EagerTerminateInput();
+
         private EagerTerminateInput() { }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2150,7 +2182,9 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public static readonly IgnoreTerminateInput Instance = new IgnoreTerminateInput();
+
         private IgnoreTerminateInput() { }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2173,10 +2207,7 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
-        public ConditionalTerminateInput(Func<bool> predicate)
-        {
-            _predicate = predicate;
-        }
+        public ConditionalTerminateInput(Func<bool> predicate) => _predicate = predicate;
 
         /// <summary>
         /// TBD
@@ -2201,7 +2232,9 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public static readonly TotallyIgnorantInput Instance = new TotallyIgnorantInput();
+
         private TotallyIgnorantInput() { }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2226,6 +2259,7 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public static readonly EagerTerminateOutput Instance = new EagerTerminateOutput();
+
         private EagerTerminateOutput() { }
         /// <summary>
         /// TBD
@@ -2242,7 +2276,9 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public static readonly IgnoreTerminateOutput Instance = new IgnoreTerminateOutput();
+
         private IgnoreTerminateOutput() { }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2265,10 +2301,7 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
-        public ConditionalTerminateOutput(Func<bool> predicate)
-        {
-            _predicate = predicate;
-        }
+        public ConditionalTerminateOutput(Func<bool> predicate) => _predicate = predicate;
 
         /// <summary>
         /// TBD
@@ -2294,6 +2327,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="args">TBD</param>
         public delegate void Receive(Tuple<IActorRef, object> args);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2525,30 +2559,21 @@ namespace Akka.Streams.Stage
         {
             public IList<T> Args { get; }
 
-            public NotInitialized(IList<T> args)
-            {
-                Args = args;
-            }
+            public NotInitialized(IList<T> args) => Args = args;
         }
 
         private sealed class Initialized : ICallbackState
         {
             public Action<T> Callback { get; }
 
-            public Initialized(Action<T> callback)
-            {
-                Callback = callback;
-            }
+            public Initialized(Action<T> callback) => Callback = callback;
         }
 
         private sealed class Stopped : ICallbackState
         {
             public Action<T> Callback { get; }
 
-            public Stopped(Action<T> callback)
-            {
-                Callback = callback;
-            }
+            public Stopped(Action<T> callback) => Callback = callback;
         }
 
         private readonly AtomicReference<ICallbackState> _callbackState =

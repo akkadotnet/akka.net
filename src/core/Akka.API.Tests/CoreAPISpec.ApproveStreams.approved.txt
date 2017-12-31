@@ -1421,7 +1421,7 @@ namespace Akka.Streams.Dsl
         public Partition(int outputPorts, System.Func<T, int> partitioner) { }
         public override Akka.Streams.UniformFanOutShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
-        public Akka.Streams.Outlet Out(int id) { }
+        public Akka.Streams.Outlet<T> Out(int id) { }
         public override string ToString() { }
     }
     public sealed class PartitionOutOfBoundsException : System.Exception
@@ -4097,8 +4097,8 @@ namespace Akka.Streams.Stage
         protected void AbortReading<T>(Akka.Streams.Inlet<T> inlet) { }
         protected internal void AfterPostStop() { }
         protected internal void BeforePreStart() { }
-        protected void Cancel(Akka.Streams.Inlet inlet) { }
-        protected void Complete(Akka.Streams.Outlet outlet) { }
+        protected void Cancel<T>(Akka.Streams.Inlet<T> inlet) { }
+        protected void Complete<T>(Akka.Streams.Outlet<T> outlet) { }
         public void CompleteStage() { }
         public static Akka.Streams.Stage.InHandler ConditionalTerminateInput(System.Func<bool> predicate) { }
         public static Akka.Streams.Stage.OutHandler ConditionalTerminateOutput(System.Func<bool> predicate) { }
@@ -4109,36 +4109,33 @@ namespace Akka.Streams.Stage
         protected internal void EmitMultiple<T>(Akka.Streams.Outlet<T> outlet, System.Collections.Generic.IEnumerable<T> elements) { }
         protected internal void EmitMultiple<T>(Akka.Streams.Outlet<T> outlet, System.Collections.Generic.IEnumerator<T> enumerator, System.Action andThen) { }
         protected internal void EmitMultiple<T>(Akka.Streams.Outlet<T> outlet, System.Collections.Generic.IEnumerator<T> enumerator) { }
-        protected void Fail(Akka.Streams.Outlet outlet, System.Exception reason) { }
+        protected void Fail<T>(Akka.Streams.Outlet<T> outlet, System.Exception reason) { }
         public void FailStage(System.Exception reason) { }
         protected System.Action<T> GetAsyncCallback<T>(System.Action<T> handler) { }
         protected System.Action GetAsyncCallback(System.Action handler) { }
-        protected Akka.Streams.Stage.IInHandler GetHandler(Akka.Streams.Inlet inlet) { }
-        protected Akka.Streams.Stage.IOutHandler GetHandler(Akka.Streams.Outlet outlet) { }
+        protected Akka.Streams.Stage.IInHandler GetHandler<T>(Akka.Streams.Inlet<T> inlet) { }
+        protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
         protected Akka.Streams.Stage.StageActorRef GetStageActorRef(Akka.Streams.Stage.StageActorRef.Receive receive) { }
-        protected internal T Grab<T>(Akka.Streams.Inlet inlet) { }
         protected internal T Grab<T>(Akka.Streams.Inlet<T> inlet) { }
-        protected bool HasBeenPulled(Akka.Streams.Inlet inlet) { }
-        protected internal bool IsAvailable(Akka.Streams.Inlet inlet) { }
-        protected internal bool IsAvailable(Akka.Streams.Outlet outlet) { }
-        protected bool IsClosed(Akka.Streams.Inlet inlet) { }
-        protected bool IsClosed(Akka.Streams.Outlet outlet) { }
+        protected bool HasBeenPulled<T>(Akka.Streams.Inlet<T> inlet) { }
+        protected internal bool IsAvailable<T>(Akka.Streams.Inlet<T> inlet) { }
+        protected internal bool IsAvailable<T>(Akka.Streams.Outlet<T> outlet) { }
+        protected bool IsClosed<T>(Akka.Streams.Inlet<T> inlet) { }
+        protected bool IsClosed<T>(Akka.Streams.Outlet<T> outlet) { }
         protected void PassAlong<TOut, TIn>(Akka.Streams.Inlet<TIn> from, Akka.Streams.Outlet<TOut> to, bool doFinish = True, bool doFail = True, bool doPull = False)
             where TIn : TOut { }
         public virtual void PostStop() { }
         public virtual void PreStart() { }
-        protected internal void Pull(Akka.Streams.Inlet inlet) { }
         protected internal void Pull<T>(Akka.Streams.Inlet<T> inlet) { }
-        protected internal void Push<T>(Akka.Streams.Outlet outlet, T element) { }
+        protected internal void Push<T>(Akka.Streams.Outlet<T> outlet, T element) { }
         protected void Read<T>(Akka.Streams.Inlet<T> inlet, System.Action<T> andThen, System.Action onClose) { }
         protected void ReadMany<T>(Akka.Streams.Inlet<T> inlet, int n, System.Action<System.Collections.Generic.IEnumerable<T>> andThen, System.Action<System.Collections.Generic.IEnumerable<T>> onComplete) { }
-        protected internal void SetHandler(Akka.Streams.Inlet inlet, Akka.Streams.Stage.IInHandler handler) { }
-        protected internal void SetHandler(Akka.Streams.Inlet inlet, System.Action onPush, System.Action onUpstreamFinish = null, System.Action<System.Exception> onUpstreamFailure = null) { }
-        protected internal void SetHandler(Akka.Streams.Outlet outlet, Akka.Streams.Stage.IOutHandler handler) { }
-        protected internal void SetHandler(Akka.Streams.Outlet outlet, System.Action onPull, System.Action onDownstreamFinish = null) { }
+        protected internal void SetHandler<T>(Akka.Streams.Inlet<T> inlet, Akka.Streams.Stage.IInHandler handler) { }
+        protected internal void SetHandler<T>(Akka.Streams.Inlet<T> inlet, System.Action onPush, System.Action onUpstreamFinish = null, System.Action<System.Exception> onUpstreamFailure = null) { }
+        protected internal void SetHandler<T>(Akka.Streams.Outlet<T> outlet, Akka.Streams.Stage.IOutHandler handler) { }
+        protected internal void SetHandler<T>(Akka.Streams.Outlet<T> outlet, System.Action onPull, System.Action onDownstreamFinish = null) { }
         protected void SetKeepGoing(bool enabled) { }
-        protected internal void TryPull(Akka.Streams.Inlet inlet) { }
         protected internal void TryPull<T>(Akka.Streams.Inlet<T> inlet) { }
         protected sealed class LambdaInHandler : Akka.Streams.Stage.InHandler
         {

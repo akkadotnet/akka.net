@@ -6,10 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 
@@ -62,19 +58,17 @@ namespace Akka.Streams.Dsl
         }
 
         public Outlet<T> Out { get; } = new Outlet<T>("RestartWithBackoffSource.out");
+
         public override SourceShape<T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new Logic(this, "Source");
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, "Source");
 
-        private class Logic : RestartWithBackoffLogic<SourceShape<T>>
+        private class Logic : RestartWithBackoffLogic<SourceShape<T>, T, T>
         {
             private readonly RestartWithBackoffSource<T, TMat> _stage;
 
             public Logic(RestartWithBackoffSource<T, TMat> stage, string name) 
-                : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
+                : base(name, stage.Shape, null, stage.Out, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
                 Backoff();
@@ -85,18 +79,13 @@ namespace Akka.Streams.Dsl
                 var sinkIn = CreateSubInlet(_stage.Out);
                 _stage.SourceFactory().RunWith(sinkIn.Sink, SubFusingMaterializer);
                 if (IsAvailable(_stage.Out))
-                {
                     sinkIn.Pull();
-                }
             }
 
-            protected override void Backoff()
+            protected override void Backoff() => SetHandler(_stage.Out, () =>
             {
-                SetHandler(_stage.Out, () =>
-                {
-                    // do nothing
-                });
-            }
+                // do nothing
+            });
         }
     }
 
@@ -150,19 +139,17 @@ namespace Akka.Streams.Dsl
         }
 
         public Inlet<T> In { get; } = new Inlet<T>("RestartWithBackoffSink.in");
+
         public override SinkShape<T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new Logic(this, "Sink");
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, "Sink");
 
-        private class Logic : RestartWithBackoffLogic<SinkShape<T>>
+        private class Logic : RestartWithBackoffLogic<SinkShape<T>, T, T>
         {
             private readonly RestartWithBackoffSink<T, TMat> _stage;
 
             public Logic(RestartWithBackoffSink<T, TMat> stage, string name)
-                : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
+                : base(name, stage.Shape, stage.In, null, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
                 Backoff();
@@ -174,13 +161,10 @@ namespace Akka.Streams.Dsl
                 Source.FromGraph(sourceOut.Source).RunWith(_stage.SinkFactory(), SubFusingMaterializer);
             }
 
-            protected override void Backoff()
+            protected override void Backoff() => SetHandler(_stage.In, () =>
             {
-                SetHandler(_stage.In, () =>
-                {
-                    // do nothing
-                });
-            }
+                // do nothing
+            });
         }
     }
 
@@ -233,22 +217,20 @@ namespace Akka.Streams.Dsl
         }
 
         public Inlet<TIn> In { get; } = new Inlet<TIn>("RestartWithBackoffFlow.in");
+
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("RestartWithBackoffFlow.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new Logic(this, "Flow");
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, "Flow");
 
-        private class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>>
+        private class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
         {
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
-            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> activeOutIn = null;
+            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
 
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
-                : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
+                : base(name, stage.Shape, stage.In, stage.Out, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
             {
                 _stage = stage;
                 Backoff();
@@ -260,10 +242,9 @@ namespace Akka.Streams.Dsl
                 var sinkIn = CreateSubInlet(_stage.Out);
                 Source.FromGraph(sourceOut.Source).Via(_stage.FlowFactory()).RunWith(sinkIn.Sink, SubFusingMaterializer);
                 if (IsAvailable(_stage.Out))
-                {
                     sinkIn.Pull();
-                }
-                activeOutIn = Tuple.Create(sourceOut, sinkIn);
+
+                _activeOutIn = Tuple.Create(sourceOut, sinkIn);
             }
 
             protected override void Backoff()
@@ -279,19 +260,16 @@ namespace Akka.Streams.Dsl
 
                 // We need to ensure that the other end of the sub flow is also completed, so that we don't
                 // receive any callbacks from it.
-                if (activeOutIn != null)
+                if (_activeOutIn != null)
                 {
-                    var sourceOut = activeOutIn.Item1;
-                    var sinkIn = activeOutIn.Item2;
+                    var sourceOut = _activeOutIn.Item1;
+                    var sinkIn = _activeOutIn.Item2;
                     if (!sourceOut.IsClosed)
-                    {
                         sourceOut.Complete();
-                    }
+
                     if (!sinkIn.IsClosed)
-                    {
                         sinkIn.Cancel();
-                    }
-                    activeOutIn = null;
+                    _activeOutIn = null;
                 }
             }
         }
@@ -300,60 +278,56 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Shared logic for all restart with backoff logics.
     /// </summary>
-    internal abstract class RestartWithBackoffLogic<S> : TimerGraphStageLogic where S : Shape
+    internal abstract class RestartWithBackoffLogic<TShape, TIn, TOut> : TimerGraphStageLogic where TShape : Shape
     {
         private readonly string _name;
-        private readonly S _shape;
         private readonly TimeSpan _minBackoff;
         private readonly TimeSpan _maxBackoff;
         private readonly double _randomFactor;
 
-        protected Inlet In { get; }
-        protected Outlet Out { get; }
+        protected Inlet<TIn> In { get; }
+        protected Outlet<TOut> Out { get; }
 
-        private int _restartCount = 0;
+        private int _restartCount;
         private Deadline _resetDeadline;
         // This is effectively only used for flows, if either the main inlet or outlet of this stage finishes, then we
         // don't want to restart the sub inlet when it finishes, we just finish normally.
-        private bool _finishing = false;
+        private bool _finishing;
 
         protected RestartWithBackoffLogic(
             string name,
-            S shape,
+            TShape shape,
+            Inlet<TIn> inlet,
+            Outlet<TOut> outlet,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             double randomFactor) : base(shape)
         {
             _name = name;
-            _shape = shape;
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
             _randomFactor = randomFactor;
 
             _resetDeadline = minBackoff.FromNow();
 
-            In = shape.Inlets.FirstOrDefault();
-            Out = shape.Outlets.FirstOrDefault();
+            In = inlet;
+            Out = outlet;
         }
 
         protected abstract void StartGraph();
+
         protected abstract void Backoff();
 
-        protected SubSinkInlet<T> CreateSubInlet<T>(Outlet<T> outlet)
+        protected SubSinkInlet<TOut> CreateSubInlet(Outlet<TOut> outlet)
         {
-            var sinkIn = new SubSinkInlet<T>(this, $"RestartWithBackoff{_name}.subIn");
+            var sinkIn = new SubSinkInlet<TOut>(this, $"RestartWithBackoff{_name}.subIn");
 
             sinkIn.SetHandler(new LambdaInHandler(
-                onPush: () =>
-                {
-                    Push(Out, sinkIn.Grab());
-                },
+                onPush: () => Push(Out, sinkIn.Grab()),
                 onUpstreamFinish: () =>
                 {
                     if (_finishing)
-                    {
                         Complete(Out);
-                    }
                     else
                     {
                         Log.Debug("Graph out finished");
@@ -363,9 +337,7 @@ namespace Akka.Streams.Dsl
                 onUpstreamFailure: ex =>
                 {
                     if (_finishing)
-                    {
-                        Fail(_shape.Outlets.First(), ex);
-                    }
+                        Fail(Out, ex);
                     else
                     {
                         Log.Error(ex, "Restarting graph due to failure");
@@ -384,16 +356,14 @@ namespace Akka.Streams.Dsl
             return sinkIn;
         }
 
-        protected SubSourceOutlet<T> CreateSubOutlet<T>(Inlet<T> inlet)
+        protected SubSourceOutlet<TIn> CreateSubOutlet(Inlet<TIn> inlet)
         {
-            var sourceOut = new SubSourceOutlet<T>(this, $"RestartWithBackoff{_name}.subOut");
+            var sourceOut = new SubSourceOutlet<TIn>(this, $"RestartWithBackoff{_name}.subOut");
             sourceOut.SetHandler(new LambdaOutHandler(
                 onPull: () =>
                 {
                     if (IsAvailable(In))
-                    {
-                        sourceOut.Push(Grab<T>(In));
-                    }
+                        sourceOut.Push(Grab(In));
                     else
                     {
                         if (!HasBeenPulled(In))
@@ -403,9 +373,7 @@ namespace Akka.Streams.Dsl
                 onDownstreamFinish: () =>
                 {
                     if (_finishing)
-                    {
                         Cancel(In);
-                    }
                     else
                     {
                         Log.Debug("Graph in finished");
@@ -418,7 +386,7 @@ namespace Akka.Streams.Dsl
                 onPush: () =>
                 {
                     if (sourceOut.IsAvailable)
-                        sourceOut.Push(Grab<T>(In));
+                        sourceOut.Push(Grab(In));
                 },
                 onUpstreamFinish: () =>
                 {
@@ -463,10 +431,7 @@ namespace Akka.Streams.Dsl
 
     internal sealed class Deadline
     {
-        public Deadline(TimeSpan time)
-        {
-            Time = time;
-        }
+        public Deadline(TimeSpan time) => Time = time;
 
         public TimeSpan Time { get; }
 
@@ -474,17 +439,11 @@ namespace Akka.Streams.Dsl
 
         public static Deadline Now => new Deadline(new TimeSpan(DateTime.UtcNow.Ticks));
 
-        public static Deadline operator +(Deadline deadline, TimeSpan duration)
-        {
-            return new Deadline(deadline.Time.Add(duration));
-        }
+        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new Deadline(deadline.Time.Add(duration));
     }
 
     internal static class DeadlineExtensions
     {
-        public static Deadline FromNow(this TimeSpan timespan)
-        {
-            return Deadline.Now + timespan;
-        }
+        public static Deadline FromNow(this TimeSpan timespan) => Deadline.Now + timespan;
     }
 }
