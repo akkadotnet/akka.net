@@ -15,6 +15,7 @@ using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
+using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Util;
 using Reactive.Streams;
@@ -271,6 +272,21 @@ namespace Akka.Streams
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 #endif
     }
+
+    /// <summary>
+    /// Signal that the stage was abruptly terminated, usually seen as a call to <see cref="GraphStageLogic.PostStop"/> without
+    /// any of the handler callbacks seeing completion or failure from upstream or cancellation from downstream. This can happen when
+    /// the actor running the graph is killed, which happens when the materializer or actor system is terminated.
+    /// </summary>
+    public sealed class AbruptStageTerminationException : Exception
+    {
+        public AbruptStageTerminationException(GraphStageLogic logic) 
+            : base($"GraphStage {logic} terminated abruptly, caused by for example materializer or actor system termination.")
+        {
+
+        }
+    }
+
 
     /// <summary>
     /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
