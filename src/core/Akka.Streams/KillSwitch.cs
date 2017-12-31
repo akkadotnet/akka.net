@@ -46,11 +46,11 @@ namespace Akka.Streams
         /// 
         /// For a Flow version see <see cref="Single{T}"/>
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="T1">TBD</typeparam>
+        /// <typeparam name="T2">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static IGraph<BidiShape<TIn1, TIn1, TOut1, TOut1>, UniqueKillSwitch> SingleBidi<TIn1, TOut1>
-            () => UniqueBidiKillSwitchStage<TIn1, TOut1>.Instance;
+        public static IGraph<BidiShape<T1, T1, T2, T2>, UniqueKillSwitch> SingleBidi<T1, T2>
+            () => UniqueBidiKillSwitchStage<T1, T2>.Instance;
 
         /// <summary>
         /// TBD
@@ -136,16 +136,16 @@ namespace Akka.Streams
             public override string ToString() => "UniqueKillSwitchFlow";
         }
 
-        private sealed class UniqueBidiKillSwitchStage<TIn, TOut> :
-            GraphStageWithMaterializedValue<BidiShape<TIn, TIn, TOut, TOut>, UniqueKillSwitch>
+        private sealed class UniqueBidiKillSwitchStage<T1, T2> :
+            GraphStageWithMaterializedValue<BidiShape<T1, T1, T2, T2>, UniqueKillSwitch>
         {
             #region Logic
 
             private sealed class Logic : KillableGraphStageLogic
             {
-                private readonly UniqueBidiKillSwitchStage<TIn, TOut> _killSwitch;
+                private readonly UniqueBidiKillSwitchStage<T1, T2> _killSwitch;
 
-                public Logic(Task terminationSignal, UniqueBidiKillSwitchStage<TIn, TOut> killSwitch)
+                public Logic(Task terminationSignal, UniqueBidiKillSwitchStage<T1, T2> killSwitch)
                     : base(terminationSignal, killSwitch.Shape)
                 {
                     _killSwitch = killSwitch;
@@ -176,21 +176,21 @@ namespace Akka.Streams
 
             #endregion
 
-            public static UniqueBidiKillSwitchStage<TIn, TOut> Instance { get; } = new UniqueBidiKillSwitchStage<TIn, TOut>();
+            public static UniqueBidiKillSwitchStage<T1, T2> Instance { get; } = new UniqueBidiKillSwitchStage<T1, T2>();
 
-            private UniqueBidiKillSwitchStage() => Shape = new BidiShape<TIn, TIn, TOut, TOut>(In1, Out1, In2, Out2);
+            private UniqueBidiKillSwitchStage() => Shape = new BidiShape<T1, T1, T2, T2>(In1, Out1, In2, Out2);
 
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("breaker");
 
-            private Inlet<TIn> In1 { get; } = new Inlet<TIn>("KillSwitchBidi.in1");
+            private Inlet<T1> In1 { get; } = new Inlet<T1>("KillSwitchBidi.in1");
 
-            private Outlet<TIn> Out1 { get; } = new Outlet<TIn>("KillSwitchBidi.out1");
+            private Outlet<T1> Out1 { get; } = new Outlet<T1>("KillSwitchBidi.out1");
 
-            private Inlet<TOut> In2 { get; } = new Inlet<TOut>("KillSwitchBidi.in2");
+            private Inlet<T2> In2 { get; } = new Inlet<T2>("KillSwitchBidi.in2");
 
-            private Outlet<TOut> Out2 { get; } = new Outlet<TOut>("KillSwitchBidi.out2");
+            private Outlet<T2> Out2 { get; } = new Outlet<T2>("KillSwitchBidi.out2");
 
-            public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
+            public override BidiShape<T1, T1, T2, T2> Shape { get; }
                 
             public override ILogicAndMaterializedValue<UniqueKillSwitch> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {
