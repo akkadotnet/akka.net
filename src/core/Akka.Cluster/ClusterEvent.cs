@@ -295,6 +295,22 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Member status changed to WeaklyUp.
+        /// A joining member can be moved to <see cref="MemberStatus.WeaklyUp"/> if convergence
+        /// cannot be reached, i.e. there are unreachable nodes.
+        /// It will be moved to <see cref="MemberStatus.Up"/> when convergence is reached.
+        /// </summary>
+        public sealed class MemberWeaklyUp : MemberStatusChange
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MemberWeaklyUp"/> class.
+            /// </summary>
+            /// <param name="member">The node that changed state.</param>
+            public MemberWeaklyUp(Member member)
+                : base(member, MemberStatus.WeaklyUp) { }
+        }
+
+        /// <summary>
         /// This class represents a <see cref="MemberStatusChange"/> event where the
         /// cluster node changed its status to <see cref="MemberStatus.Leaving"/>.
         /// </summary>
@@ -852,10 +868,24 @@ namespace Akka.Cluster
         {
             foreach (var member in members)
             {
-                if (member.Status == MemberStatus.Joining) yield return new MemberJoined(member);
-                if (member.Status == MemberStatus.Up) yield return new MemberUp(member);
-                if (member.Status == MemberStatus.Leaving) yield return new MemberLeft(member);
-                if (member.Status == MemberStatus.Exiting) yield return new MemberExited(member);
+                switch (member.Status)
+                {
+                    case MemberStatus.Joining:
+                        yield return new MemberJoined(member);
+                        break;
+                    case MemberStatus.WeaklyUp:
+                        yield return new MemberWeaklyUp(member);
+                        break;
+                    case MemberStatus.Up:
+                        yield return new MemberUp(member);
+                        break;
+                    case MemberStatus.Leaving:
+                        yield return new MemberLeft(member);
+                        break;
+                    case MemberStatus.Exiting:
+                        yield return new MemberExited(member);
+                        break;
+                }
             }
         }
 

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Dispatch;
 
@@ -22,13 +23,13 @@ namespace Akka.Event
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if(message is InitializeLogger)
+            if (message is InitializeLogger)
             {
                 Sender.Tell(new LoggerInitialized());
                 return true;
             }
             var logEvent = message as LogEvent;
-            if (logEvent == null) 
+            if (logEvent == null)
                 return false;
 
             Print(logEvent);

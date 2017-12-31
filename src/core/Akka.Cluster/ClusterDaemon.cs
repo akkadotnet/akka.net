@@ -2120,6 +2120,10 @@ namespace Akka.Cluster
                 else
                 {
                     _leaderActionCounter += 1;
+
+                    if (_cluster.Settings.AllowWeaklyUpMembers && _leaderActionCounter >= 3)
+                        MoveJoiningToWeaklyUp();
+
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
                         _log.Info(
@@ -2136,6 +2140,39 @@ namespace Akka.Cluster
 
             CleanupExitingConfirmed();
             ShutdownSelfWhenDown();
+        }
+
+        private void MoveJoiningToWeaklyUp()
+        {
+            var localGossip = _latestGossip;
+            var localMembers = localGossip.Members;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
+
+            bool IsJoiningToWeaklyUp(Member m) => m.Status == MemberStatus.Joining
+                                                  && enoughMembers
+                                                  && _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(m.UniqueAddress);
+
+            var changedMembers = localMembers
+                .Where(IsJoiningToWeaklyUp)
+                .Select(m => m.Copy(MemberStatus.WeaklyUp))
+                .ToImmutableSortedSet();
+
+            if (!changedMembers.IsEmpty)
+            {
+                // replace changed members
+                var newMembers = changedMembers.Union(localMembers);
+                var newGossip = localGossip.Copy(members: newMembers);
+                UpdateLatestGossip(newGossip);
+
+                // log status change
+                foreach (var m in changedMembers)
+                {
+                    _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+                }
+
+                Publish(newGossip);
+                if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero) PublishInternalStats();
+            }
         }
 
         private void ShutdownSelfWhenDown()
@@ -2197,7 +2234,7 @@ namespace Akka.Cluster
             var localSeen = localOverview.Seen;
 
             bool enoughMembers = IsMinNrOfMembersFulfilled();
-            Func<Member, bool> isJoiningUp = m => m.Status == MemberStatus.Joining && enoughMembers;
+            bool IsJoiningUp(Member m) => (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp) && enoughMembers;
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2211,7 +2248,7 @@ namespace Akka.Cluster
             var upNumber = 0;
             var changedMembers = localMembers.Select(m =>
             {
-                if (isJoiningUp(m))
+                if (IsJoiningUp(m))
                 {
                     // Move JOINING => UP (once all nodes have seen that this node is JOINING, i.e. we have a convergence)
                     // and minimum number of nodes have joined the cluster
