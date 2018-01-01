@@ -34,7 +34,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
-            return self.Ask<object>(message, timeout, CancellationToken.None);
+            return AskInternal(self, message, timeout, CancellationToken.None);
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, CancellationToken cancellationToken)
         {
-            return self.Ask<object>(message, null, cancellationToken);
+            return AskInternal(self, message, null, cancellationToken);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            return self.Ask<object>(message, timeout, cancellationToken);
+            return AskInternal(self, message, timeout, cancellationToken);
         }
 
         /// <summary>
@@ -102,11 +102,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            IActorRefProvider provider = ResolveProvider(self);
-            if (provider == null)
-                throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
-
-            return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
+            return AskInternal(self, message, timeout, cancellationToken).CastTask<object, T>();
         }
 
         /// <summary>
@@ -132,9 +128,12 @@ namespace Akka.Actor
         private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
 
 
-        private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
-            TimeSpan? timeout, CancellationToken cancellationToken)
+        private static Task<object> AskInternal(ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
+            var provider = ResolveProvider(self);
+            if (provider == null)
+                throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
+
             TaskCompletionSource<object> result;
             if (isRunContinuationsAsynchronouslyAvailable)
                 result = new TaskCompletionSource<object>((TaskCreationOptions)RunContinuationsAsynchronously);

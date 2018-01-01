@@ -10,9 +10,16 @@ using Xunit;
 using Akka.Actor;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Actor
 {
+    public class ExpectedTestException : Exception
+    {
+        public ExpectedTestException(string message) : base(message)
+        {
+        }
+    }
     
     public class AskSpec : AkkaSpec
     {
@@ -20,14 +27,17 @@ namespace Akka.Tests.Actor
         {
             protected override void OnReceive(object message)
             {
-                if (message.Equals("timeout"))
+                switch (message)
                 {
-                    Thread.Sleep(5000);
+                    case "timeout": Thread.Sleep(5000); break;
+                    case "answer": Sender.Tell("answer"); break;
+                    case "throw": Task.Run(ThrowNested).PipeTo(Sender); break;
                 }
-                if (message.Equals("answer"))
-                {
-                    Sender.Tell("answer");
-                }
+            }
+
+            internal async Task ThrowNested()
+            {
+                throw new ExpectedTestException("BOOM!");
             }
         }
 
@@ -140,6 +150,30 @@ namespace Akka.Tests.Actor
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
             ExpectMsg("bar");
+        }
+
+        [Fact]
+        public void Generic_Ask_when_Failure_is_returned_should_throw_error_payload_and_preserve_stack_trace()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var aggregateException = Assert.Throws<AggregateException>(() =>
+            {
+                var result = actor.Ask<string>("throw", timeout: TimeSpan.FromSeconds(3)).Result;
+            });
+            var exception = aggregateException.Flatten().InnerException;
+            exception.GetType().ShouldBe(typeof(ExpectedTestException));
+            exception.Message.ShouldBe("BOOM!");
+            exception.StackTrace.Contains(nameof(SomeActor.ThrowNested)).ShouldBeTrue("stack trace should be preserved");
+        }
+
+        [Fact]
+        public void Generic_Ask_when_Failure_is_and_Failure_was_expected_should_not_throw()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var result = actor.Ask<Status.Failure>("throw", timeout: TimeSpan.FromSeconds(3)).Result;
+            var exception = ((AggregateException)result.Cause).Flatten().InnerException;
+            exception.GetType().ShouldBe(typeof(ExpectedTestException));
+            exception.Message.ShouldBe("BOOM!");
         }
     }
 }
