@@ -1443,9 +1443,9 @@ namespace Akka.Streams.Dsl
     public class static Retry
     {
         [Akka.Annotations.ApiMayChangeAttribute()]
-        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TI, TS>, System.Tuple<Akka.Util.Result<TO>, TS>>, TM> Concat<TI, TS, TO, TM>(long limit, Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TI, TS>, System.Tuple<Akka.Util.Result<TO>, TS>>, TM> flow, System.Func<TS, System.Collections.Generic.IEnumerable<System.Tuple<TI, TS>>> retryWith) { }
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Concat<TIn, TState, TOut, TMat>(long limit, Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Collections.Generic.IEnumerable<System.Tuple<TIn, TState>>> retryWith) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
-        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TI, TS>, System.Tuple<Akka.Util.Result<TO>, TS>>, TM> Create<TI, TS, TO, TM>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TI, TS>, System.Tuple<Akka.Util.Result<TO>, TS>>, TM> flow, System.Func<TS, System.Tuple<TI, TS>> retryWith) { }
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Tuple<TIn, TState>> retryWith) { }
     }
     public class static ReverseOps
     {

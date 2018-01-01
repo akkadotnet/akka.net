@@ -37,21 +37,21 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">the flow to retry</param>
         /// <param name="retryWith">if output was failure, we can optionaly recover from it,
         /// and retry with a new pair of input and new state we get from this function.</param>
-        /// <typeparam name="TI">input elements type</typeparam>
-        /// <typeparam name="TS">state to create a new `(I,S)` to retry with</typeparam>
-        /// <typeparam name="TO">output elements type</typeparam>
-        /// <typeparam name="TM">materialized value type</typeparam>
+        /// <typeparam name="TIn">input elements type</typeparam>
+        /// <typeparam name="TState">state to create a new `(I,S)` to retry with</typeparam>
+        /// <typeparam name="TOut">output elements type</typeparam>
+        /// <typeparam name="TMat">materialized value type</typeparam>
         [ApiMayChange]
-        public static IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> Create<TI, TS, TO, TM>(
-            IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> flow, Func<TS, Tuple<TI, TS>> retryWith)
+        public static IGraph<FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(
+            IGraph<FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>, TMat> flow, Func<TState, Tuple<TIn, TState>> retryWith)
         {
             return GraphDsl.Create(flow, (b, origFlow) =>
             {
-                var retry = b.Add(new RetryCoordinator<TI, TS, TO>(retryWith));
+                var retry = b.Add(new RetryCoordinator<TIn, TState, TOut>(retryWith));
 
                 b.From(retry.Outlet2).Via(origFlow).To(retry.Inlet2);
 
-                return new FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>(retry.Inlet1, retry.Outlet1);
+                return new FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>(retry.Inlet1, retry.Outlet1);
             });
         }
 
@@ -79,36 +79,36 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">the flow to retry</param>
         /// <param name="retryWith">if output was failure, we can optionaly recover from it, and retry with
         /// a sequence of input and new state pairs we get from this function.</param>
-        /// <typeparam name="TI">input elements type</typeparam>
-        /// <typeparam name="TS">state to create a new `(I,S)` to retry with</typeparam>
-        /// <typeparam name="TO">output elements type</typeparam>
-        /// <typeparam name="TM">materialized value type</typeparam>
+        /// <typeparam name="TIn">input elements type</typeparam>
+        /// <typeparam name="TState">state to create a new `(I,S)` to retry with</typeparam>
+        /// <typeparam name="TOut">output elements type</typeparam>
+        /// <typeparam name="TMat">materialized value type</typeparam>
         [ApiMayChange]
-        public static IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> Concat<TI, TS, TO, TM>(long limit,
-            IGraph<FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>, TM> flow, Func<TS, IEnumerable<Tuple<TI, TS>>> retryWith)
+        public static IGraph<FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>, TMat> Concat<TIn, TState, TOut, TMat>(long limit,
+            IGraph<FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>, TMat> flow, Func<TState, IEnumerable<Tuple<TIn, TState>>> retryWith)
         {
             return GraphDsl.Create(flow, (b, origFlow) =>
             {
-                var retry = b.Add(new RetryConcatCoordinator<TI, TS, TO>(limit, retryWith));
+                var retry = b.Add(new RetryConcatCoordinator<TIn, TState, TOut>(limit, retryWith));
 
                 b.From(retry.Outlet2).Via(origFlow).To(retry.Inlet2);
 
-                return new FlowShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>>(retry.Inlet1, retry.Outlet1);
+                return new FlowShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>>(retry.Inlet1, retry.Outlet1);
             });
         }
 
 
-        private class RetryCoordinator<TI, TS, TO> : GraphStage<BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>>>
+        private class RetryCoordinator<TIn, TState, TOut> : GraphStage<BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>>>
         {
             #region Logic
 
             private sealed class Logic : GraphStageLogic
             {
-                private readonly RetryCoordinator<TI, TS, TO> _retry;
+                private readonly RetryCoordinator<TIn, TState, TOut> _retry;
                 private bool _elementInCycle;
-                private Tuple<TI, TS> _pending;
+                private Tuple<TIn, TState> _pending;
 
-                public Logic(RetryCoordinator<TI, TS, TO> retry) : base(retry.Shape)
+                public Logic(RetryCoordinator<TIn, TState, TOut> retry) : base(retry.Shape)
                 {
 
                     _retry = retry;
@@ -181,7 +181,7 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                private void PushAndCompleteIfLast(Tuple<Result<TO>, TS> item)
+                private void PushAndCompleteIfLast(Tuple<Result<TOut>, TState> item)
                 {
                     Push(_retry.Out1, item);
                     if (IsClosed(_retry.In1))
@@ -191,41 +191,41 @@ namespace Akka.Streams.Dsl
 
             #endregion
 
-            private readonly Func<TS, Tuple<TI, TS>> _retryWith;
+            private readonly Func<TState, Tuple<TIn, TState>> _retryWith;
 
-            public RetryCoordinator(Func<TS, Tuple<TI, TS>> retryWith)
+            public RetryCoordinator(Func<TState, Tuple<TIn, TState>> retryWith)
             {
                 _retryWith = retryWith;
 
-                In1 = new Inlet<Tuple<TI, TS>>("Retry.ext.in");
-                Out1 = new Outlet<Tuple<Result<TO>, TS>>("Retry.ext.out");
-                In2 = new Inlet<Tuple<Result<TO>, TS>>("Retry.int.in");
-                Out2 = new Outlet<Tuple<TI, TS>>("Retry.int.out");
-                Shape = new BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>>(In1, Out1, In2, Out2);
+                In1 = new Inlet<Tuple<TIn, TState>>("Retry.ext.in");
+                Out1 = new Outlet<Tuple<Result<TOut>, TState>>("Retry.ext.out");
+                In2 = new Inlet<Tuple<Result<TOut>, TState>>("Retry.int.in");
+                Out2 = new Outlet<Tuple<TIn, TState>>("Retry.int.out");
+                Shape = new BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>>(In1, Out1, In2, Out2);
             }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>> Shape { get; }
+            public override BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>> Shape { get; }
 
-            public Inlet<Tuple<TI, TS>> In1 { get; }
-            public Outlet<Tuple<Result<TO>, TS>> Out1 { get; }
-            public Inlet<Tuple<Result<TO>, TS>> In2 { get; }
-            public Outlet<Tuple<TI, TS>> Out2 { get; }
+            public Inlet<Tuple<TIn, TState>> In1 { get; }
+            public Outlet<Tuple<Result<TOut>, TState>> Out1 { get; }
+            public Inlet<Tuple<Result<TOut>, TState>> In2 { get; }
+            public Outlet<Tuple<TIn, TState>> Out2 { get; }
         }
 
 
-        private class RetryConcatCoordinator<TI, TS, TO> : GraphStage<BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>>>
+        private class RetryConcatCoordinator<TIn, TState, TOut> : GraphStage<BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>>>
         {
             #region Logic
 
             private sealed class Logic : GraphStageLogic
             {
-                private readonly RetryConcatCoordinator<TI, TS, TO> _retry;
-                private readonly Queue<Tuple<TI, TS>> _queue = new Queue<Tuple<TI, TS>>();
+                private readonly RetryConcatCoordinator<TIn, TState, TOut> _retry;
+                private readonly Queue<Tuple<TIn, TState>> _queue = new Queue<Tuple<TIn, TState>>();
                 private bool _elementInCycle;
 
-                public Logic(RetryConcatCoordinator<TI, TS, TO> retry) : base(retry.Shape)
+                public Logic(RetryConcatCoordinator<TIn, TState, TOut> retry) : base(retry.Shape)
                 {
                     _retry = retry;
 
@@ -332,7 +332,7 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                private void PushAndCompleteIfLast(Tuple<Result<TO>, TS> item)
+                private void PushAndCompleteIfLast(Tuple<Result<TOut>, TState> item)
                 {
                     Push(_retry.Out1, item);
                     if (IsClosed(_retry.In1) && _queue.Count == 0)
@@ -343,28 +343,28 @@ namespace Akka.Streams.Dsl
             #endregion
 
             private readonly long _limit;
-            private readonly Func<TS, IEnumerable<Tuple<TI, TS>>> _retryWith;
+            private readonly Func<TState, IEnumerable<Tuple<TIn, TState>>> _retryWith;
 
-            public RetryConcatCoordinator(long limit, Func<TS, IEnumerable<Tuple<TI, TS>>> retryWith)
+            public RetryConcatCoordinator(long limit, Func<TState, IEnumerable<Tuple<TIn, TState>>> retryWith)
             {
                 _limit = limit;
                 _retryWith = retryWith;
 
-                In1 = new Inlet<Tuple<TI, TS>>("RetryConcat.ext.in");
-                Out1 = new Outlet<Tuple<Result<TO>, TS>>("RetryConcat.ext.out");
-                In2 = new Inlet<Tuple<Result<TO>, TS>>("RetryConcat.int.in");
-                Out2 = new Outlet<Tuple<TI, TS>>("RetryConcat.int.out");
-                Shape = new BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>>(In1, Out1, In2, Out2);
+                In1 = new Inlet<Tuple<TIn, TState>>("RetryConcat.ext.in");
+                Out1 = new Outlet<Tuple<Result<TOut>, TState>>("RetryConcat.ext.out");
+                In2 = new Inlet<Tuple<Result<TOut>, TState>>("RetryConcat.int.in");
+                Out2 = new Outlet<Tuple<TIn, TState>>("RetryConcat.int.out");
+                Shape = new BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>>(In1, Out1, In2, Out2);
             }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override BidiShape<Tuple<TI, TS>, Tuple<Result<TO>, TS>, Tuple<Result<TO>, TS>, Tuple<TI, TS>> Shape { get; }
+            public override BidiShape<Tuple<TIn, TState>, Tuple<Result<TOut>, TState>, Tuple<Result<TOut>, TState>, Tuple<TIn, TState>> Shape { get; }
 
-            public Inlet<Tuple<TI, TS>> In1 { get; }
-            public Outlet<Tuple<Result<TO>, TS>> Out1 { get; }
-            public Inlet<Tuple<Result<TO>, TS>> In2 { get; }
-            public Outlet<Tuple<TI, TS>> Out2 { get; }
+            public Inlet<Tuple<TIn, TState>> In1 { get; }
+            public Outlet<Tuple<Result<TOut>, TState>> Out1 { get; }
+            public Inlet<Tuple<Result<TOut>, TState>> In2 { get; }
+            public Outlet<Tuple<TIn, TState>> Out2 { get; }
         }
     }
 }
