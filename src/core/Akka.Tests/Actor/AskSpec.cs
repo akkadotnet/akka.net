@@ -11,6 +11,7 @@ using Akka.Actor;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 
 namespace Akka.Tests.Actor
 {
@@ -39,9 +40,9 @@ namespace Akka.Tests.Actor
                 _testActor = testActor;
             }
 
-            private IActorRef _replyActor;
+            private readonly IActorRef _replyActor;
 
-            private IActorRef _testActor;
+            private readonly IActorRef _testActor;
 
             protected override void OnReceive(object message)
             {
@@ -130,6 +131,17 @@ namespace Akka.Tests.Actor
 
             // expect int, but in fact string
             await Assert.ThrowsAsync<InvalidCastException>(async () => await actor.Ask<int>("answer"));
+        }
+
+        [Fact]
+        public void AskDoesNotDeadlockWhenWaitForResultInGuiApplication()
+        {
+            AsyncContext.Run(() =>
+            {
+                var actor = Sys.ActorOf<SomeActor>();
+                var res = actor.Ask<string>("answer").Result; // blocking on purpose
+                res.ShouldBe("answer");
+            });
         }
 
         private void Are_Temp_Actors_Removed(IActorRef actor)
