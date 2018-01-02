@@ -129,6 +129,7 @@ message Member {
     Exiting = 3;
     Down = 4;
     Removed = 5;
+    WeaklyUp = 6;
   }
 
   int32 addressIndex = 1;

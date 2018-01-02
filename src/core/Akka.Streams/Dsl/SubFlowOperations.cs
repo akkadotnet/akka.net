@@ -1139,7 +1139,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
-        /// Backpressures when depending on OverflowStrategy
+        /// Backpressures when downstream backpressures or depending on OverflowStrategy:
         /// <para/> * Backpressure - backpressures when buffer is full
         /// <para/> * DropHead, DropTail, DropBuffer - never backpressures
         /// <para/> * Fail - fails the stream if buffer gets full
@@ -1413,7 +1413,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1456,7 +1456,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>

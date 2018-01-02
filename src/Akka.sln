@@ -5,47 +5,47 @@ VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PingPong", "benchmark\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PingPong", "benchmark\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{01167D3C-49C4-4CDE-9787-C176D139ACDD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.Tests", "core\Akka.Remote.Tests\Akka.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Tests", "core\Akka.Remote.Tests\Akka.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.TestKit", "core\Akka.TestKit\Akka.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit", "core\Akka.TestKit\Akka.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Tests", "core\Akka.Tests\Akka.Tests.csproj", "{3F786C7D-70E3-4836-8B33-EC9A5AF72330}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests", "core\Akka.Tests\Akka.Tests.csproj", "{3F786C7D-70E3-4836-8B33-EC9A5AF72330}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote", "core\Akka.Remote\Akka.Remote.csproj", "{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote", "core\Akka.Remote\Akka.Remote.csproj", "{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka", "core\Akka\Akka.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka", "core\Akka\Akka.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.TestKit.Tests", "core\Akka.TestKit.Tests\Akka.TestKit.Tests.csproj", "{D2BED2D5-B152-48C1-9818-1097BECDDF98}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Tests", "core\Akka.TestKit.Tests\Akka.TestKit.Tests.csproj", "{D2BED2D5-B152-48C1-9818-1097BECDDF98}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Tests.Shared.Internals", "core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj", "{E636D23C-3432-4AA9-9A5D-5F29D33D3399}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests.Shared.Internals", "core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj", "{E636D23C-3432-4AA9-9A5D-5F29D33D3399}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster", "core\Akka.Cluster\Akka.Cluster.csproj", "{6AB00F61-269A-4501-B06A-026707F000A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster", "core\Akka.Cluster\Akka.Cluster.csproj", "{6AB00F61-269A-4501-B06A-026707F000A7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tests", "core\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj", "{C8D6A95C-50BF-4416-A212-86B18B87220D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tests", "core\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj", "{C8D6A95C-50BF-4416-A212-86B18B87220D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.TestKit", "core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj", "{E5957C3E-2B1E-469F-A680-7953B4DEA31B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.TestKit", "core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj", "{E5957C3E-2B1E-469F-A680-7953B4DEA31B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.TestKit.Tests", "core\Akka.Remote.TestKit.Tests\Akka.Remote.TestKit.Tests.csproj", "{F338508B-FE01-4132-AC4A-FC00071EA4EB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.TestKit.Tests", "core\Akka.Remote.TestKit.Tests\Akka.Remote.TestKit.Tests.csproj", "{F338508B-FE01-4132-AC4A-FC00071EA4EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner", "core\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj", "{C1113300-74F1-446A-9914-3020C842EDF1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner", "core\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj", "{C1113300-74F1-446A-9914-3020C842EDF1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.NodeTestRunner", "core\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj", "{28520F30-2868-4BD3-9CAE-AC27226C24E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.NodeTestRunner", "core\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj", "{28520F30-2868-4BD3-9CAE-AC27226C24E3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Tests", "core\Akka.Persistence.Tests\Akka.Persistence.Tests.csproj", "{4492004A-A8D0-45B0-BACC-05BA2F38EC55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Tests", "core\Akka.Persistence.Tests\Akka.Persistence.Tests.csproj", "{4492004A-A8D0-45B0-BACC-05BA2F38EC55}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TCK", "core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj", "{AD9418B6-C452-4169-94FB-D43DE0BFA966}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.TCK", "core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj", "{AD9418B6-C452-4169-94FB-D43DE0BFA966}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence", "core\Akka.Persistence\Akka.Persistence.csproj", "{FCA84DEA-C118-424B-9EB8-34375DFEF18A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence", "core\Akka.Persistence\Akka.Persistence.csproj", "{FCA84DEA-C118-424B-9EB8-34375DFEF18A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TCK.Tests", "core\Akka.Persistence.TCK.Tests\Akka.Persistence.TCK.Tests.csproj", "{E6CDDAC1-BD68-4C7B-9E6D-569AC6D50793}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.TCK.Tests", "core\Akka.Persistence.TCK.Tests\Akka.Persistence.TCK.Tests.csproj", "{E6CDDAC1-BD68-4C7B-9E6D-569AC6D50793}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.Shared.Tests", "core\Akka.MultiNodeTestRunner.Shared.Tests\Akka.MultiNodeTestRunner.Shared.Tests.csproj", "{91746A3F-21C6-4614-B0AB-A59310D75C51}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner.Shared.Tests", "core\Akka.MultiNodeTestRunner.Shared.Tests\Akka.MultiNodeTestRunner.Shared.Tests.csproj", "{91746A3F-21C6-4614-B0AB-A59310D75C51}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.Shared", "core\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj", "{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner.Shared", "core\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj", "{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98CEB6FB-A277-42FA-A98E-99A8640B26FD}"
 	ProjectSection(SolutionItems) = preProject
@@ -57,13 +57,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 		protobuf\SystemMessageFormats.proto = protobuf\SystemMessageFormats.proto
 		protobuf\TestConductorProtocol.proto = protobuf\TestConductorProtocol.proto
 		protobuf\WireFormats.proto = protobuf\WireFormats.proto
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{8A15341C-5596-4F4D-949D-2CD9A0006E12}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\NuGet.Config = .nuget\NuGet.Config
-		.nuget\nuget.exe = .nuget\nuget.exe
-		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
@@ -78,13 +71,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestKits", "TestKits", "{76
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persistence", "Persistence", "{264C22A4-CAFC-41F6-B82C-4DDC5C196767}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.TestKit.Xunit2", "contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj", "{7DBD5C17-5E9D-40C4-9201-D092751532A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit2", "contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj", "{7DBD5C17-5E9D-40C4-9201-D092751532A7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Sql.Common", "contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj", "{3B9E6211-9488-4DB5-B714-24248693B38F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sql.Common", "contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj", "{3B9E6211-9488-4DB5-B714-24248693B38F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tests.MultiNode", "core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj", "{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tests.MultiNode", "core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj", "{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceBenchmark", "benchmark\PersistenceBenchmark\PersistenceBenchmark.csproj", "{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistenceBenchmark", "benchmark\PersistenceBenchmark\PersistenceBenchmark.csproj", "{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A59BAE84-70E2-46A0-9E26-7413C103E2D7}"
 	ProjectSection(SolutionItems) = preProject
@@ -93,87 +86,87 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		NuGet.Config = NuGet.Config
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.Tests.MultiNode", "core\Akka.Remote.Tests.MultiNode\Akka.Remote.Tests.MultiNode.csproj", "{C9105C76-B084-4DA1-9348-1C74A8F22F6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Tests.MultiNode", "core\Akka.Remote.Tests.MultiNode\Akka.Remote.Tests.MultiNode.csproj", "{C9105C76-B084-4DA1-9348-1C74A8F22F6B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Sqlite", "contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj", "{453EFD22-7C53-4887-9DBF-FCFC9172E909}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sqlite", "contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj", "{453EFD22-7C53-4887-9DBF-FCFC9172E909}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Sqlite.Tests", "contrib\persistence\Akka.Persistence.Sqlite.Tests\Akka.Persistence.Sqlite.Tests.csproj", "{7A832BBF-053E-4E9F-BD83-D988A0130CC8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sqlite.Tests", "contrib\persistence\Akka.Persistence.Sqlite.Tests\Akka.Persistence.Sqlite.Tests.csproj", "{7A832BBF-053E-4E9F-BD83-D988A0130CC8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Serializers", "Serializers", "{0E55F1F8-E212-43D7-A0C0-ACEA9794B0D7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Serialization.TestKit", "contrib\serializers\Akka.Serialization.TestKit\Akka.Serialization.TestKit.csproj", "{CAA97041-CFC0-4081-9BD2-8B139E62A611}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.TestKit", "contrib\serializers\Akka.Serialization.TestKit\Akka.Serialization.TestKit.csproj", "{CAA97041-CFC0-4081-9BD2-8B139E62A611}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Sharding", "contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj", "{A05C31E8-0246-46A1-B3BC-4D6FE7A9AA49}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding", "contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj", "{A05C31E8-0246-46A1-B3BC-4D6FE7A9AA49}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tools", "contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj", "{5CF8A8BE-B634-473F-BB01-EBA878746BD4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools", "contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj", "{5CF8A8BE-B634-473F-BB01-EBA878746BD4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tools.Tests", "contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj", "{9D8D62C7-7B4B-4CDF-8FE8-675DB71F6B21}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools.Tests", "contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj", "{9D8D62C7-7B4B-4CDF-8FE8-675DB71F6B21}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Sharding.Tests", "contrib\cluster\Akka.Cluster.Sharding.Tests\Akka.Cluster.Sharding.Tests.csproj", "{B369F314-4D37-4AC1-B4FB-64FF671AF0BC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests", "contrib\cluster\Akka.Cluster.Sharding.Tests\Akka.Cluster.Sharding.Tests.csproj", "{B369F314-4D37-4AC1-B4FB-64FF671AF0BC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Tests.Performance", "core\Akka.Tests.Performance\Akka.Tests.Performance.csproj", "{B17DEDCB-D2AA-472D-82A0-D242B711F488}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests.Performance", "core\Akka.Tests.Performance\Akka.Tests.Performance.csproj", "{B17DEDCB-D2AA-472D-82A0-D242B711F488}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.Tests.Performance", "core\Akka.Remote.Tests.Performance\Akka.Remote.Tests.Performance.csproj", "{453DD4B1-64B8-4B50-BFDA-3489E32D30D8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Tests.Performance", "core\Akka.Remote.Tests.Performance\Akka.Remote.Tests.Performance.csproj", "{453DD4B1-64B8-4B50-BFDA-3489E32D30D8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams", "core\Akka.Streams\Akka.Streams.csproj", "{6180A876-AE4A-41E2-A08F-84FDEA0C8A0E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams", "core\Akka.Streams\Akka.Streams.csproj", "{6180A876-AE4A-41E2-A08F-84FDEA0C8A0E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams.Tests", "core\Akka.Streams.Tests\Akka.Streams.Tests.csproj", "{9F63102D-8270-4B83-B2B6-BDD4EAC1FEB7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests", "core\Akka.Streams.Tests\Akka.Streams.Tests.csproj", "{9F63102D-8270-4B83-B2B6-BDD4EAC1FEB7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams.TestKit", "core\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj", "{AC70BF13-890B-4A06-A269-D0B301F463DF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.TestKit", "core\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj", "{AC70BF13-890B-4A06-A269-D0B301F463DF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.API.Tests", "core\Akka.API.Tests\Akka.API.Tests.csproj", "{F72BE71A-2BE3-413D-A3D9-C7FDBB4E5F08}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.API.Tests", "core\Akka.API.Tests\Akka.API.Tests.csproj", "{F72BE71A-2BE3-413D-A3D9-C7FDBB4E5F08}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams.TestKit.Tests", "core\Akka.Streams.TestKit.Tests\Akka.Streams.TestKit.Tests.csproj", "{46EA9956-913F-4E65-9902-28A5EDD9CDB3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.TestKit.Tests", "core\Akka.Streams.TestKit.Tests\Akka.Streams.TestKit.Tests.csproj", "{46EA9956-913F-4E65-9902-28A5EDD9CDB3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.TestKit", "core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj", "{B32850D2-E9CB-4638-83A4-164907595E56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.TestKit", "core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj", "{B32850D2-E9CB-4638-83A4-164907595E56}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Query", "core\Akka.Persistence.Query\Akka.Persistence.Query.csproj", "{92AB2788-E008-40D0-8B54-0C95B3CF3404}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query", "core\Akka.Persistence.Query\Akka.Persistence.Query.csproj", "{92AB2788-E008-40D0-8B54-0C95B3CF3404}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Query.Tests", "core\Akka.Persistence.Query.Tests\Akka.Persistence.Query.Tests.csproj", "{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query.Tests", "core\Akka.Persistence.Query.Tests\Akka.Persistence.Query.Tests.csproj", "{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams.Tests.Performance", "core\Akka.Streams.Tests.Performance\Akka.Streams.Tests.Performance.csproj", "{F5934093-4B7C-4303-9E27-60B4021C05B2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.Performance", "core\Akka.Streams.Tests.Performance\Akka.Streams.Tests.Performance.csproj", "{F5934093-4B7C-4303-9E27-60B4021C05B2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Query.Sql", "contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj", "{3CBD3880-0655-44CC-AD81-77E8CADFCC3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query.Sql", "contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj", "{3CBD3880-0655-44CC-AD81-77E8CADFCC3E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tools.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Tools.Tests.MultiNode\Akka.Cluster.Tools.Tests.MultiNode.csproj", "{666698AB-85BC-4C91-894C-CBB4316DC1A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Tools.Tests.MultiNode\Akka.Cluster.Tools.Tests.MultiNode.csproj", "{666698AB-85BC-4C91-894C-CBB4316DC1A4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Sql.TestKit", "contrib\persistence\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.csproj", "{14502A16-2B6F-4728-8A98-ED5AF45FC515}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sql.TestKit", "contrib\persistence\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.csproj", "{14502A16-2B6F-4728-8A98-ED5AF45FC515}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Streams.Tests.TCK", "core\Akka.Streams.Tests.TCK\Akka.Streams.Tests.TCK.csproj", "{805908F6-8792-47C0-8E4F-4DB4C5736A47}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.TCK", "core\Akka.Streams.Tests.TCK\Akka.Streams.Tests.TCK.csproj", "{805908F6-8792-47C0-8E4F-4DB4C5736A47}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Sharding.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Sharding.Tests.MultiNode\Akka.Cluster.Sharding.Tests.MultiNode.csproj", "{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Sharding.Tests.MultiNode\Akka.Cluster.Sharding.Tests.MultiNode.csproj", "{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DistributedData", "contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj", "{59CFFC88-8A73-445D-B191-281E40BE9421}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData", "contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj", "{59CFFC88-8A73-445D-B191-281E40BE9421}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DistributedData.Tests", "contrib\cluster\Akka.DistributedData.Tests\Akka.DistributedData.Tests.csproj", "{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests", "contrib\cluster\Akka.DistributedData.Tests\Akka.DistributedData.Tests.csproj", "{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DistributedData.Tests.MultiNode", "contrib\cluster\Akka.DistributedData.Tests.MultiNode\Akka.DistributedData.Tests.MultiNode.csproj", "{53A657B3-D3CD-461E-9759-664331218060}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests.MultiNode", "contrib\cluster\Akka.DistributedData.Tests.MultiNode\Akka.DistributedData.Tests.MultiNode.csproj", "{53A657B3-D3CD-461E-9759-664331218060}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Serialization.Hyperion", "contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj", "{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion", "contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj", "{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Serialization.Hyperion.Tests", "contrib\serializers\Akka.Serialization.Hyperion.Tests\Akka.Serialization.Hyperion.Tests.csproj", "{E3549E17-7206-44F0-A322-EDC058A0498F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion.Tests", "contrib\serializers\Akka.Serialization.Hyperion.Tests\Akka.Serialization.Hyperion.Tests.csproj", "{E3549E17-7206-44F0-A322-EDC058A0498F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Transports", "Transports", "{6AD34FA4-7584-454D-ACD4-A8911E0BDB00}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Remote.Transport.Helios", "contrib\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj", "{29FEAABC-E326-450A-9008-B5FCECF0115F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Transport.Helios", "contrib\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj", "{29FEAABC-E326-450A-9008-B5FCECF0115F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DependencyInjection", "DependencyInjection", "{48845655-5E60-40AB-A798-F118CC1CF510}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DI.Core", "contrib\dependencyinjection\Akka.DI.Core\Akka.DI.Core.csproj", "{3DCFADA2-02DF-41AD-A907-F805B86A5DFE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Core", "contrib\dependencyinjection\Akka.DI.Core\Akka.DI.Core.csproj", "{3DCFADA2-02DF-41AD-A907-F805B86A5DFE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DI.TestKit", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{539317E7-EEEF-4BE5-A12D-6BB048E7A1E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.TestKit", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{539317E7-EEEF-4BE5-A12D-6BB048E7A1E3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.TestKit.Xunit", "contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj", "{E7A836C1-42D3-4ADC-81C6-C6C5398CC740}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit", "contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj", "{E7A836C1-42D3-4ADC-81C6-C6C5398CC740}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tests.Performance", "core\Akka.Cluster.Tests.Performance\Akka.Cluster.Tests.Performance.csproj", "{94C10096-C33E-404E-B0FB-F8535512A952}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tests.Performance", "core\Akka.Cluster.Tests.Performance\Akka.Cluster.Tests.Performance.csproj", "{94C10096-C33E-404E-B0FB-F8535512A952}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DistributedData.LightningDB", "contrib\cluster\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj", "{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.LightningDB", "contrib\cluster\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj", "{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemotePingPong", "benchmark\RemotePingPong\RemotePingPong.csproj", "{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemotePingPong", "benchmark\RemotePingPong\RemotePingPong.csproj", "{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{D3AF8295-AEB5-4324-AA82-FCC0014AC310}"
 EndProject
@@ -181,7 +174,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{C50E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusterSharding.Node", "ClusterSharding.Node", "{820CFBF7-E165-4ADA-B821-E6A0A81DFE84}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusterSharding.Node", "examples\Cluster\ClusterSharding\ClusterSharding.Node\ClusterSharding.Node.csproj", "{3C6EB4EF-3726-432F-812E-07828876418B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterSharding.Node", "examples\Cluster\ClusterSharding\ClusterSharding.Node\ClusterSharding.Node.csproj", "{3C6EB4EF-3726-432F-812E-07828876418B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Chat", "Chat", "{AF50BDA2-EA1C-4694-9B0C-CB5D50024181}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "examples\Chat\ChatMessages\ChatMessages.csproj", "{6389B968-FFBE-44AF-9016-687E837D555B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatServer", "examples\Chat\ChatServer\ChatServer.csproj", "{91B73868-F504-45F2-B49F-9F967D692230}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatClient", "examples\Chat\ChatClient\ChatClient.csproj", "{81D89DA8-A58E-41A8-9558-8289ACE8BF88}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Cluster.Simple", "examples\Cluster\Samples.Cluster.Simple\Samples.Cluster.Simple.csproj", "{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Cluster.Transformation", "examples\Cluster\Roles\Samples.Cluster.Transformation\Samples.Cluster.Transformation.csproj", "{01B074DB-67C8-4600-8CE2-DAAAFC052261}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -722,6 +727,66 @@ Global
 		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x64.Build.0 = Release|Any CPU
 		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x86.ActiveCfg = Release|Any CPU
 		{3C6EB4EF-3726-432F-812E-07828876418B}.Release|x86.Build.0 = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|x64.Build.0 = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Debug|x86.Build.0 = Debug|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|x64.ActiveCfg = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|x64.Build.0 = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|x86.ActiveCfg = Release|Any CPU
+		{6389B968-FFBE-44AF-9016-687E837D555B}.Release|x86.Build.0 = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|x64.Build.0 = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Debug|x86.Build.0 = Debug|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|x64.ActiveCfg = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|x64.Build.0 = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|x86.ActiveCfg = Release|Any CPU
+		{91B73868-F504-45F2-B49F-9F967D692230}.Release|x86.Build.0 = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|x64.Build.0 = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Debug|x86.Build.0 = Debug|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|x64.ActiveCfg = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|x64.Build.0 = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|x86.ActiveCfg = Release|Any CPU
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88}.Release|x86.Build.0 = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|x64.Build.0 = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Debug|x86.Build.0 = Debug|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|x64.ActiveCfg = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|x64.Build.0 = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|x86.ActiveCfg = Release|Any CPU
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9}.Release|x86.Build.0 = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|x64.Build.0 = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Debug|x86.Build.0 = Debug|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|x64.ActiveCfg = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|x64.Build.0 = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|x86.ActiveCfg = Release|Any CPU
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -797,6 +862,12 @@ Global
 		{C50E1A9E-820C-4E75-AE39-6F96A99AC4A7} = {D3AF8295-AEB5-4324-AA82-FCC0014AC310}
 		{820CFBF7-E165-4ADA-B821-E6A0A81DFE84} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
 		{3C6EB4EF-3726-432F-812E-07828876418B} = {820CFBF7-E165-4ADA-B821-E6A0A81DFE84}
+		{AF50BDA2-EA1C-4694-9B0C-CB5D50024181} = {D3AF8295-AEB5-4324-AA82-FCC0014AC310}
+		{6389B968-FFBE-44AF-9016-687E837D555B} = {AF50BDA2-EA1C-4694-9B0C-CB5D50024181}
+		{91B73868-F504-45F2-B49F-9F967D692230} = {AF50BDA2-EA1C-4694-9B0C-CB5D50024181}
+		{81D89DA8-A58E-41A8-9558-8289ACE8BF88} = {AF50BDA2-EA1C-4694-9B0C-CB5D50024181}
+		{C78223F9-A4C8-4DC9-A4A0-CAEC3611E5B9} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
+		{01B074DB-67C8-4600-8CE2-DAAAFC052261} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}

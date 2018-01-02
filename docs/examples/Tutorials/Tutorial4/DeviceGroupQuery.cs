@@ -18,6 +18,7 @@ namespace Tutorials.Tutorial4
         {
             private ICancelable queryTimeoutTimer;
 
+            #region query-state
             public DeviceGroupQuery(Dictionary<IActorRef, string> actorToDeviceId, long requestId, IActorRef requester, TimeSpan timeout)
             {
                 ActorToDeviceId = actorToDeviceId;
@@ -26,6 +27,8 @@ namespace Tutorials.Tutorial4
                 Timeout = timeout;
 
                 queryTimeoutTimer = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, CollectionTimeout.Instance, Self);
+                
+                Become(WaitingForReplies(new Dictionary<string, ITemperatureReading>(), new HashSet<IActorRef>(ActorToDeviceId.Keys)));
             }
 
             protected override void PreStart()
@@ -47,12 +50,6 @@ namespace Tutorials.Tutorial4
             public long RequestId { get; }
             public IActorRef Requester { get; }
             public TimeSpan Timeout { get; }
-
-            #region query-state
-            protected override void OnReceive(object message)
-            {
-                Become(WaitingForReplies(new Dictionary<string, ITemperatureReading>(), new HashSet<IActorRef>(ActorToDeviceId.Keys)));
-            }
 
             public UntypedReceive WaitingForReplies(
                 Dictionary<string, ITemperatureReading> repliesSoFar,
@@ -106,7 +103,7 @@ namespace Tutorials.Tutorial4
 
                 repliesSoFar.Add(deviceId, reading);
 
-                if (repliesSoFar.Count == 0)
+                if (stillWaiting.Count == 0)
                 {
                     Requester.Tell(new RespondAllTemperatures(RequestId, repliesSoFar));
                     Context.Stop(Self);
@@ -116,7 +113,12 @@ namespace Tutorials.Tutorial4
                     Context.Become(WaitingForReplies(repliesSoFar, stillWaiting));
                 }
             }
-            #endregion
+            #endregion   
+
+            protected override void OnReceive(object message)
+            {
+
+            }
 
             public static Props Props(Dictionary<IActorRef, string> actorToDeviceId, long requestId, IActorRef requester, TimeSpan timeout) =>
                 Akka.Actor.Props.Create(() => new DeviceGroupQuery(actorToDeviceId, requestId, requester, timeout));
