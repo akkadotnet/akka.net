@@ -152,7 +152,7 @@ namespace Akka.Remote.Tests
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", TestActor);
-            ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
+            ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(5.0));
         }
 
         [Fact]
@@ -161,7 +161,9 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+
+            // FIXED: set to longer interval as of 1/2/2018 by @Aaronontheweb
+            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(5.0));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
@@ -172,11 +174,11 @@ namespace Akka.Remote.Tests
             // see https://github.com/akkadotnet/akka.net/issues/2546
 
             // the configure await causes the continuation (== the second ask) to be scheduled on the HELIOS worker thread
-            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(5.0)).ConfigureAwait(false);
             Assert.Equal("pong", msg.Item1);
 
             // the .Result here blocks the helios worker thread, deadlocking the whole system.
-            var msg2 = here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).Result;
+            var msg2 = here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(5.0)).Result;
             Assert.Equal("pong", msg2.Item1);
         }
         
