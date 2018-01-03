@@ -713,6 +713,19 @@ In essence, the above guarantees are similar to what `Actor`'s provide, if one t
 > [!WARNING]
 > It is **not** safe to access the state of any custom stage outside of the callbacks that it provides, just like it is unsafe to access the state of an actor from the outside. This means that Future callbacks should not close over internal state of custom stages because such access can be concurrent with the provided callbacks, leading to undefined behavior.
 
+
+## Resources and the stage lifecycle
+
+If a stage manages a resource with a lifecycle, for example objects that need to be shutdown when they are not
+used anymore it is important to make sure this will happen in all circumstances when the stage shuts down.
+
+Cleaning up resources should be done in `GraphStageLogic.PostStop` and not in the `InHandler` and `OutHandler`
+callbacks. The reason for this is that when the stage itself completes or is failed there is no signal from the upstreams
+for the downstreams. Even for stages that do not complete or fail in this manner, this can happen when the
+`Materializer` is shutdown or the `ActorSystem` is terminated while a stream is still running, what is called an
+"abrupt termination".
+
+
 ## Extending Flow Combinators with Custom Operators
 
 The most general way of extending any `Source`, `Flow` or `SubFlow` (e.g. from `GroupBy`) is demonstrated above: create a graph of flow-shape like the `Filter` example given above and use the `.Via(...)` combinator to integrate it into your stream topology. This works with all `IFlow` sub-types, including the ports that you connect with the graph DSL.
