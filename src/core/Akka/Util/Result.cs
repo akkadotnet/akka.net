@@ -97,6 +97,8 @@ namespace Akka.Util
         {
             return !(left == right);
         }
+
+        public override string ToString() => IsSuccess ? $"Success ({Value})" : $"Failure ({Exception})";
     }
 
     /// <summary>
@@ -155,6 +157,8 @@ namespace Akka.Util
                 return new Result<T>(e);
             }
         }
+        
+        
 
     }
 }

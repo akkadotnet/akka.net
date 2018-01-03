@@ -29,19 +29,19 @@ The approval file is located at:
 ### Approving a New Change
 After modifying some code in Akka.NET that results in a public API change - this can be any change, such as adding an overload to a public method or adding a new public class, you will immediately see an API change when you attempt to run the `Akka.API.Tests` unit tests:
 
-![Failed API approval test](/images/api-diff-fail.png)
+![Failed API approval test](../images/api-diff-fail.png)
 
 The tests will fail, because the `.approved.txt` file doesn't match the new `.received.txt`, but you will be prompted by [ApprovalTests](https://github.com/approvals/ApprovalTests.Net) to view the diff between the two files in your favorite diff viewer:
 
-![API difference as seen in a diff viewer like TortoiseMerge or WinMerge](/images/api-diff-viewer.png)
+![API difference as seen in a diff viewer like TortoiseMerge or WinMerge](../images/api-diff-viewer.png)
 
 After you've merged the changes generated from your code into the `approved.txt` file, the tests will pass:
 
-![Passed API approval test](/images/api-diff-approve.png)
+![Passed API approval test](../images/api-diff-approve.png)
 
 And then once you've merged in those changes, added them to a Git commit, and sent them in a pull request then other Akka.NET contributors will review your pull request and view the differences between the current `approved.txt` file and the one included in your PR:
 
-![approved.txt differences as reported by Git](/images/diff-results.png)
+![approved.txt differences as reported by Git](../images/diff-results.png)
 
 ## Unacceptable API Changes
 The following types of API changes will generally not be approved:
