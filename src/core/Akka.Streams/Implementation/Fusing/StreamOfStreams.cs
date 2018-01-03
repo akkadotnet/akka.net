@@ -50,8 +50,7 @@ namespace Akka.Streams.Implementation.Fusing
                         PushOut();
                 };
 
-                SetHandler(_stage._in, this);
-                SetHandler(_stage._out, this);
+                SetHandler(stage._in, stage._out, this);
             }
             public override void OnPush()
             {
@@ -384,7 +383,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = new Lazy<Decider>(() =>
                 {
                     var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                    return attribute != null ? attribute.Decider : Deciders.StoppingDecider; ;
+                    return attribute != null ? attribute.Decider : Deciders.StoppingDecider;
                 }); 
 
                 SetHandler(_stage.In, this);
@@ -976,36 +975,80 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal static class SubSink
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal interface ICommand
+        internal interface IState
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Not yet materialized and no command has been scheduled
         /// </summary>
+        internal class Uninitialized : IState
+        {
+            public static readonly Uninitialized Instance = new Uninitialized();
+
+            private Uninitialized()
+            {
+            }
+        }
+
+        /// <summary>
+        /// A command was scheduled before materialization
+        /// </summary>
+        internal abstract class CommandScheduledBeforeMaterialization : IState
+        {
+            protected CommandScheduledBeforeMaterialization(ICommand command)
+            {
+                Command = command;
+            }
+
+            public ICommand Command { get; }
+        }
+
+        /// <summary>
+        /// A RequestOne command was scheduled before materialization
+        /// </summary>
+        internal class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
+        {
+            public static readonly RequestOneScheduledBeforeMaterialization Instance = new RequestOneScheduledBeforeMaterialization(RequestOne.Instance);
+            
+            private RequestOneScheduledBeforeMaterialization(ICommand command) : base(command)
+            {
+            }
+        }
+
+        /// <summary>
+        /// A Cancel command was scheduled before materialization
+        /// </summary>
+        internal sealed class CancelScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
+        {
+            public static readonly CancelScheduledBeforeMaterialization Instance = new CancelScheduledBeforeMaterialization(Cancel.Instance);
+
+            private CancelScheduledBeforeMaterialization(ICommand command) : base(command)
+            {
+            }
+        }
+
+        /*
+         Steady state: sink has been materialized, commands can be delivered through the callback 
+         Represented in unwrapped form as AsyncCallback[Command] directly to prevent a level of indirection
+         case class Materialized(callback: AsyncCallback[Command]) extends State
+        */
+
+        internal interface ICommand
+        {
+        }
+
         internal class RequestOne : ICommand
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly RequestOne Instance = new RequestOne();
 
             private RequestOne()
             {
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         internal class Cancel : ICommand
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly Cancel Instance = new Cancel();
 
             private Cancel()
@@ -1017,7 +1060,6 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
     internal sealed class SubSink<T> : GraphStage<SinkShape<T>>
     {
         #region internal classes
@@ -1039,49 +1081,47 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFailure(Exception e) => _stage._externalCallback(new OnError(e));
 
-            private void SetCallback(Action<SubSink.ICommand> cb)
+            private void SetCallback(Action<SubSink.ICommand> callback)
             {
-                var status = _stage._status.Value;
-                if (status == null)
+                var status = _stage._status;
+                switch (status.Value)
                 {
-                    if (!_stage._status.CompareAndSet(null, cb))
-                        SetCallback(cb);
+                    case SubSink.Uninitialized _:
+                        if(!status.CompareAndSet(SubSink.Uninitialized.Instance, /* Materialized */ GetAsyncCallback(callback)))
+                            SetCallback(callback);
+                        break;
+                    case SubSink.CommandScheduledBeforeMaterialization command:
+                        if (status.CompareAndSet(command, /* Materialized */ GetAsyncCallback(callback)))
+                        {
+                            // between those two lines a new command might have been scheduled, but that will go through the
+                            // async interface, so that the ordering is still kept
+                            callback(command.Command);
+                        }
+                        else
+                            SetCallback(callback);
+                        break;
+                    case Action<SubSink.ICommand> _: /* Materialized */
+                        FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
+                        break;
                 }
-                else if (status is SubSink.RequestOne)
-                {
-                    Pull(_stage._in);
-                    if (!_stage._status.CompareAndSet(SubSink.RequestOne.Instance, cb))
-                        SetCallback(cb);
-                }
-                else if (status is SubSink.Cancel)
-                {
-                    CompleteStage();
-                    if (!_stage._status.CompareAndSet(SubSink.Cancel.Instance, cb))
-                        SetCallback(cb);
-                }
-                else if (status is Action)
-                    FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
             }
 
             public override void PreStart()
             {
-                var ourOwnCallback = GetAsyncCallback<SubSink.ICommand>(cmd =>
+                SetCallback(command =>
                 {
-                    if (cmd is SubSink.RequestOne)
+                    if (command is SubSink.RequestOne)
                         TryPull(_stage._in);
-                    else if (cmd is SubSink.Cancel)
+                    else if (command is SubSink.Cancel)
                         CompleteStage();
-                    else
-                        throw new IllegalStateException("Bug");
                 });
-                SetCallback(ourOwnCallback);
             }
         }
 
         #endregion
 
         private readonly Inlet<T> _in = new Inlet<T>("SubSink.in");
-        private readonly AtomicReference<object> _status = new AtomicReference<object>();
+        private readonly AtomicReference<object> _status = new AtomicReference<object>(SubSink.Uninitialized.Instance);
         private readonly string _name;
         private readonly Action<IActorSubscriberMessage> _externalCallback;
 
@@ -1112,32 +1152,30 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public void PullSubstream()
-        {
-            var s = _status.Value;
-            var f = s as Action<SubSink.ICommand>;
-
-            if (f != null)
-                f(SubSink.RequestOne.Instance);
-            else
-            {
-                if (!_status.CompareAndSet(null, SubSink.RequestOne.Instance))
-                    ((Action<SubSink.ICommand>) _status.Value)(SubSink.RequestOne.Instance);
-            }
-        }
+        public void PullSubstream() => DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public void CancelSubstream()
-        {
-            var s = _status.Value;
-            var f = s as Action<SubSink.ICommand>;
+        public void CancelSubstream() => DispatchCommand(SubSink.CancelScheduledBeforeMaterialization.Instance);
 
-            if (f != null)
-                f(SubSink.Cancel.Instance);
-            else if (!_status.CompareAndSet(s, SubSink.Cancel.Instance)) // a potential RequestOne is overwritten
-                ((Action<SubSink.ICommand>) _status.Value)(SubSink.Cancel.Instance);
+        private void DispatchCommand(SubSink.CommandScheduledBeforeMaterialization newState)
+        {
+            switch (_status.Value)
+            {
+                case Action<SubSink.ICommand> callback: callback(newState.Command); break;
+                case SubSink.Uninitialized _:
+                    if(!_status.CompareAndSet(SubSink.Uninitialized.Instance, newState))
+                        DispatchCommand(newState); // changed to materialized in the meantime
+                    break;
+                case SubSink.RequestOneScheduledBeforeMaterialization _ when newState == SubSink.CancelScheduledBeforeMaterialization.Instance:
+                    // cancellation is allowed to replace pull
+                    if(!_status.CompareAndSet(SubSink.RequestOneScheduledBeforeMaterialization.Instance, newState))
+                        DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
+                    break;
+                case SubSink.CommandScheduledBeforeMaterialization command:
+                    throw new IllegalStateException($"{newState.Command} on subsink is illegal when {command.Command} is still pending");
+            }
         }
 
         /// <summary>

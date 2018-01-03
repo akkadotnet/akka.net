@@ -418,7 +418,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, NotUsed> OnComplete<TIn>(Action success, Action<Exception> failure)
             => Flow.Create<TIn>()
-                .Transform(() => new OnCompleted<TIn, NotUsed>(success, failure))
+                .Via(new OnCompleted<TIn>(success, failure))
                 .To(Ignore<NotUsed>())
                 .Named("OnCompleteSink");
 

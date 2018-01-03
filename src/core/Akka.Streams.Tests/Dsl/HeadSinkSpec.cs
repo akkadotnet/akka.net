@@ -127,5 +127,20 @@ namespace Akka.Streams.Tests.Dsl
                 task.Result.Should().Be(0);
             }, Materializer);
         }
+
+        [Fact]
+        public void A_FLow_with_a_Sink_HeadOption_must_fail_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var source = this.CreatePublisherProbe<int>();
+            var task = Source.FromPublisher(source).RunWith(Sink.FirstOrDefault<int>(), materializer);
+
+            materializer.Shutdown();
+
+            // this one always fails with the AbruptTerminationException rather than the
+            // AbruptStageTerminationException for some reason
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
+        }
     }
 }
