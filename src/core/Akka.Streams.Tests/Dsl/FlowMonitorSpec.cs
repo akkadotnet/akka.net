@@ -10,6 +10,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -151,6 +152,18 @@ namespace Akka.Streams.Tests.Dsl
 
                 throw new Exception();
             });
+        }
+
+        [Fact]
+        public void A_FlowMonitor_must_return_failed_when_stream_is_abruptly_terminated()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var t = this.SourceProbe<string>().Monitor(Keep.Both).To(Sink.Ignore<string>()).Run(materializer);
+            var monitor = t.Item2;
+
+            materializer.Shutdown();
+            AwaitAssert(() => monitor.State.Should().BeOfType<FlowMonitor.Failed>(), RemainingOrDefault);
         }
     }
 }

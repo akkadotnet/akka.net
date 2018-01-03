@@ -69,6 +69,18 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
             }
         }
 
+        /// <summary>
+        /// According to the discovery rules, the concrete class doesn't explicitly need
+        /// an instance of its configuration. Only the sub-class does.
+        /// </summary>
+        public class DefaultConstructorOnDerivedClassSpec : DeeplyInheritedMediumSpec
+        {
+            public DefaultConstructorOnDerivedClassSpec() : base(new DeeplyInheritedConfig())
+            {
+                
+            }
+        }
+
         public class FloodyConfig : MultiNodeConfig
         {
             public RoleName Role1 { get; set; }
