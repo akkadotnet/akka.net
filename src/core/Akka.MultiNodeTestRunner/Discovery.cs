@@ -100,7 +100,7 @@ namespace Akka.MultiNodeTestRunner
             return roles;
         }
 
-        private ConstructorInfo FindConfigConstructor(Type configUser)
+        internal static ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
             var current = configUser;
@@ -108,13 +108,13 @@ namespace Akka.MultiNodeTestRunner
             {
 
 #if CORECLR
-                var ctorWithConfig = configUser
+                var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
             
                 current = current.GetTypeInfo().BaseType;
 #else
-                var ctorWithConfig = configUser
+                var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
 
