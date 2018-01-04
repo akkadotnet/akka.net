@@ -174,8 +174,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Identity<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -222,8 +221,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void PreStart() => TryPull(_stage.Inlet);
@@ -304,14 +302,14 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly TerminationWatcher<T> _stage;
             private readonly TaskCompletionSource<NotUsed> _finishPromise;
+            private bool _completedSignalled;
 
             public Logic(TerminationWatcher<T> stage, TaskCompletionSource<NotUsed> finishPromise) : base(stage.Shape)
             {
                 _stage = stage;
                 _finishPromise = finishPromise;
 
-                SetHandler(stage._inlet, this);
-                SetHandler(stage._outlet, this);
+                SetHandler(stage._inlet, stage._outlet, this);
             }
 
             public override void OnPush() => Push(_stage._outlet, Grab(_stage._inlet));
@@ -319,12 +317,14 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnUpstreamFinish()
             {
                 _finishPromise.TrySetResult(NotUsed.Instance);
+                _completedSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _finishPromise.TrySetException(e);
+                _completedSignalled = true;
                 FailStage(e);
             }
 
@@ -333,14 +333,21 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnDownstreamFinish()
             {
                 _finishPromise.TrySetResult(NotUsed.Instance);
+                _completedSignalled = true;
                 CompleteStage();
+            }
+
+            public override void PostStop()
+            {
+                if (!_completedSignalled)
+                    _finishPromise.TrySetException(new AbruptStageTerminationException(this));
             }
         }
 
         #endregion
 
-        private readonly Inlet<T> _inlet = new Inlet<T>("terminationWatcher.in");
-        private readonly Outlet<T> _outlet = new Outlet<T>("terminationWatcher.out");
+        private readonly Inlet<T> _inlet = new Inlet<T>("TerminationWatcher.in");
+        private readonly Outlet<T> _outlet = new Outlet<T>("TerminationWatcher.out");
 
         private TerminationWatcher()
         {
@@ -424,8 +431,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _monitor = monitor;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -455,6 +461,12 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 CompleteStage();
                 _monitor.Value = FlowMonitor.Finished.Instance;
+            }
+
+            public override void PostStop()
+            {
+                if (!(_monitor.State is FlowMonitor.Finished) && !(_monitor.State is FlowMonitor.Failed))
+                    _monitor.Value = new FlowMonitor.Failed(new AbruptStageTerminationException(this));
             }
 
             public override string ToString() => "MonitorFlowLogic";
