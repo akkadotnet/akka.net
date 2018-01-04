@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
+using Akka.DistributedData;
 using Akka.Pattern;
 
 namespace Akka.Cluster.Sharding
@@ -153,6 +155,10 @@ namespace Akka.Cluster.Sharding
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly ClusterSharding _sharding = ClusterSharding.Get(Context.System);
 
+        private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap");
+        private readonly ReplicatorSettings _replicatorSettings = ReplicatorSettings.Create(Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data"));
+        private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -167,6 +173,7 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
+                    var replicator = Replicator(settings);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -174,7 +181,10 @@ namespace Akka.Cluster.Sharding
                         {
                             var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
                             var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
-                            var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
+                            var coordinatorProps = settings.StateStoreMode == StateStoreMode.Persistence
+                                ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
+                                : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
+
                             var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
                             var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
                             Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
@@ -186,7 +196,9 @@ namespace Akka.Cluster.Sharding
                             coordinatorPath: coordinatorPath,
                             extractEntityId: start.ExtractEntityId,
                             extractShardId: start.ExtractShardId,
-                            handOffStopMessage: start.HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), encName);
+                            handOffStopMessage: start.HandOffStopMessage,
+                            replicator: replicator,
+                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 
                     Sender.Tell(new Started(shardRegion));
@@ -210,6 +222,7 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
+                    var replicator = DistributedData.DistributedData.Get(Context.System).Replicator;
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -219,7 +232,9 @@ namespace Akka.Cluster.Sharding
                             settings: settings,
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
-                            extractShardId: startProxy.ExtractShardId).WithDispatcher(Context.Props.Dispatcher), encName);
+                            extractShardId: startProxy.ExtractShardId,
+                            replicator: replicator,
+                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 
                     Sender.Tell(new Started(shardRegion));
@@ -232,6 +247,26 @@ namespace Akka.Cluster.Sharding
                     Sender.Tell(new Status.Failure(ex));
                 }
             });
+        }
+
+        private IActorRef Replicator(ClusterShardingSettings settings)
+        {
+            if (settings.StateStoreMode == StateStoreMode.DData)
+            {
+                // one replicator per role
+                var role = settings.Role ?? string.Empty;
+                if (_replicatorsByRole.TryGetValue(role, out var aref)) return aref;
+                else
+                {
+                    var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
+                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(_replicatorSettings.WithRole(settings.Role)), name);
+
+                    _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
+                    return replicatorRef;
+                }
+            }
+            else
+                return Context.System.DeadLetters;
         }
 
         private string CoordinatorPath(string encName)
