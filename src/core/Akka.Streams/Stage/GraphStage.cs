@@ -971,7 +971,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/> and <see cref="Outlet{T}"/>.
         /// </summary>
-        protected internal void SetHandler(Inlet inlet, Outlet outlet, InAndOutGraphStageLogic handler)
+        protected internal void SetHandler<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, InAndOutGraphStageLogic handler)
         {
             SetHandler(inlet, handler);
             SetHandler(outlet, handler);
