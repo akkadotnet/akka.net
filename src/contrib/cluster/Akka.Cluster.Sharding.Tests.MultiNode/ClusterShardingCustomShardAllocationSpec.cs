@@ -6,18 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
-using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -26,9 +18,8 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingCustomShardAllocationSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public ClusterShardingCustomShardAllocationSpecConfig()
         {

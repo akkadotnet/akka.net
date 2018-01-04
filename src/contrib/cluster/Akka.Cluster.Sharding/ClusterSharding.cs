@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -247,6 +248,7 @@ namespace Akka.Cluster.Sharding
             _system = system;
             _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            _system.Settings.InjectTopLevelFallback(DistributedData.DistributedData.DefaultConfig());
             _cluster = Cluster.Get(_system);
             Settings = ClusterShardingSettings.Create(system);
 
@@ -314,10 +316,21 @@ namespace Akka.Cluster.Sharding
             var timeout = _system.Settings.CreationTimeout;
             var startMsg = new ClusterShardingGuardian.Start(typeName, entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
 
-            var started = _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout).Result;
-            var shardRegion = started.ShardRegion;
-            _regions.TryAdd(typeName, shardRegion);
-            return shardRegion;
+            var reply = _guardian.Value.Ask(startMsg, timeout).Result;
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    var shardRegion = started.ShardRegion;
+                    _regions.TryAdd(typeName, shardRegion);
+                    return shardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default: 
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
         }
 
         /// <summary>
@@ -361,10 +374,21 @@ namespace Akka.Cluster.Sharding
             var timeout = _system.Settings.CreationTimeout;
             var startMsg = new ClusterShardingGuardian.Start(typeName, entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
 
-            var started = await _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout);
-            var shardRegion = started.ShardRegion;
-            _regions.TryAdd(typeName, shardRegion);
-            return shardRegion;
+            var reply = await _guardian.Value.Ask(startMsg, timeout);
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    var shardRegion = started.ShardRegion;
+                    _regions.TryAdd(typeName, shardRegion);
+                    return shardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default:
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
         }
 
         /// <summary>
@@ -566,9 +590,20 @@ namespace Akka.Cluster.Sharding
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
             var startMsg = new ClusterShardingGuardian.StartProxy(typeName, settings, extractEntityId, extractShardId);
-            var started = _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout).Result;
-            _regions.TryAdd(typeName, started.ShardRegion);
-            return started.ShardRegion;
+            var reply = _guardian.Value.Ask(startMsg, timeout).Result;
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    _regions.TryAdd(typeName, started.ShardRegion);
+                    return started.ShardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default:
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
         }
 
         /// <summary>
@@ -596,9 +631,20 @@ namespace Akka.Cluster.Sharding
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
             var startMsg = new ClusterShardingGuardian.StartProxy(typeName, settings, extractEntityId, extractShardId);
-            var started = await _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout);
-            _regions.TryAdd(typeName, started.ShardRegion);
-            return started.ShardRegion;
+            var reply = await _guardian.Value.Ask(startMsg, timeout);
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    _regions.TryAdd(typeName, started.ShardRegion);
+                    return started.ShardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default:
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
         }
 
         /// <summary>
