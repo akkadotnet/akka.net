@@ -6,18 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
 using FluentAssertions;
 
@@ -25,11 +18,9 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGetStateSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; private set; }
-
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public ClusterShardingGetStateSpecConfig()
         {
@@ -47,6 +38,9 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.sharding {
                         coordinator-failure-backoff = 3s

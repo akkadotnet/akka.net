@@ -6,44 +6,40 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Akka.Configuration;
 using Akka.Persistence;
 using Akka.Remote.TestKit;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
+using Akka.DistributedData;
 using Akka.Pattern;
-using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
-using Xunit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingSpecConfig : MultiNodeConfig
+    public abstract class ClusterShardingSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; private set; }
+        public string Mode { get; }
+        public string EntityRecoveryStrategy { get; }
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
+        public RoleName Sixth { get; }
 
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
-
-        public RoleName Third { get; private set; }
-
-        public RoleName Fourth { get; private set; }
-
-        public RoleName Fifth { get; private set; }
-
-        public RoleName Sixth { get; private set; }
-
-        public ClusterShardingSpecConfig(/*string entityRecoveryStrategy*/)
+        protected ClusterShardingSpecConfig(string mode, string entityRecoveryStrategy = "all")
         {
+            Mode = mode;
+            EntityRecoveryStrategy = entityRecoveryStrategy;
             Controller = Role("controller");
             First = Role("first");
             Second = Role("second");
@@ -53,58 +49,79 @@ namespace Akka.Cluster.Sharding.Tests
             Sixth = Role("sixth");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
+                .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
+                        }}
+                        serialization-bindings {{
                             ""System.Object"" = hyperion
-                        }
-                    }
-
+                        }}
+                    }}
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.roles = [""backend""]
-                    akka.cluster.sharding {
+                    akka.cluster.distributed-data.gossip-interval = 1s
+                    akka.cluster.sharding {{
                         retry-interval = 1 s
                         handoff-timeout = 10 s
                         shard-start-timeout = 5s
                         entity-restart-backoff = 1s
                         rebalance-interval = 2 s
-                        entity-recovery-strategy = ""all""
-                        entity-recovery-constant-rate-strategy {
+                        state-store-mode = ""{mode}""
+                        entity-recovery-strategy = ""{entityRecoveryStrategy}""
+                        entity-recovery-constant-rate-strategy {{
                             frequency = 1 ms
                             number-of-entities = 1
-                        }
-                        least-shard-allocation-strategy {
+                        }}
+                        least-shard-allocation-strategy {{
                             rebalance-threshold = 2
                             max-simultaneous-rebalance = 1
-                        }
-                    }
-
+                        }}
+                        distributed-data.durable.lmdb {{
+                          dir = ""target/ClusterShardingSpec/sharding-ddata""
+                          map-size = 10000000
+                        }}
+                    }}
                     akka.testconductor.barrier-timeout = 70s
-
-
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
 
-                    akka.persistence.journal.MemoryJournal {
+                    akka.persistence.journal.MemoryJournal {{
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-
-                    akka.persistence.journal.memory-journal-shared {
+                    }}
+                    akka.persistence.journal.memory-journal-shared {{
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
-                    }
+                    }}
                 "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
         }
+    }
+    public class PersistentClusterShardingSpecConfig : ClusterShardingSpecConfig
+    {
+        public PersistentClusterShardingSpecConfig() : base("persistence") { }
+    }
+    public class DDataClusterShardingSpecConfig : ClusterShardingSpecConfig
+    {
+        public DDataClusterShardingSpecConfig() : base("ddata") { }
+    }
+    public class PersistentClusterShardingWithEntityRecoverySpecConfig : ClusterShardingSpecConfig
+    {
+        public PersistentClusterShardingWithEntityRecoverySpecConfig() : base("persistence", "constant") { }
+    }
+    public class DDataClusterShardingWithEntityRecoverySpecConfig : ClusterShardingSpecConfig
+    {
+        public DDataClusterShardingWithEntityRecoverySpecConfig() : base("ddata", "constant") { }
     }
 
     internal class Counter : PersistentActor
@@ -316,20 +333,26 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-
-    public class ClusterShardingSpecRecoveryAll : ClusterShardingSpec
+    public class PersistentClusterShardingSpec : ClusterShardingSpec
     {
-        public ClusterShardingSpecRecoveryAll()
-            : this(new ClusterShardingSpecConfig(/*"all"*/))
-        {
-        }
-
-        protected ClusterShardingSpecRecoveryAll(ClusterShardingSpecConfig config)
-            : base(config, typeof(ClusterShardingSpec))
-        {
-        }
+        public PersistentClusterShardingSpec() : this(new PersistentClusterShardingSpecConfig()) { }
+        protected PersistentClusterShardingSpec(PersistentClusterShardingSpecConfig config) : base(config, typeof(PersistentClusterShardingSpec)) { }
     }
-
+    public class PersistentClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
+    {
+        public PersistentClusterShardingWithEntityRecoverySpec() : this(new PersistentClusterShardingWithEntityRecoverySpecConfig()) { }
+        protected PersistentClusterShardingWithEntityRecoverySpec(PersistentClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(PersistentClusterShardingWithEntityRecoverySpec)) { }
+    }
+    public class DDataClusterShardingSpec : ClusterShardingSpec
+    {
+        public DDataClusterShardingSpec() : this(new DDataClusterShardingSpecConfig()) { }
+        protected DDataClusterShardingSpec(DDataClusterShardingSpecConfig config) : base(config, typeof(DDataClusterShardingSpec)) { }
+    }
+    public class DDataClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
+    {
+        public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
+        protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
+    }
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         #region Setup
@@ -343,6 +366,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly Lazy<IActorRef> _autoMigrateRegion;
 
         private readonly ClusterShardingSpecConfig _config;
+        private readonly List<FileInfo> _storageLocations;
 
         protected ClusterShardingSpec(ClusterShardingSpecConfig config, Type type)
             : base(config, type)
@@ -357,9 +381,39 @@ namespace Akka.Cluster.Sharding.Tests
             _persistentRegion = new Lazy<IActorRef>(() => CreateRegion("RememberCounter", true));
             _rebalancingPersistentRegion = new Lazy<IActorRef>(() => CreateRegion("RebalancingRememberCounter", true));
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
+            _storageLocations = new List<FileInfo>
+            {
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+            };
+
+            IsDDataMode = config.Mode == "ddata";
+
+            DeleteStorageLocations();
+
+            ReplicatorRef = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
+                .WithGossipInterval(TimeSpan.FromSeconds(1))
+                .WithMaxDeltaElements(10)), "replicator");
+
+            EnterBarrier("startup");
+        }
+        protected bool IsDDataMode { get; }
+        
+        protected override void AfterTermination()
+        {
+            base.AfterTermination();
+            DeleteStorageLocations();
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
+        private void DeleteStorageLocations()
+        {
+            foreach (var fileInfo in _storageLocations)
+            {
+                if (fileInfo.Exists) fileInfo.Delete();
+            }
+        }
+
+        protected override int InitialParticipantsValueFactory => Roles.Count;
+        public IActorRef ReplicatorRef { get; }
 
         private void Join(RoleName from, RoleName to)
         {
@@ -430,7 +484,9 @@ namespace Akka.Cluster.Sharding.Tests
                 "/user/" + typeName + "Coordinator/singleton/coordinator",
                 Counter.ExtractEntityId,
                 Counter.ExtractShardId,
-                PoisonPill.Instance)),
+                PoisonPill.Instance,
+                ReplicatorRef,
+                3)),
                 typeName + "Region");
         }
 
@@ -441,6 +497,7 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact]
         public void ClusterSharding_specs()
         {
+            // must be done also in ddata mode since Counter is PersistentActor
             ClusterSharding_should_setup_shared_journal();
             ClusterSharding_should_work_in_single_node_cluster();
             ClusterSharding_should_use_second_node();
@@ -455,11 +512,14 @@ namespace Akka.Cluster.Sharding.Tests
 
             ClusterSharding_should_be_easy_API_for_starting();
 
-            PersistentClusterShards_should_recover_entities_upon_restart();
-            PersistentClusterShards_should_permanently_stop_entities_which_passivate();
-            PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
-            PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
-            PersistentClusterShards_should_ensure_rebalance_restarts_shards();
+            if (!IsDDataMode)
+            {
+                PersistentClusterShards_should_recover_entities_upon_restart();
+                PersistentClusterShards_should_permanently_stop_entities_which_passivate();
+                PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
+                PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
+                PersistentClusterShards_should_ensure_rebalance_restarts_shards();
+            }
         }
 
         public void ClusterSharding_should_setup_shared_journal()
@@ -613,7 +673,9 @@ namespace Akka.Cluster.Sharding.Tests
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
                         extractEntityId: Counter.ExtractEntityId,
-                        extractShardId: Counter.ExtractShardId
+                        extractShardId: Counter.ExtractShardId,
+                        replicator: Sys.DeadLetters,
+                        majorityMinCap: 0
                         ), "regionProxy");
 
                     proxy.Tell(new Counter.Get(1));

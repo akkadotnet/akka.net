@@ -22,3 +22,5 @@ using System.Runtime.InteropServices;
 [assembly: Guid("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]

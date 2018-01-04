@@ -6,62 +6,61 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
-using System.Collections.Immutable;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingRememberEntitiesNewExtractorSpecConfig : MultiNodeConfig
+    public abstract class ClusterShardingRememberEntitiesNewExtractorSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
+        public string Mode { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
-        public RoleName Second { get; private set; }
-
-        public RoleName Third { get; private set; }
-
-        public ClusterShardingRememberEntitiesNewExtractorSpecConfig()
+        protected ClusterShardingRememberEntitiesNewExtractorSpecConfig(string mode)
         {
+            Mode = mode;
             First = Role("first");
             Second = Role("second");
             Third = Role("third");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
+                .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
+                        }}
+                        serialization-bindings {{
                             ""System.Object"" = hyperion
-                        }
-                    }
+                        }}
+                    }}
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
-
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                    akka.persistence.journal.MemoryJournal {
+                    akka.persistence.journal.MemoryJournal {{
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-
-                    akka.persistence.journal.memory-journal-shared {
+                    }}
+                    akka.persistence.journal.memory-journal-shared {{
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
-                    }
+                    }}
+                    akka.cluster.sharding.state-store-mode = ""{mode}""
+                    akka.cluster.sharding.distributed-data.durable.lmdb {{
+                      dir = ""target/ClusterShardingMinMembersSpec/sharding-ddata""
+                      map-size = 10000000
+                    }}
                 "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
@@ -69,11 +68,41 @@ namespace Akka.Cluster.Sharding.Tests
 
             var roleConfig = ConfigurationFactory.ParseString(@"akka.cluster.roles = [sharding]");
 
-            NodeConfig(new RoleName[] { Second, Third }, new Config[] { roleConfig });
+            // we pretend node 4 and 5 are new incarnations of node 2 and 3 as they never run in parallel
+            // so we can use the same lmdb store for them and have node 4 pick up the persisted data of node 2
+            var ddataNodeAConfig = ConfigurationFactory.ParseString(@"
+              akka.cluster.sharding.distributed-data.durable.lmdb {
+                dir = ""target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-a""
+              }");
+            var ddataNodeBConfig = ConfigurationFactory.ParseString(@"
+              akka.cluster.sharding.distributed-data.durable.lmdb {
+                dir = ""target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-b""
+              }");
+
+            NodeConfig(new[] { Second }, new[] { roleConfig.WithFallback(ddataNodeAConfig) });
+            NodeConfig(new[] { Third }, new[] { roleConfig.WithFallback(ddataNodeBConfig) });
         }
     }
+    public class PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig : ClusterShardingRememberEntitiesNewExtractorSpecConfig
+    {
+        public PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig() : base("persistence") { }
+    }
+    public class DDataClusterShardingRememberEntitiesNewExtractorSpecConfig : ClusterShardingRememberEntitiesNewExtractorSpecConfig
+    {
+        public DDataClusterShardingRememberEntitiesNewExtractorSpecConfig() : base("ddata") { }
+    }
 
-    public class ClusterShardingRememberEntitiesNewExtractorSpec : MultiNodeClusterSpec
+    public class PersistentClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
+    {
+        public PersistentClusterShardingRememberEntitiesNewExtractorSpec() : this(new PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig()) { }
+        protected PersistentClusterShardingRememberEntitiesNewExtractorSpec(PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesNewExtractorSpec)) { }
+    }
+    public class DDataClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
+    {
+        public DDataClusterShardingRememberEntitiesNewExtractorSpec() : this(new DDataClusterShardingRememberEntitiesNewExtractorSpecConfig()) { }
+        protected DDataClusterShardingRememberEntitiesNewExtractorSpec(DDataClusterShardingRememberEntitiesNewExtractorSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesNewExtractorSpec)) { }
+    }
+    public abstract class ClusterShardingRememberEntitiesNewExtractorSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -101,7 +130,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        readonly static int ShardCount = 3;
+        static readonly int ShardCount = 3;
 
         internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
@@ -129,23 +158,41 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        readonly static string TypeName = "Entity";
+        static readonly string TypeName = "Entity";
 
         private readonly ClusterShardingRememberEntitiesNewExtractorSpecConfig _config;
+        private readonly List<FileInfo> _storageLocations;
 
-        public ClusterShardingRememberEntitiesNewExtractorSpec()
-            : this(new ClusterShardingRememberEntitiesNewExtractorSpecConfig())
-        {
-        }
-
-        protected ClusterShardingRememberEntitiesNewExtractorSpec(ClusterShardingRememberEntitiesNewExtractorSpecConfig config)
-            : base(config, typeof(ClusterShardingRememberEntitiesNewExtractorSpec))
+        protected ClusterShardingRememberEntitiesNewExtractorSpec(ClusterShardingRememberEntitiesNewExtractorSpecConfig config, Type type)
+            : base(config, type)
         {
             _config = config;
+            _storageLocations = new List<FileInfo>
+            {
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+            };
 
+            IsDDataMode = config.Mode == "ddata";
+            DeleteStorageLocations();
+            EnterBarrier("startup");
+        }
+        protected bool IsDDataMode { get; }
+        
+        protected override void AfterTermination()
+        {
+            base.AfterTermination();
+            DeleteStorageLocations();
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
+        private void DeleteStorageLocations()
+        {
+            foreach (var fileInfo in _storageLocations)
+            {
+                if (fileInfo.Exists) fileInfo.Delete();
+            }
+        }
+
+        protected override int InitialParticipantsValueFactory => Roles.Count;
 
         #endregion
 
@@ -186,7 +233,7 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact]
         public void Cluster_sharding_with_remember_entities_specs()
         {
-            Cluster_sharding_with_remember_entities_should_setup_shared_journal();
+            if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_setup_shared_journal();
             Cluster_sharding_with_remember_entities_should_start_up_first_cluster_and_sharding();
             Cluster_sharding_with_remember_entities_should_shutdown_sharding_nodes();
             Cluster_sharding_with_remember_entities_should_start_new_nodes_with_different_extractor_and_have_the_entities_running_on_the_right_shards();
@@ -314,6 +361,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                     var probe2 = CreateTestProbe(sys2);
 
+                    if (!IsDDataMode)
                     {
                         // setup Persistence
                         Persistence.Persistence.Instance.Apply(sys2);
