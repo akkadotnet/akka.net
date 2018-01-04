@@ -413,8 +413,13 @@ namespace Akka.Streams.Stage
     ///    else (as such access would not be thread-safe)</para>
     ///  <para>* The lifecycle hooks <see cref="PreStart"/> and <see cref="PostStop"/></para>
     ///  <para>* Methods for performing stream processing actions, like pulling or pushing elements</para> 
-    ///  The stage logic is always stopped once all its input and output ports have been closed, i.e. it is not possible to
-    ///  keep the stage alive for further processing once it does not have any open ports.
+    /// The stage logic is completed once all its input and output ports have been closed. This can be changed by
+    /// setting <see cref="SetKeepGoing"/> to true.
+    /// <para />
+    /// The <see cref="PostStop"/> lifecycle hook on the logic itself is called once all ports are closed. This is the only tear down
+    /// callback that is guaranteed to happen, if the actor system or the materializer is terminated the handlers may never
+    /// see any callbacks to <see cref="InHandler.OnUpstreamFailure"/>, <see cref="InHandler.OnUpstreamFinish"/> or <see cref="OutHandler.OnDownstreamFinish"/>. 
+    /// Therefore stage resource cleanup should always be done in <see cref="PostStop"/>.
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
@@ -490,17 +495,34 @@ namespace Akka.Streams.Stage
                 AndThen();
                 if (FollowUps != null)
                 {
-                    if (Logic.GetHandler(Out) is Emitting e)
-                        e.AddFollowUps(this);
-                    else
+                    // If (while executing andThen() callback) handler was changed to new emitting,
+                    // we should add it to the end of emission queue
+                    var currentHandler = Logic.GetHandler(Out);
+                    if(currentHandler is Emitting e)
+                        AddFollowUp(e);
+
+                    var next = Dequeue();
+                    if (next is EmittingCompletion completion)
                     {
-                        var next = Dequeue();
-                        if (next is EmittingCompletion)
-                            Logic.Complete(Out);
+                        // If next element is emitting completion and there are some elements after it,
+                        // we to need pass them before completion
+                        if (completion.FollowUps != null)
+                            Logic.SetHandler(Out, DequeueHeadAndAddToTail(completion));
                         else
-                            Logic.SetHandler(Out, next);
+                            Logic.Complete(Out);
                     }
+                    else
+                        Logic.SetHandler(Out, next);
                 }
+            }
+
+            private IOutHandler DequeueHeadAndAddToTail(Emitting head)
+            {
+                var next = head.Dequeue();
+                next.AddFollowUp(head);
+                head.FollowUps = null;
+                head.FollowUpsTail = null;
+                return next;
             }
 
             public void AddFollowUp(Emitting e)
@@ -536,7 +558,7 @@ namespace Akka.Streams.Stage
             /// not be retained (setHandler will install the followUp). For this reason
             /// the followUpsTail knowledge needs to be passed on to the next runner.
             /// </summary>
-            private OutHandler Dequeue()
+            private Emitting Dequeue()
             {
                 var result = FollowUps;
                 result.FollowUpsTail = FollowUpsTail;
@@ -947,6 +969,15 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Assigns callbacks for the events for an <see cref="Inlet{T}"/> and <see cref="Outlet{T}"/>.
+        /// </summary>
+        protected internal void SetHandler(Inlet inlet, Outlet outlet, InAndOutGraphStageLogic handler)
+        {
+            SetHandler(inlet, handler);
+            SetHandler(outlet, handler);
+        }
+
+        /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
         /// </summary>
         /// <param name="outlet">TBD</param>
@@ -1121,7 +1152,8 @@ namespace Akka.Streams.Stage
             if ((connection.PortState & (InReady | InFailed)) == (InReady | InFailed))
             {
                 // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return connection.Slot is GraphInterpreter.Failed failed && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
+                return connection.Slot is GraphInterpreter.Failed failed &&
+                       !ReferenceEquals(failed.PreviousElement, Empty.Instance);
             }
 
             return false;
@@ -1225,7 +1257,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
-        /// then stops the stage, then <see cref="PostStop"/> is called.
+        /// then marks the stage as stopped.
         /// </summary>
         public void CompleteStage()
         {
@@ -1247,7 +1279,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail{T}"/> on all the input or output ports that have been called,
-        /// then stops the stage, then <see cref="PostStop"/> is called.
+        /// then marks the stage as stopped.
         /// </summary>
         /// <param name="reason">TBD</param>
         public void FailStage(Exception reason)
