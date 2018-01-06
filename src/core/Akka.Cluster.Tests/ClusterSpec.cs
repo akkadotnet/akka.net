@@ -134,7 +134,7 @@ namespace Akka.Cluster.Tests
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
             callbackProbe.ExpectMsg("OnMemberUp"); // verify that callback hooks are registered
-            
+
 
             _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
             // first, is in response to the subscription
@@ -198,11 +198,11 @@ namespace Akka.Cluster.Tests
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
-//#if CORECLR
-//        [Fact(Skip = "Fails on .NET Core")]
-//#else
-//        [Fact(Skip = "Fails flakily on .NET 4.5")]
-//#endif
+        //#if CORECLR
+        //        [Fact(Skip = "Fails on .NET Core")]
+        //#else
+        //        [Fact(Skip = "Fails flakily on .NET 4.5")]
+        //#endif
         [Fact]
         public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
@@ -341,8 +341,33 @@ namespace Akka.Cluster.Tests
                 Assert.Throws<AggregateException>(() => task.Wait(timeout))
                     .Flatten()
                     .InnerException.Should().BeOfType<TaskCanceledException>();
-                    
+
                 task.IsCanceled.Should().BeTrue();
+            }
+            finally
+            {
+                _cluster.Shutdown();
+            }
+        }
+
+        [Fact]
+        public void A_cluster_JoinAsync_must_fail_if_could_not_connect_to_cluster()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
+
+                var nonexisting = Address.Parse($"akka.tcp://{_selfAddress.System}@127.0.0.1:9999/");
+                Assert.ThrowsAsync<ClusterJoinFailedException>(async () =>
+                {
+                    await _cluster.JoinAsync(nonexisting);
+                    LeaderActions();
+
+                    ExpectMsg<ClusterEvent.MemberRemoved>();
+                }).Wait(timeout);
+
             }
             finally
             {
@@ -357,11 +382,36 @@ namespace Akka.Cluster.Tests
 
             try
             {
-                _cluster.JoinSeedNodesAsync(new []{ _selfAddress }).Wait(timeout).Should().BeTrue();
+                _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).Wait(timeout).Should().BeTrue();
                 LeaderActions();
                 // Member should already be up
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
                 ExpectMsg<ClusterEvent.MemberUp>();
+
+            }
+            finally
+            {
+                _cluster.Shutdown();
+            }
+        }
+
+        [Fact]
+        public void A_cluster_JoinSeedNodesAsync_must_fail_if_could_not_connect_to_cluster()
+        {
+            var timeout = TimeSpan.FromSeconds(10);
+
+            try
+            {
+                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
+
+                var nonexisting = Address.Parse($"akka.tcp://{_selfAddress.System}@127.0.0.1:9999/");
+                Assert.ThrowsAsync<ClusterJoinFailedException>(async () =>
+                {
+                    await _cluster.JoinSeedNodesAsync(new[] { nonexisting });
+                    LeaderActions();
+
+                    ExpectMsg<ClusterEvent.MemberRemoved>();
+                }).Wait(timeout);
 
             }
             finally
@@ -454,7 +504,7 @@ namespace Akka.Cluster.Tests
 
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 probe.ExpectMsg<ClusterEvent.MemberExited>();
-                probe.ExpectMsg<ClusterEvent.MemberRemoved>(); 
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
             }

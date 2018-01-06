@@ -244,7 +244,7 @@ namespace Akka.Cluster
             var completion = new TaskCompletionSource<NotUsed>();
             this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
             this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has been removed from the cluster before it managed to join {address}.")));
+                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided address: {address}")));
 
             Join(address);
 
@@ -298,7 +298,7 @@ namespace Akka.Cluster
             var completion = new TaskCompletionSource<NotUsed>();
             this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
             this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has been removed from the cluster before it managed to join any of the seed nodes: {string.Join(", ", seedNodes)}.")));
+                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}.")));
 
             JoinSeedNodes(seedNodes);
 
