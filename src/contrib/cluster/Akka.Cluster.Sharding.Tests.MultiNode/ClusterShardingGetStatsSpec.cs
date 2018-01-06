@@ -6,32 +6,21 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
-using System.Collections.Immutable;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGetStatsSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; private set; }
-
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
-
-        public RoleName Third { get; private set; }
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public ClusterShardingGetStatsSpecConfig()
         {
@@ -50,6 +39,9 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.sharding {
                         updating-state-timeout = 2s
@@ -62,7 +54,6 @@ namespace Akka.Cluster.Sharding.Tests
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                     }
-
                     akka.persistence.journal.memory-journal-shared {
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
