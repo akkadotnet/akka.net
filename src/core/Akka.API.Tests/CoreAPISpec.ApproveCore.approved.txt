@@ -882,7 +882,7 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
-        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
