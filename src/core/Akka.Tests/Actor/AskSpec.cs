@@ -17,6 +17,10 @@ namespace Akka.Tests.Actor
 {
     public class AskSpec : AkkaSpec
     {
+        public AskSpec()
+            : base(@"akka.actor.ask-timeout = 3000ms")
+        { }
+
         public class SomeActor : UntypedActor
         {
             protected override void OnReceive(object message)
@@ -25,6 +29,7 @@ namespace Akka.Tests.Actor
                 {
                     Thread.Sleep(5000);
                 }
+
                 if (message.Equals("answer"))
                 {
                     Sender.Tell("answer");
@@ -100,6 +105,21 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public async Task Ask_should_honor_config_specified_timeout()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            try
+            {
+                await actor.Ask<string>("timeout");
+                Assert.True(false, "the ask should have timed out with default timeout");
+            }
+            catch (AskTimeoutException e)
+            {
+                Assert.Equal("Timeout after 00:00:03 seconds", e.Message);
+            }
+        }
+
+        [Fact]
         public async Task Cancelled_ask_with_null_timeout_should_remove_temp_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
@@ -120,6 +140,16 @@ namespace Akka.Tests.Actor
             {
                 await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("cancel", TimeSpan.FromSeconds(30), cts.Token));
             }
+
+            Are_Temp_Actors_Removed(actor);
+        }
+
+        [Fact]
+        public async Task AskTimeout_with_default_timeout_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout"));
 
             Are_Temp_Actors_Removed(actor);
         }
