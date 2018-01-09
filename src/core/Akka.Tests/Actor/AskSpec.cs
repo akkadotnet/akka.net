@@ -123,6 +123,15 @@ namespace Akka.Tests.Actor
             Are_Temp_Actors_Removed(actor);
         }
 
+        [Fact]
+        public async Task ShouldFailWhenAskExpectsWrongType()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            // expect int, but in fact string
+            await Assert.ThrowsAsync<InvalidCastException>(async () => await actor.Ask<int>("answer"));
+        }
+
         private void Are_Temp_Actors_Removed(IActorRef actor)
         {
             var actorCell = actor as ActorRefWithCell;
