@@ -321,11 +321,21 @@ namespace Akka.Cluster.Tests
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
                 ExpectMsg<ClusterEvent.MemberUp>();
 
+                // join second time - response should be immediate success
+                _cluster.JoinAsync(_selfAddress).Wait(TimeSpan.FromMilliseconds(100)).Should().BeTrue();
             }
             finally
             {
                 _cluster.Shutdown();
             }
+
+            // JoinAsync should fail after cluster has been shutdown - a manual actor system restart is required
+            Assert.ThrowsAsync<ClusterJoinFailedException>(async () =>
+            {
+                await _cluster.JoinAsync(_selfAddress);
+                LeaderActions();
+                ExpectMsg<ClusterEvent.MemberRemoved>();
+            }).Wait(timeout);
         }
 
         [Fact]
@@ -388,11 +398,21 @@ namespace Akka.Cluster.Tests
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
                 ExpectMsg<ClusterEvent.MemberUp>();
 
+                // join second time - response should be immediate success
+                _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).Wait(TimeSpan.FromMilliseconds(100)).Should().BeTrue();
             }
             finally
             {
                 _cluster.Shutdown();
             }
+
+            // JoinSeedNodesAsync should fail after cluster has been shutdown - a manual actor system restart is required
+            Assert.ThrowsAsync<ClusterJoinFailedException>(async () =>
+            {
+                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress });
+                LeaderActions();
+                ExpectMsg<ClusterEvent.MemberRemoved>();
+            }).Wait(timeout);
         }
 
         [Fact]

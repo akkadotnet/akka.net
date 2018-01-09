@@ -235,6 +235,9 @@ namespace Akka.Cluster
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
+        /// 
+        /// Once cluster has been shutdown, <see cref="JoinAsync"/> will always fail until an entire 
+        /// actor system is manually restarted.
         /// </summary>
         /// <param name="address">The address of the node we want to join.</param>
         /// <param name="token">An optional cancellation token used to cancel returned task before it completes.</param>
@@ -291,6 +294,9 @@ namespace Akka.Cluster
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
+        /// 
+        /// Once cluster has been shutdown, <see cref="JoinSeedNodesAsync"/> will always fail until an entire 
+        /// actor system is manually restarted.
         /// </summary>
         /// <param name="seedNodes">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
