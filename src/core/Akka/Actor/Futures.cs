@@ -100,13 +100,13 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
+            return (T) await Ask(self, message, provider, timeout, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
