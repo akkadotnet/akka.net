@@ -25,6 +25,7 @@ namespace Akka.Cluster
         public Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> FailureDetector { get; }
         public bool IsTerminated { get; }
         public Akka.Actor.Address SelfAddress { get; }
+        public Akka.Cluster.Member SelfMember { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> SelfRoles { get; }
         public Akka.Cluster.UniqueAddress SelfUniqueAddress { get; }
         public Akka.Cluster.ClusterSettings Settings { get; }
