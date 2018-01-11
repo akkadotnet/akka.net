@@ -53,7 +53,7 @@ You can [view the full v1.3.2 change set here](https://github.com/akkadotnet/akk
 - Bugfix: Akka.Persistence support for `SerializerWithStringManifest` required by Akka.Cluster.Sharding and Akka.Cluster.Tools
 	- Akka.Persistence.Sqlite and Akka.Persistence.SqlServer were unable to support `SerializerWithStringManifest`, so using Akka.Cluster.Sharding with Sql plugins would not work.
 - Bugfix: Akka.Streams generic type parameters of the flow returned from current implementation of Bidiflow's JoinMat method were incorrect.
-- Bugfix: `PersistenceMessageSerializer` was failing with the wrong exceptoin when a non-supported type was provided.
+- Bugfix: `PersistenceMessageSerializer` was failing with the wrong exception when a non-supported type was provided.
 
 **Akka.Persistence backwards compability warning**:
 
