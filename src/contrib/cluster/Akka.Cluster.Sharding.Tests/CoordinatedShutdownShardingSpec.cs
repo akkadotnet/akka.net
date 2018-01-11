@@ -118,6 +118,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             InitCluster();
             RunCoordinatedShutdownWhenLeaving();
+            RunCoordinatedShutdownWhenDowning();
         }
 
         private void InitCluster()
