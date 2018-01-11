@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="CoordinatedShutdownShardingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Cluster.Sharding.Serialization;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,17 +20,17 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class CoordinatedShutdownShardingSpec : AkkaSpec
     {
-        private ActorSystem sys1;
-        private ActorSystem sys2;
-        private ActorSystem sys3;
+        private readonly ActorSystem _sys1;
+        private readonly ActorSystem _sys2;
+        private readonly ActorSystem _sys3;
 
-        private IActorRef region1;
-        private IActorRef region2;
-        private IActorRef region3;
+        private readonly IActorRef _region1;
+        private readonly IActorRef _region2;
+        private readonly IActorRef _region3;
 
-        private TestProbe _probe1;
-        private TestProbe _probe2;
-        private TestProbe _probe3;
+        private readonly TestProbe _probe1;
+        private readonly TestProbe _probe2;
+        private readonly TestProbe _probe3;
 
         private static readonly Config SpecConfig;
 
@@ -55,36 +58,36 @@ namespace Akka.Cluster.Sharding.Tests
 
         public CoordinatedShutdownShardingSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
-            sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            sys3 = Sys;
+            _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys3 = Sys;
 
             var props = Props.Create(() => new EchoActor());
-            region1 = ClusterSharding.Get(sys1).Start("type1", props, ClusterShardingSettings.Create(sys1),
+            _region1 = ClusterSharding.Get(_sys1).Start("type1", props, ClusterShardingSettings.Create(_sys1),
                 _extractEntityId, _extractShard);
-            region2 = ClusterSharding.Get(sys2).Start("type1", props, ClusterShardingSettings.Create(sys2),
+            _region2 = ClusterSharding.Get(_sys2).Start("type1", props, ClusterShardingSettings.Create(_sys2),
                 _extractEntityId, _extractShard);
-            region3 = ClusterSharding.Get(sys3).Start("type1", props, ClusterShardingSettings.Create(sys3),
+            _region3 = ClusterSharding.Get(_sys3).Start("type1", props, ClusterShardingSettings.Create(_sys3),
                 _extractEntityId, _extractShard);
 
 
-            _probe1 = CreateTestProbe(sys1);
-            _probe2 = CreateTestProbe(sys2);
-            _probe3 = CreateTestProbe(sys3);
+            _probe1 = CreateTestProbe(_sys1);
+            _probe2 = CreateTestProbe(_sys2);
+            _probe3 = CreateTestProbe(_sys3);
 
-            CoordinatedShutdown.Get(sys1).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
+            CoordinatedShutdown.Get(_sys1).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
             {
                 _probe1.Ref.Tell("CS-unbind-1");
                 return Task.FromResult(Done.Instance);
             });
 
-            CoordinatedShutdown.Get(sys2).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
+            CoordinatedShutdown.Get(_sys2).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
             {
                 _probe2.Ref.Tell("CS-unbind-2");
                 return Task.FromResult(Done.Instance);
             });
 
-            CoordinatedShutdown.Get(sys3).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
+            CoordinatedShutdown.Get(_sys3).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
             {
                 _probe3.Ref.Tell("CS-unbind-3");
                 return Task.FromResult(Done.Instance);
@@ -93,8 +96,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected override void BeforeTermination()
         {
-            Shutdown(sys1);
-            Shutdown(sys2);
+            Shutdown(_sys1);
+            Shutdown(_sys2);
         }
 
         /// <summary>
@@ -102,11 +105,11 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         private void PingEntities()
         {
-            region2.Tell(1, _probe2.Ref);
+            _region2.Tell(1, _probe2.Ref);
             _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(1);
-            region2.Tell(2, _probe2.Ref);
+            _region2.Tell(2, _probe2.Ref);
             _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(2);
-            region2.Tell(3, _probe2.Ref);
+            _region2.Tell(3, _probe2.Ref);
             _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(3);
         }
 
@@ -123,32 +126,32 @@ namespace Akka.Cluster.Sharding.Tests
             //       but currently there seems to be a race between the CS and the ClusterSingleton observing OldestChanged
             //       and terminating coordinator singleton before the graceful sharding stop is done.
 
-            Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress); // coordinator will initially run on sys2
-            AwaitAssert(() => Cluster.Get(sys2).SelfMember.Status.Should().Be(MemberStatus.Up));
+            Cluster.Get(_sys2).Join(Cluster.Get(_sys2).SelfAddress); // coordinator will initially run on sys2
+            AwaitAssert(() => Cluster.Get(_sys2).SelfMember.Status.Should().Be(MemberStatus.Up));
 
-            Cluster.Get(sys1).Join(Cluster.Get(sys2).SelfAddress);
+            Cluster.Get(_sys1).Join(Cluster.Get(_sys2).SelfAddress);
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys1).State.Members.Count.Should().Be(2);
-                    Cluster.Get(sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(sys2).State.Members.Count.Should().Be(2);
-                    Cluster.Get(sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                    Cluster.Get(_sys1).State.Members.Count.Should().Be(2);
+                    Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                    Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
+                    Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
                 });
             });
 
-            Cluster.Get(sys3).Join(Cluster.Get(sys1).SelfAddress);
+            Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys1).State.Members.Count.Should().Be(3);
-                    Cluster.Get(sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(sys2).State.Members.Count.Should().Be(3);
-                    Cluster.Get(sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(sys3).State.Members.Count.Should().Be(3);
-                    Cluster.Get(sys3).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                    Cluster.Get(_sys1).State.Members.Count.Should().Be(3);
+                    Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                    Cluster.Get(_sys2).State.Members.Count.Should().Be(3);
+                    Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                    Cluster.Get(_sys3).State.Members.Count.Should().Be(3);
+                    Cluster.Get(_sys3).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
                 });
             });
 
@@ -157,15 +160,15 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void RunCoordinatedShutdownWhenLeaving()
         {
-            Cluster.Get(sys3).Leave(Cluster.Get(sys1).SelfAddress);
+            Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
             _probe1.ExpectMsg("CS-unbind-1");
 
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys2).State.Members.Count.Should().Be(2);
-                    Cluster.Get(sys3).State.Members.Count.Should().Be(2);
+                    Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
+                    Cluster.Get(_sys3).State.Members.Count.Should().Be(2);
                 });
             });
 
@@ -173,8 +176,8 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys1).IsTerminated.Should().BeTrue();
-                    sys1.WhenTerminated.IsCompleted.Should().BeTrue();
+                    Cluster.Get(_sys1).IsTerminated.Should().BeTrue();
+                    _sys1.WhenTerminated.IsCompleted.Should().BeTrue();
                 });
             });
 
@@ -184,14 +187,14 @@ namespace Akka.Cluster.Sharding.Tests
         private void RunCoordinatedShutdownWhenDowning()
         {
             // coordinator is on Sys2
-            Cluster.Get(sys2).Down(Cluster.Get(sys3).SelfAddress);
+            Cluster.Get(_sys2).Down(Cluster.Get(_sys3).SelfAddress);
             _probe3.ExpectMsg("CS-unbind-3");
 
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys2).State.Members.Count.Should().Be(1);
+                    Cluster.Get(_sys2).State.Members.Count.Should().Be(1);
                 });
             });
 
@@ -199,8 +202,8 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys3).IsTerminated.Should().BeTrue();
-                    sys3.WhenTerminated.IsCompleted.Should().BeTrue();
+                    Cluster.Get(_sys3).IsTerminated.Should().BeTrue();
+                    _sys3.WhenTerminated.IsCompleted.Should().BeTrue();
                 });
             });
 
