@@ -406,6 +406,11 @@ namespace Akka.Cluster
         /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
+        /// <summary>
+        /// Access to the current member info for this node.
+        /// </summary>
+        public Member SelfMember => _readView.Self;
+
         private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
         /// <summary>
