@@ -133,15 +133,14 @@ namespace Akka.Cluster
             var unreachable = MembersWithRole(context.Unreachable);
 
             if (remaining.Count < unreachable.Count) return context.Remaining;
-            else if (remaining.Count > unreachable.Count) return context.Unreachable;
-            else
-            {
-                // if the parts are of equal size the part containing the node with the lowest address is kept.
-                var oldest = remaining.Union(unreachable).First();
-                return remaining.Contains(oldest) 
-                    ? context.Unreachable 
-                    : context.Remaining;
-            }
+            if (remaining.Count > unreachable.Count) return context.Unreachable;
+            if (remaining.IsEmpty && unreachable.IsEmpty) return new Member[0];
+
+            // if the parts are of equal size the part containing the node with the lowest address is kept.
+            var oldest = remaining.Union(unreachable).First();
+            return remaining.Contains(oldest)
+                ? context.Unreachable
+                : context.Remaining;
         }
 
         private ImmutableSortedSet<Member> MembersWithRole(ImmutableSortedSet<Member> members) => string.IsNullOrEmpty(Role)
