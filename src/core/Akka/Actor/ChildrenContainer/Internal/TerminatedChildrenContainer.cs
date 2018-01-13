@@ -14,10 +14,8 @@ namespace Akka.Actor.Internal
     /// terminated while stopping; it is necessary to distinguish from the normal
     /// empty state while calling handleChildTerminated() for the last time.
     /// </summary>
-    public class TerminatedChildrenContainer : EmptyChildrenContainer
+    public sealed class TerminatedChildrenContainer : EmptyChildrenContainer
     {
-        private static readonly IChildrenContainer _instance = new TerminatedChildrenContainer();
-
         private TerminatedChildrenContainer()
         {
             //Intentionally left blank
@@ -25,7 +23,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public new static IChildrenContainer Instance { get { return _instance; } }
+        public new static IChildrenContainer Instance { get; } = new TerminatedChildrenContainer();
 
         /// <summary>
         /// TBD
@@ -33,10 +31,7 @@ namespace Akka.Actor.Internal
         /// <param name="name">TBD</param>
         /// <param name="stats">TBD</param>
         /// <returns>TBD</returns>
-        public override IChildrenContainer Add(string name, ChildRestartStats stats)
-        {
-            return this;
-        }
+        public override IChildrenContainer Add(string name, ChildRestartStats stats) => this;
 
         /// <summary>
         /// N/A
@@ -44,29 +39,23 @@ namespace Akka.Actor.Internal
         /// <param name="name">N/A</param>
         /// <returns>N/A</returns>
         /// <exception cref="InvalidOperationException">This exception is automatically thrown since the name belongs to an actor that is already terminated.</exception>
-        public override IChildrenContainer Reserve(string name)
-        {
-            throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
-        }
+        public override IChildrenContainer Reserve(string name) => throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override bool IsTerminating { get { return true; } }
+        public override bool IsTerminating => true;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override bool IsNormal { get { return false; } }
+        public override bool IsNormal => false;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "Terminated";
-        }
+        public override string ToString() => "Terminated";
     }
 }
 

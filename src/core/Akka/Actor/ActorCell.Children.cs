@@ -238,8 +238,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason.IsWaitingForChildren;
             }
         }
 
@@ -378,15 +377,14 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
         {
-            var terminating = ChildrenContainer as TerminatingChildrenContainer;
-            if (terminating != null)
+            if (ChildrenContainer is TerminatingChildrenContainer terminating)
             {
                 var newContainer = UpdateChildrenRefs(c => c.Remove(child));
-                if (newContainer is TerminatingChildrenContainer) return null;
+                if (newContainer is TerminatingChildrenContainer) return default(SuspendReason);
                 return terminating.Reason;
             }
             UpdateChildrenRefs(c => c.Remove(child));
-            return null;
+            return default(SuspendReason);
         }
 
         private static string CheckName(string name)

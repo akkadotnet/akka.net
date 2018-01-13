@@ -17,7 +17,6 @@ namespace Akka.Actor.Internal
     public class EmptyChildrenContainer : IChildrenContainer
     {
         private static readonly ImmutableDictionary<string, IChildStats> _emptyStats = ImmutableDictionary<string, IChildStats>.Empty;
-        private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         /// <summary>
         /// TBD
@@ -30,7 +29,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static IChildrenContainer Instance { get { return _instance; } }
+        public static IChildrenContainer Instance { get; } = new EmptyChildrenContainer();
 
         /// <summary>
         /// TBD
@@ -49,10 +48,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="child">TBD</param>
         /// <returns>TBD</returns>
-        public IChildrenContainer Remove(IActorRef child)
-        {
-            return this;
-        }
+        public IChildrenContainer Remove(IActorRef child) => this;
 
         /// <summary>
         /// TBD
@@ -83,68 +79,55 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
-        public bool Contains(IActorRef actor)
-        {
-            return false;
-        }
+        public bool Contains(IActorRef actor) => false;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IReadOnlyCollection<IInternalActorRef> Children { get { return ImmutableList<IInternalActorRef>.Empty; } }
+        public IReadOnlyCollection<IInternalActorRef> Children => ImmutableList<IInternalActorRef>.Empty;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IReadOnlyCollection<ChildRestartStats> Stats { get { return ImmutableList<ChildRestartStats>.Empty; } }
+        public IReadOnlyCollection<ChildRestartStats> Stats => ImmutableList<ChildRestartStats>.Empty;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
-        public IChildrenContainer ShallDie(IActorRef actor)
-        {
-            return this;
-        }
+        public IChildrenContainer ShallDie(IActorRef actor) => this;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public virtual IChildrenContainer Reserve(string name)
-        {
-            return NormalChildrenContainer.Create(_emptyStats.Add(name, ChildNameReserved.Instance));
-        }
+        public virtual IChildrenContainer Reserve(string name) => 
+            NormalChildrenContainer.Create(_emptyStats.Add(name, ChildNameReserved.Instance));
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public IChildrenContainer Unreserve(string name)
-        {
-            return this;
-        }
+        public IChildrenContainer Unreserve(string name) => this;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "No children";
-        }
+        public override string ToString() => "No children";
 
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsTerminating { get { return false; } }
+        public virtual bool IsTerminating => false;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsNormal { get { return true; } }
+        public virtual bool IsNormal => true;
     }
 }
 

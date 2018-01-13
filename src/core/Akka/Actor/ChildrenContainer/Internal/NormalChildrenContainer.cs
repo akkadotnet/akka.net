@@ -8,7 +8,6 @@
 using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -17,9 +16,9 @@ namespace Akka.Actor.Internal
     /// children are currently terminating (which is the time period between calling
     /// context.stop(child) and processing the ChildTerminated() system message).
     /// </summary>
-    public class NormalChildrenContainer : ChildrenContainerBase
+    public sealed class NormalChildrenContainer : ChildrenContainerBase
     {
-        private NormalChildrenContainer(IImmutableDictionary<string, IChildStats> children)
+        private NormalChildrenContainer(ImmutableDictionary<string, IChildStats> children)
             : base(children)
         {
         }
@@ -29,11 +28,8 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="children">TBD</param>
         /// <returns>TBD</returns>
-        public static IChildrenContainer Create(IImmutableDictionary<string, IChildStats> children)
-        {
-            if (children.Count == 0) return EmptyChildrenContainer.Instance;
-            return new NormalChildrenContainer(children);
-        }
+        public static IChildrenContainer Create(ImmutableDictionary<string, IChildStats> children) => 
+            children.Count == 0 ? EmptyChildrenContainer.Instance : new NormalChildrenContainer(children);
 
         /// <summary>
         /// TBD
@@ -41,30 +37,24 @@ namespace Akka.Actor.Internal
         /// <param name="name">TBD</param>
         /// <param name="stats">TBD</param>
         /// <returns>TBD</returns>
-        public override IChildrenContainer Add(string name, ChildRestartStats stats)
-        {
-            return Create(InternalChildren.SetItem(name, stats));
-        }
+        public override IChildrenContainer Add(string name, ChildRestartStats stats) => 
+            new NormalChildrenContainer(InternalChildren.SetItem(name, stats));
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="child">TBD</param>
         /// <returns>TBD</returns>
-        public override IChildrenContainer Remove(IActorRef child)
-        {
-            return Create(InternalChildren.Remove(child.Path.Name));
-        }
+        public override IChildrenContainer Remove(IActorRef child) => 
+            Create(InternalChildren.Remove(child.Path.Name));
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
-        public override IChildrenContainer ShallDie(IActorRef actor)
-        {
-            return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
-        }
+        public override IChildrenContainer ShallDie(IActorRef actor) => 
+            new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest);
 
         /// <summary>
         /// TBD

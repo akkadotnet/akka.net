@@ -1881,9 +1881,9 @@ namespace Akka.Actor.Internal
     }
     public abstract class ChildrenContainerBase : Akka.Actor.Internal.IChildrenContainer
     {
-        protected ChildrenContainerBase(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
+        protected ChildrenContainerBase(System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
         public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
-        protected System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
+        protected System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
         public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
@@ -1959,39 +1959,31 @@ namespace Akka.Actor.Internal
     {
         public static Akka.Actor.ActorCell Current { get; set; }
     }
-    public class NormalChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
+    public sealed class NormalChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
     {
         public override Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats) { }
-        public static Akka.Actor.Internal.IChildrenContainer Create(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
+        public static Akka.Actor.Internal.IChildrenContainer Create(System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
         public override Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child) { }
         public override Akka.Actor.Internal.IChildrenContainer Reserve(string name) { }
         public override Akka.Actor.Internal.IChildrenContainer ShallDie(Akka.Actor.IActorRef actor) { }
         public override string ToString() { }
         public override Akka.Actor.Internal.IChildrenContainer Unreserve(string name) { }
     }
-    public abstract class SuspendReason
+    public struct SuspendReason
     {
-        protected SuspendReason() { }
-        public class Creation : Akka.Actor.Internal.SuspendReason, Akka.Actor.Internal.SuspendReason.IWaitingForChildren
-        {
-            public Creation() { }
-        }
-        public interface IWaitingForChildren { }
-        public class Recreation : Akka.Actor.Internal.SuspendReason, Akka.Actor.Internal.SuspendReason.IWaitingForChildren
-        {
-            public Recreation(System.Exception cause) { }
-            public System.Exception Cause { get; }
-        }
-        public class Termination : Akka.Actor.Internal.SuspendReason
-        {
-            public static Akka.Actor.Internal.SuspendReason.Termination Instance { get; }
-        }
-        public class UserRequest : Akka.Actor.Internal.SuspendReason
-        {
-            public static Akka.Actor.Internal.SuspendReason.UserRequest Instance { get; }
-        }
+        public static readonly Akka.Actor.Internal.SuspendReason Creation;
+        public static readonly Akka.Actor.Internal.SuspendReason Termination;
+        public static readonly Akka.Actor.Internal.SuspendReason UserRequest;
+        public SuspendReason(System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public bool IsCreation { get; }
+        public bool IsRecreation { get; }
+        public bool IsTermination { get; }
+        public bool IsUserRequest { get; }
+        public bool IsWaitingForChildren { get; }
+        public int Status { get; }
     }
-    public class TerminatedChildrenContainer : Akka.Actor.Internal.EmptyChildrenContainer
+    public sealed class TerminatedChildrenContainer : Akka.Actor.Internal.EmptyChildrenContainer
     {
         public new static Akka.Actor.Internal.IChildrenContainer Instance { get; }
         public override bool IsNormal { get; }
@@ -2000,10 +1992,10 @@ namespace Akka.Actor.Internal
         public override Akka.Actor.Internal.IChildrenContainer Reserve(string name) { }
         public override string ToString() { }
     }
-    public class TerminatingChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
+    public sealed class TerminatingChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
     {
-        public TerminatingChildrenContainer(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, Akka.Actor.IActorRef toDie, Akka.Actor.Internal.SuspendReason reason) { }
-        public TerminatingChildrenContainer(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> toDie, Akka.Actor.Internal.SuspendReason reason) { }
+        public TerminatingChildrenContainer(System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, Akka.Actor.IActorRef toDie, Akka.Actor.Internal.SuspendReason reason) { }
+        public TerminatingChildrenContainer(System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> toDie, Akka.Actor.Internal.SuspendReason reason) { }
         public override bool IsNormal { get; }
         public override bool IsTerminating { get; }
         public Akka.Actor.Internal.SuspendReason Reason { get; }
