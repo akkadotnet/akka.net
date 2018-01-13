@@ -231,7 +231,7 @@ namespace Akka.Streams.Dsl
 
                 public override void OnPush()
                 {
-                    _buffer += Grab(_stage._in);
+                    _buffer += Grab(_stage.Inlet);
                     DoParse();
                 }
 
@@ -239,7 +239,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (_buffer.IsEmpty)
                         CompleteStage();
-                    else if (IsAvailable(_stage._out))
+                    else if (IsAvailable(_stage.Outlet))
                         DoParse();
 
                     // else swallow the termination and wait for pull 
@@ -249,11 +249,11 @@ namespace Akka.Streams.Dsl
 
                 private void TryPull()
                 {
-                    if (IsClosed(_stage._in))
+                    if (IsClosed(_stage.Inlet))
                     {
                         if (_stage._allowTruncation)
                         {
-                            Push(_stage._out, _buffer);
+                            Push(_stage.Outlet, _buffer);
                             CompleteStage();
                         }
                         else
@@ -262,7 +262,7 @@ namespace Akka.Streams.Dsl
                                     "Stream finished but there was a truncated final frame in the buffer"));
                     }
                     else
-                        Pull(_stage._in);
+                        Pull(_stage.Inlet);
                 }
 
                 private void DoParse()
@@ -300,9 +300,9 @@ namespace Akka.Streams.Dsl
                             var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
                             _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
                             _nextPossibleMatch = 0;
-                            Push(_stage._out, parsedFrame);
+                            Push(_stage.Outlet, parsedFrame);
 
-                            if (IsClosed(_stage._in) && _buffer.IsEmpty)
+                            if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
                                 CompleteStage();
                         }
                         else
@@ -328,15 +328,7 @@ namespace Akka.Streams.Dsl
                 _separatorBytes = separatorBytes;
                 _maximumLineBytes = maximumLineBytes;
                 _allowTruncation = allowTruncation;
-
-                Shape = new FlowShape<ByteString, ByteString>(_in, _out);
             }
-            
-            private readonly Inlet<ByteString> _in = new Inlet<ByteString>("DelimiterFraming.in");
-
-            private readonly Outlet<ByteString> _out = new Outlet<ByteString>("DelimiterFraming.in");
-
-            public override FlowShape<ByteString, ByteString> Shape { get; }
 
             protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelimiterFraming;
 
