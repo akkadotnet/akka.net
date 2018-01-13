@@ -79,11 +79,11 @@ namespace Akka.Streams.Tests.Performance
             {
                 _toString = toString;
 
-                // ReSharper disable once PossibleNullReferenceException
-                typeof(OutPort).GetField("Id", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Out, 0);
-
                 var outlet = new Outlet<T>("out");
                 Out = outlet;
+
+                // ReSharper disable once PossibleNullReferenceException
+                typeof(OutPort).GetField("Id", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(outlet, 0);
 
                 SetHandler(outlet, onPull: () =>
                 {
