@@ -1257,7 +1257,7 @@ namespace Akka.Cluster.Sharding
 
         public ILoggingAdapter Log { get; }
         public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
-        public ImmutableHashSet<string> RebalanceInProgress { get; set; } = ImmutableHashSet<string>.Empty;
+        public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
         // regions that have requested handoff, for graceful shutdown
         public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
