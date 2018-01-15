@@ -5,6 +5,10 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
 namespace Akka.Streams
 {
+    public sealed class AbruptStageTerminationException : System.Exception
+    {
+        public AbruptStageTerminationException(Akka.Streams.Stage.GraphStageLogic logic) { }
+    }
     public class AbruptTerminationException : System.Exception
     {
         public readonly Akka.Actor.IActorRef Actor;
@@ -1440,6 +1444,13 @@ namespace Akka.Streams.Dsl
     {
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
     }
+    public class static Retry
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Concat<TIn, TState, TOut, TMat>(long limit, Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Collections.Generic.IEnumerable<System.Tuple<TIn, TState>>> retryWith) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Tuple<TIn, TState>> retryWith) { }
+    }
     public class static ReverseOps
     {
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ReverseOps<TIn, TMat> ops, Akka.Streams.Outlet<TOut> outlet)
@@ -2357,6 +2368,15 @@ namespace Akka.Streams.Implementation
     {
         public static readonly Reactive.Streams.IPublisher<T> Instance;
         public void Subscribe(Reactive.Streams.ISubscriber<T> subscriber) { }
+        public override string ToString() { }
+    }
+    public sealed class EmptySource<TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TOut>>
+    {
+        public EmptySource() { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.SourceShape<TOut> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
     public abstract class EnumerableActorName
@@ -3633,12 +3653,13 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class OnCompleted<TIn, TOut> : Akka.Streams.Stage.PushStage<TIn, TOut>
+    public sealed class OnCompleted<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, Akka.NotUsed>>
     {
         public OnCompleted(System.Action success, System.Action<System.Exception> failure) { }
-        public override Akka.Streams.Stage.ISyncDirective OnPush(TIn element, Akka.Streams.Stage.IContext<TOut> context) { }
-        public override Akka.Streams.Stage.ITerminationDirective OnUpstreamFailure(System.Exception cause, Akka.Streams.Stage.IContext<TOut> context) { }
-        public override Akka.Streams.Stage.ITerminationDirective OnUpstreamFinish(Akka.Streams.Stage.IContext<TOut> context) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<Akka.NotUsed> Out { get; }
+        public override Akka.Streams.FlowShape<T, Akka.NotUsed> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Recover<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
@@ -4137,6 +4158,7 @@ namespace Akka.Streams.Stage
         protected internal void SetHandler(Akka.Streams.Inlet inlet, System.Action onPush, System.Action onUpstreamFinish = null, System.Action<System.Exception> onUpstreamFailure = null) { }
         protected internal void SetHandler(Akka.Streams.Outlet outlet, Akka.Streams.Stage.IOutHandler handler) { }
         protected internal void SetHandler(Akka.Streams.Outlet outlet, System.Action onPull, System.Action onDownstreamFinish = null) { }
+        protected internal void SetHandler(Akka.Streams.Inlet inlet, Akka.Streams.Outlet outlet, Akka.Streams.Stage.InAndOutGraphStageLogic handler) { }
         protected void SetKeepGoing(bool enabled) { }
         protected internal void TryPull(Akka.Streams.Inlet inlet) { }
         protected internal void TryPull<T>(Akka.Streams.Inlet<T> inlet) { }

@@ -198,8 +198,7 @@ namespace Akka.Streams.Dsl
                 _shuttingDown = true;
 
                 // Anybody that missed the announcement needs to be notified.
-                IEvent e;
-                while (_queue.TryDequeue(out e))
+                while (_queue.TryDequeue(out var e))
                 {
                     var register = e as Register;
                     register?.DemandCallback(MergeHub.Cancel);
@@ -211,16 +210,14 @@ namespace Akka.Streams.Dsl
 
             private bool OnEvent(IEvent e)
             {
-                var element = e as Element;
-                if (element != null)
+                if (e is Element element)
                 {
                     _demands[element.Id].OnElement();
                     Push(_stage.Out, element.Value);
                     return false;
                 }
 
-                var register = e as Register;
-                if (register != null)
+                if (e is Register register)
                 {
                     _demands.Add(register.Id, new InputState(register.DemandCallback, _stage.DemandThreshold));
                     return true;
@@ -243,8 +240,7 @@ namespace Akka.Streams.Dsl
                     // Unregister is only used to keep the map growing too large, but otherwise it is not critical to process it
                     // timely. In fact, the only way the map could keep growing would mean that we dequeue Registers from the
                     // queue, but then we will eventually reach the Deregister message, too.
-                    IEvent nextElement;
-                    if (_queue.TryDequeue(out nextElement))
+                    if (_queue.TryDequeue(out var nextElement))
                     {
                         _needWakeup = false;
                         if (OnEvent(nextElement))
@@ -761,8 +757,7 @@ namespace Akka.Streams.Dsl
                     return;
                 }
 
-                var unregister = hubEvent as UnRegister;
-                if (unregister != null)
+                if (hubEvent is UnRegister unregister)
                 {
                     _activeConsumer--;
                     FindAndRemoveConsumer(unregister.Id, unregister.PreviousOffset);
@@ -791,8 +786,7 @@ namespace Akka.Streams.Dsl
                     return;
                 }
 
-                var advance = hubEvent as Advanced;
-                if (advance != null)
+                if (hubEvent is Advanced advance)
                 {
                     var newOffset = advance.PreviousOffset + _stage.DemandThreshold;
                     // Move the consumer from its last known offset to its new one. Check if we are unblocked.
@@ -1016,8 +1010,7 @@ namespace Akka.Streams.Dsl
                     while (true)
                     {
                         var state = _stage._hubLogic.State.Value;
-                        var closed = state as Closed;
-                        if (closed != null)
+                        if (state is Closed closed)
                         {
                             if(closed.Failure != null)
                                 FailStage(closed.Failure);
@@ -1027,8 +1020,7 @@ namespace Akka.Streams.Dsl
                             break;
                         }
 
-                        var open = state as Open;
-                        if (open != null)
+                        if (state is Open open)
                         {
                             var newRegistrations = open.Registrations.Insert(0, new Consumer(_id, callback));
                             if (_stage._hubLogic.State.CompareAndSet(state, new Open(open.CallbackTask, newRegistrations)))
@@ -1080,8 +1072,7 @@ namespace Akka.Streams.Dsl
                 
                 private void OnCommand(IConsumerEvent e)
                 {
-                    var completed = e as HubCompleted;
-                    if (completed != null)
+                    if (e is HubCompleted completed)
                     {
                         if(completed.Failure != null)
                             FailStage(completed.Failure);

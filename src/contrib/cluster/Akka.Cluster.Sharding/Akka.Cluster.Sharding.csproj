@@ -15,6 +15,7 @@
     <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+    <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">

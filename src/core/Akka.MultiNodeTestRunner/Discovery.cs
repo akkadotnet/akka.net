@@ -92,15 +92,15 @@ namespace Akka.MultiNodeTestRunner
             var args = ConfigConstructorParamValues(configType);
             var configInstance = Activator.CreateInstance(configType, args);
             var roleType = typeof(RoleName);
-            var configProps = configType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-            var roleProps = configProps.Where(p => p.PropertyType == roleType).Select(p => (RoleName)p.GetValue(configInstance));
-            var configFields = configType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-            var roleFields = configFields.Where(f => f.FieldType == roleType).Select(f => (RoleName)f.GetValue(configInstance));
+            var configProps = configType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var roleProps = configProps.Where(p => p.PropertyType == roleType && p.Name != "Myself").Select(p => (RoleName)p.GetValue(configInstance));
+            var configFields = configType.GetFields(BindingFlags.Instance | BindingFlags.Public);
+            var roleFields = configFields.Where(f => f.FieldType == roleType && f.Name != "Myself").Select(f => (RoleName)f.GetValue(configInstance));
             var roles = roleProps.Concat(roleFields).Distinct();
             return roles;
         }
 
-        private ConstructorInfo FindConfigConstructor(Type configUser)
+        internal static ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
             var current = configUser;
@@ -108,13 +108,13 @@ namespace Akka.MultiNodeTestRunner
             {
 
 #if CORECLR
-                var ctorWithConfig = configUser
+                var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
             
                 current = current.GetTypeInfo().BaseType;
 #else
-                var ctorWithConfig = configUser
+                var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
 

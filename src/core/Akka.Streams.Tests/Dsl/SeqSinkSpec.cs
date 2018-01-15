@@ -5,8 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -40,6 +42,18 @@ namespace Akka.Streams.Tests.Dsl
             var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
             future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
+        }
+
+
+        [Fact]
+        public void Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = this.CreatePublisherProbe<int>();
+            var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
+            materializer.Shutdown();
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

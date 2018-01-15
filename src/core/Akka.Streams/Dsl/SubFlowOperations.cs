@@ -398,7 +398,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
-        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
+        /// <seealso cref="Limit{T,TMat,TClosed}"/> <seealso cref="LimitWeighted{T,TMat,TClosed}"/>
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
@@ -613,7 +613,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Similar to <see cref="Scan{TOut1,TOut2,TMat}"/> but with a asynchronous function,
+        /// Similar to <see cref="Scan{TOut1,TOut2,TMat,TClosed}"/> but with a asynchronous function,
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>
         /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.

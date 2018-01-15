@@ -5,10 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 {
@@ -26,6 +29,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         {
             var discoveredSpecs = DiscoverSpecs();
             Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role, "DeeplyInheritedChildRole");
+        }
+
+        [Fact(DisplayName = "Child test class with default constructors are ok")]
+        public void Child_class_with_default_constructor_are_ok()
+        {
+            Action testDelegate = () =>
+            {
+                var testCase = typeof(DiscoveryCases.DefaultConstructorOnDerivedClassSpec);
+                var constuctor = Discovery.FindConfigConstructor(testCase);
+                constuctor.Should().NotBeNull();
+            };
+
+            testDelegate.ShouldNotThrow();
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]

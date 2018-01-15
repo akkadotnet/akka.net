@@ -6,10 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 
@@ -245,7 +242,7 @@ namespace Akka.Streams.Dsl
         private class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>>
         {
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
-            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> activeOutIn = null;
+            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
 
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
                 : base(name, stage.Shape, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
@@ -263,7 +260,7 @@ namespace Akka.Streams.Dsl
                 {
                     sinkIn.Pull();
                 }
-                activeOutIn = Tuple.Create(sourceOut, sinkIn);
+                _activeOutIn = Tuple.Create(sourceOut, sinkIn);
             }
 
             protected override void Backoff()
@@ -279,10 +276,10 @@ namespace Akka.Streams.Dsl
 
                 // We need to ensure that the other end of the sub flow is also completed, so that we don't
                 // receive any callbacks from it.
-                if (activeOutIn != null)
+                if (_activeOutIn != null)
                 {
-                    var sourceOut = activeOutIn.Item1;
-                    var sinkIn = activeOutIn.Item2;
+                    var sourceOut = _activeOutIn.Item1;
+                    var sinkIn = _activeOutIn.Item2;
                     if (!sourceOut.IsClosed)
                     {
                         sourceOut.Complete();
@@ -291,7 +288,7 @@ namespace Akka.Streams.Dsl
                     {
                         sinkIn.Cancel();
                     }
-                    activeOutIn = null;
+                    _activeOutIn = null;
                 }
             }
         }
@@ -311,11 +308,11 @@ namespace Akka.Streams.Dsl
         protected Inlet In { get; }
         protected Outlet Out { get; }
 
-        private int _restartCount = 0;
+        private int _restartCount;
         private Deadline _resetDeadline;
         // This is effectively only used for flows, if either the main inlet or outlet of this stage finishes, then we
         // don't want to restart the sub inlet when it finishes, we just finish normally.
-        private bool _finishing = false;
+        private bool _finishing;
 
         protected RestartWithBackoffLogic(
             string name,

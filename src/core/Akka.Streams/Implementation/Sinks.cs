@@ -585,6 +585,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly TaskCompletionSource<T> _promise;
             private readonly FirstOrDefaultStage<T> _stage;
+            private bool _completionSignalled;
 
             public Logic(TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(stage.Shape)
             {
@@ -596,22 +597,30 @@ namespace Akka.Streams.Implementation
             public override void OnPush()
             {
                 _promise.TrySetResult(Grab(_stage.In));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(default(T));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
             }
 
-
+            public override void PostStop()
+            {
+                if(!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
+            }
+            
             public override void PreStart() => Pull(_stage.In);
         }
 
@@ -662,6 +671,7 @@ namespace Akka.Streams.Implementation
             private readonly SeqStage<T> _stage;
             private readonly TaskCompletionSource<IImmutableList<T>> _promise;
             private IImmutableList<T> _buf = ImmutableList<T>.Empty;
+            private bool _completionSignalled;
 
             public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
@@ -680,13 +690,21 @@ namespace Akka.Streams.Implementation
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(_buf);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
             }
 
             public override void PreStart() => Pull(_stage.In);

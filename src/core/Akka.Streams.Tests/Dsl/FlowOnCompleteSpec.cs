@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
-                    .To(Sink.OnComplete<int>(() => {}, ex => onCompleteProbe.Ref.Tell(ex)))
+                    .To(Sink.OnComplete<int>(() => { }, ex => onCompleteProbe.Ref.Tell(ex)))
                     .Run(Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
-                    .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => {}))
+                    .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => { }))
                     .Run(Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).RunWith(foreachSink, Materializer);
                 future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
-                
+
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
                 proc.SendNext(42);
@@ -105,5 +105,23 @@ namespace Akka.Streams.Tests.Dsl
                 onCompleteProbe.ExpectMsg("done");
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Flow_with_OnComplete_must_yield_error_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var onCompleteProbe = CreateTestProbe();
+            var publisher = this.CreateManualPublisherProbe<int>();
+
+            Source.FromPublisher(publisher).To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"),
+                    ex => onCompleteProbe.Ref.Tell(ex)))
+                .Run(materializer);
+            var proc = publisher.ExpectSubscription();
+            proc.ExpectRequest();
+            materializer.Shutdown();
+
+            onCompleteProbe.ExpectMsg<AbruptTerminationException>();
+        }
     }
 }
+
