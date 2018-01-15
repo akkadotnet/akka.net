@@ -1444,6 +1444,13 @@ namespace Akka.Streams.Dsl
     {
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
     }
+    public class static Retry
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Concat<TIn, TState, TOut, TMat>(long limit, Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Collections.Generic.IEnumerable<System.Tuple<TIn, TState>>> retryWith) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> Create<TIn, TState, TOut, TMat>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TIn, TState>, System.Tuple<Akka.Util.Result<TOut>, TState>>, TMat> flow, System.Func<TState, System.Tuple<TIn, TState>> retryWith) { }
+    }
     public class static ReverseOps
     {
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ReverseOps<TIn, TMat> ops, Akka.Streams.Outlet<TOut> outlet)
