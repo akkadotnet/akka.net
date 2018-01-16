@@ -63,11 +63,7 @@ namespace Akka.Streams
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="name"/> is undefined.
         /// </exception>
-        protected Inlet(string name)
-        {
-            if (name == null) throw new ArgumentException("Inlet name must be defined");
-            Name = name;
-        }
+        protected Inlet(string name) => Name = name ?? throw new ArgumentException("Inlet name must be defined");
 
         /// <summary>
         /// TBD
@@ -129,10 +125,7 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
-        protected Outlet(string name)
-        {
-            Name = name;
-        }
+        protected Outlet(string name) => Name = name;
 
         /// <summary>
         /// TBD
@@ -351,10 +344,7 @@ namespace Akka.Streams
         /// <exception cref="ArgumentNullException">TBD</exception>
         public SourceShape(Outlet<TOut> outlet)
         {
-            if (outlet == null)
-                throw new ArgumentNullException(nameof(outlet));
-
-            Outlet = outlet;
+            Outlet = outlet ?? throw new ArgumentNullException(nameof(outlet));
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
 
@@ -407,7 +397,7 @@ namespace Akka.Streams
             if (ReferenceEquals(this, obj))
                 return true;
 
-            return obj is SourceShape<TOut> && Equals((SourceShape<TOut>) obj);
+            return obj is SourceShape<TOut> shape && Equals(shape);
         }
 
         /// <inheritdoc/>
@@ -450,13 +440,8 @@ namespace Akka.Streams
         /// </exception>
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
-            if (inlet == null)
-                throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
-            if (outlet == null)
-                throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
-
-            Inlet = inlet;
-            Outlet = outlet;
+            Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
+            Outlet = outlet ?? throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
             Inlets = ImmutableArray.Create<Inlet>(inlet);
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
@@ -533,8 +518,7 @@ namespace Akka.Streams
         /// </exception>
         public SinkShape(Inlet<TIn> inlet)
         {
-            if (inlet == null) throw new ArgumentNullException(nameof(inlet), "SinkShape expected non-null inlet");
-            Inlet = inlet;
+            Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "SinkShape expected non-null inlet");
             Inlets = ImmutableArray.Create<Inlet>(inlet);
         }
 
@@ -582,7 +566,7 @@ namespace Akka.Streams
             if (ReferenceEquals(this, obj))
                 return true;
 
-            return obj is SinkShape<TIn> && Equals((SinkShape<TIn>) obj);
+            return obj is SinkShape<TIn> shape && Equals(shape);
         }
 
         private bool Equals(SinkShape<TIn> other) => Equals(Inlet, other.Inlet);
@@ -630,19 +614,10 @@ namespace Akka.Streams
         /// </exception>
         public BidiShape(Inlet<TIn1> in1, Outlet<TOut1> out1, Inlet<TIn2> in2, Outlet<TOut2> out2)
         {
-            if (in1 == null)
-                throw new ArgumentNullException(nameof(in1));
-            if (out1 == null)
-                throw new ArgumentNullException(nameof(out1));
-            if (in2 == null)
-                throw new ArgumentNullException(nameof(in2));
-            if (out2 == null)
-                throw new ArgumentNullException(nameof(out2));
-
-            Inlet1 = in1;
-            Inlet2 = in2;
-            Outlet1 = out1;
-            Outlet2 = out2;
+            Inlet1 = in1 ?? throw new ArgumentNullException(nameof(in1));
+            Inlet2 = in2 ?? throw new ArgumentNullException(nameof(in2));
+            Outlet1 = out1 ?? throw new ArgumentNullException(nameof(out1));
+            Outlet2 = out2 ?? throw new ArgumentNullException(nameof(out2));
 
             Inlets = ImmutableArray.Create<Inlet>(Inlet1, Inlet2);
             Outlets = ImmutableArray.Create<Outlet>(Outlet1, Outlet2);

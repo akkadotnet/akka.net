@@ -8,8 +8,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using Akka.Actor;
-using Akka.Event;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Tests.Implementation.Fusing;
@@ -71,7 +69,7 @@ namespace Akka.Streams.Tests.Performance
                 setup.Interpreter.Execute(int.MaxValue);
             });
         }
-        
+
         private sealed class GraphDataSource<T> : GraphInterpreter.UpstreamBoundaryStageLogic
         {
             private int _index;
@@ -81,14 +79,17 @@ namespace Akka.Streams.Tests.Performance
             {
                 _toString = toString;
 
-                // ReSharper disable once PossibleNullReferenceException
-                typeof(OutPort).GetField("Id", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Out, 0);
+                var outlet = new Outlet<T>("out");
+                Out = outlet;
 
-                SetHandler(Out, onPull: () =>
+                // ReSharper disable once PossibleNullReferenceException
+                typeof(OutPort).GetField("Id", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(outlet, 0);
+
+                SetHandler(outlet, onPull: () =>
                 {
-                     if (_index < data.Length)
+                    if (_index < data.Length)
                     {
-                        Push(Out, data[_index]);
+                        Push(outlet, data[_index]);
                         _index++;
                     }
                     else
@@ -96,8 +97,8 @@ namespace Akka.Streams.Tests.Performance
                 }, onDownstreamFinish: CompleteStage);
                 Console.WriteLine("Handler Set");
             }
-            
-            public override Outlet Out { get; } = new Outlet<T>("out");
+
+            public override Outlet Out { get; }
 
             public override string ToString() => _toString;
         }
@@ -114,10 +115,10 @@ namespace Akka.Streams.Tests.Performance
                 typeof(InPort).GetField("Id", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(_inlet, 0);
                 In = _inlet;
 
-                SetHandler(In, onPush: () =>
+                SetHandler(_inlet, onPush: () =>
                 {
                     expected--;
-                    if(expected > 0)
+                    if (expected > 0)
                         Pull(_inlet);
                     // Otherwise do nothing, it will exit the interpreter
                 });
@@ -128,23 +129,6 @@ namespace Akka.Streams.Tests.Performance
             public void RequestOne() => Pull(_inlet);
 
             public override string ToString() => _toString;
-        }
-
-        private sealed class NoobBus : LoggingBus
-        {
-            public static readonly NoobBus Instance = new NoobBus();
-
-            private NoobBus() { }
-
-            public override bool Subscribe(IActorRef subscriber, Type classifier) => true;
-
-            public override void Publish(object @event)
-            {
-            }
-
-            public override bool Unsubscribe(IActorRef subscriber) => true;
-
-            public override bool Unsubscribe(IActorRef subscriber, Type classifier) => true;
         }
     }
 }

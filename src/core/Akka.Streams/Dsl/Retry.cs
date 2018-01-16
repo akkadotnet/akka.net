@@ -152,7 +152,7 @@ namespace Akka.Streams.Dsl
                                 Pull(retry.In2);
                                 if (IsAvailable(retry.Out2))
                                 {
-                                    Push(retry.Out2, r.Item2);
+                                    Push(retry.Out2, r);
                                     _elementInCycle = true;
                                 }
                                 else
