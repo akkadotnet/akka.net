@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding
         IActorRef IShardCoordinator.Sender => Sender;
         public ILoggingAdapter Log { get; }
         public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
-        public ImmutableHashSet<string> RebalanceInProgress { get; set; } = ImmutableHashSet<string>.Empty;
+        public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
         public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> RegionTerminationInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
@@ -189,10 +189,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private Receive WaitingForUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback,
-            ImmutableHashSet<IKey<IReplicatedData>> remainingKeys)
-            where TEvent : PersistentShardCoordinator.IDomainEvent
-            => message =>
+        private Receive WaitingForUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback, ImmutableHashSet<IKey<IReplicatedData>> remainingKeys) where TEvent : PersistentShardCoordinator.IDomainEvent => message =>
             {
                 switch (message)
                 {
@@ -227,6 +224,11 @@ namespace Akka.Cluster.Sharding
                     case ModifyFailure failure:
                         Log.Error("The ShardCoordinator was unable to update a distributed state {0} with error {1} and event {2}.Coordinator will be restarted", failure.Key, failure.Cause, e);
                         ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                        return true;
+
+                    case PersistentShardCoordinator.GetShardHome getShardHome:
+                        if (!this.HandleGetShardHome(getShardHome)) 
+                            Stash.Stash();
                         return true;
 
                     default:
