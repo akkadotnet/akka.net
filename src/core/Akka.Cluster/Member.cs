@@ -400,7 +400,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Defines the current status of a cluster member node
     /// 
-    /// Can be one of: Joining, Up, Leaving, Exiting and Down.
+    /// Can be one of: Joining, Up, WeaklyUp, Leaving, Exiting and Down.
     /// </summary>
     public enum MemberStatus
     {

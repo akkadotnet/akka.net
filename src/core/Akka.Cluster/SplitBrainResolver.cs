@@ -171,6 +171,11 @@ namespace Akka.Cluster
             var remaining = MembersWithRole(context.Remaining);
             var unreachable = MembersWithRole(context.Unreachable);
 
+            if (remaining.IsEmpty && unreachable.IsEmpty) // prevent exception due to both lists being empty
+            {
+                return new Member[0];
+            }
+
             var oldest = remaining.Union(unreachable).ToImmutableSortedSet(Member.AgeOrdering).First();
             if (remaining.Contains(oldest))
             {
@@ -178,11 +183,11 @@ namespace Akka.Cluster
                     ? context.Remaining 
                     : context.Unreachable;
             }
-            else if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
+            if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
             {
                 return context.Unreachable;
             }
-            else return context.Remaining;
+            return context.Remaining;
         }
 
         private ImmutableSortedSet<Member> MembersWithRole(ImmutableSortedSet<Member> members) => string.IsNullOrEmpty(Role)
