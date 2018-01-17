@@ -2160,7 +2160,7 @@ namespace Akka.Cluster
             if (!changedMembers.IsEmpty)
             {
                 // replace changed members
-                var newMembers = changedMembers.Union(localMembers);
+                var newMembers = Member.PickNextTransition(localMembers, changedMembers);
                 var newGossip = localGossip.Copy(members: newMembers);
                 UpdateLatestGossip(newGossip);
 
