@@ -49,84 +49,37 @@ namespace Akka.Cluster.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            var heartbeat = obj as ClusterHeartbeatSender.Heartbeat;
-            if (heartbeat != null)
+            switch (obj)
             {
-                return AddressToProto(heartbeat.From).ToByteArray();
+                case ClusterHeartbeatSender.Heartbeat heartbeat:
+                    return AddressToProto(heartbeat.From).ToByteArray();
+                case ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp:
+                    return UniqueAddressToProto(heartbeatRsp.From).ToByteArray();
+                case GossipEnvelope gossipEnvelope:
+                    return GossipEnvelopeToProto(gossipEnvelope);
+                case GossipStatus gossipStatus:
+                    return GossipStatusToProto(gossipStatus);
+                case InternalClusterAction.Join @join:
+                    return JoinToByteArray(@join);
+                case InternalClusterAction.Welcome welcome:
+                    return WelcomeMessageBuilder(welcome);
+                case ClusterUserAction.Leave leave:
+                    return AddressToProto(leave.Address).ToByteArray();
+                case ClusterUserAction.Down down:
+                    return AddressToProto(down.Address).ToByteArray();
+                case InternalClusterAction.InitJoin _:
+                    return new Google.Protobuf.WellKnownTypes.Empty().ToByteArray();
+                case InternalClusterAction.InitJoinAck initJoinAck:
+                    return AddressToProto(initJoinAck.Address).ToByteArray();
+                case InternalClusterAction.InitJoinNack initJoinNack:
+                    return AddressToProto(initJoinNack.Address).ToByteArray();
+                case InternalClusterAction.ExitingConfirmed exitingConfirmed:
+                    return UniqueAddressToProto(exitingConfirmed.Address).ToByteArray();
+                case ClusterRouterPool pool:
+                    return ClusterRouterPoolToByteArray(pool);
+                default:
+                    throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterMessageSerializer)}]");
             }
-
-            var heartbeatRsp = obj as ClusterHeartbeatSender.HeartbeatRsp;
-            if (heartbeatRsp != null)
-            {
-                return UniqueAddressToProto(heartbeatRsp.From).ToByteArray();
-            }
-
-            var gossipEnvelope = obj as GossipEnvelope;
-            if (gossipEnvelope != null)
-            {
-                return GossipEnvelopeToProto(gossipEnvelope);
-            }
-
-            var gossipStatus = obj as GossipStatus;
-            if (gossipStatus != null)
-            {
-                return GossipStatusToProto(gossipStatus);
-            }
-
-            var join = obj as InternalClusterAction.Join;
-            if (join != null)
-            {
-                return JoinToByteArray(join);
-            }
-
-            var welcome = obj as InternalClusterAction.Welcome;
-            if (welcome != null)
-            {
-                return WelcomeMessageBuilder(welcome);
-            }
-
-            var leave = obj as ClusterUserAction.Leave;
-            if (leave != null)
-            {
-                return AddressToProto(leave.Address).ToByteArray();
-            }
-
-            var down = obj as ClusterUserAction.Down;
-            if (down != null)
-            {
-                return AddressToProto(down.Address).ToByteArray();
-            }
-
-            if (obj is InternalClusterAction.InitJoin)
-            {
-                return new Google.Protobuf.WellKnownTypes.Empty().ToByteArray();
-            }
-
-            var initJoinAck = obj as InternalClusterAction.InitJoinAck;
-            if (initJoinAck != null)
-            {
-                return AddressToProto(initJoinAck.Address).ToByteArray();
-            }
-
-            var initJoinNack = obj as InternalClusterAction.InitJoinNack;
-            if (initJoinNack != null)
-            {
-                return AddressToProto(initJoinNack.Address).ToByteArray();
-            }
-
-            var exitingConfirmed = obj as InternalClusterAction.ExitingConfirmed;
-            if (exitingConfirmed != null)
-            {
-                return UniqueAddressToProto(exitingConfirmed.Address).ToByteArray();
-            }
-
-            var pool = obj as ClusterRouterPool;
-            if (pool != null)
-            {
-                return ClusterRouterPoolToByteArray(pool);
-            }
-
-            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterMessageSerializer)}]");
         }
 
         public override object FromBinary(byte[] bytes, Type type)
@@ -276,21 +229,21 @@ namespace Akka.Cluster.Serialization
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
             var hashMapping = allHashes.ZipWithIndex();
 
-            Func<UniqueAddress, int> mapUniqueAddress = address => MapWithErrorMessage(addressMapping, address, "address");
+            int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
 
-            Func<Member, Proto.Msg.Member> memberToProto = m =>
+            Proto.Msg.Member MemberToProto(Member m)
             {
                 var protoMember = new Proto.Msg.Member();
-                protoMember.AddressIndex = mapUniqueAddress(m.UniqueAddress);
+                protoMember.AddressIndex = MapUniqueAddress(m.UniqueAddress);
                 protoMember.UpNumber = m.UpNumber;
                 protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
                 protoMember.RolesIndexes.AddRange(m.Roles.Select(s => MapWithErrorMessage(roleMapping, s, "role")));
                 return protoMember;
-            };
+            }
 
             var reachabilityProto = ReachabilityToProto(gossip.Overview.Reachability, addressMapping);
-            var membersProtos = gossip.Members.Select(memberToProto);
-            var seenProtos = gossip.Overview.Seen.Select(mapUniqueAddress);
+            var membersProtos = gossip.Members.Select((Func<Member, Proto.Msg.Member>)MemberToProto);
+            var seenProtos = gossip.Overview.Seen.Select((Func<UniqueAddress, int>)MapUniqueAddress);
 
             var overview = new Proto.Msg.GossipOverview();
             overview.Seen.AddRange(seenProtos);
@@ -312,16 +265,14 @@ namespace Akka.Cluster.Serialization
             var roleMapping = gossip.AllRoles.ToList();
             var hashMapping = gossip.AllHashes.ToList();
 
-            Func<Proto.Msg.Member, Member> memberFromProto = member =>
-            {
-                return Member.Create(
-                    addressMapping[member.AddressIndex],
-                    member.UpNumber,
-                    (MemberStatus) member.Status,
+            Member MemberFromProto(Proto.Msg.Member member) => 
+                Member.Create(
+                    addressMapping[member.AddressIndex], 
+                    member.UpNumber, 
+                    (MemberStatus)member.Status, 
                     member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet());
-            };
 
-            var members = gossip.Members.Select(memberFromProto).ToImmutableSortedSet(Member.Ordering);
+            var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
             var reachability = ReachabilityFromProto(gossip.Overview.ObserverReachability, addressMapping);
             var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
             var overview = new GossipOverview(seen, reachability);

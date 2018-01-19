@@ -37,7 +37,7 @@ namespace Akka.Streams.Dsl
             private readonly Func<Task> _unbindAction;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ServerBinding"/> class.
             /// </summary>
             /// <param name="localAddress">TBD</param>
             /// <param name="unbindAction">TBD</param>
@@ -65,7 +65,7 @@ namespace Akka.Streams.Dsl
         public struct IncomingConnection
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
             /// </summary>
             /// <param name="localAddress">TBD</param>
             /// <param name="remoteAddress">TBD</param>
@@ -112,7 +112,7 @@ namespace Akka.Streams.Dsl
         public struct OutgoingConnection
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.
             /// </summary>
             /// <param name="remoteAddress">TBD</param>
             /// <param name="localAddress">TBD</param>
@@ -142,7 +142,7 @@ namespace Akka.Streams.Dsl
         private readonly ExtendedActorSystem _system;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TcpExt"/> class.
         /// </summary>
         /// <param name="system">TBD</param>
         [InternalApi]
@@ -225,6 +225,11 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
+        /// <para>
+        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// to achieve application level chunks you have to introduce explicit framing in your streams,
+        /// for example using the <see cref="Framing"/> stages.
+        /// </para>
         /// </summary>
         /// <param name="remoteAddress"> The remote address to connect to</param>
         /// <param name="localAddress">Optional local address for the connection</param>
@@ -257,6 +262,11 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Creates an <see cref="Tcp.OutgoingConnection"/> without specifying options.
         /// It represents a prospective TCP client connection to the given endpoint.
+        /// <para>
+        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// to achieve application level chunks you have to introduce explicit framing in your streams,
+        /// for example using the <see cref="Framing"/> stages.
+        /// </para>
         /// </summary>
         /// <param name="host">TBD</param>
         /// <param name="port">TBD</param>

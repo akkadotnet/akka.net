@@ -41,8 +41,7 @@ namespace Akka.Streams.Implementation.Fusing
         public static Streams.Fusing.FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
-            var fusedGraph = graph as Streams.Fusing.FusedGraph<TShape, TMat>;
-            if (fusedGraph != null)
+            if (graph is Streams.Fusing.FusedGraph<TShape, TMat> fusedGraph)
                 return fusedGraph;
 
             var structInfo = new BuildStructuralInfo();
@@ -433,14 +432,13 @@ namespace Akka.Streams.Implementation.Fusing
             else
             {
                 var allAttributes = inheritedAttributes.And(module.Attributes);
-                if (module is CopiedModule)
+                if (module is CopiedModule copied)
                 {
-                    var copied = (CopiedModule) module;
                     var result = Descend<T>(copied.CopyOf, allAttributes, structInfo, localGroup, indent + 1);
                     if (result.Count == 0)
                         throw new IllegalStateException("Descend returned empty result from CopiedModule");
 
-                    result.AddFirst(new KeyValuePair<IModule, IMaterializedValueNode>(module, result.First.Value.Value));
+                    result.AddFirst(new KeyValuePair<IModule, IMaterializedValueNode>(copied, result.First.Value.Value));
 
                     structInfo.Rewire(copied.CopyOf.Shape, copied.Shape, indent);
                     return result;
@@ -489,8 +487,7 @@ namespace Akka.Streams.Implementation.Fusing
                         var ms = (IMaterializedValueSource) ((GraphStageModule) c.CopyOf).Stage;
 
                         IMaterializedValueNode mapped;
-                        var atomic = ms.Computation as Atomic;
-                        if (atomic != null)
+                        if (ms.Computation is Atomic atomic)
                             mapped = subMat[atomic.Module];
                         else if (ms.Computation == StreamLayout.Ignore.Instance)
                             mapped = ms.Computation;
@@ -520,25 +517,22 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private static IMaterializedValueNode RewriteMaterializer(IDictionary<IModule, IMaterializedValueNode> subMat, IMaterializedValueNode mat, Dictionary<IMaterializedValueNode, IMaterializedValueNode> mapping)
         {
-            if (mat is Atomic)
+            if (mat is Atomic atomic)
             {
-                var atomic = (Atomic) mat;
                 var result = subMat[atomic.Module];
-                mapping.Put(mat, result);
+                mapping.Put(atomic, result);
                 return result;
             }
-            if (mat is Combine)
+            if (mat is Combine combine)
             {
-                var combine = (Combine) mat;
                 var result = new Combine(combine.Combinator, RewriteMaterializer(subMat, combine.Left, mapping), RewriteMaterializer(subMat, combine.Right, mapping));
-                mapping.Put(mat, result);
+                mapping.Put(combine, result);
                 return result;
             }
-            if (mat is Transform)
+            if (mat is Transform transform)
             {
-                var transform = (Transform) mat;
                 var result = new Transform(transform.Transformator, RewriteMaterializer(subMat, transform.Node, mapping));
-                mapping.Put(mat, result);
+                mapping.Put(transform, result);
                 return result;
             }
 
@@ -942,8 +936,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private static IModule GetRealModule(IModule module)
         {
-            return module is CopiedModule
-                ? GetRealModule(((CopiedModule)module).CopyOf)
+            return module is CopiedModule copiedModule
+                ? GetRealModule(copiedModule.CopyOf)
                 : module;
         }
 

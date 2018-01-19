@@ -33,7 +33,9 @@ namespace Akka.Cluster
         public void Down(Akka.Actor.Address address) { }
         public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
         public void Join(Akka.Actor.Address address) { }
+        public System.Threading.Tasks.Task JoinAsync(Akka.Actor.Address address, System.Threading.CancellationToken token = null) { }
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
+        public System.Threading.Tasks.Task JoinSeedNodesAsync(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes, System.Threading.CancellationToken token = null) { }
         public void Leave(Akka.Actor.Address address) { }
         public System.Threading.Tasks.Task LeaveAsync() { }
         public System.Threading.Tasks.Task LeaveAsync(System.Threading.CancellationToken cancellationToken) { }
@@ -114,6 +116,10 @@ namespace Akka.Cluster
         {
             public MemberUp(Akka.Cluster.Member member) { }
         }
+        public sealed class MemberWeaklyUp : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberWeaklyUp(Akka.Cluster.Member member) { }
+        }
         public abstract class ReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IReachabilityEvent
         {
             protected ReachabilityEvent(Akka.Cluster.Member member) { }
@@ -150,6 +156,10 @@ namespace Akka.Cluster
         public ClusterExtension() { }
         public override Akka.Cluster.Cluster CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    public class ClusterJoinFailedException : Akka.Actor.AkkaException
+    {
+        public ClusterJoinFailedException(string message) { }
+    }
     public class ClusterScope : Akka.Actor.Scope
     {
         public static readonly Akka.Cluster.ClusterScope Instance;
@@ -159,6 +169,7 @@ namespace Akka.Cluster
     public sealed class ClusterSettings
     {
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
+        public bool AllowWeaklyUpMembers { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
         public System.Type DowningProviderType { get; }
         [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
@@ -224,12 +235,20 @@ namespace Akka.Cluster
         Exiting = 3,
         Down = 4,
         Removed = 5,
+        WeaklyUp = 6,
     }
     public sealed class NoDowning : Akka.Cluster.IDowningProvider
     {
         public NoDowning(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
+    }
+    public sealed class SplitBrainResolver : Akka.Cluster.IDowningProvider
+    {
+        public SplitBrainResolver(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Props DowningActorProps { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public System.TimeSpan StableAfter { get; }
     }
     public class UniqueAddress : System.IComparable, System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
     {

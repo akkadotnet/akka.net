@@ -96,25 +96,18 @@ namespace Akka.Streams.Dsl
                 if (Keep.IsLeft(combine))
                 {
                     if (IgnorableMaterializedValueComposites.Apply(m))
-                    {
                         materializedValueNode = StreamLayout.Ignore.Instance;
-                    }
                     else
-                    {
                         materializedValueNode = new StreamLayout.Transform(_ => NotUsed.Instance,
                             new StreamLayout.Atomic(m));
-                    }
                 }
                 else
-                {
-                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat) o, (TMat2) o1),
+                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat)o, (TMat2)o1),
                         StreamLayout.Ignore.Instance, new StreamLayout.Atomic(m));
-                }
 
                 return
                     new Flow<TIn, TOut2, TMat3>(new CompositeModule(ImmutableArray<IModule>.Empty.Add(m), m.Shape,
-                        ImmutableDictionary<OutPort, InPort>.Empty, ImmutableDictionary<InPort, OutPort>.Empty,
-                        materializedValueNode, Attributes.None));
+                        m.Downstreams, m.Upstreams, materializedValueNode, m.Attributes));
             }
 
             var copy = flow.Module.CarbonCopy();

@@ -21,7 +21,7 @@ namespace Akka.DistributedData
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public static ReplicatorSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data"));
+            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ?? throw new ConfigurationException("HOCON config section `akka.cluster.distributed-data` was not found"));
 
         /// <summary>
         /// Create settings from a configuration with the same layout as

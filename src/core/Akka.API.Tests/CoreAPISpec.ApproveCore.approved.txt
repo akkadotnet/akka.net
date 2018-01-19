@@ -882,7 +882,7 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
-        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
@@ -2330,6 +2330,7 @@ namespace Akka.Configuration.Hocon
         public bool Matches(string pattern) { }
         public bool Matches(params string[] patterns) { }
         public char Peek() { }
+        protected string PickErrorLine(out int index) { }
         public void Pop() { }
         public void PullWhitespace() { }
         public void Push() { }
@@ -4709,6 +4710,7 @@ namespace Akka.Util
         public bool Equals(Akka.Util.Result<T> other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+        public override string ToString() { }
     }
     public class Right<T>
     {

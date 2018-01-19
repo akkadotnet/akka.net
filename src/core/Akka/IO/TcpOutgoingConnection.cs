@@ -23,7 +23,9 @@ namespace Akka.IO
     {
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
-        
+
+        private SocketAsyncEventArgs _connectArgs;
+
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(tcp, new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false }, connect.PullMode)
         {
@@ -44,8 +46,19 @@ namespace Akka.IO
                 Context.SetReceiveTimeout(connect.Timeout.Value);  //Initiate connection timeout if supplied
         }
 
+        private void ReleaseConnectionSocketArgs()
+        {
+            if (_connectArgs != null)
+            {
+                Tcp.SocketEventArgsPool.Release(_connectArgs);
+                _connectArgs = null;
+            }
+        }
+
         private void Stop()
         {
+            ReleaseConnectionSocketArgs();
+
             StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {_commander}), _connect.FailureMessage));
         }
 
@@ -87,6 +100,14 @@ namespace Akka.IO
             });
         }
 
+        protected override void PostStop()
+        {
+            // always try to release SocketAsyncEventArgs to avoid memory leaks
+            ReleaseConnectionSocketArgs();
+
+            base.PostStop();
+        }
+
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();
@@ -124,13 +145,13 @@ namespace Akka.IO
             {
                 Log.Debug("Attempting connection to [{0}]", address);
 
-                var connectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
-                connectArgs.RemoteEndPoint = address;
+                _connectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+                _connectArgs.RemoteEndPoint = address;
                 // we don't setup buffer here, it shouldn't be necessary just for connection
-                if (!Socket.ConnectAsync(connectArgs))
+                if (!Socket.ConnectAsync(_connectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(Connecting(Tcp.Settings.FinishConnectRetries, connectArgs, fallbackAddress));
+                Become(Connecting(Tcp.Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
             });
         }
 
@@ -145,6 +166,7 @@ namespace Akka.IO
                         if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
                         Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
 
+                        ReleaseConnectionSocketArgs();
                         AcquireSocketAsyncEventArgs();
 
                         CompleteConnect(_commander, _connect.Options);

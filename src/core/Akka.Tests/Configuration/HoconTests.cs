@@ -16,6 +16,10 @@ namespace Akka.Tests.Configuration
 {
     public class HoconTests
     {
+        public HoconTests()
+        {
+        }
+
         //Added tests to conform to the HOCON spec https://github.com/Lightbendhub/config/blob/master/HOCON.md
         [Fact]
         public void Can_use_paths_as_keys_3_14()
@@ -915,6 +919,22 @@ ip = ""::1""
         {
             var hocon = @"akka.cluster.seed-nodes = [akka.tcp://Cluster@127.0.0.1:4053]";
             Assert.Throws<ConfigurationException>(() => { ConfigurationFactory.ParseString(hocon); });
+        }
+
+        [Fact]
+        public void Should_throw_human_readable_exception_message_when_parsing_invalid_string()
+        {
+            var hocon = 
+@"akka {
+    ask-timeout = $10ms
+}";
+            var ex = Assert.Throws<FormatException>(() => { ConfigurationFactory.ParseString(hocon); });
+
+            var expectedMessage = $@"Unknown token at position {hocon.IndexOf('$')}: 
+    ask-timeout = $10ms
+                  ^    
+".Replace("\r\n", "\n");
+            ex.Message.Replace("\r\n", "\n").ShouldBe(expectedMessage);
         }
     }
 }
