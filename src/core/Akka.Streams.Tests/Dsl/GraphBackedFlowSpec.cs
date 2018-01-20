@@ -334,16 +334,13 @@ namespace Akka.Streams.Tests.Dsl
                     return new SinkShape<string>(f.Inlet);
                 }));
 
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(source, flow, sink, (src, _, snk) => Tuple.Create(src, snk),
+            var (subscriber, publisher) = RunnableGraph.FromGraph(GraphDsl.Create(source, flow, sink, (src, _, snk) => Tuple.Create(src, snk),
                 (b, src, f, snk) =>
                 {
                     b.From(src.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(f.Inlet);
                     b.From(f.Outlet).Via(Flow.Create<int>().Select(x => x.ToString())).To(snk.Inlet);
                     return ClosedShape.Instance;
                 })).Run(Materializer);
-
-            var subscriber = t.Item1;
-            var publisher = t.Item2;
 
             Source1.RunWith(Sink.AsPublisher<int>(false), Materializer).Subscribe(subscriber);
             publisher.Subscribe(probe);
@@ -361,14 +358,11 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.FromGraph(GraphDsl.Create(outSink, (b, s) => new SinkShape<int>(s.Inlet)));
 
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(source, sink, Keep.Both, (b, src, snk) =>
+            var (subscriber, publisher) = RunnableGraph.FromGraph(GraphDsl.Create(source, sink, Keep.Both, (b, src, snk) =>
             {
                 b.From(src.Outlet).To(snk.Inlet);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-
-            var subscriber = t.Item1;
-            var publisher = t.Item2;
 
             Source1.RunWith(Sink.AsPublisher<int>(false), Materializer).Subscribe(subscriber);
             publisher.Subscribe(probe);

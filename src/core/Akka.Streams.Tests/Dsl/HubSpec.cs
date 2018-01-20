@@ -37,9 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(20).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(16).Take(20).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(11, 10)).RunWith(sink, Materializer);
 
@@ -66,9 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var upstream = this.CreatePublisherProbe<int>();
 
                 Source.FromPublisher(upstream).RunWith(sink, Materializer);
@@ -85,9 +81,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<int>();
 
@@ -166,10 +160,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                var (sink, result) = MergeHub.Source<int>(16).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                     .Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
 
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
@@ -183,10 +175,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                    .Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
 
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
@@ -200,13 +189,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16)
+                var (sink, result) = MergeHub.Source<int>(16)
                     .Take(2000)
                     .Throttle(10, TimeSpan.FromMilliseconds(1), 200, ThrottleMode.Shaping)
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
 
                 Source.From(Enumerable.Range(1, 1000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(1001, 1000)).RunWith(sink, Materializer);
@@ -221,10 +208,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(2000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                    .Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(16).Take(2000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
 
                 Source.From(Enumerable.Range(1, 1000))
                     .Throttle(10, TimeSpan.FromMilliseconds(1), 100, ThrottleMode.Shaping)
@@ -260,9 +244,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
-                var sink = t.Item1;
-                var result = t.Item2;
+                var (sink, result) = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
 
                 EventFilter.Error(contains: "Upstream producer failed with exception").ExpectOne(() =>
                 {
@@ -293,12 +275,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
@@ -318,12 +298,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.Take(10).RunWith(Sink.Seq<int>(), Materializer);
@@ -360,12 +338,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
@@ -386,13 +362,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
@@ -412,12 +386,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
@@ -442,12 +414,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
-                var t = Source.Maybe<int>()
+                var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
@@ -495,11 +465,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void BroadcastHub_must_remember_completion_for_materialisations_after_completion()
         {
-            var t = this.SourceProbe<NotUsed>()
+            var (sourceProbe, source) = this.SourceProbe<NotUsed>()
                 .ToMaterialized(BroadcastHub.Sink<NotUsed>(), Keep.Both)
                 .Run(Materializer);
-            var sourceProbe = t.Item1;
-            var source = t.Item2;
             var sinkProbe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
 
             sourceProbe.SendComplete();

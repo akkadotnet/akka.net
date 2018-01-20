@@ -95,9 +95,7 @@ namespace Akka.Streams.Tests.Dsl
                 var neverSource = Source.Maybe<object>();
                 var pubSink = Sink.AsPublisher<object>(false);
 
-                var t = neverSource.ToMaterialized(pubSink, Keep.Both).Run(Materializer);
-                var f = t.Item1;
-                var neverPub = t.Item2;
+                var (f, neverPub) = neverSource.ToMaterialized(pubSink, Keep.Both).Run(Materializer);
 
                 var c = this.CreateManualSubscriberProbe<object>();
                 neverPub.Subscribe(c);
@@ -119,9 +117,7 @@ namespace Akka.Streams.Tests.Dsl
                 var neverSource = Source.Maybe<int>().Where(_ => false);
                 var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
 
-                var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
-                var neverPromise = t.Item1;
-                var counterFuture = t.Item2;
+                var (neverPromise, counterFuture) = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
                 
                 //external cancellation
                 neverPromise.TrySetResult(0).Should().BeTrue();
@@ -138,9 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
 
-                var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
-                var neverPromise = t.Item1;
-                var counterFuture = t.Item2;
+                var (neverPromise, counterFuture) = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
 
                 //external cancellation
                 neverPromise.TrySetResult(6).Should().BeTrue();
@@ -157,9 +151,7 @@ namespace Akka.Streams.Tests.Dsl
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
 
-                var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
-                var neverPromise = t.Item1;
-                var counterFuture = t.Item2;
+                var (neverPromise, counterFuture) = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
 
                 //external cancellation
                 neverPromise.SetException(new Exception("Boom"));
