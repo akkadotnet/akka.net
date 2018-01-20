@@ -347,9 +347,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(cancellation.Token);
-                            var promise = t.Item1;
-                            var enqueued = t.Item2;
+                            var (promise, enqueued) = queue.Take(cancellation.Token);
                             var wakeup = enqueued + delay;
                             while (DateTime.Now.Ticks < wakeup) { }
                             counter.Decrement();

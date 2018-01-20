@@ -34,13 +34,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_UniqueKillSwitch_must_stop_a_stream_if_requested()
         {
-            var t = this.SourceProbe<int>()
+            var ((upstream, killSwitch), downstream) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var upstream = t.Item1.Item1;
-            var killSwitch = t.Item1.Item2;
-            var downstream = t.Item2;
 
             downstream.Request(1);
             upstream.SendNext(1);
@@ -55,13 +52,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_UniqueKillSwitch_must_fail_a_stream_if_requested()
         {
-            var t = this.SourceProbe<int>()
+            var ((upstream, killSwitch), downstream) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var upstream = t.Item1.Item1;
-            var killSwitch = t.Item1.Item2;
-            var downstream = t.Item2;
 
             downstream.Request(1);
             upstream.SendNext(1);
@@ -78,17 +72,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_UniqueKillSwitch_must_work_if_used_multiple_times_in_a_flow()
         {
-            var t = this.SourceProbe<int>()
+            var (((upstream, killSwitch1), killSwitch2), downstream) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 //ex is a AggregateException from the Task
                 .Recover(ex => ex.InnerException is TestException ? -1 : Option<int>.None)
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var upstream = t.Item1.Item1.Item1;
-            var killSwitch1 = t.Item1.Item1.Item2;
-            var killSwitch2 = t.Item1.Item2;
-            var downstream = t.Item2;
 
             downstream.Request(1);
             upstream.SendNext(1);
@@ -106,13 +96,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_UniqueKillSwitch_must_ignore_completion_after_already_completed()
         {
-            var t = this.SourceProbe<int>()
+            var ((upstream, killSwitch), downstream) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var upstream = t.Item1.Item1;
-            var killSwitch = t.Item1.Item2;
-            var downstream = t.Item2;
 
             upstream.EnsureSubscription();
             downstream.EnsureSubscription();
@@ -137,12 +124,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -161,12 +146,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -200,19 +183,14 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t1 = this.SourceProbe<int>()
+                var (upstream1, downstream1) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var t2 = this.SourceProbe<string>()
+                var (upstream2, downstream2) = this.SourceProbe<string>()
                     .Via(killSwitch.Flow<string>())
                     .ToMaterialized(this.SinkProbe<string>(), Keep.Both)
                     .Run(Materializer);
-
-                var upstream1 = t1.Item1;
-                var downstream1 = t1.Item2;
-                var upstream2 = t2.Item1;
-                var downstream2 = t2.Item2;
 
                 downstream1.Request(1);
                 upstream1.SendNext(1);
@@ -238,19 +216,14 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t1 = this.SourceProbe<int>()
+                var (upstream1, downstream1) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var t2 = this.SourceProbe<string>()
+                var (upstream2, downstream2) = this.SourceProbe<string>()
                     .Via(killSwitch.Flow<string>())
                     .ToMaterialized(this.SinkProbe<string>(), Keep.Both)
                     .Run(Materializer);
-
-                var upstream1 = t1.Item1;
-                var downstream1 = t1.Item2;
-                var upstream2 = t2.Item1;
-                var downstream2 = t2.Item2;
 
                 downstream1.Request(1);
                 upstream1.SendNext(1);
@@ -277,12 +250,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -309,12 +280,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -343,12 +312,10 @@ namespace Akka.Streams.Tests.Dsl
                 var killSwitch = KillSwitches.Shared("switch");
                 killSwitch.Shutdown();
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 upstream.ExpectCancellation();
                 downstream.ExpectSubscriptionAndComplete();
@@ -364,12 +331,10 @@ namespace Akka.Streams.Tests.Dsl
                 var testException = new TestException("Abort");
                 killSwitch.Abort(testException);
 
-                var t = this.SourceProbe<int>()
+                var (upstream, downstream) = this.SourceProbe<int>()
                     .Via(killSwitch.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var upstream = t.Item1;
-                var downstream = t.Item2;
 
                 upstream.ExpectCancellation();
                 downstream.ExpectSubscriptionAndError().InnerException.Should().Be(testException);
@@ -397,13 +362,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
-                var t = Source.Maybe<int>()
+                var (killSwitch2, completion) = Source.Maybe<int>()
                     .ViaMaterialized(killSwitch.Flow<int>(), Keep.Right)
                     .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
                     .Run(Materializer);
 
-                var killSwitch2 = t.Item1;
-                var completion = t.Item2;
                 killSwitch2.Should().Be(killSwitch);
                 killSwitch2.Shutdown();
                 completion.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -419,19 +382,14 @@ namespace Akka.Streams.Tests.Dsl
                 var killSwitch1 = KillSwitches.Shared("switch");
                 var killSwitch2 = KillSwitches.Shared("switch");
 
-                var t1 = this.SourceProbe<int>()
+                var (upstream1, downstream1) = this.SourceProbe<int>()
                     .Via(killSwitch1.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-                var t2 = this.SourceProbe<int>()
+                var (upstream2, downstream2) = this.SourceProbe<int>()
                     .Via(killSwitch2.Flow<int>())
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-
-                var upstream1 = t1.Item1;
-                var downstream1 = t1.Item2;
-                var upstream2 = t2.Item1;
-                var downstream2 = t2.Item2;
 
                 downstream1.Request(1);
                 upstream1.SendNext(1);

@@ -62,9 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_PublisherSink_must_work_with_SubscriberSource()
         {
-            var t = Source.AsSubscriber<int>().ToMaterialized(Sink.AsPublisher<int>(false), Keep.Both).Run(Materializer);
-            var sub = t.Item1;
-            var pub = t.Item2;
+            var (sub, pub) = Source.AsSubscriber<int>().ToMaterialized(Sink.AsPublisher<int>(false), Keep.Both).Run(Materializer);
 
             Source.From(Enumerable.Range(1, 100)).To(Sink.FromSubscriber(sub)).Run(Materializer);
 

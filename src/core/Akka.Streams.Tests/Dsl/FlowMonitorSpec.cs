@@ -28,13 +28,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Finished_when_stream_is_completed()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, monitor), sink) = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1.Item1;
-            var monitor = t.Item1.Item2;
-            var sink = t.Item2;
             source.SendComplete();
             AwaitAssert(() =>
             {
@@ -48,12 +45,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Finished_when_stream_is_cancelled_from_downstream()
         {
-            var t = this.SourceProbe<int>()
+            var (monitor, sink) = this.SourceProbe<int>()
                 .Monitor(Keep.Right)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var monitor = t.Item1;
-            var sink = t.Item2;
 
             sink.Cancel();
             AwaitAssert(() =>
@@ -66,13 +61,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Failed_when_stream_fails_and_propagate_the_error()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, monitor), sink) = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1.Item1;
-            var monitor = t.Item1.Item2;
-            var sink = t.Item2;
             var ex = new TestException("Source failed");
             source.SendError(ex);
             AwaitAssert(() =>
@@ -89,13 +81,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Initialized_for_an_empty_stream()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, monitor), sink) = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1.Item1;
-            var monitor = t.Item1.Item2;
-            var sink = t.Item2;
 
             AwaitAssert(() =>
             {
@@ -109,13 +98,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Received_after_receiving_a_message()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, monitor), sink) = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1.Item1;
-            var monitor = t.Item1.Item2;
-            var sink = t.Item2;
             var message = 42;
             source.SendNext(message);
             sink.RequestNext(message);
@@ -134,13 +120,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlowMonitor_must_return_Received_after_receiving_a_StreamState_message()
         {
-            var t = this.SourceProbe<FlowMonitor.Received<string>>()
+            var ((source, monitor), sink) = this.SourceProbe<FlowMonitor.Received<string>>()
                 .Monitor(Keep.Both)
                 .ToMaterialized(this.SinkProbe<FlowMonitor.Received<string>>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1.Item1;
-            var monitor = t.Item1.Item2;
-            var sink = t.Item2;
             var message = new FlowMonitor.Received<string>("message");
             source.SendNext(message);
             sink.RequestNext(message);
@@ -159,8 +142,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = ActorMaterializer.Create(Sys);
 
-            var t = this.SourceProbe<string>().Monitor(Keep.Both).To(Sink.Ignore<string>()).Run(materializer);
-            var monitor = t.Item2;
+            var (_, monitor) = this.SourceProbe<string>().Monitor(Keep.Both).To(Sink.Ignore<string>()).Run(materializer);
 
             materializer.Shutdown();
             AwaitAssert(() => monitor.State.Should().BeOfType<FlowMonitor.Failed>(), RemainingOrDefault);

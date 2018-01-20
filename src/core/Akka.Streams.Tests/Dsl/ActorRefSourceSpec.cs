@@ -68,11 +68,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_ActorRefSource_must_drop_new_when_full_and_with_DropNew_strategy()
         {
-            var t = Source.ActorRef<int>(100, OverflowStrategy.DropNew)
+            var (actorRef, sub) = Source.ActorRef<int>(100, OverflowStrategy.DropNew)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
-            var actorRef = t.Item1;
-            var sub = t.Item2;
 
             Enumerable.Range(1, 20).ForEach(x => actorRef.Tell(x));
             sub.Request(10);

@@ -32,13 +32,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
+                var (future, p) =
                     Source.From(Enumerable.Range(1, 4))
                         .WatchTermination(Keep.Right)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(Materializer);
-                var future = t.Item1;
-                var p = t.Item2;
 
                 p.Request(4).ExpectNext(1, 2, 3, 4);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -51,13 +49,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
+                var (future, p) =
                     Source.From(Enumerable.Range(1, 4))
                         .WatchTermination(Keep.Right)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(Materializer);
-                var future = t.Item1;
-                var p = t.Item2;
 
                 p.Request(3).ExpectNext(1, 2, 3);
                 p.Cancel();
@@ -71,9 +67,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var ex = new Exception("Stream failed.");
-                var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
-                var p = t.Item1;
-                var future = t.Item2;
+                var (p, future) = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
                 p.SendNext(1);
                 p.SendError(ex);
                 future.Invoking(f => f.Wait()).ShouldThrow<Exception>().WithMessage("Stream failed.");
@@ -85,13 +79,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
+                var (future, p) =
                     Source.Empty<int>()
                         .WatchTermination(Keep.Right)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(Materializer);
-                var future = t.Item1;
-                var p = t.Item2;
                 p.Request(1);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             }, Materializer);
@@ -136,8 +128,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = ActorMaterializer.Create(Sys);
 
-            var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(materializer);
-            var task = t.Item2;
+            var (_, task) = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(materializer);
 
             materializer.Shutdown();
 

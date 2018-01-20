@@ -81,8 +81,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Graph_stage_ActorRef_must_be_watchable()
         {
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
+            var (source, res) = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -97,8 +96,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Graph_stage_ActorRef_must_be_able_to_become()
         {
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
+            var (source, res) = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -116,8 +114,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Graph_stage_ActorRef_must_reply_Terminated_when_terminated_stage_is_watched()
         {
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
+            var (source, res) = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -137,8 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Graph_stage_ActorRef_must_be_unwatchable()
         {
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
+            var (source, res) = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -156,8 +152,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Graph_stage_ActorRef_must_ignore_and_log_warnings_for_PoisonPill_and_Kill_messages()
         {
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
+            var (source, res) = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
 
             var stageRef = ExpectMsg<IActorRef>();
             stageRef.Tell(new Add(40));

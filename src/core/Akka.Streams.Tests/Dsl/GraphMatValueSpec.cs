@@ -104,13 +104,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = CreateMaterializer(autoFusing);
 
-            var t =
+            var (f1, f2) =
                 FoldFeedbackSource.SelectAsync(4, x => x)
                     .Select(x => x + 100)
                     .ToMaterialized(Sink.First<int>(), Keep.Both)
                     .Run(materializer);
-            var f1 = t.Item1;
-            var f2 = t.Item2;
             f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             f1.Result.Should().Be(55);
 

@@ -174,12 +174,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Expand_must_work_properly_with_finite_extrapolations()
         {
-            var t = TestSource.SourceProbe<int>(this)
+            var (source, sink) = TestSource.SourceProbe<int>(this)
                 .Expand(i => Enumerable.Range(0, 4).Select(x => Tuple.Create(i, x)).Take(3).GetEnumerator())
                 .ToMaterialized(this.SinkProbe<Tuple<int, int>>(), Keep.Both)
                 .Run(Materializer);
-            var source = t.Item1;
-            var sink = t.Item2;
 
             source.SendNext(1);
 

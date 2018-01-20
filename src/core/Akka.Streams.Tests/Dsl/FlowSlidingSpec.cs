@@ -28,24 +28,20 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private void Check(IEnumerable<Tuple<int, int, int>> gen)
+        private void Check(IEnumerable<(int len, int win, int step)> gen)
         {
             gen.ForEach(t =>
             {
-                var len = t.Item1;
-                var win = t.Item2;
-                var step = t.Item3;
-
-                var af = Source.FromEnumerator(() => Enumerable.Range(0, int.MaxValue).Take(len).GetEnumerator())
-                    .Sliding(win, step)
+                var af = Source.FromEnumerator(() => Enumerable.Range(0, int.MaxValue).Take(t.len).GetEnumerator())
+                    .Sliding(t.win, t.step)
                     .RunAggregate(new List<IEnumerable<int>>(), (ints, e) =>
                     {
                         ints.Add(e);
                         return ints;
                     }, Materializer);
 
-                var input = Enumerable.Range(0, int.MaxValue).Take(len).ToList();
-                var cf = Source.FromEnumerator(() => Sliding(input, win, step).GetEnumerator())
+                var input = Enumerable.Range(0, int.MaxValue).Take(t.len).ToList();
+                var cf = Source.FromEnumerator(() => Sliding(input, t.win, t.step).GetEnumerator())
                     .RunAggregate(new List<IEnumerable<int>>(), (ints, e) =>
                     {
                         ints.Add(e);
@@ -93,7 +89,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, random.Next(1, win));
+                        return (random.Next(0, 32), win, random.Next(1, win));
                     });
 
                 Check(gen);
@@ -110,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, win);
+                        return (random.Next(0, 32), win, win);
                     });
 
                 Check(gen);
@@ -127,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, random.Next(win + 1, 128));
+                        return (random.Next(0, 32), win, random.Next(win + 1, 128));
                     });
 
                 Check(gen);
