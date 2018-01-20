@@ -11,7 +11,6 @@ using System.Linq;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
 using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
@@ -221,7 +220,7 @@ namespace Akka.Streams.Dsl
         {
             if (IsIdentity)
             {
-                return Sink.FromGraph(sink as IGraph<SinkShape<TIn>, TMat2>)
+                return Sink.FromGraph((IGraph<SinkShape<TIn>, TMat2>)sink)
                     .MapMaterializedValue(mat2 => combine(default(TMat), mat2));
             }
 
@@ -381,7 +380,7 @@ namespace Akka.Streams.Dsl
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, NotUsed> FromProcessor<TIn, TOut>(Func<IProcessor<TIn, TOut>> factory)
-            => FromProcessorMaterialized(() => Tuple.Create(factory(), NotUsed.Instance));
+            => FromProcessorMaterialized(() => (factory(), NotUsed.Instance));
 
         /// <summary>
         /// Creates a Flow from a Reactive Streams <see cref="IProcessor{T1,T2}"/> and returns a materialized value.
@@ -391,7 +390,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory) 
+        public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<(IProcessor<TIn, TOut>, TMat)> factory) 
             => new Flow<TIn, TOut, TMat>(new ProcessorModule<TIn, TOut, TMat>(factory));
 
         /// <summary>
