@@ -30,14 +30,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Retry_should_retry_ints_according_to_their_parity()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Create(RetryFlow<int>(), s => s < 42 ? Tuple.Create(s + 1, s + 1) : null))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -53,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Retry_descending_ints_until_success()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, Enumerable.Range(0, i).Reverse().Select(x => x * 2).Concat(new[] { i + 1 }).ToImmutableList()))
                 .Via(Retry.Create(RetryFlow<ImmutableList<int>>(),
                     s => s.IsEmpty
@@ -61,9 +58,6 @@ namespace Akka.Streams.Tests.Dsl
                         : Tuple.Create(s[0], s.RemoveAt(0))))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, ImmutableList<int>>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -79,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Retry_squares_by_division()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i * i))
                 .Via(Retry.Create(RetryFlow<int>(), s =>
                 {
@@ -89,9 +83,6 @@ namespace Akka.Streams.Tests.Dsl
                 }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -108,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Tolerate_killswitch_terminations_after_start()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, killSwitch), sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .Select(i => Tuple.Create(i, i * i))
                 .Via(Retry.Create(RetryFlow<int>(), x =>
@@ -119,10 +110,6 @@ namespace Akka.Streams.Tests.Dsl
                 }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1.Item1;
-            var killSwitch = t.Item1.Item2;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -136,15 +123,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Tolerate_killswitch_terminations_on_start()
         {
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Create(RetryFlow<int>(), x => Tuple.Create(x, x + 1)))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             killSwitch.Abort(FailedElement.Exception);
@@ -154,15 +138,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Tolerate_killswitch_terminations_before_start()
         {
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Create(RetryFlow<int>(), x => Tuple.Create(x, x + 1)))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             killSwitch.Abort(FailedElement.Exception);
             sink.Request(1);
@@ -174,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var innerFlow = RetryFlow<int>().ViaMaterialized(KillSwitches.Single<Tuple<Result<int>, int>>(), Keep.Right);
 
-            var t = this.SourceProbe<int>()
+            var ((_, killSwitch), sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i * i))
                 .ViaMaterialized(Retry.Create(innerFlow, x =>
                 {
@@ -184,9 +165,6 @@ namespace Akka.Streams.Tests.Dsl
                 }), Keep.Both)
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1.Item2;
-            var sink = t.Item2;
 
             sink.Request(99);
             killSwitch.Abort(FailedElement.Exception);
@@ -198,14 +176,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             var innerFlow = RetryFlow<int>().ViaMaterialized(KillSwitches.Single<Tuple<Result<int>, int>>(), Keep.Right);
 
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i))
                 .ViaMaterialized(Retry.Create(innerFlow, x => Tuple.Create(x, x + 1)), Keep.Right)
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             killSwitch.Abort(FailedElement.Exception);
@@ -217,14 +192,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             var innerFlow = RetryFlow<int>().ViaMaterialized(KillSwitches.Single<Tuple<Result<int>, int>>(), Keep.Right);
 
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i))
                 .ViaMaterialized(Retry.Create(innerFlow, x => Tuple.Create(x, x + 1)), Keep.Right)
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             killSwitch.Abort(FailedElement.Exception);
             sink.Request(1);
@@ -234,14 +206,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_should_swallow_failed_elements_that_are_retried_with_an_empty_seq()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), _ => Enumerable.Empty<Tuple<int, int>>()))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -259,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_should_concat_incremented_ints_and_modulo_3_incremented_ints_from_retries()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), os =>
                 {
@@ -270,9 +239,6 @@ namespace Akka.Streams.Tests.Dsl
                 }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -292,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_squares_by_division()
         {
-            var t = this.SourceProbe<int>()
+            var (source, sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i * i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), x =>
                 {
@@ -302,9 +268,6 @@ namespace Akka.Streams.Tests.Dsl
                 }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -321,7 +284,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_tolerate_killswitch_terminations_after_start()
         {
-            var t = this.SourceProbe<int>()
+            var ((source, killswitch), sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 .Select(i => Tuple.Create(i, i * i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), x =>
@@ -332,10 +295,6 @@ namespace Akka.Streams.Tests.Dsl
                 }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1.Item1;
-            var killswitch = t.Item1.Item2;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -349,15 +308,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_tolerate_killswitch_terminations_on_start()
         {
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), x => new[] { Tuple.Create(x, x + 1) }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             killSwitch.Abort(FailedElement.Exception);
@@ -367,15 +323,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_tolerate_killswitch_terminations_before_start()
         {
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), x => new[] { Tuple.Create(x, x + 1) }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             killSwitch.Abort(FailedElement.Exception);
             sink.Request(1);
@@ -387,7 +340,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var innerFlow = RetryFlow<int>().ViaMaterialized(KillSwitches.Single<Tuple<Result<int>, int>>(), Keep.Right);
 
-            var t = this.SourceProbe<int>()
+            var ((source, killSwitch), sink) = this.SourceProbe<int>()
                 .Select(i => Tuple.Create(i, i * i))
                 .ViaMaterialized(Retry.Concat(100, innerFlow, x =>
                 {
@@ -397,10 +350,6 @@ namespace Akka.Streams.Tests.Dsl
                 }), Keep.Both)
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var source = t.Item1.Item1;
-            var killSwitch = t.Item1.Item2;
-            var sink = t.Item2;
 
             sink.Request(99);
             source.SendNext(1);
@@ -414,15 +363,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void RetryConcat_tolerate_killswitch_terminations_inside_the_flow_on_start()
         {
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, RetryFlow<int>(), x => new[] { Tuple.Create(x, x + 1) }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             sink.Request(99);
             killSwitch.Abort(FailedElement.Exception);
@@ -434,15 +380,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             var innerFlow = RetryFlow<int>().ViaMaterialized(KillSwitches.Single<Tuple<Result<int>, int>>(), Keep.Right);
 
-            var t = this.SourceProbe<int>()
+            var (killSwitch, sink) = this.SourceProbe<int>()
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                 .Select(i => Tuple.Create(i, i))
                 .Via(Retry.Concat(100, innerFlow, x => new[] { Tuple.Create(x, x + 1) }))
                 .ToMaterialized(this.SinkProbe<Tuple<Result<int>, int>>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var killSwitch = t.Item1;
-            var sink = t.Item2;
 
             killSwitch.Abort(FailedElement.Exception);
             sink.Request(1);

@@ -198,9 +198,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
-                var maybePromise = t.Item1;
-                var pingerFuture = t.Item2;
+                var (maybePromise, pingerFuture) = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var pinger = pingerFuture.Result;
 
@@ -233,9 +231,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
-                var maybePromise = t.Item1;
-                var pingerFuture = t.Item2;
+                var (maybePromise, pingerFuture) = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var pinger = pingerFuture.Result;
 
@@ -272,9 +268,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
-                var maybePromise = t.Item1;
-                var pingerFuture = t.Item2;
+                var (maybePromise, pingerFuture) = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var pinger = pingerFuture.Result;
 
@@ -313,9 +307,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.Maybe<int>().ToMaterialized(new PingableSink(false), Keep.Both).Run(Materializer);
-                var maybePromise = t.Item1;
-                var pingerFuture = t.Item2;
+                var (maybePromise, pingerFuture) = Source.Maybe<int>().ToMaterialized(new PingableSink(false), Keep.Both).Run(Materializer);
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var pinger = pingerFuture.Result;
 

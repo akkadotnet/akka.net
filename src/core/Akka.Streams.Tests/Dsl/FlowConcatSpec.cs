@@ -176,9 +176,9 @@ namespace Akka.Streams.Tests.Dsl
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
-                var t = runnable.Run(Materializer);
-                t.Item1.Should().BeOfType<NotUsed>();
-                t.Item2.Should().BeOfType<NotUsed>();
+                var (m1, m2) = runnable.Run(Materializer);
+                m1.Should().BeOfType<NotUsed>();
+                m2.Should().BeOfType<NotUsed>();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
             }, Materializer);

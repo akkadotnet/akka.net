@@ -106,12 +106,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Intersperse_must__complete_the_stage_when_the_Source_has_been_completed()
         {
-            var t = this.SourceProbe<string>()
+            var (p1, p2) = this.SourceProbe<string>()
                 .Intersperse(",")
                 .ToMaterialized(this.SinkProbe<string>(), Keep.Both)
                 .Run(Materializer);
-            var p1 = t.Item1;
-            var p2 = t.Item2;
 
             p2.Request(10);
             p1.SendNext("a")
@@ -126,12 +124,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Intersperse_must_complete_the_stage_when_the_Sink_has_been_cancelled()
         {
-            var t = this.SourceProbe<string>()
+            var (p1, p2) = this.SourceProbe<string>()
                 .Intersperse(",")
                 .ToMaterialized(this.SinkProbe<string>(), Keep.Both)
                 .Run(Materializer);
-            var p1 = t.Item1;
-            var p2 = t.Item2;
 
             p2.Request(10);
             p1.SendNext("a")

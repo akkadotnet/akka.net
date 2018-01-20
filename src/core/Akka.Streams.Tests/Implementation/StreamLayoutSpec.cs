@@ -258,9 +258,8 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -273,9 +272,8 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -288,9 +286,8 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -304,9 +301,8 @@ namespace Akka.Streams.Tests.Implementation
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
-            var t = m.Run(_materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = m.Run(_materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -319,9 +315,8 @@ namespace Akka.Streams.Tests.Implementation
             var g = Flow.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
-            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -334,9 +329,8 @@ namespace Akka.Streams.Tests.Implementation
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
-            var materialized = t.Item1;
-            var result = t.Item2.AwaitResult(VeryPatient);
+            var (materialized, task) = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
+            var result = task.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);

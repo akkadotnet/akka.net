@@ -125,9 +125,7 @@ namespace Akka.Streams.Tests.Extra
                             d => probe.Tell(d))
                         .Select(s => s + "!");
 
-                var t = flow.RunWith(Source.AsSubscriber<int>(), Sink.AsPublisher<string>(false), Materializer);
-                var flowIn = t.Item1;
-                var flowOut = t.Item2;
+                var (flowIn, flowOut) = flow.RunWith(Source.AsSubscriber<int>(), Sink.AsPublisher<string>(false), Materializer);
 
                 var c1 = this.CreateManualSubscriberProbe<string>();
                 flowOut.Subscribe(c1);

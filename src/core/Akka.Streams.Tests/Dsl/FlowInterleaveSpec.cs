@@ -217,12 +217,10 @@ namespace Akka.Streams.Tests.Dsl
                 var up2 = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<int>();
 
-                var t = Source.AsSubscriber<int>()
+                var (graphSubscriber1, graphSubscriber2) = Source.AsSubscriber<int>()
                     .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, Tuple.Create)
                     .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                     .Run(Materializer);
-                var graphSubscriber1 = t.Item1;
-                var graphSubscriber2 = t.Item2;
 
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();

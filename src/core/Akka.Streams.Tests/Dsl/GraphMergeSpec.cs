@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
                 var src1 = Source.AsSubscriber<int>();
                 var src2 = Source.AsSubscriber<int>();
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, Tuple.Create, (b, s1, s2) =>
+                var (sub1, sub2) = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, Tuple.Create, (b, s1, s2) =>
                 {
                     var merge = b.Add(new Merge<int>(2));
                     var sink = Sink.FromSubscriber(down)
@@ -226,8 +226,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();
-                up1.Subscribe(t.Item1);
-                up2.Subscribe(t.Item2);
+                up1.Subscribe(sub1);
+                up2.Subscribe(sub2);
                 var upSub1 = up1.ExpectSubscription();
                 upSub1.ExpectCancellation();
                 var upSub2 = up2.ExpectSubscription();
