@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var zip = b.Add(new Zip<int, string>());
                 var unzip = b.Add(new UnZip<int, string>());
-                var sink = Sink.AsPublisher<Tuple<int, string>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                var sink = Sink.AsPublisher<(int, string)>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 var source =
                     Source.From(new[]
                     {
