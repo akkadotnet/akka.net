@@ -213,13 +213,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Buffer_must_drop_new_elements_if_buffer_is_full_and_configured_so()
         {
-            var t =
+            var (publisher, subscriber) =
                 this.SourceProbe<int>()
                     .Buffer(100, OverflowStrategy.DropNew)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(Materializer);
-            var publisher = t.Item1;
-            var subscriber = t.Item2;
 
             subscriber.EnsureSubscription();
 

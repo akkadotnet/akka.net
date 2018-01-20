@@ -146,9 +146,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_materialize_into_Publisher_Subscriber()
         {
             var flow = Flow.Create<string>();
-            var t = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
-            var flowIn = t.Item1;
-            var flowOut = t.Item2;
+            var (flowIn, flowOut) = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
 
             var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
@@ -168,9 +166,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_materialize_into_Publisher_Subscriber_and_transformation_processor()
         {
             var flow = Flow.Create<int>().Select(i=>i.ToString());
-            var t = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
-            var flowIn = t.Item1;
-            var flowOut = t.Item2;
+            var (flowIn, flowOut) = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
 
             var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
@@ -192,9 +188,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_materialize_into_Publisher_Subscriber_and_multiple_transformation_processor()
         {
             var flow = Flow.Create<int>().Select(i => i.ToString()).Select(s => "elem-" + s);
-            var t = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
-            var flowIn = t.Item1;
-            var flowOut = t.Item2;
+            var (flowIn, flowOut) = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
 
             var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
@@ -706,11 +700,8 @@ namespace Akka.Streams.Tests.Dsl
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
                     new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
-                var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
+                var (connections, logics) = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), _ => { });
-
-                var connections = t.Item1;
-                var logics = t.Item2;
 
                 var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape, Settings,
                     (ActorMaterializerImpl) Materializer);

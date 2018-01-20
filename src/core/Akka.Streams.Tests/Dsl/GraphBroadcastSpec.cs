@@ -306,14 +306,11 @@ namespace Akka.Streams.Tests.Dsl
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();
 
-                var t =
+                var (ps1, ps2) =
                     Source.From(Enumerable.Range(1, 6))
                         .AlsoToMaterialized(p, Keep.Right)
                         .ToMaterialized(p2, Keep.Both)
                         .Run(Materializer);
-
-                var ps1 = t.Item1;
-                var ps2 = t.Item2;
 
                 ps1.Request(6);
                 ps2.Request(6);
@@ -332,15 +329,12 @@ namespace Akka.Streams.Tests.Dsl
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();
 
-                var t =
+                var (ps1, ps2) =
                     Source.From(Enumerable.Range(1, 6))
                         .AlsoToMaterialized(p, Keep.Right)
                         .ToMaterialized(p2, Keep.Both)
                         .Run(Materializer);
 
-                var ps1 = t.Item1;
-                var ps2 = t.Item2;
-                
                 ps2.Request(6);
                 ps1.Cancel();
                 ps2.ExpectNext(1, 2, 3, 4, 5, 6);
