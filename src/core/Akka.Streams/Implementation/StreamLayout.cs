@@ -174,23 +174,30 @@ namespace Akka.Streams.Implementation
         {
             idMap = idMap ?? new Dictionary<object, int>();
             var currentId = 1;
-            Func<int> ids = () => currentId++;
-            Func<object, int> id = obj =>
+            int Ids() => currentId++;
+
+            int Id(object obj)
             {
                 if (!idMap.TryGetValue(obj, out int x))
                 {
-                    x = ids();
+                    x = Ids();
                     idMap.Add(obj, x);
                 }
+
                 return x;
-            };
-            Func<InPort, string> inPort = i => $"{i}@{id(i)}";
-            Func<OutPort, string> outPort = o => $"{o}@{id(o)}";
-            Func<IEnumerable<InPort>, string> ins = i => $"In[{string.Join(",", i.Select(inPort))}]";
-            Func<IEnumerable<OutPort>, string> outs = o => $"Out[{string.Join(",", o.Select(outPort))}]";
-            Func<OutPort, InPort, string> pair = (o, i) => $"{inPort(i)}->{outPort(o)}";
-            Func<IEnumerable<KeyValuePair<OutPort, InPort>>, string> pairs = i =>
-                $"[{string.Join(",", i.Select(p => pair(p.Key, p.Value)))}]";
+            }
+
+            string InPort(InPort i) => $"{i}@{Id(i)}";
+            
+            string OutPort(OutPort o) => $"{o}@{Id(o)}";
+            
+            string Ins(IEnumerable<InPort> i) => $"In[{string.Join(",", i.Select(InPort))}]";
+            
+            string Outs(IEnumerable<OutPort> o) => $"Out[{string.Join(",", o.Select(OutPort))}]";
+            
+            string Pair(OutPort o, InPort i) => $"{InPort(i)}->{OutPort(o)}";
+            
+            string Pairs(IEnumerable<KeyValuePair<OutPort, InPort>> i) => $"[{string.Join(",", i.Select(p => Pair(p.Key, p.Value)))}]";
 
             var shape = module.Shape;
             var inset = shape.Inlets.ToImmutableHashSet();
@@ -200,23 +207,23 @@ namespace Akka.Streams.Implementation
             var problems = new List<string>();
 
             if (inset.Count != shape.Inlets.Count())
-                problems.Add("shape has duplicate inlets " + ins(shape.Inlets));
+                problems.Add("shape has duplicate inlets " + Ins(shape.Inlets));
             if (!inset.SetEquals(inPorts))
                 problems.Add(
-                    $"shape has extra {ins(inset.Except(inPorts))}, module has extra {ins(inPorts.Except(inset))}");
+                    $"shape has extra {Ins(inset.Except(inPorts))}, module has extra {Ins(inPorts.Except(inset))}");
 
             var connectedInlets = inset.Intersect(module.Upstreams.Keys).ToArray();
             if (connectedInlets.Any())
-                problems.Add("found connected inlets " + ins(connectedInlets));
+                problems.Add("found connected inlets " + Ins(connectedInlets));
             if (outset.Count != shape.Outlets.Count())
-                problems.Add("shape has duplicate outlets " + outs(shape.Outlets));
+                problems.Add("shape has duplicate outlets " + Outs(shape.Outlets));
             if (!outset.SetEquals(outPorts))
                 problems.Add(
-                    $"shape has extra {outs(outset.Except(outPorts))}, module has extra {outs(outPorts.Except(outset))}");
+                    $"shape has extra {Outs(outset.Except(outPorts))}, module has extra {Outs(outPorts.Except(outset))}");
 
             var connectedOutlets = outset.Intersect(module.Downstreams.Keys).ToArray();
             if (connectedOutlets.Any())
-                problems.Add("found connected outlets " + outs(connectedOutlets));
+                problems.Add("found connected outlets " + Outs(connectedOutlets));
 
             var ups = module.Upstreams.ToImmutableHashSet();
             var ups2 = ups.Select(x => new KeyValuePair<OutPort, InPort>(x.Value, x.Key)).ToImmutableHashSet();
@@ -224,7 +231,7 @@ namespace Akka.Streams.Implementation
             var inter = ups2.Intersect(downs);
 
             if (!downs.SetEquals(ups2))
-                problems.Add($"inconsistent maps: ups {pairs(ups2.Except(inter))} downs {pairs(downs.Except(inter))}");
+                problems.Add($"inconsistent maps: ups {Pairs(ups2.Except(inter))} downs {Pairs(downs.Except(inter))}");
 
             var allInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
             var duplicateInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
@@ -247,21 +254,21 @@ namespace Akka.Streams.Implementation
             var duplicateOut = duplicateOutBuilder.ToImmutable();
 
             if (!duplicateIn.IsEmpty)
-                problems.Add("duplicate ports in submodules " + ins(duplicateIn));
+                problems.Add("duplicate ports in submodules " + Ins(duplicateIn));
             if (!duplicateOut.IsEmpty)
-                problems.Add("duplicate ports in submodules " + outs(duplicateOut));
+                problems.Add("duplicate ports in submodules " + Outs(duplicateOut));
             if (!module.IsSealed && inset.Except(allIn).Any())
-                problems.Add("foreign inlets " + ins(inset.Except(allIn)));
+                problems.Add("foreign inlets " + Ins(inset.Except(allIn)));
             if (!module.IsSealed && outset.Except(allOut).Any())
-                problems.Add("foreign outlets " + outs(outset.Except(allOut)));
+                problems.Add("foreign outlets " + Outs(outset.Except(allOut)));
 
             var unIn = allIn.Except(inset).Except(module.Upstreams.Keys);
             if (unIn.Any() && !module.IsCopied)
-                problems.Add("unconnected inlets " + ins(unIn));
+                problems.Add("unconnected inlets " + Ins(unIn));
 
             var unOut = allOut.Except(outset).Except(module.Downstreams.Keys);
             if (unOut.Any() && !module.IsCopied)
-                problems.Add("unconnected outlets " + outs(unOut));
+                problems.Add("unconnected outlets " + Outs(unOut));
 
             var atomics = Atomics(module.MaterializedValueComputation);
             var graphValues =
@@ -276,10 +283,10 @@ namespace Akka.Streams.Implementation
             if (print)
             {
                 var indent = string.Empty.PadLeft(level*2);
-                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts),
-                    outs(outPorts));
+                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, Ins(inPorts),
+                    Outs(outPorts));
                 foreach (var downstream in module.Downstreams)
-                    Console.Out.WriteLine("{0}    {1} -> {2}", indent, outPort(downstream.Key), inPort(downstream.Value));
+                    Console.Out.WriteLine("{0}    {1} -> {2}", indent, OutPort(downstream.Key), InPort(downstream.Value));
                 foreach (var problem in problems)
                     Console.Out.WriteLine("{0}  -!- {1}", indent, problem);
             }
@@ -296,10 +303,10 @@ namespace Akka.Streams.Implementation
         {
             if (node is Ignore)
                 return ImmutableHashSet<IModule>.Empty;
-            if (node is Transform)
-                return Atomics(((Transform) node).Node);
-            if (node is Atomic)
-                return ImmutableHashSet.Create(((Atomic) node).Module);
+            if (node is Transform transform)
+                return Atomics(transform.Node);
+            if (node is Atomic atomic)
+                return ImmutableHashSet.Create(atomic.Module);
 
             Combine c;
             if ((c = node as Combine) != null)
@@ -325,8 +332,7 @@ namespace Akka.Streams.Implementation
             if (composition is StreamLayout.Ignore)
                 return true;
 
-            var atomic = composition as StreamLayout.Atomic;
-            return atomic != null && Apply(atomic.Module);
+            return composition is StreamLayout.Atomic atomic && Apply(atomic.Module);
         }
 
         /// <summary>
@@ -338,16 +344,13 @@ namespace Akka.Streams.Implementation
         {
             if (module is AtomicModule || module is EmptyModule)
                 return true;
-            var copied = module as CopiedModule;
-            if (copied != null)
+            if (module is CopiedModule copied)
                 return Apply(copied.CopyOf);
 
-            var composite = module as CompositeModule;
-            if(composite != null)
+            if(module is CompositeModule composite)
                 return Apply(composite.MaterializedValueComputation);
 
-            var fused = module as FusedModule;
-            return fused != null && Apply(fused.MaterializedValueComputation);
+            return module is FusedModule fused && Apply(fused.MaterializedValueComputation);
         }
     }
 
@@ -744,8 +747,8 @@ namespace Akka.Streams.Implementation
 
         private bool IsIgnorable(StreamLayout.IMaterializedValueNode computation)
         {
-            if (computation is StreamLayout.Atomic)
-                return IsIgnorable(((StreamLayout.Atomic) computation).Module);
+            if (computation is StreamLayout.Atomic atomic)
+                return IsIgnorable(atomic.Module);
 
             if (computation is StreamLayout.Combine || computation is StreamLayout.Transform)
                 return false;
@@ -756,9 +759,9 @@ namespace Akka.Streams.Implementation
         private bool IsIgnorable(IModule module)
         {
             if (module is AtomicModule || module is EmptyModule) return true;
-            if (module is CopiedModule) return IsIgnorable(((CopiedModule) module).CopyOf);
-            if (module is CompositeModule) return IsIgnorable(((CompositeModule) module).MaterializedValueComputation);
-            if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
+            if (module is CopiedModule copiedModule) return IsIgnorable(copiedModule.CopyOf);
+            if (module is CompositeModule compositeModule) return IsIgnorable(compositeModule.MaterializedValueComputation);
+            if (module is FusedModule fusedModule) return IsIgnorable(fusedModule.MaterializedValueComputation);
 
             throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
         }
@@ -1596,8 +1599,7 @@ namespace Akka.Streams.Implementation
                 return;
             }
 
-            var subscription = Value as ISubscription;
-            if (subscription != null)
+            if (Value is ISubscription subscription)
             {
                 if (CompareAndSet(subscription, new Both(subscriber)))
                     EstablishSubscription(subscriber, subscription);
@@ -1607,8 +1609,7 @@ namespace Akka.Streams.Implementation
                 return;
             }
 
-            var publisher = Value as IPublisher<T>;
-            if (publisher != null)
+            if (Value is IPublisher<T> publisher)
             {
                 if (CompareAndSet(publisher, Inert.Instance))
                     publisher.Subscribe(subscriber);
@@ -1654,11 +1655,9 @@ namespace Akka.Streams.Implementation
                 return;
             }
 
-            var subscriber = Value as ISubscriber<T>;
-            if (subscriber != null)
+            if (Value is ISubscriber<T> subscriber)
             {
-                var subscription = obj as ISubscription;
-                if (subscription != null)
+                if (obj is ISubscription subscription)
                 {
                     if (CompareAndSet(subscriber, new Both(subscriber)))
                         EstablishSubscription(subscriber, subscription);
@@ -1668,8 +1667,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var publisher = Value as IPublisher<T>;
-                if (publisher != null)
+                if (Value is IPublisher<T> publisher)
                 {
                     var inert = GetAndSet(Inert.Instance);
                     if (inert != Inert.Instance)
@@ -1727,8 +1725,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var subscription = Value as ISubscription;
-                if (subscription != null)
+                if (Value is ISubscription subscription)
                 {
                     if (!CompareAndSet(subscription, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
                         continue;
@@ -1737,8 +1734,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var both = Value as Both;
-                if (both != null)
+                if (Value is Both both)
                 {
                     Value = Inert.Instance;
                     try
@@ -1755,8 +1751,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
+                if (Value is ISubscriber<T> subscriber)
                 {
                     // spec violation
                     var inert = GetAndSet(Inert.Instance);
@@ -1786,8 +1781,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var subscription = Value as ISubscription;
-                if (subscription != null)
+                if (Value is ISubscription subscription)
                 {
                     if (!CompareAndSet(subscription, EmptyPublisher<T>.Instance))
                         continue;
@@ -1795,16 +1789,14 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var both = Value as Both;
-                if (both != null)
+                if (Value is Both both)
                 {
                     Value = Inert.Instance;
                     ReactiveStreamsCompliance.TryOnComplete(both.Subscriber);
                     return;
                 }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
+                if (Value is ISubscriber<T> subscriber)
                 {
                     // spec violation
                     Value = Inert.Instance;
@@ -1839,8 +1831,7 @@ namespace Akka.Streams.Implementation
                         break;
                     }
 
-                    var subscriber = Value as ISubscriber<T>;
-                    if (subscriber != null)
+                    if (Value is ISubscriber<T> subscriber)
                     {
                         try
                         {
@@ -1853,8 +1844,7 @@ namespace Akka.Streams.Implementation
                         break;
                     }
 
-                    var both = Value as Both;
-                    if (both != null)
+                    if (Value is Both both)
                     {
                         try
                         {
@@ -1876,8 +1866,7 @@ namespace Akka.Streams.Implementation
 
             while (true)
             {
-                var both = Value as Both;
-                if (both != null)
+                if (Value is Both both)
                 {
                     try
                     {
@@ -1892,8 +1881,7 @@ namespace Akka.Streams.Implementation
                     }
                 }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
+                if (Value is ISubscriber<T> subscriber)
                 {
                     // spec violation
                     var ex = new IllegalStateException(NoDemand);
@@ -1958,8 +1946,7 @@ namespace Akka.Streams.Implementation
                 {
                     ReactiveStreamsCompliance.TryCancel(_real);
                     var value = _processor.GetAndSet(Inert.Instance);
-                    var both = value as Both;
-                    if (both != null)
+                    if (value is Both both)
                         ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(both.Subscriber);
                     else if (value == Inert.Instance)
                     {
@@ -2062,8 +2049,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var publisher = Value as IPublisher<T>;
-                if (publisher != null)
+                if (Value is IPublisher<T> publisher)
                 {
                     if (CompareAndSet(publisher, Inert.Subscriber))
                     {
@@ -2104,8 +2090,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
+                if (Value is ISubscriber<T> subscriber)
                 {
                     Value = Inert.Instance;
                     publisher.Subscribe(subscriber);
@@ -2287,8 +2272,7 @@ namespace Akka.Streams.Implementation
                 foreach (var subMap in _subscribersStack)
                     foreach (var value in subMap.Values)
                     {
-                        var subscriber = value as IUntypedSubscriber;
-                        if (subscriber != null)
+                        if (value is IUntypedSubscriber subscriber)
                         {
                             var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
                             var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
@@ -2297,8 +2281,7 @@ namespace Akka.Streams.Implementation
                             continue;
                         }
 
-                        var virtualPublisher = value as IUntypedVirtualPublisher;
-                        if (virtualPublisher != null)
+                        if (value is IUntypedVirtualPublisher virtualPublisher)
                         {
                             var publishedType =
                                 UntypedVirtualPublisher.ToTyped(virtualPublisher).GetType().GetPublishedType();
@@ -2360,8 +2343,7 @@ namespace Akka.Streams.Implementation
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
 
-                var atomic = submodule as AtomicModule;
-                if (atomic != null)
+                if (submodule is AtomicModule atomic)
                     MaterializeAtomic(atomic, subEffectiveAttributes, materializedValues);
                 else if (submodule is CopiedModule)
                 {
@@ -2422,9 +2404,8 @@ namespace Akka.Streams.Implementation
             if (IsDebug)
                 Console.WriteLine($"{indent}{node}");
             object result;
-            if (node is StreamLayout.Atomic)
+            if (node is StreamLayout.Atomic atomic)
             {
-                var atomic = (StreamLayout.Atomic) node;
                 values.TryGetValue(atomic.Module, out result);
             }
             else if (node is StreamLayout.Combine)
@@ -2488,15 +2469,13 @@ namespace Akka.Streams.Implementation
 
         private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)
         {
-            var subscriber = subscriberOrVirtual as IUntypedSubscriber;
-            if (subscriber != null)
+            if (subscriberOrVirtual is IUntypedSubscriber subscriber)
             {
                 publisher.Subscribe(subscriber);
                 return;
             }
 
-            var virtualPublisher = subscriberOrVirtual as IUntypedVirtualPublisher;
-            if (virtualPublisher != null)
+            if (subscriberOrVirtual is IUntypedVirtualPublisher virtualPublisher)
             {
                 virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
                 return;
@@ -2536,14 +2515,14 @@ namespace Akka.Streams.Implementation
     [InternalApi]
     public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
-        private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;
+        private readonly Func<(IProcessor<TIn, TOut>, TMat)> _createProcessor;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="createProcessor">TBD</param>
         /// <param name="attributes">TBD</param>
-        public ProcessorModule(Func<Tuple<IProcessor<TIn, TOut>, TMat>> createProcessor, Attributes attributes = null)
+        public ProcessorModule(Func<(IProcessor<TIn, TOut>, TMat)> createProcessor, Attributes attributes = null)
         {
             _createProcessor = createProcessor;
             Attributes = attributes ?? DefaultAttributes.Processor;
