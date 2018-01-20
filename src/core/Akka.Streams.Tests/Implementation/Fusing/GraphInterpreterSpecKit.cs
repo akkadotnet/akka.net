@@ -120,10 +120,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     var assembly = BuildAssembly();
 
-                    var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
+                    var (connections, logics) = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                         new Dictionary<IModule, object>(), s => { });
-                    var connections = mat.Item1;
-                    var logics = mat.Item2;
                     var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
 
                     var i = 0;
@@ -143,10 +141,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public void ManualInit(GraphAssembly assembly)
             {
-                var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
+                var (connections, logics) = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), s => { });
-                var connections = mat.Item1;
-                var logics = mat.Item2;
                 _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
             }
 

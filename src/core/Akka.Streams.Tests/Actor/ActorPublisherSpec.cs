@@ -226,7 +226,7 @@ my-dispatcher1 {
             actorRef.Tell(CompleteThenStop.Instance);
             s.ExpectNext("elem-1");
             s.ExpectComplete();
-            probe.ExpectTerminated(actorRef,TimeSpan.FromSeconds(3));
+            probe.ExpectTerminated(actorRef, TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -290,15 +290,13 @@ my-dispatcher1 {
                 var probe = CreateTestProbe();
                 var source = Source.ActorPublisher<int>(Sender.Props);
                 var sink = Sink.ActorSubscriber<string>(Receiver.Props(probe.Ref));
-                
-                var t = source.Collect(n =>
+
+                var (snd, rcv) = source.Collect(n =>
                 {
-                    if (n%2 == 0)
+                    if (n % 2 == 0)
                         return "elem-" + n;
                     return null;
                 }).ToMaterialized(sink, Keep.Both).Run(materializer);
-                var snd = t.Item1;
-                var rcv = t.Item2;
 
                 for (var i = 1; i <= 3; i++)
                     snd.Tell(i);
@@ -306,7 +304,7 @@ my-dispatcher1 {
 
                 for (var n = 4; n <= 500; n++)
                 {
-                    if (n%19 == 0)
+                    if (n % 19 == 0)
                         Thread.Sleep(50); // simulate bursts
                     snd.Tell(n);
                 }
@@ -345,9 +343,9 @@ my-dispatcher1 {
 
                     builder.From(source1).To(merge.In(0));
                     builder.From(source2.Outlet).To(merge.In(1));
-                    
+
                     builder.From(merge.Out).Via(Flow.Create<int>().Select(i => i.ToString())).To(bcast.In);
-                    
+
                     builder.From(bcast.Out(0)).Via(Flow.Create<string>().Select(s => s + "mark")).To(sink1);
                     builder.From(bcast.Out(1)).To(sink2);
 
@@ -359,16 +357,17 @@ my-dispatcher1 {
             for (var i = 0; i < noOfMessages; i++)
             {
                 senderRef1.Tell(i);
-                senderRef2.Tell(i+noOfMessages);
+                senderRef2.Tell(i + noOfMessages);
             }
 
-            var probe1Messages = new List<string>(noOfMessages*2);
-            var probe2Messages = new List<string>(noOfMessages*2);
+            var probe1Messages = new List<string>(noOfMessages * 2);
+            var probe2Messages = new List<string>(noOfMessages * 2);
             for (var i = 0; i < noOfMessages * 2; i++)
             {
                 probe1Messages.Add(probe1.ExpectMsg<string>());
                 probe2Messages.Add(probe2.ExpectMsg<string>());
             }
+
             probe1Messages.Should().BeEquivalentTo(Enumerable.Range(0, noOfMessages * 2).Select(i => i + "mark"));
             probe2Messages.Should().BeEquivalentTo(Enumerable.Range(0, noOfMessages * 2).Select(i => i.ToString()));
         }
@@ -419,8 +418,8 @@ my-dispatcher1 {
             var materializer = ActorMaterializer.Create(Sys, Sys.Materializer().Settings.WithDispatcher("my-dispatcher1"));
             var s = this.CreateManualSubscriberProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false))
-                    .To(Sink.FromSubscriber(s))
-                    .Run(materializer);
+                .To(Sink.FromSubscriber(s))
+                .Run(materializer);
 
             actorRef.Tell(ThreadName.Instance);
             ExpectMsg<string>().Should().Contain("my-dispatcher1");
@@ -482,7 +481,7 @@ my-dispatcher1 {
         }
 
         private readonly IActorRef _probe;
-        
+
         public TestPublisher(IActorRef probe)
         {
             _probe = probe;
@@ -498,7 +497,8 @@ my-dispatcher1 {
                 .With<Complete>(OnComplete)
                 .With<CompleteThenStop>(OnCompleteThenStop)
                 .With<Boom>(() => { throw new Exception("boom"); })
-                .With<ThreadName>(()=>_probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
+                .With<ThreadName
+                >(() => _probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
                 .WasHandled;
         }
     }
@@ -527,7 +527,7 @@ my-dispatcher1 {
 
             return true;
         }
-        
+
         public IStash Stash { get; set; }
     }
 
@@ -562,8 +562,8 @@ my-dispatcher1 {
 
             if (TotalDemand <= int.MaxValue)
             {
-                var use = _buffer.Take((int) TotalDemand).ToImmutableList();
-                _buffer = _buffer.Skip((int) TotalDemand).ToImmutableList();
+                var use = _buffer.Take((int)TotalDemand).ToImmutableList();
+                _buffer = _buffer.Skip((int)TotalDemand).ToImmutableList();
 
                 use.ForEach(OnNext);
             }
@@ -581,17 +581,17 @@ my-dispatcher1 {
     internal class TimeoutingPublisher : Actors.ActorPublisher<int>
     {
         public static Props Props(IActorRef probe, TimeSpan timeout) =>
-                Akka.Actor.Props.Create(() => new TimeoutingPublisher(probe, timeout))
-                    .WithDispatcher("akka.test.stream-dispatcher");
+            Akka.Actor.Props.Create(() => new TimeoutingPublisher(probe, timeout))
+                .WithDispatcher("akka.test.stream-dispatcher");
 
         private readonly IActorRef _probe;
 
-        public TimeoutingPublisher(IActorRef probe, TimeSpan timeout) 
+        public TimeoutingPublisher(IActorRef probe, TimeSpan timeout)
         {
             _probe = probe;
             SubscriptionTimeout = timeout;
         }
-        
+
         protected override bool Receive(object message)
         {
             return message.Match()
@@ -641,7 +641,7 @@ my-dispatcher1 {
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj.GetType() == GetType() && Equals((TotalDemand) obj);
+            return obj.GetType() == GetType() && Equals((TotalDemand)obj);
         }
 
         protected bool Equals(TotalDemand other) => Elements == other.Elements;
@@ -683,27 +683,35 @@ my-dispatcher1 {
     {
         public static Boom Instance { get; } = new Boom();
 
-        private Boom() { }
+        private Boom()
+        {
+        }
     }
 
     internal class Complete
     {
         public static Complete Instance { get; } = new Complete();
 
-        private Complete() { }
+        private Complete()
+        {
+        }
     }
 
     internal class CompleteThenStop
     {
         public static CompleteThenStop Instance { get; } = new CompleteThenStop();
 
-        private CompleteThenStop() { }
+        private CompleteThenStop()
+        {
+        }
     }
 
     internal class ThreadName
     {
         public static ThreadName Instance { get; } = new ThreadName();
 
-        private ThreadName() { }
+        private ThreadName()
+        {
+        }
     }
 }

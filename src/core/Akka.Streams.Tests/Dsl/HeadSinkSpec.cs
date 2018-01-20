@@ -47,9 +47,7 @@ namespace Akka.Streams.Tests.Dsl
             var p = this.CreateManualPublisherProbe<int>();
             var f = Sink.First<int>();
             var s = Source.AsSubscriber<int>();
-            var t = s.ToMaterialized(f, Keep.Both).Run(Materializer);
-            var subscriber = t.Item1;
-            var future = t.Item2;
+            var (subscriber, future) = s.ToMaterialized(f, Keep.Both).Run(Materializer);
 
             p.Subscribe(subscriber);
             var proc = p.ExpectSubscription();

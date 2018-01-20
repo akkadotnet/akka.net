@@ -72,12 +72,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_reject_elements_when_backpressuring_with_maxBuffer_0()
         {
-            var t =
+            var (source, probe) =
                 Source.Queue<int>(0, OverflowStrategy.Backpressure)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = t.Item1;
-            var probe = t.Item2;
             var task = source.OfferAsync(42);
             var ex = source.OfferAsync(43);
             ex.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3)))

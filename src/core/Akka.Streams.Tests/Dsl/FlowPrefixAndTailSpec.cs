@@ -170,7 +170,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var ms = 300;
+                const int ms = 300;
 
                 var settings = ActorMaterializerSettings.Create(Sys)
                     .WithSubscriptionTimeoutSettings(
@@ -278,9 +278,8 @@ namespace Akka.Streams.Tests.Dsl
                 upstream.ExpectRequest();
                 upstream.SendNext(1);
 
-                var t = subscriber.ExpectNext();
-                t.Item1.Should().ContainSingle(i => i == 1);
-                var tail = t.Item2;
+                var (prefix, tail) = subscriber.ExpectNext();
+                prefix.Should().ContainSingle(i => i == 1);
                 subscriber.ExpectComplete();
 
                 var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
@@ -338,9 +337,8 @@ namespace Akka.Streams.Tests.Dsl
                 upstream.ExpectRequest();
                 upstream.SendNext(1);
 
-                var t = subscriber.ExpectNext();
-                t.Item1.Should().ContainSingle(i => i == 1);
-                var tail = t.Item2;
+                var (prefix, tail) = subscriber.ExpectNext();
+                prefix.Should().ContainSingle(i => i == 1);
                 subscriber.ExpectComplete();
 
                 var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
