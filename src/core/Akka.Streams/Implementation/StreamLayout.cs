@@ -2503,7 +2503,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        Tuple<object, object> CreateProcessor();
+        (object processor, object materialized) CreateProcessor();
     }
 
     /// <summary>
@@ -2579,10 +2579,6 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public Tuple<object, object> CreateProcessor()
-        {
-            var result = _createProcessor();
-            return Tuple.Create<object, object>(result.Item1, result.Item2);
-        }
+        public (object processor, object materialized) CreateProcessor() => _createProcessor();
     }
 }

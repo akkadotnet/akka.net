@@ -142,15 +142,11 @@ namespace Akka.Streams.Implementation
                     AssignPort(source.Shape.Outlets.First(), publisher);
                     materializedValues.Add(atomic, materialized);
                 }
-                else if (atomic is IProcessorModule)
+                else if (atomic is IProcessorModule stage1)
                 {
-                    var stage = atomic as IProcessorModule;
-                    var t = stage.CreateProcessor();
-                    var processor = t.Item1;
-                    var materialized = t.Item2;
-
-                    AssignPort(stage.In, UntypedSubscriber.FromTyped(processor));
-                    AssignPort(stage.Out, UntypedPublisher.FromTyped(processor));
+                    var (processor, materialized) = stage1.CreateProcessor();
+                    AssignPort(stage1.In, UntypedSubscriber.FromTyped(processor));
+                    AssignPort(stage1.Out, UntypedPublisher.FromTyped(processor));
                     materializedValues.Add(atomic, materialized);
                 }
                 //else if (atomic is TlsModule)
