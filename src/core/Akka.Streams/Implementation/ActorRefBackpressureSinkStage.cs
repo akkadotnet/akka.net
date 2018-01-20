@@ -25,6 +25,7 @@ namespace Akka.Streams.Implementation
         {
             private bool _acknowledgementReceived;
             private bool _completeReceived;
+            private bool _completionSignalled;
             private readonly ActorRefBackpressureSinkStage<TIn> _stage;
             private readonly int _maxBuffer;
             private readonly List<TIn> _buffer;
@@ -65,6 +66,7 @@ namespace Akka.Streams.Implementation
             public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._actorRef.Tell(_stage._onFailureMessage(ex), _self);
+                _completionSignalled = true;
                 FailStage(ex);
             }
 
@@ -116,7 +118,14 @@ namespace Akka.Streams.Implementation
             private void Finish()
             {
                 _stage._actorRef.Tell(_stage._onCompleteMessage, _self);
+                _completionSignalled = true;
                 CompleteStage();
+            }
+
+            public override void PostStop()
+            {
+                if(!_completionSignalled)
+                    StageActorRef.Tell(_stage._onFailureMessage(new AbruptStageTerminationException(this)));
             }
 
             public override string ToString() => "ActorRefBackpressureSink";

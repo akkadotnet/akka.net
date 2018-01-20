@@ -494,6 +494,7 @@ namespace Akka.DistributedData
             Receive<Subscribe>(s => ReceiveSubscribe(s.Key, s.Subscriber));
             Receive<Unsubscribe>(u => ReceiveUnsubscribe(u.Key, u.Subscriber));
             Receive<Terminated>(t => ReceiveTerminated(t.ActorRef));
+            Receive<ClusterEvent.MemberWeaklyUp>(m => ReceiveMemberWeaklyUp(m.Member));
             Receive<ClusterEvent.MemberUp>(m => ReceiveMemberUp(m.Member));
             Receive<ClusterEvent.MemberRemoved>(m => ReceiveMemberRemoved(m.Member));
             Receive<ClusterEvent.IMemberEvent>(_ => { });
@@ -1190,6 +1191,14 @@ namespace Akka.DistributedData
                     if (!_subscribers.ContainsKey(k) && !_newSubscribers.ContainsKey(k))
                         _subscriptionKeys = _subscriptionKeys.Remove(k);
                 }
+            }
+        }
+
+        private void ReceiveMemberWeaklyUp(Member m)
+        {
+            if (MatchingRole(m) && m.Address != _selfAddress)
+            {
+                _weaklyUpNodes = _weaklyUpNodes.Add(m.Address);
             }
         }
 

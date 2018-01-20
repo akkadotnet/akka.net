@@ -658,10 +658,22 @@ namespace Akka.Streams.Tests.Dsl
         public void A_broken_Flow_must_suitably_override_attribute_handling_methods()
         {
             var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
-            f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
-            f.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            f.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+            f.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
+        }
+
+        [Fact]
+        public void A_broken_Flow_must_work_without_fusing()
+        {
+            var settings = ActorMaterializerSettings.Create(Sys).WithAutoFusing(false).WithInputBuffer(1, 1);
+            var noFusingMaterializer = ActorMaterializer.Create(Sys, settings);
+
+            // The map followed by a filter is to ensure that it is a CompositeModule passed in to Flow[Int].via(...)
+            var sink = Flow.Create<int>().Via(Flow.Create<int>().Select(i => i + 1).Where(_ => true))
+                .ToMaterialized(Sink.First<int>(), Keep.Right);
+            Source.Single(4711).RunWith(sink, noFusingMaterializer).AwaitResult().ShouldBe(4712);
         }
 
         private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);

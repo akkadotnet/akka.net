@@ -100,13 +100,13 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
+            return (T) await Ask(self, message, provider, timeout, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -128,10 +128,18 @@ namespace Akka.Actor
             return null;
         }
 
+        private const int RunContinuationsAsynchronously = 64;
+        private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
+
+
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
             TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            var result = new TaskCompletionSource<object>();
+            TaskCompletionSource<object> result;
+            if (isRunContinuationsAsynchronouslyAvailable)
+                result = new TaskCompletionSource<object>((TaskCreationOptions)RunContinuationsAsynchronously);
+            else
+                result = new TaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
@@ -167,7 +175,7 @@ namespace Akka.Actor
                     provider.UnregisterTempActor(path);
                 };
 
-            var future = new FutureActorRef(result, unregister, path);
+            var future = new FutureActorRef(result, unregister, path, isRunContinuationsAsynchronouslyAvailable);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             self.Tell(message, future);

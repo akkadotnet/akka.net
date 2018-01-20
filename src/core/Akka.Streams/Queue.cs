@@ -36,8 +36,8 @@ namespace Akka.Streams
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>
-        /// Method returns task that completes when stream is completed and fails
-        /// when stream failed.
+        /// Method returns <see cref="Task"/> that will be completed if the stream completes,
+        /// or will be failed when the stage faces an internal failure.
         /// </summary>
         /// <returns>TBD</returns>
         Task WatchCompletionAsync();
@@ -59,6 +59,13 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="ex">TBD</param>
         void Fail(Exception ex);
+
+        /// <summary>
+        /// Method returns <see cref="Task"/> that will be completed if the stream completes,
+        /// or will be failed when the stage faces an internal failure or the the <see cref="Fail"/> method is invoked.
+        /// </summary>
+        /// <returns>Task</returns>
+        new Task WatchCompletionAsync();
     }
 
     /// <summary>

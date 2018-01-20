@@ -8,6 +8,8 @@
 using System;
 using Akka.Actor;
 using Akka.Util;
+using System.Text;
+using System.Threading;
 
 namespace Akka.Event
 {
@@ -107,29 +109,64 @@ namespace Akka.Event
         /// <param name="logEvent">The event to print</param>
         public static void PrintLogEvent(LogEvent logEvent)
         {
-            ConsoleColor? color = null;
-            
-            if(UseColors)
+            try
             {
-                var logLevel = logEvent.LogLevel();
-                switch(logLevel)
+                ConsoleColor? color = null;
+
+                if (UseColors)
                 {
-                    case LogLevel.DebugLevel:
-                        color = DebugColor;
+                    var logLevel = logEvent.LogLevel();
+                    switch (logLevel)
+                    {
+                        case LogLevel.DebugLevel:
+                            color = DebugColor;
+                            break;
+                        case LogLevel.InfoLevel:
+                            color = InfoColor;
+                            break;
+                        case LogLevel.WarningLevel:
+                            color = WarningColor;
+                            break;
+                        case LogLevel.ErrorLevel:
+                            color = ErrorColor;
+                            break;
+                    }
+                }
+
+                StandardOutWriter.WriteLine(logEvent.ToString(), color);
+            }
+            catch (FormatException)
+            {
+                /*
+                 * If we've reached this point, the `logEvent` itself is informatted incorrectly. 
+                 * Therefore we have to treat the data inside the `logEvent` as suspicious and avoid throwing
+                 * a second FormatException.
+                 */
+                var sb = new StringBuilder();
+                sb.AppendFormat("[ERROR][{0}][Thread {1}][StandardOutLogger] ", logEvent.Timestamp, 0);
+                sb.AppendFormat("Encoutered System.FormatException while recording log: [" +
+                                logEvent.LogLevel().PrettyNameFor() + "]")
+                    .AppendFormat("[" + logEvent.LogSource + "][" + logEvent.Message + "]");
+
+                string msg;
+                switch (logEvent.Message)
+                {
+                    case LogMessage formatted: // a parameterized log
+                        msg = "str=[" + formatted.Format + "],args=["+ string.Join(",", formatted.Args) +"]";
                         break;
-                    case LogLevel.InfoLevel:
-                        color = InfoColor;
+                    case string unformatted: // pre-formatted or non-parameterized log
+                        msg = unformatted;
                         break;
-                    case LogLevel.WarningLevel:
-                        color = WarningColor;
-                        break;
-                    case LogLevel.ErrorLevel:
-                        color = ErrorColor;
+                    default: // surprise!
+                        msg = logEvent.Message.ToString(); 
                         break;
                 }
-            }
 
-            StandardOutWriter.WriteLine(logEvent.ToString(), color);
+                sb.Append(msg)
+                    .Append("Please take a look at the logging call where this occurred and fix your format string.");
+
+                StandardOutWriter.WriteLine(sb.ToString(), ErrorColor);
+            }
         }
     }
 }

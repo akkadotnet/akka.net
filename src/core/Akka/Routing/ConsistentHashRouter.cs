@@ -292,7 +292,7 @@ namespace Akka.Routing
                 case ActorRefRoutee actorRef:
                     return ToStringWithFullAddress(actorRef.Actor.Path);
                 case ActorSelectionRoutee selection:
-                    return ToStringWithFullAddress(selection.Selection.Anchor.Path) +
+                    return ToStringWithFullAddress(selection.Selection.Anchor.Path).TrimEnd('/') +
                             selection.Selection.PathString;
                 default:
                     return Routee.ToString();

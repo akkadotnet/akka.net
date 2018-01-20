@@ -249,6 +249,11 @@ int-prio-mailbox {
         {
             var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
 
@@ -264,6 +269,9 @@ int-prio-mailbox {
             }
 
             actor.Tell(new StashingActor.Start());
+
+            //resume mailbox, this prevents the mailbox from running to early
+            actor.SendSystemMessage(new Resume(null));
 
             this.Within(5.Seconds(), () =>
             {

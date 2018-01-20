@@ -39,9 +39,9 @@ namespace Akka.Persistence
     public abstract partial class Eventsourced
     {
         /// <summary>
-        /// Initial state. Before starting the actual recovery it must get a permit from the `RecoveryPermitter`. 
-        /// When starting many persistent actors at the same time the journal and its data store is protected from 
-        /// being overloaded by limiting number of recoveries that can be in progress at the same time. 
+        /// Initial state. Before starting the actual recovery it must get a permit from the `RecoveryPermitter`.
+        /// When starting many persistent actors at the same time the journal and its data store is protected from
+        /// being overloaded by limiting number of recoveries that can be in progress at the same time.
         /// When receiving `RecoveryPermitGranted` it switches to `recoveryStarted` state.
         /// All incoming messages are stashed.
         /// </summary>
@@ -57,9 +57,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/> 
-        /// message to the actor's <see cref="ReceiveRecover"/>. Then initiates a message replay, either starting 
-        /// from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state. 
+        /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/>
+        /// message to the actor's <see cref="ReceiveRecover"/>. Then initiates a message replay, either starting
+        /// from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state.
         /// All incoming messages are stashed.
         /// </summary>
         /// <param name="maxReplays">Maximum number of messages to replay</param>
@@ -144,12 +144,12 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Processes replayed messages, if any. The actor's <see cref="ReceiveRecover"/> is invoked with the replayed events.
-        /// 
+        ///
         /// If replay succeeds it got highest stored sequence number response from the journal and then switches
         /// to <see cref="ProcessingCommands"/> state.
         /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
         /// <see cref="OnRecoveryFailure"/>.
-        /// 
+        ///
         /// All incoming messages are stashed.
         /// </summary>
         private EventsourcedState Recovering(Receive recoveryBehavior, TimeSpan timeout)
@@ -195,14 +195,8 @@ namespace Akka.Persistence
                         LastSequenceNr = m.HighestSequenceNr;
                         _internalStash.UnstashAll();
 
-                        try
-                        {
-                            base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
-                        }
-                        finally
-                        {
-                            ReturnRecoveryPermit();
-                        }
+                        base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
+                        ReturnRecoveryPermit();
                     }
                     else if (message is ReplayMessagesFailure)
                     {
@@ -250,7 +244,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// If event persistence is pending after processing a command, event persistence 
+        /// If event persistence is pending after processing a command, event persistence
         /// is triggered and the state changes to <see cref="PersistingEvents"/>.
         /// </summary>
         private EventsourcedState ProcessingCommands()

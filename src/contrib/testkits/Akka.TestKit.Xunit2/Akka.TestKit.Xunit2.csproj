@@ -18,5 +18,8 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-
+  <PropertyGroup>
+    <!-- WORKAROUND: for some reason starting at Akka.NET 1.3.2 this package was determined as "unpackable" by default via DOTNET CLI -->
+    <IsPackable>true</IsPackable> 
+  </PropertyGroup>
 </Project>

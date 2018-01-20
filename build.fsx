@@ -11,6 +11,7 @@ open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
 open Fake.Git
+open Fake.NuGet.Install
 
 // Variables
 let configuration = "Release"
@@ -111,12 +112,12 @@ Target "RunTests" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests Net |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
+                            (getIncrementalUnitTests Net) |> Seq.iter log
+                            getUnitTestProjects Net
         | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
+               getUnitTestProjects Net
     
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -140,12 +141,12 @@ Target "RunTestsNetCore" (fun _ ->
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+                    getIncrementalUnitTests NetCore |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
+                            getIncrementalUnitTests NetCore |> Seq.iter log
+                            getUnitTestProjects NetCore
         | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
+               getUnitTestProjects NetCore
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -299,32 +300,13 @@ let overrideVersionSuffix (project:string) =
     | _ -> versionSuffix
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/Akka.csproj"
-                   ++ "src/**/Akka.Cluster.csproj"
-                   ++ "src/**/Akka.Cluster.TestKit.csproj"
-                   ++ "src/**/Akka.Cluster.Tools.csproj"
-                   ++ "src/**/Akka.Cluster.Sharding.csproj"
-                   ++ "src/**/Akka.DistributedData.csproj"
-                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
-                   ++ "src/**/Akka.Persistence.csproj"
-                   ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TCK.csproj"
-                   ++ "src/**/Akka.Persistence.Query.Sql.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.Common.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
-                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
-                   ++ "src/**/Akka.Remote.csproj"
-                   ++ "src/**/Akka.Remote.TestKit.csproj"
-                   ++ "src/**/Akka.Streams.csproj"
-                   ++ "src/**/Akka.Streams.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit2.csproj"
-                   ++ "src/**/Akka.DI.Core.csproj"
-                   ++ "src/**/Akka.DI.TestKit.csproj"
-                   ++ "src/**/Akka.Serialization.Hyperion.csproj"
-                   ++ "src/**/Akka.Serialization.TestKit.csproj"
-                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
+    let projects = !! "src/**/*.csproj"
+                   -- "src/**/*.Tests*.csproj"
+                   -- "src/benchmark/**/*.csproj"
+                   -- "src/examples/**/*.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.csproj"
+                   -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
+                   -- "src/**/*.NodeTestRunner.csproj"
 
     let runSingleProject project =
         DotNetCli.Pack
@@ -488,12 +470,19 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
+    // build the project with samples
     let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
     DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
     DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
-    let docsPath = "./docs"
+    // install MSDN references
+    NugetInstall (fun p -> 
+            { p with
+                ExcludeVersion = true
+                Version = "0.1.0-alpha-1611021200"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
+    let docsPath = "./docs"
     DocFx (fun p -> 
                 { p with 
                     Timeout = TimeSpan.FromMinutes 30.0; 
@@ -577,8 +566,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"

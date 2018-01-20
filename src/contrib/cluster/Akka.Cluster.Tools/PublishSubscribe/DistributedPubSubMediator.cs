@@ -345,6 +345,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (IsMatchingRole(up.Member)) _nodes.Add(up.Member.Address);
             });
+            Receive<ClusterEvent.MemberWeaklyUp>(weaklyUp =>
+            {
+                if (IsMatchingRole(weaklyUp.Member)) _nodes.Add(weaklyUp.Member.Address);
+            });
             Receive<ClusterEvent.MemberLeft>(left =>
             {
                 if (IsMatchingRole(left.Member))
@@ -475,19 +479,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void PublishMessage(string path, object message, bool allButSelf = false)
         {
-            foreach (var entry in _registry)
+            IEnumerable<IActorRef> Refs()
             {
-                var address = entry.Key;
-                var bucket = entry.Value;
-
-                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
+                foreach (var entry in _registry)
                 {
-                    if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
-                        valueHolder.Ref.Forward(message);
-                    else
-                        SendToDeadLetters(message);
+                    var address = entry.Key;
+                    var bucket = entry.Value;
+
+                    if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
+                    {
+                        if (valueHolder != null && !Equals(valueHolder.Ref, ActorRefs.Nobody))
+                            yield return valueHolder.Ref;
+                    }
                 }
             }
+
+            var counter = 0;
+            foreach (var r in Refs())
+            {
+                if (r == null) continue;
+                r.Forward(message);
+                counter++;
+            }
+
+            if (counter == 0) SendToDeadLetters(message);
         }
 
         private void PublishToEachGroup(string path, object message)

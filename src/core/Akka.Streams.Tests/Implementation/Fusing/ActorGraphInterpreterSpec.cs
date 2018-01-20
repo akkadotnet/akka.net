@@ -45,9 +45,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Equal(Enumerable.Range(1, 100));
+                
+                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -64,9 +63,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Equal(Enumerable.Range(1, 100));
+                
+                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -82,9 +80,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Equal(Enumerable.Range(1, 10));
+                
+                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -101,9 +98,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Equal(Enumerable.Range(1, 10));
+                
+                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -133,12 +129,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                         return ClosedShape.Instance;
                     })).Run(Materializer);
-
-                tasks.Item1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                tasks.Item2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-
-                tasks.Item1.Result.Should().Equal(Enumerable.Range(1, 100));
-                tasks.Item2.Result.Should().Equal(Enumerable.Range(1, 10));
+                
+                tasks.Item1.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
+                tasks.Item2.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -237,10 +230,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             private sealed class Subscription : ISubscription
             {
-                public void Request(long n)
-                {
-                    throw new TestException("violating your spec");
-                }
+                public void Request(long n) => throw new TestException("violating your spec");
 
                 public void Cancel()
                 {
@@ -272,14 +262,64 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }, Materializer);
         }
 
+        [Fact]
+        public void ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var materializer = ActorMaterializer.Create(Sys);
+                var gotStop = new TestLatch(1);
+                var downstream = this.CreateSubscriberProbe<string>();
+
+                Source.Repeat("whatever")
+                    .Via(new PostStopSnitchFlow(gotStop))
+                    .To(Sink.FromSubscriber(downstream)).Run(materializer);
+
+                downstream.RequestNext();
+
+                materializer.Shutdown();
+                gotStop.Ready(RemainingOrDefault);
+
+                downstream.ExpectError().Should().BeOfType<AbruptTerminationException>();
+            }, Materializer);
+        }
+
+        private sealed class PostStopSnitchFlow : SimpleLinearGraphStage<string>
+        {
+            private sealed class Logic : InAndOutGraphStageLogic
+            {
+                private readonly PostStopSnitchFlow _stage;
+
+                public Logic(PostStopSnitchFlow stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Inlet, this);
+                    SetHandler(stage.Outlet, this);
+                }
+
+                public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+                public override void OnPull() => Pull(_stage.Inlet);
+
+                public override void PostStop() => _stage._latch.CountDown();
+            }
+
+            private readonly TestLatch _latch;
+
+            public PostStopSnitchFlow(TestLatch latch)
+            {
+                _latch = latch;
+            }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        }
+
         private sealed class FilthySubscriber : ISubscriber<int>
         {
             public void OnSubscribe(ISubscription subscription) => subscription.Request(1);
 
-            public void OnNext(int element)
-            {
-                throw new TestException("violating your spec");
-            }
+            public void OnNext(int element) => throw new TestException("violating your spec");
 
             public void OnError(Exception cause)
             {
@@ -330,15 +370,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override BidiShape<int, int, int, int> Shape { get; }
 
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            {
-                return new Logic(Shape);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape);
 
-            public override string ToString()
-            {
-                return "IdentityBidi";
-            }
+            public override string ToString() => "IdentityBidi";
         }
 
         /// <summary>
@@ -385,15 +419,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override BidiShape<int, int, int, int> Shape { get; }
 
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            {
-                return new Logic(Shape);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape);
 
-            public override string ToString()
-            {
-                return "IdentityBidi";
-            }
+            public override string ToString() => "IdentityBidi";
         }
 
         public class FailyGraphStage : GraphStage<SourceShape<int>>
@@ -422,15 +450,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override SourceShape<int> Shape { get; }
 
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            {
-                return new Logic(Shape);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape);
 
-            public override string ToString()
-            {
-                return "Faily";
-            }
+            public override string ToString() => "Faily";
         }
 
         /// <summary>
@@ -477,15 +499,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override FanOutShape<int, int, int> Shape { get; }
 
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            {
-                return new Logic(Shape, _evilLatch);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, _evilLatch);
 
-            public override string ToString()
-            {
-                return "Faily";
-            }
+            public override string ToString() => "Faily";
         }
     }
 }
