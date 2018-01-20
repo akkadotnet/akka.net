@@ -1442,7 +1442,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
-        public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
+        public UnZip() : base(kv => (kv.Key, kv.Value)) { }
 
         /// <summary>
         /// TBD
