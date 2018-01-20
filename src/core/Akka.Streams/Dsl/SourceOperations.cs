@@ -1161,9 +1161,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
-            return (Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -1416,9 +1416,9 @@ namespace Akka.Streams.Dsl
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<Tuple<TOut1, long>, TMat> ZipWithIndex<TOut1, TMat>(this Source<TOut1, TMat> flow)
+        public static Source<(TOut1, long), TMat> ZipWithIndex<TOut1, TMat>(this Source<TOut1, TMat> flow)
         {
-            return (Source<Tuple<TOut1, long>, TMat>)InternalFlowOperations.ZipWithIndex(flow);
+            return (Source<(TOut1, long), TMat>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>

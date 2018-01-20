@@ -558,7 +558,7 @@ namespace Akka.Streams.Implementation
             private readonly Lazy<Decider> _decider;
             private TaskCompletionSource<TSource> _resource;
             private Action<Either<Option<TOut>, Exception>> _createdCallback;
-            private Action<Tuple<Action, Task>> _closeCallback;
+            private Action<(Action, Task)> _closeCallback;
             private bool _open;
 
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
@@ -624,7 +624,7 @@ namespace Akka.Streams.Implementation
 
                 _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(CreatedHandler);
 
-                void CloseHandler(Tuple<Action, Task> t)
+                void CloseHandler((Action, Task) t)
                 {
                     if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
                     {
@@ -638,7 +638,7 @@ namespace Akka.Streams.Implementation
                     }
                 }
 
-                _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(CloseHandler);
+                _closeCallback = GetAsyncCallback<(Action, Task)>(CloseHandler);
             }
 
             private void CreateStream(bool withPull)
@@ -711,7 +711,7 @@ namespace Akka.Streams.Implementation
                 {
                     try
                     {
-                        _source._close(source).ContinueWith(t => _closeCallback(Tuple.Create(action, t)));
+                        _source._close(source).ContinueWith(t => _closeCallback((action, t)));
                     }
                     catch (Exception ex)
                     {
