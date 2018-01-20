@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
-                    var unzip = b.Add(new UnzipWith<int, int, string>(i => Tuple.Create(1/i, 1 + "/" + i)));
+                    var unzip = b.Add(new UnzipWith<int, int, string>(i => (1/i, 1 + "/" + i)));
                     var source = Source.From(Enumerable.Range(-2, 5));
 
                     b.From(source).To(unzip.In);
@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
-                    var unzip = b.Add(new UnzipWith<Person, string, string, int>(p => Tuple.Create(p.Name, p.Surname, p.Age)));
+                    var unzip = b.Add(new UnzipWith<Person, string, string, int>(p => (p.Name, p.Surname, p.Age)));
                     var source = Source.Single(new Person("Caplin", "Capybara", 55));
 
                     b.From(source).To(unzip.In);
@@ -234,8 +234,8 @@ namespace Akka.Streams.Tests.Dsl
                         b.Add(
                             new UnzipWith<List<int>, int, string, int, string, int, string>(
                                 ints =>
-                                    Tuple.Create(ints[0], ints[0].ToString(), ints[1], ints[1].ToString(), ints[2],
-                                        ints[2].ToString())));
+                                    (ints[0], ints[0].ToString(), ints[1], ints[1].ToString(), ints[2],
+                                     ints[2].ToString())));
 
                     var source = Source.Single(Enumerable.Range(1,3).ToList());
                     
@@ -277,13 +277,13 @@ namespace Akka.Streams.Tests.Dsl
         
         private static readonly TestException TestException = new TestException("test");
 
-        private static readonly Func<int, Tuple<int, string>> Zipper = i => Tuple.Create(i + i, i + "+" + i);
+        private static readonly Func<int, (int, string)> Zipper = i => (i + i, i + "+" + i);
 
         private sealed class UnzipWithFixture
         {
             public UnzipWithFixture(GraphDsl.Builder<NotUsed> builder)
             {
-                var unzip = builder.Add(new UnzipWith<int, int, string>(i => Tuple.Create(i + i, i + "+" + i)));
+                var unzip = builder.Add(new UnzipWith<int, int, string>(i => (i + i, i + "+" + i)));
                 In = unzip.In;
                 Left = unzip.Out0;
                 Right = unzip.Out1;
