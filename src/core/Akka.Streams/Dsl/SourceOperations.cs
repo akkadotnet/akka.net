@@ -1161,7 +1161,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<(IImmutableList<TOut> prefix, Source<TOut, NotUsed> tail), TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
             return (Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }

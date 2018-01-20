@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
+                var (p2, p3) = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
                     Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
                     {
                         var balance = b.Add(new Balance<int>(3, true));
@@ -121,8 +121,6 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(balance.Out(2)).To(p3Sink);
                         return ClosedShape.Instance;
                     })).Run(Materializer);
-                var p2 = t.Item1;
-                var p3 = t.Item2;
 
                 var sub1 = s1.ExpectSubscription();
                 sub1.Request(1);
@@ -230,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var probe = this.SinkProbe<int>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, Tuple.Create,
+                var (p1, p2, p3) = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, Tuple.Create,
                     (b, o1, o2, o3) =>
                     {
                         var balance = b.Add(new Balance<int>(3));
@@ -243,9 +241,6 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(balance.Out(2)).To(o3);
                         return ClosedShape.Instance;
                     })).Run(Materializer);
-                var p1 = t.Item1;
-                var p2 = t.Item2;
-                var p3 = t.Item3;
 
                 p1.RequestNext(1);
                 p2.RequestNext(2);

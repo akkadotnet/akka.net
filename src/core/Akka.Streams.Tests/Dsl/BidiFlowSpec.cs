@@ -183,13 +183,9 @@ namespace Akka.Streams.Tests.Dsl
                     return new FlowShape<long, ByteString>(flow.Inlet, source.Outlet);
                 }));
 
-                var tt = left.JoinMaterialized(BidiMaterialized(), Keep.Both)
+                var ((l, m), r) = left.JoinMaterialized(BidiMaterialized(), Keep.Both)
                     .JoinMaterialized(right, Keep.Both)
                     .Run(Materializer);
-                var t = tt.Item1;
-                var l = t.Item1;
-                var m = t.Item2;
-                var r = tt.Item2;
 
                 Task.WhenAll(l, m, r).Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 l.Result.Should().Be(1);

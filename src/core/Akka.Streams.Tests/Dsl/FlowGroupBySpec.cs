@@ -406,10 +406,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var f = Flow.Create<int>().GroupBy(1, x => x % 2).PrefixAndTail(0).MergeSubstreams();
-                var t = ((Flow<int, (IImmutableList<int>, Source<int, NotUsed>), NotUsed>)f)
+                var (up, down) = ((Flow<int, (IImmutableList<int>, Source<int, NotUsed>), NotUsed>)f)
                     .RunWith(this.SourceProbe<int>(), this.SinkProbe<(IImmutableList<int>, Source<int, NotUsed>)>(), Materializer);
-                var up = t.Item1;
-                var down = t.Item2;
 
                 down.Request(2);
 
