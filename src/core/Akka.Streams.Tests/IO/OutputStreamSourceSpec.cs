@@ -64,11 +64,10 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                         .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
+
                 var s = probe.ExpectSubscription();
 
                 outputStream.Write(_bytesArray, 0, _bytesArray.Length);
@@ -84,11 +83,10 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                         .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
+
                 var s = probe.ExpectSubscription();
 
                 outputStream.Write(_bytesArray, 0, _bytesArray.Length);
@@ -115,11 +113,9 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                         .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
                 var s = probe.ExpectSubscription();
 
                 outputStream.Write(_bytesArray, 0, _byteString.Count);
@@ -150,12 +146,10 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
                     .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                     .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
                 var s = probe.ExpectSubscription();
 
                 for (var i = 1; i <= 16; i++)
@@ -184,11 +178,9 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = StreamConverters.AsOutputStream()
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                         .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
 
                 probe.ExpectSubscription();
                 outputStream.Dispose();
@@ -229,12 +221,10 @@ namespace Akka.Streams.Tests.IO
             this.AssertAllStagesStopped(() =>
             {
                 var sourceProbe = CreateTestProbe();
-                var t =
+                var (outputStream, probe) =
                     TestSourceStage<ByteString, Stream>.Create(new OutputStreamSourceStage(Timeout), sourceProbe)
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                         .Run(_materializer);
-                var outputStream = t.Item1;
-                var probe = t.Item2;
 
                 var s = probe.ExpectSubscription();
 
@@ -271,12 +261,10 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public void OutputStreamSource_must_not_leave_blocked_threads()
         {
-            var tuple =
+            var (outputStream, probe) =
                 StreamConverters.AsOutputStream(Timeout)
                     .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                     .Run(_materializer);
-            var outputStream = tuple.Item1;
-            var probe = tuple.Item2;
 
             var sub = probe.ExpectSubscription();
 
@@ -317,12 +305,10 @@ namespace Akka.Streams.Tests.IO
 
             const int bufferSize = 4;
 
-            var t = StreamConverters.AsOutputStream(Timeout)
+            var (outputStream, probe) = StreamConverters.AsOutputStream(Timeout)
                 .AddAttributes(Attributes.CreateInputBuffer(bufferSize, bufferSize))
                 .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
                 .Run(_materializer);
-            var outputStream = t.Item1;
-            var probe = t.Item2;
 
             // fill the buffer up
             Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));

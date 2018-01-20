@@ -231,11 +231,9 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = FileIO.FromFile(NotExistingFile())
+                var (r, p) = FileIO.FromFile(NotExistingFile())
                     .ToMaterialized(Sink.AsPublisher<ByteString>(false), Keep.Both)
                     .Run(_materializer);
-                var r = t.Item1;
-                var p = t.Item2;
 
                 var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);

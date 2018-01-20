@@ -1200,9 +1200,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed> PrefixAndTail<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
+        public static SubFlow<(IImmutableList<TOut> prefix, Source<TOut, NotUsed> tail), TMat, TClosed> PrefixAndTail<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
         {
-            return (SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (SubFlow<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat, TClosed>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>

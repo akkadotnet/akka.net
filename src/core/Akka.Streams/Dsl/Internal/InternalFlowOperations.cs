@@ -1197,7 +1197,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<(IImmutableList<T>, Source<T, NotUsed>), TMat> PrefixAndTail<T, TMat>(
+        public static IFlow<(IImmutableList<T> prefix, Source<T, NotUsed> tail), TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));
