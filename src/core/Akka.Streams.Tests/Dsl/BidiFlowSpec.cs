@@ -68,26 +68,23 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_top_and_bottom_in_isolation()
         {
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<long>(), Sink.First<string>(), Keep.Both,
+            var (top, bottom) = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<long>(), Sink.First<string>(), Keep.Both,
                 (b, st, sb) =>
                 {
                     var s = b.Add(Bidi());
                     b.From(
                         Source.Single(1)
-                            .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))))
+                            .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))))
                         .To(s.Inlet1);
                     b.From(s.Outlet1).To(st);
                     b.To(sb).From(s.Outlet2);
                     b.To(s.Inlet2)
                         .From(
                             Source.Single(Bytes)
-                                .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))));
+                                .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))));
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);
-
-            var top = t.Item1;
-            var bottom = t.Item2;
 
             top.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 
             bottom.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 

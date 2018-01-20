@@ -111,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
                         var balance = b.Add(new Balance<int>(3, true));
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
+                                .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0))
                             .To(

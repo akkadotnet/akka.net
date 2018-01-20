@@ -753,7 +753,7 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.AsPublisher<TOut>(true).WithAttributes(Attributes.CreateInputBuffer(elasticity, elasticity)),
                     materializer);
 
-        private static Tuple<ISubscriber<TIn>, IPublisher<TOut>> MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
+        private static (ISubscriber<TIn>, IPublisher<TOut>) MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
             Flow<TIn, TOut, TMat> flow, ActorMaterializer materializer)
             => flow.RunWith(Source.AsSubscriber<TIn>(), Sink.AsPublisher<TOut>(false), materializer);
     }

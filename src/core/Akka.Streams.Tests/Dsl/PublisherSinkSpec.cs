@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
+                var (pub1, pub2) =
                     RunnableGraph.FromGraph(
                         GraphDsl.Create(Sink.AsPublisher<int>(false),
                             Sink.AsPublisher<int>(false), Keep.Both,
@@ -41,15 +41,12 @@ namespace Akka.Streams.Tests.Dsl
                                 var broadcast = b.Add(new Broadcast<int>(2));
                                 var source =
                                     Source.From(Enumerable.Range(0, 6))
-                                        .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
+                                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
                                 b.From(source).To(broadcast.In);
                                 b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
                                 b.From(broadcast.Out(1)).To(p2.Inlet);
                                 return ClosedShape.Instance;
                             })).Run(Materializer);
-
-                var pub1 = t.Item1;
-                var pub2 = t.Item2;
 
                 var f1 = Source.FromPublisher(pub1).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
                 var f2 = Source.FromPublisher(pub2).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);

@@ -67,6 +67,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>

@@ -331,7 +331,7 @@ namespace Akka.Streams.Dsl
         /// <param name="sink">TBD</param>
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
-        public Tuple<TMat1, TMat2> RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
+        public (TMat1, TMat2) RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
             => Source.FromGraph(source).Via(this).ToMaterialized(sink, Keep.Both).Run(materializer);
 
         /// <summary>

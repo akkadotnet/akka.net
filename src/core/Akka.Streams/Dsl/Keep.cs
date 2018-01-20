@@ -44,7 +44,7 @@ namespace Akka.Streams.Dsl
         /// <param name="left">TBD</param>
         /// <param name="right">TBD</param>
         /// <returns>TBD</returns>
-        public static Tuple<TLeft, TRight> Both<TLeft, TRight>(TLeft left, TRight right) => Tuple.Create(left, right);
+        public static (TLeft, TRight) Both<TLeft, TRight>(TLeft left, TRight right) => (left, right);
 
         /// <summary>
         /// TBD
