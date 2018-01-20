@@ -279,10 +279,10 @@ namespace Akka.Streams.Tests.Dsl
                     _stage._probe.Tell(Self);
                 }
 
-                private void Behaviour(Tuple<IActorRef, object> args)
+                private void Behaviour((IActorRef sender, object msg) args)
                 {
-                    var msg = args.Item2;
-                    var sender = args.Item1;
+                    var msg = args.msg;
+                    var sender = args.sender;
 
                     switch (msg)
                     {

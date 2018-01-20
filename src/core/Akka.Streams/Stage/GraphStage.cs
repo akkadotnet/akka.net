@@ -1626,7 +1626,7 @@ namespace Akka.Streams.Stage
                 var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 _stageActor = new StageActor(
                     actorMaterializer,
-                    r => GetAsyncCallback<Tuple<IActorRef, object>>(message => r(message)),
+                    r => GetAsyncCallback<(IActorRef, object)>(message => r(message)),
                     receive,
                     StageActorName);
             }
@@ -2365,7 +2365,7 @@ namespace Akka.Streams.Stage
 
     public static class StageActorRef
     {
-        public delegate void Receive(Tuple<IActorRef, object> args);
+        public delegate void Receive((IActorRef sender, object msg) args);
     }
 
     /// <summary>
@@ -2373,7 +2373,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class StageActor
     {
-        private readonly Action<Tuple<IActorRef, object>> _callback;
+        private readonly Action<(IActorRef, object)> _callback;
         private readonly ActorCell _cell;
         private readonly FunctionRef _functionRef;
         private StageActorRef.Receive _behavior;
@@ -2402,6 +2402,7 @@ namespace Akka.Streams.Stage
                     case Kill _:
                         materializer.Logger.Warning("{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor. " +
                                                     "Use a custom message type to communicate with it instead.", message, _functionRef.Path);
+                    _callback((sender, message));
                         break;
                     default: _callback(Tuple.Create(sender, message)); break;
                 }
