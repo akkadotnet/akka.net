@@ -310,14 +310,14 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> Factory;
+        public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
-        public PushPullGraphStageWithMaterializedValue(Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> factory, Attributes stageAttributes)
+        public PushPullGraphStageWithMaterializedValue(Func<Attributes, (IStage<TIn, TOut>, TMat)> factory, Attributes stageAttributes)
         {
             InitialAttributes = stageAttributes;
             Factory = factory;
@@ -370,7 +370,7 @@ namespace Akka.Streams.Stage
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => Tuple.Create(factory(attributes), NotUsed.Instance), stageAttributes)
+        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => (factory(attributes), NotUsed.Instance), stageAttributes)
         {
         }
     }
