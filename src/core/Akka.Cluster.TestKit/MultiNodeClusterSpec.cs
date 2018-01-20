@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
@@ -370,6 +371,57 @@ namespace Akka.Cluster.TestKit
                 var firstMember = ClusterView.Members.FirstOrDefault();
                 var expectedLeader = firstMember == null ? null : firstMember.Address;
                 AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
+            });
+        }
+
+        public void AwaitMemberRemoved(Address toBeRemovedAddress, TimeSpan? timeout = null)
+        {
+            var t = timeout ?? TimeSpan.FromSeconds(25);
+            Within(t, () =>
+            {
+                if (toBeRemovedAddress == Cluster.SelfAddress)
+                {
+                    EnterBarrier("registered-listener");
+
+                    Cluster.Leave(toBeRemovedAddress);
+                    EnterBarrier("member-left");
+
+                    AwaitCondition(() => Cluster.IsTerminated, Remaining);
+                    EnterBarrier("member-shutdown");
+                }
+                else
+                {
+                    var exitingLatch = CreateTestLatch();
+
+                    Action<IActorDsl> act = c =>
+                    {
+                        c.Receive<ClusterEvent.MemberRemoved>((removed, ctx) =>
+                        {
+                            if (removed.Member.Address == toBeRemovedAddress)
+                                exitingLatch.CountDown();
+                        });
+                        c.ReceiveAny((o, context) =>
+                        {
+                            /* ignore */
+                        });
+                    };
+                    var awaiter = Sys.ActorOf(Props.Create(() => new Act(act)).WithDeploy(Deploy.Local));
+                    Cluster.Subscribe(awaiter, typeof(ClusterEvent.IMemberEvent));
+                    EnterBarrier("registered-listener");
+
+                    // in the meantime member issues leave
+                    EnterBarrier("member-left");
+
+                    // verify that the member is EXITING
+                    exitingLatch.Ready(t);
+
+                    awaiter.Tell(PoisonPill.Instance); // you've done your job, now die
+
+                    EnterBarrier("member-shutdown");
+                    MarkNodeAsUnavailable(toBeRemovedAddress);
+                }
+
+                EnterBarrier("member-totally-shutdown");
             });
         }
 
