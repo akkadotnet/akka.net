@@ -1245,7 +1245,7 @@ namespace Akka.Streams.Implementation
             IImmutableDictionary<InPort, OutPort> upstreams,
             IImmutableDictionary<InPort, IModule> inOwners, 
             IImmutableDictionary<OutPort, IModule> outOwners,
-            IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> materializedValues,
+            IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> materializedValues,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes)
         {
@@ -1309,7 +1309,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
+        public IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> MaterializedValues { get; }
 
         /// <summary>
         /// TBD

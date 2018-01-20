@@ -231,7 +231,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var sink1 = setup.NewDownstreamProbe<Tuple<int, int>>("sink1");
                 var sink2 = setup.NewDownstreamProbe<Tuple<int, int>>("sink2");
                 var zip = new Zip<int, int>();
-                var broadcast = new Broadcast<Tuple<int, int>>(2);
+                var broadcast = new Broadcast<(int, int)>(2);
 
                 builder(new IGraphStageWithMaterializedValue<Shape, object>[] {broadcast, zip})
                     .Connect(source1, zip.In0)

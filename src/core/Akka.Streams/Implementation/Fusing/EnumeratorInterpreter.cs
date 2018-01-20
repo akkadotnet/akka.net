@@ -239,9 +239,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             var assembly = new GraphAssembly(stages, attributes, ins, inOwners, outs, outOwners);
-            var tup = assembly.Materialize(Attributes.None, assembly.Stages.Select(x => x.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
-            var connections = tup.Item1;
-            var logics = tup.Item2;
+            var (connections, logics) = assembly.Materialize(Attributes.None, assembly.Stages.Select(x => x.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
 
             var interpreter = new GraphInterpreter(
                 assembly: assembly, 

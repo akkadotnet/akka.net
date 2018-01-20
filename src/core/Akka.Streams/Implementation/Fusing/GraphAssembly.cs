@@ -167,7 +167,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="register">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public Tuple<Connection[], GraphStageLogic[]> Materialize(
+        public (Connection[], GraphStageLogic[]) Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
@@ -228,9 +228,8 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var owner = InletOwners[i];
                     var logic = logics[owner];
-                    var h = logic.Handlers[inlet.Id] as IInHandler;
 
-                    if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {inlet}");
+                    if (!(logic.Handlers[inlet.Id] is IInHandler h)) throw new IllegalStateException($"No handler defined in stage {logic} for port {inlet}");
                     connection.InHandler = h;
 
                     logic.PortToConn[inlet.Id] = connection;
@@ -251,7 +250,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            return Tuple.Create(connections, logics);
+            return (connections, logics);
         }
 
         /// <summary>

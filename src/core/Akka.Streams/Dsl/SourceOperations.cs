@@ -1788,9 +1788,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static Source<(T1, T2), TMat> Zip<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
-            return (Source<Tuple<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
+            return (Source<(T1, T2), TMat>)InternalFlowOperations.Zip(flow, other);
         }
 
         /// <summary>

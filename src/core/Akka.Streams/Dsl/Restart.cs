@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 
@@ -228,7 +227,7 @@ namespace Akka.Streams.Dsl
         private class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
         {
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
-            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
+            private (SubSourceOutlet<TIn> sourceOut, SubSinkInlet<TOut> sinkIn)? _activeOutIn;
 
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor)
@@ -245,7 +244,7 @@ namespace Akka.Streams.Dsl
                 if (IsAvailable(_stage.Out))
                     sinkIn.Pull();
 
-                _activeOutIn = Tuple.Create(sourceOut, sinkIn);
+                _activeOutIn = (sourceOut, sinkIn);
             }
 
             protected override void Backoff()
@@ -263,13 +262,11 @@ namespace Akka.Streams.Dsl
                 // receive any callbacks from it.
                 if (_activeOutIn != null)
                 {
-                    var sourceOut = _activeOutIn.Item1;
-                    var sinkIn = _activeOutIn.Item2;
-                    if (!sourceOut.IsClosed)
-                        sourceOut.Complete();
+                    if (!_activeOutIn.Value.sourceOut.IsClosed)
+                        _activeOutIn.Value.sourceOut.Complete();
 
-                    if (!sinkIn.IsClosed)
-                        sinkIn.Cancel();
+                    if (!_activeOutIn.Value.sinkIn.IsClosed)
+                        _activeOutIn.Value.sinkIn.Cancel();
                     _activeOutIn = null;
                 }
             }
