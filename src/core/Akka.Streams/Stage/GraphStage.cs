@@ -1626,7 +1626,7 @@ namespace Akka.Streams.Stage
                 var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 var provider = ((IInternalActorRef)actorMaterializer.Supervisor).Provider;
                 var path = actorMaterializer.Supervisor.Path / StageActorRef.Name.Next();
-                _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);
+                _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<(IActorRef, object)>(tuple => r(tuple)), receive, path);
             }
             else
                 _stageActorRef.Become(receive);
@@ -2358,7 +2358,7 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         /// <param name="args">TBD</param>
-        public delegate void Receive(Tuple<IActorRef, object> args);
+        public delegate void Receive((IActorRef sender, object msg) args);
 
         /// <summary>
         /// TBD
@@ -2374,7 +2374,7 @@ namespace Akka.Streams.Stage
         /// TBD
         /// </summary>
         public readonly ILoggingAdapter Log;
-        private readonly Action<Tuple<IActorRef, object>> _callback;
+        private readonly Action<(IActorRef, object)> _callback;
         private readonly AtomicReference<IImmutableSet<IActorRef>> _watchedBy = new AtomicReference<IImmutableSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
 
         private volatile Receive _behavior;
@@ -2389,7 +2389,7 @@ namespace Akka.Streams.Stage
         /// <param name="initialReceive">TBD</param>
         /// <param name="path">TBD</param>
         /// <returns>TBD</returns>
-        public StageActorRef(IActorRefProvider provider, ILoggingAdapter log, Func<Receive, Action<Tuple<IActorRef, object>>> getAsyncCallback, Receive initialReceive, ActorPath path)
+        public StageActorRef(IActorRefProvider provider, ILoggingAdapter log, Func<Receive, Action<(IActorRef, object)>> getAsyncCallback, Receive initialReceive, ActorPath path)
         {
             Log = log;
             Provider = provider;
@@ -2432,12 +2432,12 @@ namespace Akka.Streams.Stage
                     if (_watching.Contains(t.ActorRef))
                     {
                         _watching.Remove(t.ActorRef);
-                        _callback(Tuple.Create(sender, message));
+                        _callback((sender, message));
                         break;
                     }
                     else return;
                 default:
-                    _callback(Tuple.Create(sender, message));
+                    _callback((sender, message));
                     break;
             }
         }

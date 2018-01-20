@@ -331,16 +331,13 @@ namespace Akka.Streams.Tests.Dsl
                     _stage._probe.Tell(_self);
                 }
 
-                private void Behaviour(Tuple<IActorRef, object> args)
+                private void Behaviour((IActorRef sender, object msg) args)
                 {
-                    var msg = args.Item2;
-                    var sender = args.Item1;
-
-                    msg.Match()
+                    args.msg.Match()
                         .With<Add>(a => _sum += a.N)
                         .With<PullNow>(() => Pull(_stage._inlet))
-                        .With<CallInitStageActorRef>(() => sender.Tell(GetStageActorRef(Behaviour), _self))
-                        .With<BecomeStringEcho>(() => GetStageActorRef(tuple => tuple.Item1.Tell(tuple.Item2.ToString())))
+                        .With<CallInitStageActorRef>(() => args.sender.Tell(GetStageActorRef(Behaviour), _self))
+                        .With<BecomeStringEcho>(() => GetStageActorRef(tuple => tuple.sender.Tell(tuple.Item2.ToString())))
                         .With<StopNow>(() =>
                         {
                             _promise.TrySetResult(_sum);
@@ -348,7 +345,7 @@ namespace Akka.Streams.Tests.Dsl
                         }).With<AddAndTell>(a =>
                         {
                             _sum += a.N;
-                            sender.Tell(_sum, _self);
+                            args.sender.Tell(_sum, _self);
                         })
                         .With<WatchMe>(w => _self.Watch(w.Watchee))
                         .With<Terminated>(t => _stage._probe.Tell(new WatcheeTerminated(t.ActorRef)));
