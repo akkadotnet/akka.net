@@ -432,12 +432,10 @@ namespace Akka.Streams.Tests.IO
                         .Run(Materializer);
                 var binding = task.Result;
 
-                var t = Source.Maybe<ByteString>()
+                var (promise, result) = Source.Maybe<ByteString>()
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
                     .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
-                var promise = t.Item1;
-                var result = t.Item2;
 
                 result.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
                 result.Result.ShouldBeEquivalentTo(ByteString.FromString("Early response"));
@@ -540,14 +538,13 @@ namespace Akka.Streams.Tests.IO
         public async Task Tcp_listen_stream_must_be_able_to_implement_echo()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var t = Sys.TcpStream()
+            var (bindingTask, echoServerFinish) = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await t.Item1;
-            var echoServerFinish = t.Item2;
+            var binding = await bindingTask;
 
             var testInput = Enumerable.Range(0, 255)
                 .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}))
@@ -568,14 +565,13 @@ namespace Akka.Streams.Tests.IO
         public async Task Tcp_listen_stream_must_work_with_a_chain_of_echoes()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var t = Sys.TcpStream()
+            var (bindingTask, echoServerFinish) = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await t.Item1;
-            var echoServerFinish = t.Item2;
+            var binding = await bindingTask;
 
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
@@ -649,7 +645,7 @@ namespace Akka.Streams.Tests.IO
                     .ToArray();
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
-                var t = Sys.TcpStream()
+                var (bindingTask, _) = Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .Take(1)
                     .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(tcp =>
@@ -658,8 +654,6 @@ namespace Akka.Streams.Tests.IO
                         tcp.Flow.Join(Flow.Create<ByteString>()).Run(Materializer);
                     }), Keep.Both)
                     .Run(Materializer);
-
-                var bindingTask = t.Item1;
 
                 // make sure server is running first
                 bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
