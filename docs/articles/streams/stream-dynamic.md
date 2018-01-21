@@ -104,3 +104,54 @@ We now wrap the `Sink` and `Source` in a Flow using `Flow.FromSinkAndSource`. Th
 The resulting `Flow` now has a type of `Flow<string, string, UniqueKillSwitch>` representing a publish-subscribe channel which can be used any number of times to attach new producers or consumers. In addition, it materializes to a `UniqueKillSwitch` (see [UniqueKillSwitch](xref:streams-dynamic-handling#uniquekillswitch)) that can be used to deregister a single user externally:
 
 [!code-csharp[HubsDocTests.cs](../../examples/DocsExamples/Streams/HubsDocTests.cs?name=pub-sub-4)]
+
+
+### Using the PartitionHub
+
+**This is a [may change](../utilities/may-change.md) feature**
+
+A `PartitionHub` can be used to route elements from a common producer to a dynamic set of consumers.
+The selection of consumer is done with a function. Each element can be routed to only one consumer. 
+
+The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a `Sink`
+to which the single producer must be attached first. Consumers can only be attached once the `Sink` has
+been materialized (i.e. the producer has been started). One example of using the `PartitionHub`:
+
+[!code-csharp[HubsDocTests.cs](../../examples/DocsExamples/Streams/HubsDocTests.cs?name=partition-hub)]
+
+The `partitioner` function takes two parameters; the first is the number of active consumers and the second
+is the stream element. The function should return the index of the selected consumer for the given element, 
+i.e. `int` greater than or equal to 0 and less than number of consumers.
+
+The resulting `Source` can be materialized any number of times, each materialization effectively attaching
+a new consumer. If there are no consumers attached to this hub then it will not drop any elements but instead
+backpressure the upstream producer until consumers arrive. This behavior can be tweaked by using the combinators
+`.Buffer` for example with a drop strategy, or just attaching a consumer that drops all messages. If there
+are no other consumers, this will ensure that the producer is kept drained (dropping all elements) and once a new
+consumer arrives and messages are routed to the new consumer it will adaptively slow down, ensuring no more messages
+are dropped.
+
+It is possible to define how many initial consumers that are required before it starts emitting any messages
+to the attached consumers. While not enough consumers have been attached messages are buffered and when the
+buffer is full the upstream producer is backpressured. No messages are dropped.
+
+The above example illustrate a stateless partition function. For more advanced stateful routing the `StatefulSink` can be used. Here is an example of a stateful round-robin function:
+
+[!code-csharp[HubsDocTests.cs](../../examples/DocsExamples/Streams/HubsDocTests.cs?name=partition-hub-stateful)]
+
+Note that it is a factory of a function to to be able to hold stateful variables that are 
+unique for each materialization.
+
+
+The function takes two parameters; the first is information about active consumers, including an array of 
+consumer identifiers and the second is the stream element. The function should return the selected consumer
+identifier for the given element. The function will never be called when there are no active consumers, i.e. 
+there is always at least one element in the array of identifiers.
+
+Another interesting type of routing is to prefer routing to the fastest consumers. The `IConsumerInfo`
+has an accessor `QueueSize` that is approximate number of buffered elements for a consumer.
+Larger value than other consumers could be an indication of that the consumer is slow.
+Note that this is a moving target since the elements are consumed concurrently. Here is an example of
+a hub that routes to the consumer with least buffered elements:
+
+[!code-csharp[HubsDocTests.cs](../../examples/DocsExamples/Streams/HubsDocTests.cs?name=partition-hub-fastest)]
