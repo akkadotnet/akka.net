@@ -36,7 +36,29 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class CrossDcHeartbeatSender : ActorBase
     {
+        #region messages intended only for local messaging during testing
+
+        internal interface IInspectionCommand : INoSerializationVerificationNeeded { }
+        internal sealed class ReportStatus { }
+
+        internal interface IStatusReport : INoSerializationVerificationNeeded { }
+        internal interface IMonitoringStateReport : IStatusReport { }
+        internal sealed class MonitoringActive : IMonitoringStateReport
+        {
+            public MonitoringActive(CrossDcHeartbeatingState state)
+            {
+                State = state;
+            }
+
+            public CrossDcHeartbeatingState State { get; }
+        }
+
+        internal sealed class MonitoringDormant : IMonitoringStateReport { }
+
+        #endregion
+
         private readonly Func<Member, bool> IsExternalClusterMember;
+        private readonly Receive _activeOrIntrospecting;
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly bool _isVerboseHeartbeat;
@@ -54,14 +76,15 @@ namespace Akka.Cluster
 
         public CrossDcHeartbeatSender()
         {
+            _activeOrIntrospecting = message => Active(message) || Introspecting(message);
             _isVerboseHeartbeat = _cluster.Settings.VerboseHeartbeatLogging;
-            IsExternalClusterMember = member => member.DataCenter != _cluster.SelfDataCenter;
+            IsExternalClusterMember = member => member.DataCenter != SelfDataCenter;
             _crossDcFailureDetector = _cluster.FailureDetector;
             _selfHeartbeat = new ClusterHeartbeatSender.Heartbeat(_cluster.SelfAddress);
             _dataCentersState = CrossDcHeartbeatingState.Init(
-                _cluster.SelfDataCenter, 
-                _crossDcFailureDetector, 
-                _crossDcSettings.NrOfMonitoringActors, 
+                SelfDataCenter,
+                _crossDcFailureDetector,
+                _crossDcSettings.NrOfMonitoringActors,
                 ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering));
 
             // start periodic heartbeat to other nodes in cluster
@@ -71,11 +94,22 @@ namespace Akka.Cluster
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, heartbeatInterval, Self, new ClusterHeartbeatSender.HeartbeatTick(), ActorRefs.NoSender);
         }
 
+        public string SelfDataCenter => _cluster.SelfDataCenter;
+
+        public bool SelfIsResponsibleForCrossDcHeartbeat
+        {
+            get
+            {
+                var activeDCs = _dataCentersState.DataCenters.Count;
+                return activeDCs > 1 && _dataCentersState.ShouldActivelyMonitorNodes(SelfDataCenter, _cluster.SelfUniqueAddress);
+            }
+        }
+
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
             if (_isVerboseHeartbeat)
-                _log.Debug("Initialized cross-dc heartbeat sender as DORMANT in DC: [{0}]", _cluster.SelfDataCenter);
+                _log.Debug("Initialized cross-dc heartbeat sender as DORMANT in DC: [{0}]", SelfDataCenter);
         }
 
         protected override void PostStop()
@@ -88,16 +122,141 @@ namespace Akka.Cluster
             _cluster.Unsubscribe(Self);
         }
 
-        protected override bool Receive(object message)
+        protected override bool Receive(object message) => Dormant(message) || Introspecting(message);
+
+        private bool Dormant(object message)
         {
-            throw new System.NotImplementedException();
+            switch (message)
+            {
+                case ClusterEvent.CurrentClusterState state: Init(state); return true;
+                case ClusterEvent.MemberRemoved removed: RemoveMember(removed.Member); return true;
+                case ClusterHeartbeatSender.HeartbeatTick _: return true; // ignore
+                default: return false;
+            }
         }
+
+        private bool Active(object message)
+        {
+            switch (message)
+            {
+                case ClusterHeartbeatSender.HeartbeatTick _: Heartbeat(); return true;
+                case ClusterHeartbeatSender.HeartbeatRsp rsp: HeartbeatRsp(rsp.From); return true;
+                case ClusterEvent.MemberRemoved removed: RemoveMember(removed.Member); return true;
+                case ClusterEvent.IMemberEvent e: AddMember(e.Member); return true;
+                case ClusterHeartbeatSender.ExpectedFirstHeartbeat f: TriggerFirstHeartbeat(f.From); return true;
+                default: return false;
+            }
+        }
+
+        private bool Introspecting(object message)
+        {
+            switch (message)
+            {
+                case ReportStatus _:
+                    var msg = _activelyMonitoring ? (object)new MonitoringActive(_dataCentersState) : new MonitoringDormant(); 
+                    Sender.Tell(msg);
+                    return true;
+                default: return false;
+            }
+        }
+        private void Init(ClusterEvent.CurrentClusterState snapshot)
+        {
+            // val unreachable = snapshot.unreachable.collect({ case m if isExternalClusterMember(m) => m.uniqueAddress })
+            // nr of monitored nodes is the same as the number of monitoring nodes (`n` oldest in one DC watch `n` oldest in other)
+            var nodes = snapshot.Members;
+            var nrOfMonitoredNodes = _crossDcSettings.NrOfMonitoringActors;
+            _dataCentersState = CrossDcHeartbeatingState.Init(SelfDataCenter, _crossDcFailureDetector, nrOfMonitoredNodes, nodes);
+            BecomeActiveIfResponsibleForHeartbeat();
+        }
+
+        private void AddMember(Member member)
+        {
+            if (CrossDcHeartbeatingState.AtLeastInUpState(member))
+            {
+                // since we only monitor nodes in Up or later states, due to the n-th oldest requirement
+                _dataCentersState = _dataCentersState.AddMember(member);
+                if (_isVerboseHeartbeat && member.DataCenter != SelfDataCenter)
+                    _log.Debug("Register member {0} for cross DC heartbeat (will only heartbeat if oldest)", member);
+
+                BecomeActiveIfResponsibleForHeartbeat();
+            }
+        }
+
+        private void RemoveMember(Member member)
+        {
+            if (member.UniqueAddress == _cluster.SelfUniqueAddress)
+            {
+                // This cluster node will be shutdown, but stop this actor immediately to avoid further updates
+                Context.Stop(Self);
+            }
+            else
+            {
+                _dataCentersState = _dataCentersState.RemoveMember(member);
+                BecomeActiveIfResponsibleForHeartbeat();
+            }
+        }
+
+        private void Heartbeat()
+        {
+            foreach (var to in _dataCentersState.ActiveReceivers)
+            {
+                if (_crossDcFailureDetector.IsMonitoring(to.Address))
+                {
+                    if (_isVerboseHeartbeat) _log.Debug("Cluster Node [{0}][{1}] - (Cross) Heartbeat to [{2}]", SelfDataCenter, _cluster.SelfAddress, to.Address);
+                }
+                else
+                {
+                    if (_isVerboseHeartbeat) _log.Debug("Cluster Node [{0}][{1}] - First (Cross) Heartbeat to [{2}]", SelfDataCenter, _cluster.SelfAddress, to.Address);
+                    // schedule the expected first heartbeat for later, which will give the
+                    // other side a chance to reply, and also trigger some resends if needed
+                    Context.System.Scheduler.ScheduleTellOnce(_crossDcSettings.HeartbeatExpectedResponseAfter, Self, new ClusterHeartbeatSender.ExpectedFirstHeartbeat(to), ActorRefs.NoSender);
+                }
+
+                HeartbeatReceiver(to.Address).Tell(_selfHeartbeat);
+            }
+        }
+
+        private void HeartbeatRsp(UniqueAddress from)
+        {
+            if (_isVerboseHeartbeat) _log.Debug("Cluster Node [{0}][{1}] - (Cross) Heartbeat response from [{2}]", SelfDataCenter, _cluster.SelfAddress, from.Address);
+            _dataCentersState = _dataCentersState.HeartbeatRsp(from);
+        }
+
+        private void TriggerFirstHeartbeat(UniqueAddress from)
+        {
+            if (_dataCentersState.ActiveReceivers.Contains(from) && !_crossDcFailureDetector.IsMonitoring(from.Address))
+            {
+                if (_isVerboseHeartbeat) _log.Debug("Cluster Node [{0}][{1}] - Trigger extra expected (cross) heartbeat from [{2}]", SelfDataCenter, _cluster.SelfAddress, from.Address);
+                _crossDcFailureDetector.Heartbeat(from.Address);
+            }
+
+        }
+
+        private void BecomeActiveIfResponsibleForHeartbeat()
+        {
+            if (!_activelyMonitoring && SelfIsResponsibleForCrossDcHeartbeat)
+            {
+                _log.Info("Cross DC heartbeat becoming ACTIVE on this node (for DC: {0}), monitoring other DCs oldest nodes", SelfDataCenter);
+                _activelyMonitoring = true;
+
+                Context.Become(_activeOrIntrospecting);
+            }
+            else if (!_activelyMonitoring)
+            {
+                if (_isVerboseHeartbeat) _log.Info("Remaining DORMANT; others in {0} handle heartbeating other DCs", SelfDataCenter);
+            }
+        }
+
+        /// <summary>
+        /// Looks up and returns the remote cluster heartbeat connection for the specific address.
+        /// </summary>
+        private ActorSelection HeartbeatReceiver(Address address) => Context.ActorSelection(ClusterHeartbeatReceiver.Path(address));
     }
 
     internal sealed class CrossDcHeartbeatingState
     {
         private static readonly ImmutableSortedSet<Member> EmptyMembersSortedSet = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering);
-        private static Func<Member, bool> AtLeastInUpState { get; } = m => m.Status != MemberStatus.WeaklyUp && m.Status != MemberStatus.Joining;
+        internal static Func<Member, bool> AtLeastInUpState { get; } = m => m.Status != MemberStatus.WeaklyUp && m.Status != MemberStatus.Joining;
         public static CrossDcHeartbeatingState Init(string selfDataCenter,
             IFailureDetectorRegistry<Address> crossDcFailureDetector,
             int nrOfMonitoredNodesPerDc,
@@ -137,7 +296,7 @@ namespace Akka.Cluster
                 var allOtherNodes = otherDc.Select(pair => pair.Value);
 
                 return allOtherNodes
-                    .SelectMany(set => 
+                    .SelectMany(set =>
                         set.Take(NrOfMonitoredNodesPerDc).Select(m => m.UniqueAddress))
                     .ToImmutableHashSet();
             }
@@ -201,7 +360,7 @@ namespace Akka.Cluster
             {
                 var updatedMembers = dcMembers.Where(m => m.UniqueAddress != member.UniqueAddress)
                     .ToImmutableSortedSet(Member.AgeOrdering);
-                
+
                 FailureDetector.Remove(member.Address);
                 return this.Copy(state: State.SetItem(dc, updatedMembers));
             }
@@ -222,9 +381,9 @@ namespace Akka.Cluster
             }
         }
 
-        private CrossDcHeartbeatingState Copy(string selfDataCenter = null, 
+        private CrossDcHeartbeatingState Copy(string selfDataCenter = null,
             IFailureDetectorRegistry<Address> failureDetector = null,
-            int? nrOfMonitoredNodesPerDc = null, 
+            int? nrOfMonitoredNodesPerDc = null,
             ImmutableDictionary<string, ImmutableSortedSet<Member>> state = null)
         {
             return new CrossDcHeartbeatingState(

@@ -23,6 +23,9 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatReceiver : ReceiveActor
     {
+        internal const string Name = "heartbeatReceiver";
+        internal static ActorPath Path(Address address) => new RootActorPath(address) / "system" / "cluster" / Name;
+
         private readonly Lazy<ClusterHeartbeatSender.HeartbeatRsp> _selfHeartbeatRsp;
 
         /// <summary>
@@ -109,7 +112,7 @@ namespace Akka.Cluster
         /// </summary>
         private ActorSelection HeartbeatReceiver(Address address)
         {
-            return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "heartbeatReceiver");
+            return Context.ActorSelection(ClusterHeartbeatReceiver.Path(address));
         }
 
         private void Initializing()
