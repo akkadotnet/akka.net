@@ -449,20 +449,20 @@ namespace Akka.Streams.Implementation.IO
             {
                 SetKeepGoing(true);
 
-                if (_role is Inbound)
+                switch (_role)
                 {
-                    var inbound = (Inbound)_role;
-                    SetHandler(_bytesOut, _readHandler);
-                    _connection = inbound.Connection;
-                    GetStageActorRef(Connected).Watch(_connection);
-                    _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
-                    Pull(_bytesIn);
-                }
-                else
-                {
-                    var outbound = (Outbound)_role;
-                    GetStageActorRef(Connecting(outbound)).Watch(outbound.Manager);
-                    outbound.Manager.Tell(outbound.ConnectCmd, StageActorRef);
+                    case Inbound inbound:
+                        SetHandler(_bytesOut, _readHandler);
+                        _connection = inbound.Connection;
+                        GetStageActorRef(Connected).Watch(_connection);
+                        _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
+                        Pull(_bytesIn);
+                        break;
+                    default:
+                        var outbound = (Outbound)_role;
+                        GetStageActorRef(Connecting(outbound)).Watch(outbound.Manager);
+                        outbound.Manager.Tell(outbound.ConnectCmd, StageActorRef);
+                        break;
                 }
             }
 
@@ -483,32 +483,33 @@ namespace Akka.Streams.Implementation.IO
             {
                 return args =>
                 {
-                    var sender = args.Item1;
-                    var msg = args.Item2;
+                    var sender = args.sender;
+                    var msg = args.msg;
 
-                    if (msg is Terminated)
-                        FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
-                    else if (msg is Tcp.CommandFailed)
-                        FailStage(new StreamTcpException($"Tcp command {((Tcp.CommandFailed)msg).Cmd} failed"));
-                    else if (msg is Tcp.Connected)
+                    switch (msg)
                     {
-                        var connected = (Tcp.Connected)msg;
+                        case Terminated _:
+                            FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
+                            break;
+                        case Tcp.CommandFailed failed:
+                            FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                            break;
+                        case Tcp.Connected connected:
+                            ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
+                            _connection = sender;
+                            SetHandler(_bytesOut, _readHandler);
+                            StageActorRef.Unwatch(outbound.Manager);
+                            StageActorRef.Become(Connected);
+                            StageActorRef.Watch(_connection);
+                            _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
 
-                        ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
-                        _connection = sender;
-                        SetHandler(_bytesOut, _readHandler);
-                        StageActorRef.Unwatch(outbound.Manager);
-                        StageActorRef.Become(Connected);
-                        StageActorRef.Watch(_connection);
-                        _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
+                            if (IsAvailable(_bytesOut))
+                                _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef);
 
-                        if (IsAvailable(_bytesOut))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef);
-
-                        Pull(_bytesIn);
+                            Pull(_bytesIn);
+                            break;
                     }
                 };
-
             }
 
             private void Connected((IActorRef, object msg) args)

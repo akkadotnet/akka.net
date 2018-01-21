@@ -45,7 +45,8 @@ namespace Akka.Streams.Implementation
         /// <param name="initialAttributes">TBD</param>
         /// <returns>TBD</returns>
         [InternalApi]
-        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes);
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser,
+            Attributes initialAttributes);
 
         /// <summary>
         /// INTERNAL API
@@ -76,7 +77,7 @@ namespace Akka.Streams.Implementation
         {
             var localActorRef = Supervisor as LocalActorRef;
             if (localActorRef != null)
-                return ((ActorCell) localActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher),
+                return ((ActorCell)localActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher),
                     isSystemService: false, name: name);
 
 
@@ -107,12 +108,14 @@ namespace Akka.Streams.Implementation
             private static readonly MethodInfo ProcessorForMethod =
                 typeof(ActorMaterializerSession).GetMethod("ProcessorFor",
                     BindingFlags.NonPublic | BindingFlags.Instance);
+
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
             private readonly string _flowName;
             private int _nextId;
 
-            public ActorMaterializerSession(ActorMaterializerImpl materializer, IModule topLevel, Attributes initialAttributes, Func<GraphInterpreterShell, IActorRef> subflowFuser)
+            public ActorMaterializerSession(ActorMaterializerImpl materializer, IModule topLevel, Attributes initialAttributes,
+                Func<GraphInterpreterShell, IActorRef> subflowFuser)
                 : base(topLevel, initialAttributes)
             {
                 _materializer = materializer;
@@ -123,12 +126,12 @@ namespace Akka.Streams.Implementation
             protected override object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes,
                 IDictionary<IModule, object> materializedValues)
             {
-                if(IsDebug)
+                if (IsDebug)
                     Console.WriteLine($"materializing {atomic}");
 
                 if (atomic is ISinkModule)
                 {
-                    var sink = (ISinkModule) atomic;
+                    var sink = (ISinkModule)atomic;
                     object materialized;
                     var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                     AssignPort(sink.Shape.Inlets.First(), subscriber);
@@ -136,7 +139,7 @@ namespace Akka.Streams.Implementation
                 }
                 else if (atomic is ISourceModule)
                 {
-                    var source = (ISourceModule) atomic;
+                    var source = (ISourceModule)atomic;
                     object materialized;
                     var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                     AssignPort(source.Shape.Outlets.First(), publisher);
@@ -154,16 +157,16 @@ namespace Akka.Streams.Implementation
                 //})
                 else if (atomic is GraphModule)
                 {
-                    var graph = (GraphModule) atomic;
+                    var graph = (GraphModule)atomic;
                     MaterializeGraph(graph, effectiveAttributes, materializedValues);
                 }
                 else if (atomic is GraphStageModule)
                 {
-                    var stage = (GraphStageModule) atomic;
+                    var stage = (GraphStageModule)atomic;
                     var graph =
                         new GraphModule(
-                            GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] {stage.Stage}),
-                            stage.Shape, stage.Attributes, new IModule[] {stage});
+                            GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] { stage.Stage }),
+                            stage.Shape, stage.Attributes, new IModule[] { stage });
                     MaterializeGraph(graph, effectiveAttributes, materializedValues);
                 }
 
@@ -178,9 +181,7 @@ namespace Akka.Streams.Implementation
             private void MaterializeGraph(GraphModule graph, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 var calculatedSettings = _materializer.EffectiveSettings(effectiveAttributes);
-                var t = graph.Assembly.Materialize(effectiveAttributes, graph.MaterializedValueIds, materializedValues, RegisterSource);
-                var connections = t.Item1;
-                var logics = t.Item2;
+                var (connections, logics) = graph.Assembly.Materialize(effectiveAttributes, graph.MaterializedValueIds, materializedValues, RegisterSource);
 
                 var shell = new GraphInterpreterShell(graph.Assembly, connections, logics, graph.Shape, calculatedSettings, _materializer);
                 var impl = _subflowFuser != null && !effectiveAttributes.Contains(Attributes.AsyncBoundary.Instance)
@@ -207,7 +208,7 @@ namespace Akka.Streams.Implementation
                     var publisher = typeof(ActorGraphInterpreter.BoundaryPublisher<>).Instantiate(elementType, impl, shell, i);
                     var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, (IActorPublisher)publisher);
                     impl.Tell(message);
-                    AssignPort(outletsEnumerator.Current, (IUntypedPublisher) publisher);
+                    AssignPort(outletsEnumerator.Current, (IUntypedPublisher)publisher);
                     i++;
                 }
             }
@@ -233,7 +234,8 @@ namespace Akka.Streams.Implementation
         /// <param name="haveShutDown">TBD</param>
         /// <param name="flowNames">TBD</param>
         /// <returns>TBD</returns>
-        public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames)
+        public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor,
+            AtomicBoolean haveShutDown, EnumerableActorName flowNames)
         {
             _system = system;
             _settings = settings;
@@ -247,7 +249,8 @@ namespace Akka.Streams.Implementation
                 : _settings.Dispatcher));
 
             if (_settings.IsFuzzingMode && !_system.Settings.Config.HasPath("akka.stream.secret-test-fuzzing-warning-disable"))
-                Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
+                Logger.Warning(
+                    "Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
         }
 
         /// <summary>
@@ -308,7 +311,7 @@ namespace Akka.Streams.Implementation
                 var dispatcher = attribute as ActorAttributes.Dispatcher;
                 if (dispatcher != null)
                     return settings.WithDispatcher(dispatcher.Name);
-                
+
                 var strategy = attribute as ActorAttributes.SupervisionStrategy;
                 if (strategy != null)
                     return settings.WithSupervisionStrategy(strategy.Decider);
@@ -352,7 +355,7 @@ namespace Akka.Streams.Implementation
         /// <param name="runnable">TBD</param>
         /// <param name="subFlowFuser">TBD</param>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser) 
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
             => Materialize(runnable, subFlowFuser, DefaultInitialAttributes);
 
         /// <summary>
@@ -364,7 +367,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
             Materialize(runnable, null, initialAttributes);
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -374,7 +377,8 @@ namespace Akka.Streams.Implementation
         /// <param name="initialAttributes">TBD</param>
         /// <exception cref="IllegalStateException">TBD</exception>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes)
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser,
+            Attributes initialAttributes)
         {
             var runnableGraph = _settings.IsAutoFusing
                 ? Fusing.Fusing.Aggressive(runnable)
@@ -389,7 +393,7 @@ namespace Akka.Streams.Implementation
             var session = new ActorMaterializerSession(this, runnableGraph.Module, initialAttributes, subFlowFuser);
 
             var matVal = session.Materialize();
-            return (TMat) matVal;
+            return (TMat)matVal;
         }
 
         /// <summary>
@@ -443,7 +447,7 @@ namespace Akka.Streams.Implementation
         /// <param name="namePrefix">TBD</param>
         /// <returns>TBD</returns>
         public IMaterializer WithNamePrefix(string namePrefix)
-            => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
+            => new SubFusingActorMaterializerImpl((ActorMaterializerImpl)_delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
         /// <summary>
         /// TBD
@@ -548,6 +552,7 @@ namespace Akka.Streams.Implementation
                 Name = name;
             }
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -557,8 +562,12 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public static readonly GetChildren Instance = new GetChildren();
-            private GetChildren() { }
+
+            private GetChildren()
+            {
+            }
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -568,8 +577,12 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public static readonly StopChildren Instance = new StopChildren();
-            private StopChildren() { }
+
+            private StopChildren()
+            {
+            }
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -579,8 +592,12 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public static readonly StoppedChildren Instance = new StoppedChildren();
-            private StoppedChildren() { }
+
+            private StoppedChildren()
+            {
+            }
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -590,8 +607,12 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public static readonly PrintDebugDump Instance = new PrintDebugDump();
-            private PrintDebugDump() { }
+
+            private PrintDebugDump()
+            {
+            }
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -601,6 +622,7 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public readonly IImmutableSet<IActorRef> Refs;
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -634,6 +656,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public readonly ActorMaterializerSettings Settings;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -665,7 +688,7 @@ namespace Akka.Streams.Implementation
         {
             if (message is Materialize)
             {
-                var materialize = (Materialize) message;
+                var materialize = (Materialize)message;
                 Sender.Tell(Context.ActorOf(materialize.Props, materialize.Name));
             }
             else if (message is GetChildren)
@@ -679,6 +702,7 @@ namespace Akka.Streams.Implementation
             }
             else
                 return false;
+
             return true;
         }
 

@@ -310,7 +310,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
+        public readonly Func<Attributes, (IStage<TIn, TOut> stage, TMat mat)> Factory;
 
         /// <summary>
         /// TBD
@@ -343,11 +343,11 @@ namespace Akka.Streams.Stage
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var stageAndMat = Factory(inheritedAttributes);
+            var (stage, mat) = Factory(inheritedAttributes);
             return
                 new LogicAndMaterializedValue<TMat>(
                     new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes,
-                        (AbstractStage<TIn, TOut>) stageAndMat.Item1), stageAndMat.Item2);
+                        (AbstractStage<TIn, TOut>) stage), mat);
         }
 
         /// <summary>
