@@ -956,6 +956,10 @@ namespace Akka.Cluster
                 .Where(node => !node.Equals(_selfUniqueAddress))
                 .Select(node => _latestGossip.GetMember(node))
                 .ToImmutableHashSet();
+
+            var unreachableDataCenters = !_latestGossip.IsMultiDc
+                ? ImmutableHashSet<string>.Empty
+                : _latestGossip.AllDataCenters.Where(IsReachable(_latestGossip, ImmutableHashSet<string>.Empty)).ToImmutableHashSet();
             
             var state = new ClusterEvent.CurrentClusterState(
                 members: _latestGossip.Members,
@@ -966,7 +970,8 @@ namespace Akka.Cluster
                 {
                     var leader = _latestGossip.RoleLeader(r, _selfUniqueAddress);
                     return leader == null ? null : leader.Address;
-                }));
+                }),
+                unreachableDataCenters: unreachableDataCenters);
             receiver.Tell(state);
         }
 
