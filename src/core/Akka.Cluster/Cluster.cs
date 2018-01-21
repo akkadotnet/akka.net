@@ -102,10 +102,10 @@ namespace Akka.Cluster
 
             LogInfo("Starting up...");
 
-            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
+            FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
 
-            _scheduler = CreateScheduler(system);
+            Scheduler = CreateScheduler(system);
 
             // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
             _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
@@ -113,7 +113,7 @@ namespace Akka.Cluster
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
-            _readView = new ClusterReadView(this);
+            ReadView = new ClusterReadView(this);
 
             // force the underlying system to start
             _clusterCore = GetClusterCoreRef().Result;
@@ -446,51 +446,47 @@ namespace Akka.Cluster
         /// <summary>
         /// The address of this cluster member.
         /// </summary>
-        public Address SelfAddress
-        {
-            get { return SelfUniqueAddress.Address; }
-        }
+        public Address SelfAddress => SelfUniqueAddress.Address;
+
+        /// <summary>
+        /// Data center to which this node belongs to (defaults to "default" if not configured explicitly).
+        /// </summary>
+        public string SelfDataCenter => Settings.SelfDataCenter;
 
         /// <summary>
         /// The roles that this cluster member is currently a part.
         /// </summary>
-        public ImmutableHashSet<string> SelfRoles
-        {
-            get { return Settings.Roles; }
-        }
+        public ImmutableHashSet<string> SelfRoles => Settings.Roles;
 
         /// <summary>
         /// The current snapshot state of the cluster.
         /// </summary>
-        public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
+        public ClusterEvent.CurrentClusterState State => ReadView._state;
 
         private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
         /// <summary>
         /// Determine whether or not this cluster instance has been shutdown.
         /// </summary>
-        public bool IsTerminated { get { return _isTerminated.Value; } }
+        public bool IsTerminated => _isTerminated.Value;
 
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
         public ExtendedActorSystem System { get; }
 
-        private Lazy<IDowningProvider> _downingProvider;
+        private readonly Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
-        private readonly ClusterReadView _readView;
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal ClusterReadView ReadView { get { return _readView; } }
-
-        private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        internal ClusterReadView ReadView { get; }
 
         /// <summary>
         /// The set of failure detectors used for monitoring one or more nodes in the cluster.
         /// </summary>
-        public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
+        public DefaultFailureDetectorRegistry<Address> FailureDetector { get; }
 
         /// <summary>
         /// TBD
@@ -501,11 +497,10 @@ namespace Akka.Cluster
         // ===================== WORK DAEMONS =====================
         // ========================================================
 
-        readonly IScheduler _scheduler;
         /// <summary>
         /// TBD
         /// </summary>
-        internal IScheduler Scheduler { get { return _scheduler; } }
+        internal IScheduler Scheduler { get; }
 
         private static IScheduler CreateScheduler(ActorSystem system)
         {
@@ -529,10 +524,7 @@ namespace Akka.Cluster
                 LogInfo("Shutting down...");
                 System.Stop(_clusterDaemons);
 
-                if (_readView != null)
-                {
-                    _readView.Dispose();
-                }
+                ReadView?.Dispose();
 
                 LogInfo("Successfully shut down");
             }
@@ -544,17 +536,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        internal IActorRef ClusterCore
-        {
-            get
-            {
-                if (_clusterCore == null)
-                {
-                    _clusterCore = GetClusterCoreRef().Result;
-                }
-                return _clusterCore;
-            }
-        }
+        internal IActorRef ClusterCore => _clusterCore ?? (_clusterCore = GetClusterCoreRef().Result);
 
         /// <summary>
         /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.

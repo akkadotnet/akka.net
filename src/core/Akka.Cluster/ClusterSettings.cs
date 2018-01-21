@@ -19,6 +19,9 @@ namespace Akka.Cluster
     /// </summary>
     public sealed class ClusterSettings
     {
+        internal const string DcRolePrefix = "dc-";
+        internal const string DefaultDataCenter = "default";
+
         readonly Config _failureDetectorConfig;
         readonly string _useDispatcher;
 
@@ -82,6 +85,9 @@ namespace Akka.Cluster
 
             RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
             AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
+
+            SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
+            MultiDataCenter = new MultiDataCenter(cc.GetConfig("multi-data-center"));
         }
 
         /// <summary>
@@ -240,6 +246,57 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public bool AllowWeaklyUpMembers { get; }
+
+        public string SelfDataCenter { get; }
+
+        public MultiDataCenter MultiDataCenter { get; }
+    }
+
+    public sealed class MultiDataCenter
+    {
+        public int CrossDcConnections { get; }
+        public double CrossDcGossipProbability { get; }
+        public CrossDcFailureDetectorSettings CrossDcFailureDetectorSettings { get; }
+
+        public MultiDataCenter(int crossDcConnections, double crossDcGossipProbability, CrossDcFailureDetectorSettings crossDcFailureDetectorSettings)
+        {
+            if (crossDcConnections <= 0) throw new ArgumentException("cross-data-center-connections must be > 0", nameof(crossDcConnections));
+            if (crossDcGossipProbability < 0 || crossDcGossipProbability > 1) throw new ArgumentException("cross-data-center-gossip-probability must be >= 0.0 and <= 1.0", nameof(crossDcGossipProbability));
+
+            CrossDcConnections = crossDcConnections;
+            CrossDcGossipProbability = crossDcGossipProbability;
+            CrossDcFailureDetectorSettings = crossDcFailureDetectorSettings;
+        }
+
+        public MultiDataCenter(Config config) : this(
+            crossDcConnections: config.GetInt("cross-data-center-connections"),
+            crossDcGossipProbability: config.GetInt("cross-data-center-gossip-probability"),
+            crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(
+                implementationType: Type.GetType(config.GetString("failure-detector.implementation-class"), throwOnError: true),
+                heartbeatInterval: config.GetTimeSpan("failure-detector.heartbeat-interval"),
+                heartbeatExpectedResponseAfter: config.GetTimeSpan("failure-detector.expected-response-after"),
+                nrOfMonitoringActors: config.GetInt("cross-data-center-connections")))
+        {
+        }
+    }
+
+    public sealed class CrossDcFailureDetectorSettings
+    {
+        public Type ImplementationType { get; }
+        public TimeSpan HeartbeatInterval { get; }
+        public TimeSpan HeartbeatExpectedResponseAfter { get; }
+        public int NrOfMonitoringActors { get; }
+
+        public CrossDcFailureDetectorSettings(Type implementationType, TimeSpan heartbeatInterval, TimeSpan heartbeatExpectedResponseAfter, int nrOfMonitoringActors)
+        {
+            if (heartbeatInterval == TimeSpan.Zero) throw new ArgumentException("failure-detector.heartbeat-interval must be > 0", nameof(heartbeatInterval));
+            if (heartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("failure-detector.expected-response-after > 0", nameof(heartbeatExpectedResponseAfter));
+
+            ImplementationType = implementationType;
+            HeartbeatInterval = heartbeatInterval;
+            HeartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
+            NrOfMonitoringActors = nrOfMonitoringActors;
+        }
     }
 }
 

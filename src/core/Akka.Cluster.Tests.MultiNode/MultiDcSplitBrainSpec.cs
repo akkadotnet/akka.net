@@ -200,7 +200,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     ClusterView.Members
                         .Where(m => m.DataCenter == "dc2")
                         .Select(m => m.Address)
-                        .Should().BeEquivalentTo(GetAddress(Third);
+                        .Should().BeEquivalentTo(GetAddress(Third));
                 });
             }, Third);
             EnterBarrier("fifth-removed");
@@ -276,7 +276,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                Cluster.Subscribe(probe.Ref, typeof(CluterEvent.IDataCenterReachabilityEvent));
+                Cluster.Subscribe(probe.Ref, typeof(ClusterEvent.DataCenterReachabilityEvent));
                 probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
             }, memberNodes);
             EnterBarrier($"split-{_barrierCount++}");
@@ -293,7 +293,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                probe.ExpectMsg<UnreachableDataCenter>(TimeSpan.FromSeconds(15));
+                probe.ExpectMsg<ClusterEvent.UnreachableDataCenter>(TimeSpan.FromSeconds(15));
                 Cluster.Unsubscribe(probe.Ref);
 
                 RunOn(() =>
@@ -335,7 +335,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                probe.ExpectMsg<ReachableDataCenter>(TimeSpan.FromSeconds(25));
+                probe.ExpectMsg<ClusterEvent.ReachableDataCenter>(TimeSpan.FromSeconds(25));
                 Cluster.Unsubscribe(probe.Ref);
                 AwaitAssert(() =>
                 {

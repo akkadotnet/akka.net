@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
@@ -23,6 +22,8 @@ namespace Akka.Cluster
     /// </remarks>
     public class Member : IComparable<Member>, IComparable
     {
+        private string _dc;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -92,10 +93,30 @@ namespace Akka.Cluster
             Roles = roles;
         }
 
+        public string DataCenter
+        {
+            get
+            {
+                if (_dc == null)
+                {
+                    foreach (var role in Roles) // no LINQ to avoid allocations
+                    {
+                        if (role.StartsWith(ClusterSettings.DcRolePrefix))
+                        {
+                            _dc = role.Substring(startIndex: ClusterSettings.DcRolePrefix.Length);
+                            break;
+                        }
+                    }
+                }
+
+                return _dc;
+            }
+        }
+
         /// <summary>
         /// The <see cref="Address"/> for this member.
         /// </summary>
-        public Address Address { get { return UniqueAddress.Address; } }
+        public Address Address => UniqueAddress.Address;
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
@@ -106,9 +127,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="object.Equals(object)"/>
         public override bool Equals(object obj)
         {
-            var m = obj as Member;
-            if (m == null) return false;
-            return UniqueAddress.Equals(m.UniqueAddress);
+            return obj is Member m && UniqueAddress.Equals(m.UniqueAddress);
         }
 
         /// <inheritdoc cref="IComparable.CompareTo"/>
@@ -124,7 +143,9 @@ namespace Akka.Cluster
         /// <inheritdoc cref="object.ToString"/>
         public override string ToString()
         {
-            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
+            return DataCenter == ClusterSettings.DefaultDataCenter 
+                ? $"Member(address = {Address}, Uid={UniqueAddress.Uid}, status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})" 
+                : $"Member(address = {Address}, DataCenter = {DataCenter} Uid={UniqueAddress.Uid}, status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
         }
 
         /// <summary>
@@ -147,6 +168,9 @@ namespace Akka.Cluster
         /// <returns><c>true</c> if this member is older than the other member. <c>false</c> otherwise.</returns>
         public bool IsOlderThan(Member other)
         {
+            if (DataCenter != other.DataCenter)
+                throw new ArgumentException($"Comparing members of different data centers with isOlderThan is not allowed ({DataCenter} vs {other.DataCenter})");
+
             if (UpNumber.Equals(other.UpNumber))
             {
                 return Member.AddressOrdering.Compare(Address, other.Address) < 0;
@@ -169,7 +193,7 @@ namespace Akka.Cluster
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
                 throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
-            
+
             return new Member(UniqueAddress, UpNumber, status, Roles);
         }
 
@@ -319,7 +343,7 @@ namespace Akka.Cluster
 
             if (Member.AllowedTransitions[a.Status].Contains(b.Status))
                 return b;
-            if(Member.AllowedTransitions[b.Status].Contains(a.Status))
+            if (Member.AllowedTransitions[b.Status].Contains(a.Status))
                 return a;
 
             return null; // illegal transition
@@ -477,7 +501,7 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="object.Equals(object)"/>
-        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
+        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress)obj);
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()

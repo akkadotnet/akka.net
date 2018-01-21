@@ -296,7 +296,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Sent to self only
         /// </summary>
-        private class HeartbeatTick { }
+        internal class HeartbeatTick { }
 
         /// <summary>
         /// TBD
