@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
@@ -20,21 +19,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class GraphInterpreterSpec : GraphInterpreterSpecKit
     {
-        private readonly SimpleLinearGraphStage<int> _identity;
-        private readonly Detacher<int> _detach;
-        private readonly Zip<int, string> _zip;
-        private readonly Broadcast<int> _broadcast;
-        private readonly Merge<int> _merge;
-        private readonly Balance<int> _balance;
+        private readonly SimpleLinearGraphStage<int> _identity = GraphStages.Identity<int>();
+        private readonly Detacher<int> _detach = new Detacher<int>();
+        private readonly Zip<int, string> _zip = new Zip<int, string>();
+        private readonly Broadcast<int> _broadcast = new Broadcast<int>(2);
+        private readonly Merge<int> _merge = new Merge<int>(2);
+        private readonly Balance<int> _balance = new Balance<int>(2);
 
         public GraphInterpreterSpec(ITestOutputHelper output = null) : base(output)
         {
-            _identity = GraphStages.Identity<int>();
-            _detach = new Detacher<int>();
-            _zip = new Zip<int, string>();
-            _broadcast = new Broadcast<int>(2);
-            _merge = new Merge<int>(2);
-            _balance = new Balance<int>(2);
         }
 
         [Fact]
@@ -70,13 +63,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // Constructing an assembly by hand and resolving ambiguities
                 var assembly = new GraphAssembly(
-                    stages: new IGraphStageWithMaterializedValue<Shape, object>[] {_identity, _identity},
-                    originalAttributes: new[] {Attributes.None, Attributes.None},
-                    inlets: new Inlet[] {_identity.Inlet, _identity.Inlet, null},
-                    inletOwners: new[] {0, 1, -1},
-                    outlets: new Outlet[] {null, _identity.Outlet, _identity.Outlet},
-                    outletOwners: new[] {-1, 0, 1}
-                    );
+                    stages: new IGraphStageWithMaterializedValue<Shape, object>[] { _identity, _identity },
+                    originalAttributes: new[] { Attributes.None, Attributes.None },
+                    inlets: new Inlet[] { _identity.Inlet, _identity.Inlet, null },
+                    inletOwners: new[] { 0, 1, -1 },
+                    outlets: new Outlet[] { null, _identity.Outlet, _identity.Outlet },
+                    outletOwners: new[] { -1, 0, 1 }
+                );
 
                 setup.ManualInit(assembly);
                 setup.Interpreter.AttachDownstreamBoundary(2, sink);
@@ -139,7 +132,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 var source1 = setup.NewUpstreamProbe<int>("source1");
                 var source2 = setup.NewUpstreamProbe<string>("source2");
-                var sink = setup.NewDownstreamProbe<Tuple<int, string>>("sink");
+                var sink = setup.NewDownstreamProbe<(int, string)>("sink");
 
                 builder(_zip)
                     .Connect(source1, _zip.In0)
@@ -158,8 +151,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 source2.OnNext("Meaning of life");
                 lastEvents()
                     .Should()
-                    .Equal(new OnNext(sink, new Tuple<int, string>(42, "Meaning of life")), new RequestOne(source1),
-                        new RequestOne(source2));
+                    .Equal(new OnNext(sink, (42, "Meaning of life")), new RequestOne(source1), new RequestOne(source2));
             });
         }
 
@@ -197,10 +189,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithTestSetup((setup, builder, lastEvents) =>
             {
                 var source = setup.NewUpstreamProbe<int>("source");
-                var sink = setup.NewDownstreamProbe<Tuple<int, int>>("sink");
+                var sink = setup.NewDownstreamProbe<(int, int)>("sink");
                 var zip = new Zip<int, int>();
 
-                builder(new IGraphStageWithMaterializedValue<Shape, object>[] {zip, _broadcast})
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] { zip, _broadcast })
                     .Connect(source, _broadcast.In)
                     .Connect(_broadcast.Out(0), zip.In0)
                     .Connect(_broadcast.Out(1), zip.In1)
@@ -213,11 +205,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().BeEquivalentTo(new OnNext(sink, new Tuple<int, int>(1, 1)), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (1, 1)), new RequestOne(source));
 
                 sink.RequestOne();
                 source.OnNext(2);
-                lastEvents().Should().BeEquivalentTo(new OnNext(sink, new Tuple<int, int>(2, 2)), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (2, 2)), new RequestOne(source));
             });
         }
 
@@ -228,12 +220,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 var source1 = setup.NewUpstreamProbe<int>("source1");
                 var source2 = setup.NewUpstreamProbe<int>("source2");
-                var sink1 = setup.NewDownstreamProbe<Tuple<int, int>>("sink1");
-                var sink2 = setup.NewDownstreamProbe<Tuple<int, int>>("sink2");
+                var sink1 = setup.NewDownstreamProbe<(int, int)>("sink1");
+                var sink2 = setup.NewDownstreamProbe<(int, int)>("sink2");
                 var zip = new Zip<int, int>();
                 var broadcast = new Broadcast<(int, int)>(2);
 
-                builder(new IGraphStageWithMaterializedValue<Shape, object>[] {broadcast, zip})
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] { broadcast, zip })
                     .Connect(source1, zip.In0)
                     .Connect(source2, zip.In1)
                     .Connect(zip.Out, broadcast.In)
@@ -254,8 +246,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 source2.OnNext(2);
                 lastEvents()
                     .Should()
-                    .Equal(new OnNext(sink1, new Tuple<int, int>(1, 2)), new RequestOne(source1),
-                        new RequestOne(source2), new OnNext(sink2, new Tuple<int, int>(1, 2)));
+                    .Equal(new OnNext(sink1, (1, 2)), new RequestOne(source1), new RequestOne(source2), new OnNext(sink2, (1, 2)));
             });
         }
 
