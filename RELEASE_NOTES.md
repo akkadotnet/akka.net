@@ -1,5 +1,74 @@
-#### 1.3.3 October 24 2017 ####
-Placeholder
+#### 1.3.3 January 19 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+
+The largest changes featured in Akka.NET v1.3.3 are the introduction of [Splint brain resolvers](http://getakka.net/articles/clustering/split-brain-resolver.html) and `WeaklyUp` members in Akka.Cluster.
+
+**Akka.Cluster Split Brain Resolvers**
+Split brain resolvers are specialized [`IDowningProvider`](http://getakka.net/api/Akka.Cluster.IDowningProvider.html) implementations that give Akka.Cluster users the ability to automatically down `Unreachable` cluster nodes in accordance with well-defined partition resolution strategies, namely:
+
+* Static quorums;
+* Keep majority;
+* Keep oldest; and 
+* Keep-referee.
+
+You can learn more about why you may want to use these and which strategy is right for you by reading our [Splint brain resolver documentation](http://getakka.net/articles/clustering/split-brain-resolver.html).
+
+**Akka.Cluster `WeaklyUp` Members**
+One common problem that occurs in Akka.Cluster is that once a current member of the cluster becomes `Unreachable`, the leader of the cluster isn't able to allow any new members of the cluster to join until that `Unreachable` member becomes `Reachable` again or is removed from the cluster via a [`Cluster.Down` command](http://getakka.net/api/Akka.Cluster.Cluster.html#Akka_Cluster_Cluster_Down_Akka_Actor_Address_).
+
+Beginning in Akka.NET 1.3.3, you can allow nodes to still join and participate in the cluster even while other member nodes are unreachable by opting into the `WeaklyUp` status for members. You can do this by setting the following in your HOCON configuration beginning in Akka.NET v1.3.3:
+
+```
+akka.cluster.allow-weakly-up-members = on
+```
+
+This will allow nodes who have joined the cluster when at least one other member was unreachable to become functioning cluster members with a status of `WeaklyUp`. If the unreachable members of the cluster are downed or become reachable again, all `WeaklyUp` nodes will be upgraded to the usual `Up` status for available cluster members.
+
+**Akka.Cluster.Sharding and Akka.Cluster.DistributedData Integration**
+A new experimental feature we've added in Akka.NET v1.3.3 is the ability to fully decouple [Akka.Cluster.Sharding](http://getakka.net/articles/clustering/cluster-sharding.html) from Akka.Persistence and instead run it on top of [Akka.Cluster.DistributedData, our library for creating eventually consistent replicated data structures on top of Akka.Cluster](http://getakka.net/articles/clustering/distributed-data.html).
+
+Beginning in Akka.NET 1.3.3, you can set the following HOCON configuration option to have the `ShardingCoordinator` replicate its shard placement state using DData instead of persisting it to storage via Akka.Persistence:
+
+```
+akka.cluster.sharding.state-store-mode = ddata
+```
+
+This setting only affects how Akka.Cluster.Sharding's internal state is managed. If you're using Akka.Persistence with your own entity actors inside Akka.Cluster.Sharding, this change will have no impact on them.
+
+**Updates and bugfixes**:
+* [Added `Cluster.JoinAsync` and `Clutser.JoinSeedNodesAsync` methods](https://github.com/akkadotnet/akka.net/pull/3196)
+* [Updated Akka.Serialization.Hyperion to Hyperion v0.9.7](https://github.com/akkadotnet/akka.net/pull/3279) - see [Hyperion v0.9.7 release notes here](https://github.com/akkadotnet/Hyperion/releases/tag/v0.9.7).
+* [Fixed: A Source.SplitAfter Akka example extra output](https://github.com/akkadotnet/akka.net/issues/3222)
+* [Fixed: Udp.Received give incorrect ByteString when client send several packets at once](https://github.com/akkadotnet/akka.net/issues/3210)
+* [Fixed: TcpOutgoingConnection does not dispose properly - memory leak](https://github.com/akkadotnet/akka.net/issues/3211)
+* [Fixed: Akka.IO & WSAEWOULDBLOCK socket error](https://github.com/akkadotnet/akka.net/issues/3188)
+* [Fixed: Sharding-RegionProxyTerminated fix](https://github.com/akkadotnet/akka.net/pull/3192)
+* [Fixed: Excessive rebalance in LeastShardAllocationStrategy](https://github.com/akkadotnet/akka.net/pull/3191)
+* [Fixed: Persistence - fix double return of recovery permit](https://github.com/akkadotnet/akka.net/pull/3201)
+* [Change: Changed Akka.IO configured buffer-size to 512B](https://github.com/akkadotnet/akka.net/pull/3176)
+* [Change: Added human-friendly error for failed MNTK discovery](https://github.com/akkadotnet/akka.net/pull/3198)
+
+You can [see the full changeset for Akka.NET 1.3.3 here](https://github.com/akkadotnet/akka.net/milestone/21).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |        
+| --- | --- | --- | --- |                 
+| 17 | 2094 | 1389 | Marc Piechura |      
+| 13 | 5426 | 2827 | Bartosz Sypytkowski |
+| 12 | 444 | 815 | Aaron Stannard |       
+| 11 | 346 | 217 | ravengerUA |           
+| 3 | 90 | 28 | zbynek001 |               
+| 3 | 78 | 84 | Maxim Cherednik |         
+| 2 | 445 | 1 | Vasily Kirichenko |       
+| 2 | 22 | 11 | Ismael Hamed |            
+| 2 | 11 | 9 | Nicola Sanitate |          
+| 1 | 9 | 10 | mrrd |                     
+| 1 | 7 | 2 | Richard Dobson |            
+| 1 | 33 | 7 | Ivars Auzins |             
+| 1 | 30 | 11 | Will |                    
+| 1 | 3 | 3 | HaniOB |                    
+| 1 | 11 | 199 | Jon Galloway |           
+| 1 | 1 | 1 | Sam Neirinck |              
+| 1 | 1 | 1 | Irvin Dominin |             
 
 #### 1.3.2 October 20 2017 ####
 **Maintenance Release for Akka.NET 1.3**
