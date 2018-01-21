@@ -626,17 +626,17 @@ namespace Akka.Streams.Implementation
 
                 _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(CreatedHandler);
 
-                void CloseHandler((Action, Task) t)
+                void CloseHandler((Action action, Task task) t)
                 {
-                    if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
+                    if (t.task.IsCompleted && !t.task.IsFaulted)
                     {
                         _open = false;
-                        t.Item1();
+                        t.action();
                     }
                     else
                     {
                         _open = false;
-                        FailStage(t.Item2.Exception);
+                        FailStage(t.task.Exception);
                     }
                 }
 

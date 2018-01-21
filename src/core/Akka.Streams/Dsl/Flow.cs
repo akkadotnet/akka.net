@@ -388,7 +388,7 @@ namespace Akka.Streams.Dsl
             => Source.AsSubscriber<TIn>()
                 .Via(this)
                 .ToMaterialized(Sink.AsPublisher<TOut>(false), Keep.Both)
-                .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.Item1, t.Item2) as IProcessor<TIn, TOut>);
+                .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.left, t.right) as IProcessor<TIn, TOut>);
 
         /// <summary>
         /// TBD
