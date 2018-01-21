@@ -25,11 +25,8 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class HubSpec : AkkaSpec
     {
-        private readonly ITestOutputHelper _helper;
-
         public HubSpec(ITestOutputHelper helper) : base(helper)
         {
-            _helper = helper;
             Materializer = Sys.Materializer();
         }
 
@@ -315,8 +312,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
-            BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
+        public void BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -358,8 +354,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
-            BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
+        public void BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -385,8 +380,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
-            BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
+        public void BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -442,8 +436,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
-            BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
+        public void BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -468,8 +461,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void
-            BroadcastHub_must_be_able_to_implement_a_keep_dropping_if_unsubscribed_policy_with_a_simple_SinkIgnore()
+        public void BroadcastHub_must_be_able_to_implement_a_keep_dropping_if_unsubscribed_policy_with_a_simple_SinkIgnore()
         {
             this.AssertAllStagesStopped(() =>
             {
