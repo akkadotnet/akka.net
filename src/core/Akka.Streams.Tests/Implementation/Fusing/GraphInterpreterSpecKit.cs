@@ -60,11 +60,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 private readonly Action<GraphInterpreter> _interpreterSetter;
                 private readonly IList<IGraphStageWithMaterializedValue<Shape, object>> _stages;
 
-                private readonly IList<Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>> _upstreams =
-                    new List<Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>>();
-                private readonly IList<Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>> _downstreams =
-                    new List<Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>>();
-                private readonly IList<Tuple<Outlet, Inlet>> _connections = new List<Tuple<Outlet, Inlet>>();
+                private readonly IList<(GraphInterpreter.UpstreamBoundaryStageLogic logic, Inlet inlet)> _upstreams =
+                    new List<(GraphInterpreter.UpstreamBoundaryStageLogic, Inlet)>();
+                private readonly IList<(Outlet outlet, GraphInterpreter.DownstreamBoundaryStageLogic logic)> _downstreams =
+                    new List<(Outlet, GraphInterpreter.DownstreamBoundaryStageLogic)>();
+                private readonly IList<(Outlet outlet, Inlet inlet)> _connections = new List<(Outlet, Inlet)>();
 
                 public AssemblyBuilder(ILoggingAdapter logger, Action<GraphInterpreter> interpreterSetter, IEnumerable<IGraphStageWithMaterializedValue<Shape, object>> stages)
                 {
@@ -75,26 +75,26 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public AssemblyBuilder Connect<T>(GraphInterpreter.UpstreamBoundaryStageLogic upstream, Inlet<T> inlet)
                 {
-                    _upstreams.Add(new Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>(upstream, inlet));
+                    _upstreams.Add((upstream, inlet));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, GraphInterpreter.DownstreamBoundaryStageLogic downstream)
                 {
-                    _downstreams.Add(new Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>(outlet, downstream));
+                    _downstreams.Add((outlet, downstream));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, Inlet<T> inlet)
                 {
-                    _connections.Add(new Tuple<Outlet, Inlet>(outlet, inlet));
+                    _connections.Add((outlet, inlet));
                     return this;
                 }
 
                 public GraphAssembly BuildAssembly()
                 {
-                    var ins = _upstreams.Select(u => u.Item2).Concat(_connections.Select(c => c.Item2)).ToArray();
-                    var outs = _connections.Select(c => c.Item1).Concat(_downstreams.Select(d => d.Item1)).ToArray();
+                    var ins = _upstreams.Select(u => u.inlet).Concat(_connections.Select(c => c.inlet)).ToArray();
+                    var outs = _connections.Select(c => c.outlet).Concat(_downstreams.Select(d => d.outlet)).ToArray();
                     var inOwners =
                         ins.Select(
                             inlet =>
@@ -127,12 +127,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var i = 0;
                     foreach (var upstream in _upstreams)
                     {
-                        interpreter.AttachUpstreamBoundary(connections[i++], upstream.Item1);
+                        interpreter.AttachUpstreamBoundary(connections[i++], upstream.logic);
                     }
                     i = 0;
                     foreach (var downstream in _downstreams)
                     {
-                        interpreter.AttachDownstreamBoundary(connections[i++ + _upstreams.Count + _connections.Count], downstream.Item2);
+                        interpreter.AttachDownstreamBoundary(connections[i++ + _upstreams.Count + _connections.Count], downstream.logic);
                     }
                     interpreter.Init(null);
                     _interpreterSetter(interpreter);
