@@ -38,8 +38,8 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 4)
-                    .Select(i => (i, new TestLatch(1)))
-                    .ToDictionary(t => t.Item1, t => t.Item2);
+                    .Select(i => (index: i, latch: new TestLatch(1)))
+                    .ToDictionary(t => t.index, t => t.latch);
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
                     latch[n].Ready(TimeSpan.FromSeconds(5));
@@ -70,8 +70,8 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 5)
-                    .Select(i => (i, new TestLatch()))
-                    .ToDictionary(t => t.Item1, t => t.Item2);
+                    .Select(i => (index: i, latch: new TestLatch()))
+                    .ToDictionary(t => t.index, t => t.latch);
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
                     probe.Ref.Tell(n);

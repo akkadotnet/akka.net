@@ -219,12 +219,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var tuple =
+                var (queue, probe) =
                     Source.Queue<int>(5, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var queue = tuple.Item1;
-                var probe = tuple.Item2;
 
                 for (var i = 1; i <= 5; i++)
                     AssertSuccess(queue.OfferAsync(i));
@@ -354,12 +352,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_complete_the_stream_when_buffer_is_empty()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.Complete();
             var task = source.WatchCompletionAsync();
@@ -371,12 +367,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_complete_the_stream_when_buffer_is_full()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.Complete();
@@ -388,12 +382,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_complete_the_stream_when_buffer_is_full_and_element_is_pending()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Backpressure)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.OfferAsync(2);
@@ -409,12 +401,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_complete_the_stream_when_no_buffer_is_used()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.Complete();
             var task = source.WatchCompletionAsync();
@@ -426,12 +416,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_complete_the_stream_when_no_buffer_is_used_and_element_is_pending()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.Complete();
@@ -445,12 +433,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_fail_the_stream_when_buffer_is_empty()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
@@ -461,12 +447,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_fail_the_stream_when_buffer_is_full()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.Fail(Ex);
@@ -478,12 +462,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_fail_the_stream_when_buffer_is_full_and_element_is_pending()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(1, OverflowStrategy.Backpressure)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.OfferAsync(2);
@@ -497,12 +479,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_fail_the_stream_when_no_buffer_is_used()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
@@ -513,12 +493,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_fail_the_stream_when_no_buffer_is_used_and_element_is_pending()
         {
-            var tuple =
+            var (source, probe) =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
                     .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                     .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
 
             source.OfferAsync(1);
             source.Fail(Ex);

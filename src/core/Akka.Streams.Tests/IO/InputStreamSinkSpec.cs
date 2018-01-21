@@ -211,8 +211,8 @@ namespace Akka.Streams.Tests.IO
                 for (var i = 0; i < 2; i++)
                 {
                     var r = ReadN(inputStream, 8);
-                    r.Item1.Should().Be(8);
-                    r.Item2.ShouldBeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
+                    r.read.Should().Be(8);
+                    r.byteString.ShouldBeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
                 }
 
                 inputStream.Dispose();
@@ -273,8 +273,8 @@ namespace Akka.Streams.Tests.IO
                 sinkProbe.ExpectMsg<GraphStageMessages.Push>();
 
                 var r = ReadN(inputStream, _byteString.Count);
-                r.Item1.Should().Be(_byteString.Count);
-                r.Item2.ShouldBeEquivalentTo(_byteString);
+                r.read.Should().Be(_byteString.Count);
+                r.byteString.ShouldBeEquivalentTo(_byteString);
 
                 probe.SendError(ex);
                 sinkProbe.ExpectMsg<GraphStageMessages.Failure>().Ex.Should().Be(ex);

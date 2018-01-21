@@ -68,7 +68,11 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" });
+                    return Source.From(new List<string>
+                    {
+                        "a",
+                        "b"
+                    });
                 }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0).RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
@@ -92,7 +96,12 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    var enumerable = new List<string> { "a", "b", "c" }.Select(c =>
+                    var enumerable = new List<string>
+                    {
+                        "a",
+                        "b",
+                        "c"
+                    }.Select(c =>
                     {
                         if (c == "c")
                             throw new ArgumentException("failed");
@@ -122,7 +131,11 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" });
+                    return Source.From(new List<string>
+                    {
+                        "a",
+                        "b"
+                    });
                 }, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(1000), 0).RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
@@ -141,7 +154,8 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        public void
+            A_restart_with_backoff_source_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -149,7 +163,11 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" });
+                    return Source.From(new List<string>
+                    {
+                        "a",
+                        "b"
+                    });
                 }, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(2000), 0).RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
@@ -186,7 +204,11 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" })
+                    return Source.From(new List<string>
+                        {
+                            "a",
+                            "b"
+                        })
                         .WatchTermination((source, _) =>
                         {
                             tcs.SetResult(Done.Instance);
@@ -265,9 +287,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var created = new AtomicCounter(0);
-                var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-                var queue = tuple.Item1;
-                var sinkProbe = tuple.Item2;
+                var (queue, sinkProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
                 var probe = this.SourceProbe<string>().ToMaterialized(RestartSink.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
@@ -298,9 +318,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var created = new AtomicCounter(0);
-                var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-                var queue = tuple.Item1;
-                var sinkProbe = tuple.Item2;
+                var (queue, sinkProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
                 var probe = this.SourceProbe<string>().ToMaterialized(RestartSink.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
@@ -326,14 +344,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        public void
+            A_restart_with_backoff_sink_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var created = new AtomicCounter(0);
-                var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-                var queue = tuple.Item1;
-                var sinkProbe = tuple.Item2;
+                var (queue, sinkProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
                 var probe = this.SourceProbe<string>().ToMaterialized(RestartSink.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
@@ -379,9 +396,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var created = new AtomicCounter(0);
-                var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-                var queue = tuple.Item1;
-                var sinkProbe = tuple.Item2;
+                var (queue, sinkProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
                 var probe = this.SourceProbe<string>().ToMaterialized(RestartSink.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
@@ -407,20 +422,19 @@ namespace Akka.Streams.Tests.Dsl
         //
         // Flow
         //
-
-        private Tuple<AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>> SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff)
+        private (AtomicCounter counter,
+            TestPublisher.Probe<string> source,
+            TestSubscriber.Probe<string> flowInProbe,
+            TestPublisher.Probe<string> flowOutProbe,
+            TestSubscriber.Probe<string> sink) SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff)
         {
             var created = new AtomicCounter(0);
-            var probe1 = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-            var flowInSource = probe1.Item1;
-            var flowInProbe = probe1.Item2;
-            var probe2 = this.SourceProbe<string>().ToMaterialized(BroadcastHub.Sink<string>(), Keep.Both).Run(Materializer);
-            var flowOutProbe = probe2.Item1;
-            var flowOutSource = probe2.Item2;
+            var (flowInSource, flowInProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
+            var (flowOutProbe, flowOutSource) = this.SourceProbe<string>().ToMaterialized(BroadcastHub.Sink<string>(), Keep.Both).Run(Materializer);
 
             // We can't just use ordinary probes here because we're expecting them to get started/restarted. Instead, we
             // simply use the probes as a message bus for feeding and capturing events.
-            var probe3 = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
+            var (source, sink) = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
                     var snk = Flow.Create<string>()
@@ -453,10 +467,8 @@ namespace Akka.Streams.Tests.Dsl
                     return Flow.FromSinkAndSource(snk, src);
                 }, minBackoff, maxBackoff, 0), Keep.Left)
                 .ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-            var source = probe3.Item1;
-            var sink = probe3.Item2;
 
-            return Tuple.Create(created, source, flowInProbe, flowOutProbe, sink);
+            return (created, source, flowInProbe, flowOutProbe, sink);
         }
 
         [Fact]
@@ -465,13 +477,12 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var created = new AtomicCounter(0);
-                var tuple = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Flow.Create<string>(); ;
-                }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0), Keep.Left).ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
-                var source = tuple.Item1;
-                var sink = tuple.Item2;
+                var (source, sink) = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
+                    {
+                        created.IncrementAndGet();
+                        return Flow.Create<string>();
+                    }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0), Keep.Left).ToMaterialized(this.SinkProbe<string>(), Keep.Both)
+                    .Run(Materializer);
 
                 source.SendNext("a");
                 sink.RequestNext("a");
@@ -486,12 +497,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_restart_with_backoff_flow_should_restart_on_cancellation()
         {
-            var tuple = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
-            var created = tuple.Item1;
-            var source = tuple.Item2;
-            var flowInProbe = tuple.Item3;
-            var flowOutProbe = tuple.Item4;
-            var sink = tuple.Item5;
+            var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
 
             source.SendNext("a");
             flowInProbe.RequestNext("a");
@@ -516,12 +522,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_restart_with_backoff_flow_should_restart_on_completion()
         {
-            var tuple = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
-            var created = tuple.Item1;
-            var source = tuple.Item2;
-            var flowInProbe = tuple.Item3;
-            var flowOutProbe = tuple.Item4;
-            var sink = tuple.Item5;
+            var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
 
             source.SendNext("a");
             flowInProbe.RequestNext("a");
@@ -548,12 +549,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_restart_with_backoff_flow_should_restart_on_failure()
         {
-            var tuple = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
-            var created = tuple.Item1;
-            var source = tuple.Item2;
-            var flowInProbe = tuple.Item3;
-            var flowOutProbe = tuple.Item4;
-            var sink = tuple.Item5;
+            var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20));
 
             source.SendNext("a");
             flowInProbe.RequestNext("a");
@@ -578,12 +574,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_restart_with_backoff_flow_should_backoff_before_restart()
         {
-            var tuple = SetupFlow(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(2));
-            var created = tuple.Item1;
-            var source = tuple.Item2;
-            var flowInProbe = tuple.Item3;
-            var flowOutProbe = tuple.Item4;
-            var sink = tuple.Item5;
+            var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(2));
 
             source.SendNext("a");
             flowInProbe.RequestNext("a");
@@ -610,12 +601,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40));
-                var created = tuple.Item1;
-                var source = tuple.Item2;
-                var flowInProbe = tuple.Item3;
-                var flowOutProbe = tuple.Item4;
-                var sink = tuple.Item5;
+                var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40));
 
                 source.SendNext("a");
                 flowInProbe.RequestNext("a");
@@ -642,12 +628,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_restart_with_backoff_flow_should_continue_running_flow_in_port_after_out_has_been_cancelled()
         {
-            var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40));
-            var created = tuple.Item1;
-            var source = tuple.Item2;
-            var flowInProbe = tuple.Item3;
-            var flowOutProbe = tuple.Item4;
-            var sink = tuple.Item5;
+            var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40));
 
             source.SendNext("a");
             flowInProbe.RequestNext("a");
