@@ -13,7 +13,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Stage;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -1339,7 +1338,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class PartitionQueue : IPartitionQueue
         {
-            private AtomicCounter _totalSize = new AtomicCounter();
+            private readonly AtomicCounter _totalSize = new AtomicCounter();
             private readonly ConcurrentDictionary<long, ConsumerQueue> _queues = new ConcurrentDictionary<long, ConsumerQueue>();
 
             public void Init(long id) => _queues.TryAdd(id, ConsumerQueue.Empty);
@@ -1421,9 +1420,9 @@ namespace Akka.Streams.Dsl
 
         private sealed class HubCompleted : IConsumerEvent
         {
-            public Option<Exception> Failure { get; }
+            public Exception Failure { get; }
 
-            public HubCompleted(Option<Exception> failure)
+            public HubCompleted(Exception failure)
             {
                 Failure = failure;
             }
@@ -1503,9 +1502,9 @@ namespace Akka.Streams.Dsl
 
         private sealed class Closed : IHubState
         {
-            public Option<Exception> Failure { get; }
+            public Exception Failure { get; }
 
-            public Closed(Option<Exception> failure)
+            public Closed(Exception failure)
             {
                 Failure = failure;
             }
@@ -1709,9 +1708,9 @@ namespace Akka.Streams.Dsl
                 var s = State.Value;
                 if (s is Open o)
                 {
-                    if (State.CompareAndSet(o, new Closed(Option<Exception>.None)))
+                    if (State.CompareAndSet(o, new Closed(null)))
                     {
-                        var completeMessage = new HubCompleted(Option<Exception>.None);
+                        var completeMessage = new HubCompleted(null);
                         foreach (var consumer in o.Registrations)
                             consumer.Callback(completeMessage);
                     }
@@ -1773,8 +1772,8 @@ namespace Akka.Streams.Dsl
                         var s = _source._logic.State.Value;
                         if (s is Closed c)
                         {
-                            if (c.Failure.HasValue)
-                                FailStage(c.Failure.Value);
+                            if (c.Failure != null)
+                                FailStage(c.Failure);
                             else
                                 CompleteStage();
                             return;
@@ -1813,8 +1812,8 @@ namespace Akka.Streams.Dsl
                     _callbackCount++;
                     switch (command)
                     {
-                        case HubCompleted c when c.Failure.HasValue:
-                            FailStage(c.Failure.Value);
+                        case HubCompleted c when c.Failure != null:
+                            FailStage(c.Failure);
                             break;
                         case HubCompleted _:
                             CompleteStage();
