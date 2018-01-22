@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
@@ -226,5 +228,193 @@ namespace Akka.Cluster
                 selfDataCenter: selfDataCenter ?? SelfDataCenter,
                 crossDataCenterConnections: crossDataCenterConnections ?? CrossDataCenterConnections);
         }
+    }
+
+    internal class GossipTargetSelector
+    {
+        public double ReduceGossipDifferentViewProbability { get; }
+        public double CrossDcGossipProbability { get; }
+
+        public GossipTargetSelector(double reduceGossipDifferentViewProbability, double crossDcGossipProbability)
+        {
+            ReduceGossipDifferentViewProbability = reduceGossipDifferentViewProbability;
+            CrossDcGossipProbability = crossDcGossipProbability;
+        }
+
+        public UniqueAddress GossipTarget(MembershipState state) => SelectRandomNode(GossipTargets(state));
+
+        public UniqueAddress[] GossipTargets(MembershipState state) => state.LatestGossip.IsMultiDc ? MultiDcGossipTargets(state) : LocalDcGossipTargets(state);
+
+        /// <summary>
+        /// Select <paramref name="n"/> random nodes to gossip to (used to quickly inform the rest of the cluster when leaving for example)
+        /// </summary>
+        public IEnumerable<UniqueAddress> RandomNodesForFullGossip(MembershipState state, int n)
+        {
+            UniqueAddress SelectOtherDcNode(string[] dcs)
+            {
+                foreach (var dc in dcs)
+                foreach (var member in state.AgeSortedTopOldestMembersPerDc[dc])
+                {
+                    if (state.IsValidNodeForGossip(member.UniqueAddress)) return member.UniqueAddress;
+                }
+
+                return null;
+            }
+
+            var randomizedNodes = state.Members.ToArray();
+            randomizedNodes.Shuffle();
+
+            if (state.LatestGossip.IsMultiDc && state.AgeSortedTopOldestMembersPerDc[state.SelfDataCenter].Contains(state.SelfMember))
+            {
+                var randomizedDcs = state.AgeSortedTopOldestMembersPerDc.Keys.Except(new []{ state.SelfDataCenter }).ToArray();
+                randomizedDcs.Shuffle();
+
+                var otherDc = SelectOtherDcNode(randomizedDcs);
+                if (otherDc != null) n--; // we'll defer yield of this one at the end
+
+                // this node is one of the N oldest in the cluster, gossip to one cross-dc but mostly locally
+                foreach (var member in randomizedNodes)
+                {
+                    if (member.DataCenter == state.SelfDataCenter && state.IsValidNodeForGossip(member.UniqueAddress))
+                    {
+                        yield return member.UniqueAddress;
+                        n--;
+                        if (n == 0) yield break;
+                    }
+                }
+
+                if (otherDc != null) yield return otherDc;
+            }
+            else
+            {
+                // single dc or not among the N oldest - select local nodes
+                foreach (var member in randomizedNodes)
+                {
+                    if (member.DataCenter == state.SelfDataCenter && state.IsValidNodeForGossip(member.UniqueAddress))
+                    {
+                        yield return member.UniqueAddress;
+                        n--;
+                        if (n == 0) yield break;
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Chooses a set of possible gossip targets that is in the same dc. If the cluster is not multi dc this
+        /// means it is a choice among all nodes of the cluster.
+        /// </summary>
+        public UniqueAddress[] LocalDcGossipTargets(MembershipState state)
+        {
+            var latestGossip = state.LatestGossip;
+            var firstSelection = PreferNodesWithDifferentView(state)
+                // If it's time to try to gossip to some nodes with a different view
+                // gossip to a random alive same dc member with preference to a member with older gossip version
+                ? latestGossip.Members
+                    .Where(m => m.DataCenter == state.SelfDataCenter && !latestGossip.SeenByNode(m.UniqueAddress) &&
+                                state.IsValidNodeForGossip(m.UniqueAddress))
+                    .Select(m => m.UniqueAddress)
+                    .ToArray()
+                : new UniqueAddress[0];
+
+            // Fall back to localGossip
+            if (firstSelection.Length == 0)
+                return state.LatestGossip.Members
+                    .Where(m => m.DataCenter == state.SelfDataCenter && state.IsValidNodeForGossip(m.UniqueAddress))
+                    .Select(m => m.UniqueAddress).ToArray();
+            else return firstSelection;
+        }
+
+        /// <summary>
+        /// Choose cross-dc nodes if this one of the N oldest nodes, and if not fall back to gossip locally in the DC.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        public UniqueAddress[] MultiDcGossipTargets(MembershipState state)
+        {
+            // only a fraction of the time across data centers
+            if (SelectDcLocalNodes(state)) return LocalDcGossipTargets(state);
+            else
+            {
+                var nodesPerDc = state.AgeSortedTopOldestMembersPerDc;
+
+                // only do cross DC gossip if this node is among the N oldest
+                if (!nodesPerDc[state.SelfDataCenter].Contains(state.SelfMember)) return LocalDcGossipTargets(state);
+                else
+                {
+                    IEnumerable<UniqueAddress> FindFirstDcWithValidNodes(string[] dcs)
+                    {
+                        foreach (var dc in dcs)
+                        foreach (var member in nodesPerDc[dc])
+                        {
+                            if (state.IsValidNodeForGossip(member.UniqueAddress)) yield return member.UniqueAddress;
+                        }
+                    }
+
+                    // chose another DC at random
+                    var otherDcsInRandomOrder = DcsInRandomOrder(nodesPerDc.Remove(state.SelfDataCenter).Keys.ToArray());
+                    var nodes = FindFirstDcWithValidNodes(otherDcsInRandomOrder).ToArray();
+                    return nodes.Length != 0 ? nodes : LocalDcGossipTargets(state); // no other dc with reachable nodes, fall back to local gossip
+                }
+            }
+        }
+
+        /// <summary>
+        /// For large clusters we should avoid shooting down individual
+        /// nodes. Therefore the probability is reduced for large clusters.
+        /// </summary>
+        public double AdjustedGossipDifferentViewProbability(int clusterSize)
+        {
+            var low = ReduceGossipDifferentViewProbability;
+            var high = low * 3;
+            // start reduction when cluster is larger than configured ReduceGossipDifferentViewProbability
+            if (clusterSize <= low)
+                return ReduceGossipDifferentViewProbability;
+            else
+            {
+                // don't go lower than 1/10 of the configured GossipDifferentViewProbability
+                var minP = ReduceGossipDifferentViewProbability / 10;
+                if (clusterSize >= high) return minP;
+                else
+                {
+                    // linear reduction of the probability with increasing number of nodes
+                    // from ReduceGossipDifferentViewProbability at ReduceGossipDifferentViewProbability nodes
+                    // to ReduceGossipDifferentViewProbability / 10 at ReduceGossipDifferentViewProbability * 3 nodes
+                    // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes
+                    var k = (minP - ReduceGossipDifferentViewProbability) / (high - low);
+                    return ReduceGossipDifferentViewProbability + (clusterSize - low) * k;
+                }
+            }
+        }
+
+        /// <summary>
+        /// For small DCs prefer cross DC gossip. This speeds up the bootstrapping of
+        /// new DCs as adding an initial node means it has no local peers.
+        /// Once the DC is at 5 members use the configured crossDcGossipProbability, before
+        /// that for a single node cluster use 1.0, two nodes use 0.75 etc
+        /// </summary>
+        protected bool SelectDcLocalNodes(MembershipState state)
+        {
+            var localMembers = state.DcMembers.Count;
+            var probability = localMembers > 4
+                ? CrossDcGossipProbability
+                // don't go below the configured probability
+                : Math.Max((5 - localMembers) * 0.25, CrossDcGossipProbability);
+            return ThreadLocalRandom.Current.NextDouble() > probability;
+        }
+
+        protected bool PreferNodesWithDifferentView(MembershipState state) => 
+            ThreadLocalRandom.Current.NextDouble() < AdjustedGossipDifferentViewProbability(state.LatestGossip.Members.Count);
+
+        protected string[] DcsInRandomOrder(string[] dcs)
+        {
+            var result = new string[dcs.Length];
+            dcs.CopyTo(result, 0);
+            result.Shuffle();
+            return result;
+        }
+
+        protected UniqueAddress SelectRandomNode(UniqueAddress[] nodes) => nodes.Length == 0 ? null : nodes[ThreadLocalRandom.Current.Next(nodes.Length)];
     }
 }
