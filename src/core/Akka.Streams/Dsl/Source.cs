@@ -762,7 +762,7 @@ namespace Akka.Streams.Dsl
         /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
         /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> when buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
         /// for downstream demand unless there is another message waiting for downstream demand, in that case
