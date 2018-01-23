@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
@@ -111,6 +112,106 @@ namespace DocsExamples.Streams
 
             // Shut down externally
             killSwitch.Shutdown();
+            #endregion
+        }
+
+        [Fact]
+        public void Hubs_must_demonstrate_creating_a_dynamic_partition_hub()
+        {
+            #region partition-hub
+
+            // A simple producer that publishes a new "message-" every second
+            Source<string, NotUsed> producer = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "message")
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .ZipWith(Source.From(Enumerable.Range(1, 100)), (msg, i) => $"{msg}-{i}");
+
+            // Attach a PartitionHub Sink to the producer. This will materialize to a
+            // corresponding Source.
+            // (We need to use toMat and Keep.right since by default the materialized
+            // value to the left is used)
+            IRunnableGraph<Source<string, NotUsed>> runnableGraph =
+                producer.ToMaterialized(PartitionHub.Sink<string>(
+                    (size, element) => Math.Abs(element.GetHashCode()) % size,
+                    startAfterNrOfConsumers: 2, bufferSize: 256), Keep.Right);
+
+            // By running/materializing the producer, we get back a Source, which
+            // gives us access to the elements published by the producer.
+            Source<string, NotUsed> fromProducer = runnableGraph.Run(Materializer);
+
+            // Print out messages from the producer in two independent consumers
+            fromProducer.RunForeach(msg => Console.WriteLine("Consumer1: " + msg), Materializer);
+            fromProducer.RunForeach(msg => Console.WriteLine("Consumer2: " + msg), Materializer);
+
+            #endregion
+        }
+
+        [Fact]
+        public void Hubs_must_demonstrate_creating_a_dynamic_steful_partition_hub()
+        {
+            #region partition-hub-stateful
+
+            // A simple producer that publishes a new "message-" every second
+            Source<string, NotUsed> producer = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "message")
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .ZipWith(Source.From(Enumerable.Range(1, 100)), (msg, i) => $"{msg}-{i}");
+
+            // New instance of the partitioner function and its state is created
+            // for each materialization of the PartitionHub.
+            Func<PartitionHub.IConsumerInfo, string, long> RoundRobbin()
+            {
+                var i = -1L;
+                return (info, element) =>
+                {
+                    i++;
+                    return info.ConsumerByIndex((int) (i % info.Size));
+                };
+            }
+
+            // Attach a PartitionHub Sink to the producer. This will materialize to a
+            // corresponding Source.
+            // (We need to use toMat and Keep.right since by default the materialized
+            // value to the left is used)
+            IRunnableGraph<Source<string, NotUsed>> runnableGraph =
+                producer.ToMaterialized(PartitionHub.StatefulSink(RoundRobbin,
+                    startAfterNrOfConsumers: 2, bufferSize: 256), Keep.Right);
+
+            // By running/materializing the producer, we get back a Source, which
+            // gives us access to the elements published by the producer.
+            Source<string, NotUsed> fromProducer = runnableGraph.Run(Materializer);
+
+            // Print out messages from the producer in two independent consumers
+            fromProducer.RunForeach(msg => Console.WriteLine("Consumer1: " + msg), Materializer);
+            fromProducer.RunForeach(msg => Console.WriteLine("Consumer2: " + msg), Materializer);
+
+            #endregion
+        }
+
+        [Fact]
+        public void Hubs_must_demonstrate_creating_a_dynamic_partition_hub_routing_to_fastest_consumer()
+        {
+            #region partition-hub-fastest
+
+            // A simple producer that publishes a new "message-" every second
+            Source<int, NotUsed> producer = Source.From(Enumerable.Range(0, 100));
+
+            // Attach a PartitionHub Sink to the producer. This will materialize to a
+            // corresponding Source.
+            // (We need to use toMat and Keep.right since by default the materialized
+            // value to the left is used)
+            IRunnableGraph<Source<int, NotUsed>> runnableGraph =
+                producer.ToMaterialized(PartitionHub.StatefulSink<int>(
+                    () => ((info, element) => info.ConsumerIds.Min(info.QueueSize)),
+                    startAfterNrOfConsumers: 2, bufferSize: 256), Keep.Right);
+
+            // By running/materializing the producer, we get back a Source, which
+            // gives us access to the elements published by the producer.
+            Source<int, NotUsed> fromProducer = runnableGraph.Run(Materializer);
+
+            // Print out messages from the producer in two independent consumers
+            fromProducer.RunForeach(msg => Console.WriteLine("Consumer1: " + msg), Materializer);
+            fromProducer.Throttle(10, TimeSpan.FromMilliseconds(100), 10, ThrottleMode.Shaping)
+                .RunForeach(msg => Console.WriteLine("Consumer2: " + msg), Materializer);
+
             #endregion
         }
     }
