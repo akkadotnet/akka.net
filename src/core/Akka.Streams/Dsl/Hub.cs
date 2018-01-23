@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Annotations;
 using Akka.Streams.Stage;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -77,7 +78,7 @@ namespace Akka.Streams.Dsl
             /// <param name="cause">The exception that is the cause of the current exception.</param>
             public ProducerFailed(string message, Exception cause) : base(message, cause)
             {
-                
+
             }
         }
     }
@@ -117,7 +118,7 @@ namespace Akka.Streams.Dsl
             }
 
             public long Id { get; }
-            
+
             public Action<long> DemandCallback { get; }
         }
 
@@ -229,7 +230,7 @@ namespace Akka.Streams.Dsl
             }
 
             public override void OnPull() => TryProcessNext(true);
-            
+
             private void TryProcessNext(bool firstAttempt)
             {
                 while (true)
@@ -359,14 +360,14 @@ namespace Akka.Streams.Dsl
                 public override void PostStop()
                 {
                     // Unlike in the case of preStart, we don't care about the Hub no longer looking at the queue.
-                    if(!_logic.IsShuttingDown)
+                    if (!_logic.IsShuttingDown)
                         _logic.Enqueue(new Deregister(_id));
                 }
 
                 public override void OnPush()
                 {
                     _logic.Enqueue(new Element(_id, Grab(_stage.In)));
-                    if(_demand > 0)
+                    if (_demand > 0)
                         PullWithDemand();
                 }
 
@@ -390,7 +391,7 @@ namespace Akka.Streams.Dsl
                     else
                     {
                         _demand += moreDemand;
-                        if(!HasBeenPulled(_stage.In))
+                        if (!HasBeenPulled(_stage.In))
                             PullWithDemand();
                     }
                 }
@@ -434,7 +435,7 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException("Buffer size must be positive", nameof(perProducerBufferSize));
 
             _perProducerBufferSize = perProducerBufferSize;
-            DemandThreshold = perProducerBufferSize/2 + perProducerBufferSize%2;
+            DemandThreshold = perProducerBufferSize / 2 + perProducerBufferSize % 2;
             Shape = new SourceShape<T>(Out);
         }
 
@@ -480,7 +481,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
         /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
         /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
-        /// broadcast elements form the original <see cref="Sink{TIn,TMat}"/>.
+        /// broadcast elements from the original <see cref="Sink{TIn,TMat}"/>.
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
@@ -525,7 +526,6 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
     internal class BroadcastHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
     {
         #region internal classes
@@ -538,7 +538,7 @@ namespace Akka.Streams.Dsl
 
             private RegistrationPending()
             {
-                
+
             }
         }
 
@@ -601,7 +601,7 @@ namespace Akka.Streams.Dsl
         }
 
 
-        private sealed class Completed 
+        private sealed class Completed
         {
             public static Completed Instance { get; } = new Completed();
 
@@ -680,7 +680,7 @@ namespace Akka.Streams.Dsl
 
             private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion =
                 new TaskCompletionSource<Action<IHubEvent>>();
-            
+
             private readonly Open _noRegistrationState;
             internal readonly AtomicReference<IHubState> State;
 
@@ -714,7 +714,7 @@ namespace Akka.Streams.Dsl
                 _noRegistrationState = new Open(_callbackCompletion.Task, ImmutableList<Consumer>.Empty);
                 State = new AtomicReference<IHubState>(_noRegistrationState);
                 _queue = new object[stage._bufferSize];
-                _consumerWheel = Enumerable.Repeat(0, stage._bufferSize*2)
+                _consumerWheel = Enumerable.Repeat(0, stage._bufferSize * 2)
                     .Select(_ => ImmutableList<Consumer>.Empty)
                     .ToArray();
 
@@ -738,7 +738,7 @@ namespace Akka.Streams.Dsl
             public override void OnPush()
             {
                 Publish(Grab(_stage.In));
-                if(!IsFull)
+                if (!IsFull)
                     Pull(_stage.In);
             }
 
@@ -746,14 +746,15 @@ namespace Akka.Streams.Dsl
             {
                 if (hubEvent == RegistrationPending.Instance)
                 {
-                    var open = (Open) State.GetAndSet(_noRegistrationState);
-                    open.Registrations.ForEach(c =>
+                    var open = (Open)State.GetAndSet(_noRegistrationState);
+                    foreach (var c in open.Registrations)
                     {
                         var startFrom = _head;
                         _activeConsumer++;
                         AddConsumer(c, startFrom);
                         c.Callback(new Initialize(startFrom));
-                    });
+                    }
+
                     return;
                 }
 
@@ -763,7 +764,7 @@ namespace Akka.Streams.Dsl
                     FindAndRemoveConsumer(unregister.Id, unregister.PreviousOffset);
                     if (_activeConsumer == 0)
                     {
-                        if(IsClosed(_stage.In))
+                        if (IsClosed(_stage.In))
                             CompleteStage();
                         else if (_head != unregister.FinalOffset)
                         {
@@ -788,7 +789,7 @@ namespace Akka.Streams.Dsl
 
                 if (hubEvent is Advanced advance)
                 {
-                    var newOffset = advance.PreviousOffset + _stage.DemandThreshold;
+                    var newOffset = advance.PreviousOffset + _stage._demandThreshold;
                     // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                     var c = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
                     AddConsumer(c, newOffset);
@@ -797,7 +798,7 @@ namespace Akka.Streams.Dsl
                 }
 
                 // only NeedWakeup left
-                var wakeup = (NeedWakeup) hubEvent;
+                var wakeup = (NeedWakeup)hubEvent;
                 // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                 var consumer = FindAndRemoveConsumer(wakeup.Id, wakeup.PreviousOffset);
                 AddConsumer(consumer, wakeup.CurrentOffset);
@@ -818,8 +819,8 @@ namespace Akka.Streams.Dsl
                 var failMessage = new HubCompleted(e);
 
                 // Notify pending consumers and set tombstone
-                var open = (Open) State.GetAndSet(new Closed(e));
-                open.Registrations.ForEach(c=>c.Callback(failMessage));
+                var open = (Open)State.GetAndSet(new Closed(e));
+                open.Registrations.ForEach(c => c.Callback(failMessage));
 
                 // Notify registered consumers
                 _consumerWheel.SelectMany(x => x).ForEach(c => c.Callback(failMessage));
@@ -862,7 +863,7 @@ namespace Akka.Streams.Dsl
             {
                 if (UnblockIfPossible(offsetOfConsumerRemoved))
                 {
-                    if(IsClosed(_stage.In))
+                    if (IsClosed(_stage.In))
                         Complete();
                     else if (!HasBeenPulled(_stage.In))
                         Pull(_stage.In);
@@ -899,7 +900,7 @@ namespace Akka.Streams.Dsl
             /// which is offset modulo (bufferSize + 1).
             /// </summary>
             /// <param name="index">TBD</param>
-            private void WakeupIndex(int index) 
+            private void WakeupIndex(int index)
                 => _consumerWheel[index].ForEach(c => c.Callback(Wakeup.Instance));
 
             private void Complete()
@@ -978,7 +979,7 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
                     _id = id;
-                    _untilNextAdvanceSignal = stage._hub.DemandThreshold;
+                    _untilNextAdvanceSignal = stage._hub._demandThreshold;
 
                     SetHandler(stage.Out, this);
                 }
@@ -1012,7 +1013,7 @@ namespace Akka.Streams.Dsl
                         var state = _stage._hubLogic.State.Value;
                         if (state is Closed closed)
                         {
-                            if(closed.Failure != null)
+                            if (closed.Failure != null)
                                 FailStage(closed.Failure);
                             else
                                 CompleteStage();
@@ -1047,7 +1048,7 @@ namespace Akka.Streams.Dsl
                         {
                             _hubCallback(new NeedWakeup(_id, _previousPublishedOffset, _offset));
                             _previousPublishedOffset = _offset;
-                            _untilNextAdvanceSignal = _stage._hub.DemandThreshold;
+                            _untilNextAdvanceSignal = _stage._hub._demandThreshold;
                         }
                         else if (element == Completed.Instance)
                             CompleteStage();
@@ -1058,9 +1059,9 @@ namespace Akka.Streams.Dsl
                             _untilNextAdvanceSignal--;
                             if (_untilNextAdvanceSignal == 0)
                             {
-                                _untilNextAdvanceSignal = _stage._hub.DemandThreshold;
+                                _untilNextAdvanceSignal = _stage._hub._demandThreshold;
                                 var previousOffset = _previousPublishedOffset;
-                                _previousPublishedOffset += _stage._hub.DemandThreshold;
+                                _previousPublishedOffset += _stage._hub._demandThreshold;
                                 _hubCallback(new Advanced(_id, previousOffset));
                             }
                         }
@@ -1069,12 +1070,12 @@ namespace Akka.Streams.Dsl
 
                 public override void PostStop()
                     => _hubCallback?.Invoke(new UnRegister(_id, _previousPublishedOffset, _offset));
-                
+
                 private void OnCommand(IConsumerEvent e)
                 {
                     if (e is HubCompleted completed)
                     {
-                        if(completed.Failure != null)
+                        if (completed.Failure != null)
                             FailStage(completed.Failure);
                         else
                             CompleteStage();
@@ -1117,6 +1118,7 @@ namespace Akka.Streams.Dsl
         private readonly int _bufferSize;
         private readonly int _mask;
         private readonly int _wheelMask;
+        private readonly int _demandThreshold;
 
         /// <summary>
         /// TBD
@@ -1137,16 +1139,13 @@ namespace Akka.Streams.Dsl
 
             _bufferSize = bufferSize;
             _mask = _bufferSize - 1;
-            _wheelMask = bufferSize*2 - 1;
-            DemandThreshold = bufferSize / 2 + bufferSize % 2;
+            _wheelMask = bufferSize * 2 - 1;
+
+            // Half of buffer size, rounded up
+            _demandThreshold = bufferSize / 2 + bufferSize % 2;
 
             Shape = new SinkShape<T>(In);
         }
-
-        /// <summary>
-        /// Half of buffer size, rounded up
-        /// </summary>
-        private int DemandThreshold { get; }
 
         private Inlet<T> In { get; } = new Inlet<T>("BroadcastHub.in");
 
@@ -1165,6 +1164,709 @@ namespace Akka.Streams.Dsl
             var idCounter = new AtomicCounterLong();
             var logic = new HubLogic(this);
             var source = new HubSourceLogic(this, logic, idCounter);
+
+            return new LogicAndMaterializedValue<Source<T, NotUsed>>(logic, Source.FromGraph(source));
+        }
+    }
+
+    /// <summary>
+    /// A <see cref="PartitionHub"/> is a special streaming hub that is able to route streamed elements to a dynamic set of consumers.
+    /// It consists of two parts, a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/>. The <see cref="Sink{TIn,TMat}"/> e elements from a producer to the
+    /// actually live consumers it has.The selection of consumer is done with a function. Each element can be routed to
+    /// only one consumer.Once the producer has been materialized, the <see cref="Sink{TIn,TMat}"/> it feeds into returns a
+    /// materialized value which is the corresponding <see cref="Source{TOut,TMat}"/>. This <see cref="Source{TOut,TMat}"/> can be materialized an arbitrary number
+    /// of times, where each of the new materializations will receive their elements from the original <see cref="Sink{TIn,TMat}"/>.
+    /// </summary>
+    public static class PartitionHub
+    {
+        private const int DefaultBufferSize = 256;
+
+        /// <summary>
+        /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and routes them to a dynamic set
+        /// of consumers.After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a 
+        /// <see cref="Source{TOut,TMat}"/> as materialized  value.
+        /// This <see cref="Source{TOut,TMat}"/> can be materialized an arbitrary number of times and each materialization will receive the
+        /// elements from the original <see cref="Sink{TIn,TMat}"/>.
+        /// <para/>
+        /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
+        /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
+        /// <para/>
+        /// If the original <see cref="Sink{TIn,TMat}"/> is failed, then the failure is immediately propagated to all of its materialized
+        /// <see cref="Source{TOut,TMat}"/>s (possibly jumping over already buffered elements). If the original <see cref="Sink{TIn,TMat}"/> is completed, then
+        /// all corresponding <see cref="Source{TOut,TMat}"/>s are completed.Both failure and normal completion is "remembered" and later
+        /// materializations of the <see cref="Source{TOut,TMat}"/> will see the same (failure or completion) state. <see cref="Source{TOut,TMat}"/>s that are
+        /// cancelled are simply removed from the dynamic set of consumers.
+        /// <para/>
+        /// This <see cref="StatefulSink{T}"/> should be used when there is a need to keep mutable state in the partition function,
+        /// e.g. for implemening round-robin or sticky session kind of routing. If state is not needed the <see cref="Sink{T}"/> can
+        /// be more convenient to use.
+        /// </summary>
+        /// <param name="partitioner">
+        /// Function that decides where to route an element.It is a factory of a function to
+        /// to be able to hold stateful variables that are unique for each materialization.The function
+        /// takes two parameters; the first is information about active consumers, including an array of consumer
+        /// identifiers and the second is the stream element.The function should return the selected consumer
+        /// identifier for the given element.The function will never be called when there are no active consumers,
+        /// i.e.there is always at least one element in the array of identifiers.
+        /// </param>
+        /// <param name="startAfterNrOfConsumers">
+        /// Elements are buffered until this number of consumers have been connected.
+        /// This is only used initially when the stage is starting up, i.e.it is not honored when consumers have been removed (canceled).
+        /// </param>
+        /// <param name="bufferSize">Total number of elements that can be buffered. If this buffer is full, the producer is backpressured.</param>
+        [ApiMayChange]
+        public static Sink<T, Source<T, NotUsed>> StatefulSink<T>(Func<Func<IConsumerInfo, T, long>> partitioner,
+            int startAfterNrOfConsumers, int bufferSize = DefaultBufferSize)
+        {
+            return Dsl.Sink.FromGraph(new PartitionHub<T>(partitioner, startAfterNrOfConsumers, bufferSize));
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and routes them to a dynamic set
+        /// of consumers.After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a 
+        /// <see cref="Source{TOut,TMat}"/> as materialized  value.
+        /// This <see cref="Source{TOut,TMat}"/> can be materialized an arbitrary number of times and each materialization will receive the
+        /// elements from the original <see cref="Sink{TIn,TMat}"/>.
+        /// <para/>
+        /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
+        /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
+        /// <para/>
+        /// If the original <see cref="Sink{TIn,TMat}"/> is failed, then the failure is immediately propagated to all of its materialized
+        /// <see cref="Source{TOut,TMat}"/>s (possibly jumping over already buffered elements). If the original <see cref="Sink{TIn,TMat}"/> is completed, then
+        /// all corresponding <see cref="Source{TOut,TMat}"/>s are completed.Both failure and normal completion is "remembered" and later
+        /// materializations of the <see cref="Source{TOut,TMat}"/> will see the same (failure or completion) state. <see cref="Source{TOut,TMat}"/>s that are
+        /// cancelled are simply removed from the dynamic set of consumers.
+        /// <para/>
+        /// This <see cref="Sink{T}"/> should be used when the routing function is stateless, e.g. based on a hashed value of the
+        /// elements. Otherwise the <see cref="StatefulSink{T}"/> can be used to implement more advanced routing logic.
+        /// </summary>
+        /// <param name="partitioner">
+        /// Function that decides where to route an element. The function takes two parameters;
+        /// the first is the number of active consumers and the second is the stream element. The function should
+        /// return the index of the selected consumer for the given element, i.e. int greater than or equal to 0
+        /// and less than number of consumers. E.g. `(size, elem) => math.abs(elem.hashCode) % size`.
+        /// </param>
+        /// <param name="startAfterNrOfConsumers">
+        /// Elements are buffered until this number of consumers have been connected.
+        /// This is only used initially when the stage is starting up, i.e.it is not honored when consumers have been removed (canceled).
+        /// </param>
+        /// <param name="bufferSize">Total number of elements that can be buffered. If this buffer is full, the producer is backpressured.</param>
+        [ApiMayChange]
+        public static Sink<T, Source<T, NotUsed>> Sink<T>(Func<int, T, int> partitioner,
+            int startAfterNrOfConsumers, int bufferSize = DefaultBufferSize)
+        {
+            return StatefulSink<T>(() => ((info, element) => info.ConsumerByIndex(partitioner(info.Size, element))),
+                startAfterNrOfConsumers, bufferSize);
+        }
+
+        /// <summary>
+        /// DO NOT INHERIT
+        /// </summary>
+        [ApiMayChange]
+        public interface IConsumerInfo
+        {
+            /// <summary>
+            /// Sequence of all identifiers of current consumers.
+            /// 
+            /// Use this method only if you need to enumerate consumer existing ids.
+            /// When selecting a specific consumerId by its index, prefer using the dedicated <see cref="ConsumerByIndex"/> method instead,
+            /// which is optimised for this use case.
+            /// </summary>
+            ImmutableArray<long> ConsumerIds { get; }
+
+            /// <summary>
+            /// Obtain consumer identifier by index 
+            /// </summary>
+            long ConsumerByIndex(int index);
+
+            /// <summary>
+            /// Approximate number of buffered elements for a consumer.
+            /// Larger value than other consumers could be an indication of that the consumer is slow.
+            /// <para/>
+            /// Note that this is a moving target since the elements are consumed concurrently.
+            /// </summary>
+            int QueueSize(long consumerId);
+
+            /// <summary>
+            /// Number of attached consumers.
+            /// </summary>
+            int Size { get; }
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class PartitionHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
+    {
+        #region queue implementation
+
+        private interface IPartitionQueue
+        {
+            void Init(long id);
+            int TotalSize { get; }
+            int Size(long id);
+            bool IsEmpty(long id);
+            bool NonEmpty(long id);
+            void Offer(long id, object element);
+            object Poll(long id);
+            void Remove(long id);
+        }
+
+        private sealed class ConsumerQueue
+        {
+            public static ConsumerQueue Empty { get; } = new ConsumerQueue(ImmutableQueue<object>.Empty, 0);
+
+            private readonly ImmutableQueue<object> _queue;
+
+            public ConsumerQueue(ImmutableQueue<object> queue, int size)
+            {
+                _queue = queue;
+                Size = size;
+            }
+
+            public ConsumerQueue Enqueue(object element) => new ConsumerQueue(_queue.Enqueue(element), Size + 1);
+
+            public bool IsEmpty => Size == 0;
+
+            public object Head => _queue.First();
+
+            public ConsumerQueue Tail => new ConsumerQueue(_queue.Dequeue(), Size - 1);
+
+            public int Size { get; }
+        }
+
+        private sealed class PartitionQueue : IPartitionQueue
+        {
+            private readonly AtomicCounter _totalSize = new AtomicCounter();
+            private readonly ConcurrentDictionary<long, ConsumerQueue> _queues = new ConcurrentDictionary<long, ConsumerQueue>();
+
+            public void Init(long id) => _queues.TryAdd(id, ConsumerQueue.Empty);
+
+            public int TotalSize => _totalSize.Current;
+
+            public int Size(long id)
+            {
+                if (_queues.TryGetValue(id, out var queue))
+                    return queue.Size;
+
+                throw new ArgumentException($"Invalid stream identifier: {id}", nameof(id));
+            }
+
+            public bool IsEmpty(long id)
+            {
+                if (_queues.TryGetValue(id, out var queue))
+                    return queue.IsEmpty;
+
+                throw new ArgumentException($"Invalid stream identifier: {id}", nameof(id));
+            }
+
+            public bool NonEmpty(long id) => !IsEmpty(id);
+
+            public void Offer(long id, object element)
+            {
+                if (_queues.TryGetValue(id, out var queue))
+                {
+                    if (_queues.TryUpdate(id, queue.Enqueue(element), queue))
+                        _totalSize.IncrementAndGet();
+                    else
+                        Offer(id, element);
+                }
+                else
+                    throw new ArgumentException($"Invalid stream identifier: {id}", nameof(id));
+            }
+
+            public object Poll(long id)
+            {
+                var success = _queues.TryGetValue(id, out var queue);
+                if (!success || queue.IsEmpty)
+                    return null;
+
+                if (_queues.TryUpdate(id, queue.Tail, queue))
+                {
+                    _totalSize.Decrement();
+                    return queue.Head;
+                }
+
+                return Poll(id);
+            }
+
+            public void Remove(long id)
+            {
+                if (_queues.TryRemove(id, out var queue))
+                    _totalSize.AddAndGet(-queue.Size);
+            }
+        }
+
+        #endregion
+
+        #region internal classes
+
+        private interface IConsumerEvent { }
+
+        private sealed class Wakeup : IConsumerEvent
+        {
+            public static Wakeup Instance { get; } = new Wakeup();
+
+            private Wakeup() { }
+        }
+
+        private sealed class Initialize : IConsumerEvent
+        {
+            public static Initialize Instance { get; } = new Initialize();
+
+            private Initialize() { }
+        }
+
+        private sealed class HubCompleted : IConsumerEvent
+        {
+            public Exception Failure { get; }
+
+            public HubCompleted(Exception failure)
+            {
+                Failure = failure;
+            }
+        }
+
+
+        private interface IHubEvent { }
+
+        private sealed class RegistrationPending : IHubEvent
+        {
+            public static RegistrationPending Instance { get; } = new RegistrationPending();
+
+            private RegistrationPending() { }
+        }
+
+        private sealed class UnRegister : IHubEvent
+        {
+            public long Id { get; }
+
+            public UnRegister(long id)
+            {
+                Id = id;
+            }
+        }
+
+        private sealed class NeedWakeup : IHubEvent
+        {
+            public Consumer Consumer { get; }
+
+            public NeedWakeup(Consumer consumer)
+            {
+                Consumer = consumer;
+            }
+
+        }
+
+        private sealed class Consumer : IHubEvent
+        {
+            public long Id { get; }
+            public Action<IConsumerEvent> Callback { get; }
+
+            public Consumer(long id, Action<IConsumerEvent> callback)
+            {
+                Id = id;
+                Callback = callback;
+            }
+        }
+
+        private sealed class TryPull : IHubEvent
+        {
+            public static TryPull Instance { get; } = new TryPull();
+
+            private TryPull() { }
+        }
+
+        private sealed class Completed
+        {
+            public static Completed Instance { get; } = new Completed();
+
+            private Completed() { }
+        }
+
+
+        private interface IHubState { }
+
+        private sealed class Open : IHubState
+        {
+            public Task<Action<IHubEvent>> CallbackTask { get; }
+            public ImmutableList<Consumer> Registrations { get; }
+
+            public Open(Task<Action<IHubEvent>> callbackTask, ImmutableList<Consumer> registrations)
+            {
+                CallbackTask = callbackTask;
+                Registrations = registrations;
+            }
+        }
+
+        private sealed class Closed : IHubState
+        {
+            public Exception Failure { get; }
+
+            public Closed(Exception failure)
+            {
+                Failure = failure;
+            }
+        }
+
+        #endregion  
+
+        private sealed class PartitionSinkLogic : InGraphStageLogic
+        {
+            private sealed class ConsumerInfo : PartitionHub.IConsumerInfo
+            {
+                private readonly PartitionSinkLogic _partitionSinkLogic;
+
+                public ConsumerInfo(PartitionSinkLogic partitionSinkLogic, ImmutableList<Consumer> consumers)
+                {
+                    _partitionSinkLogic = partitionSinkLogic;
+                    Consumers = consumers;
+                    ConsumerIds = Consumers.Select(c => c.Id).ToImmutableArray();
+                    Size = consumers.Count;
+                }
+
+                public ImmutableArray<long> ConsumerIds { get; }
+
+                public long ConsumerByIndex(int index) => Consumers[index].Id;
+
+                public int QueueSize(long consumerId) => _partitionSinkLogic._queue.Size(consumerId);
+
+                public int Size { get; }
+
+                public ImmutableList<Consumer> Consumers { get; }
+            }
+
+            private readonly PartitionHub<T> _hub;
+            private readonly int _demandThreshold;
+            private readonly Func<PartitionHub.IConsumerInfo, T, long> _materializedPartitioner;
+            private readonly TaskCompletionSource<Action<IHubEvent>> _callbackCompletion = new TaskCompletionSource<Action<IHubEvent>>();
+            private readonly IHubState _noRegistrationsState;
+            private bool _initialized;
+            private readonly IPartitionQueue _queue = new PartitionQueue();
+            private readonly List<T> _pending = new List<T>();
+            private ConsumerInfo _consumerInfo;
+            private readonly Dictionary<long, Consumer> _needWakeup = new Dictionary<long, Consumer>();
+            private long _callbackCount;
+
+            public PartitionSinkLogic(PartitionHub<T> hub) : base(hub.Shape)
+            {
+                _hub = hub;
+                // Half of buffer size, rounded up
+                _demandThreshold = hub._bufferSize / 2 + hub._bufferSize % 2;
+                _materializedPartitioner = hub._partitioner();
+                _noRegistrationsState = new Open(_callbackCompletion.Task, ImmutableList<Consumer>.Empty);
+                _consumerInfo = new ConsumerInfo(this, ImmutableList<Consumer>.Empty);
+
+                State = new AtomicReference<IHubState>(_noRegistrationsState);
+
+                SetHandler(hub.In, this);
+            }
+
+            public override void PreStart()
+            {
+                SetKeepGoing(true);
+                _callbackCompletion.SetResult(GetAsyncCallback<IHubEvent>(OnEvent));
+
+                if (_hub._startAfterNrOfConsumers == 0)
+                    Pull(_hub.In);
+            }
+
+            public override void OnPush()
+            {
+                Publish(Grab(_hub.In));
+                if (!IsFull) Pull(_hub.In);
+            }
+
+            private bool IsFull => _queue.TotalSize + _pending.Count >= _hub._bufferSize;
+
+            public AtomicReference<IHubState> State { get; }
+
+            private void Publish(T element)
+            {
+                if (!_initialized || _consumerInfo.Consumers.Count == 0)
+                {
+                    // will be published when first consumers are registered
+                    _pending.Add(element);
+                }
+                else
+                {
+                    var id = _materializedPartitioner(_consumerInfo, element);
+                    _queue.Offer(id, element);
+                    Wakeup(id);
+                }
+            }
+
+            private void Wakeup(long id)
+            {
+                if (_needWakeup.TryGetValue(id, out var consumer))
+                {
+                    _needWakeup.Remove(consumer.Id);
+                    consumer.Callback(PartitionHub<T>.Wakeup.Instance);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_consumerInfo.Consumers.Count == 0)
+                    CompleteStage();
+                else
+                {
+                    foreach (var consumer in _consumerInfo.Consumers)
+                        Complete(consumer.Id);
+                }
+            }
+
+            private void Complete(long id)
+            {
+                _queue.Offer(id, Completed.Instance);
+                Wakeup(id);
+            }
+
+            private void TryPull()
+            {
+                if (_initialized && !IsClosed(_hub.In) && !HasBeenPulled(_hub.In) && !IsFull)
+                    Pull(_hub.In);
+            }
+
+            private void OnEvent(IHubEvent e)
+            {
+                _callbackCount++;
+
+                if (e is NeedWakeup n)
+                {
+                    // Also check if the consumer is now unblocked since we published an element since it went asleep.
+                    if (_queue.NonEmpty(n.Consumer.Id))
+                        n.Consumer.Callback(PartitionHub<T>.Wakeup.Instance);
+                    else
+                    {
+                        _needWakeup[n.Consumer.Id] = n.Consumer;
+                        TryPull();
+                    }
+                }
+                else if (e is TryPull)
+                    TryPull();
+                else if (e is RegistrationPending)
+                {
+                    var o = (Open)State.GetAndSet(_noRegistrationsState);
+                    foreach (var consumer in o.Registrations)
+                    {
+                        var newConsumers = _consumerInfo.Consumers.Add(consumer).Sort((c1, c2) => c1.Id.CompareTo(c2.Id));
+                        _consumerInfo = new ConsumerInfo(this, newConsumers);
+                        _queue.Init(consumer.Id);
+                        if (newConsumers.Count >= _hub._startAfterNrOfConsumers)
+                            _initialized = true;
+
+                        consumer.Callback(Initialize.Instance);
+
+                        if (_initialized && _pending.Count != 0)
+                        {
+                            foreach (var p in _pending)
+                                Publish(p);
+
+                            _pending.Clear();
+                        }
+
+                        TryPull();
+                    }
+                }
+                else if (e is UnRegister u)
+                {
+                    var newConsumers = _consumerInfo.Consumers.RemoveAll(c => c.Id == u.Id);
+                    _consumerInfo = new ConsumerInfo(this, newConsumers);
+                    _queue.Remove(u.Id);
+                    if (newConsumers.IsEmpty)
+                    {
+                        if (IsClosed(_hub.In))
+                            CompleteStage();
+                    }
+                    else
+                        TryPull();
+                }
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                var failMessage = new HubCompleted(e);
+
+                // Notify pending consumers and set tombstone
+                var o = (Open)State.GetAndSet(new Closed(e));
+                foreach (var consumer in o.Registrations)
+                    consumer.Callback(failMessage);
+
+                // Notify registered consumers
+                foreach (var consumer in _consumerInfo.Consumers)
+                    consumer.Callback(failMessage);
+
+                FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                // Notify pending consumers and set tombstone
+
+                var s = State.Value;
+                if (s is Open o)
+                {
+                    if (State.CompareAndSet(o, new Closed(null)))
+                    {
+                        var completeMessage = new HubCompleted(null);
+                        foreach (var consumer in o.Registrations)
+                            consumer.Callback(completeMessage);
+                    }
+                    else
+                        PostStop();
+                }
+                // Already closed, ignore
+            }
+
+            // Consumer API
+            public object Poll(long id, Action<IHubEvent> hubCallback)
+            {
+                // try pull via async callback when half full
+                // this is racy with other threads doing poll but doesn't matter
+                if (_queue.TotalSize == _demandThreshold)
+                    hubCallback(PartitionHub<T>.TryPull.Instance);
+
+                return _queue.Poll(id);
+            }
+        }
+
+        private sealed class PartitionSource : GraphStage<SourceShape<T>>
+        {
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly PartitionSource _source;
+                private readonly long _id;
+                private readonly Consumer _consumer;
+                private long _callbackCount;
+                private Action<IHubEvent> _hubCallback;
+
+                public Logic(PartitionSource source) : base(source.Shape)
+                {
+                    _source = source;
+                    _id = source._counter.IncrementAndGet();
+                    var callback = GetAsyncCallback<IConsumerEvent>(OnCommand);
+                    _consumer = new Consumer(_id, callback);
+
+                    SetHandler(source._out, this);
+                }
+
+                public override void PreStart()
+                {
+                    void OnHubReady(Task<Action<IHubEvent>> t)
+                    {
+                        if (t.IsCanceled || t.IsFaulted)
+                            FailStage(t.Exception);
+                        else
+                        {
+                            _hubCallback = t.Result;
+                            _hubCallback(RegistrationPending.Instance);
+                            if (IsAvailable(_source._out))
+                                OnPull();
+                        }
+                    }
+
+                    void Register()
+                    {
+                        var s = _source._logic.State.Value;
+                        if (s is Closed c)
+                        {
+                            if (c.Failure != null)
+                                FailStage(c.Failure);
+                            else
+                                CompleteStage();
+                            return;
+                        }
+
+                        var o = (Open)s;
+                        var newRegistrations = o.Registrations.Add(_consumer);
+                        if (_source._logic.State.CompareAndSet(o, new Open(o.CallbackTask, newRegistrations)))
+                        {
+                            var callback = GetAsyncCallback<Task<Action<IHubEvent>>>(OnHubReady);
+                            o.CallbackTask.ContinueWith(callback);
+                        }
+                        else Register();
+                    }
+
+                    Register();
+                }
+
+                public override void OnPull()
+                {
+                    if (_hubCallback == null) return;
+
+                    var element = _source._logic.Poll(_id, _hubCallback);
+                    if (element == null)
+                        _hubCallback(new NeedWakeup(_consumer));
+                    else if (element is Completed)
+                        CompleteStage();
+                    else
+                        Push(_source._out, (T)element);
+                }
+
+                public override void PostStop() => _hubCallback?.Invoke(new UnRegister(_id));
+
+                private void OnCommand(IConsumerEvent command)
+                {
+                    _callbackCount++;
+                    switch (command)
+                    {
+                        case HubCompleted c when c.Failure != null:
+                            FailStage(c.Failure);
+                            break;
+                        case HubCompleted _:
+                            CompleteStage();
+                            break;
+                        case Wakeup _:
+                            if (IsAvailable(_source._out))
+                                OnPull();
+                            break;
+                        case Initialize _:
+                            if (IsAvailable(_source._out) && _hubCallback != null)
+                                OnPull();
+                            break;
+                    }
+                }
+            }
+
+            private readonly AtomicCounterLong _counter;
+            private readonly PartitionSinkLogic _logic;
+            private readonly Outlet<T> _out = new Outlet<T>("PartitionHub.out");
+
+            public PartitionSource(AtomicCounterLong counter, PartitionSinkLogic logic)
+            {
+                _counter = counter;
+                _logic = logic;
+                Shape = new SourceShape<T>(_out);
+            }
+
+            public override SourceShape<T> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        }
+
+        private readonly Func<Func<PartitionHub.IConsumerInfo, T, long>> _partitioner;
+        private readonly int _startAfterNrOfConsumers;
+        private readonly int _bufferSize;
+
+        public PartitionHub(Func<Func<PartitionHub.IConsumerInfo, T, long>> partitioner, int startAfterNrOfConsumers, int bufferSize)
+        {
+            _partitioner = partitioner;
+            _startAfterNrOfConsumers = startAfterNrOfConsumers;
+            _bufferSize = bufferSize;
+            Shape = new SinkShape<T>(In);
+        }
+
+        public Inlet<T> In { get; } = new Inlet<T>("PartitionHub.in");
+
+        public override SinkShape<T> Shape { get; }
+
+        public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var idCounter = new AtomicCounterLong();
+            var logic = new PartitionSinkLogic(this);
+            var source = new PartitionSource(idCounter, logic);
 
             return new LogicAndMaterializedValue<Source<T, NotUsed>>(logic, Source.FromGraph(source));
         }
