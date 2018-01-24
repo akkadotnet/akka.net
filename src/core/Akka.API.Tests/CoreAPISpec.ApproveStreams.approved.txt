@@ -1428,6 +1428,21 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Outlet<T> Out(int id) { }
         public override string ToString() { }
     }
+    public class static PartitionHub
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>(System.Func<int, T, int> partitioner, int startAfterNrOfConsumers, int bufferSize = 256) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> StatefulSink<T>(System.Func<System.Func<Akka.Streams.Dsl.PartitionHub.IConsumerInfo, T, long>> partitioner, int startAfterNrOfConsumers, int bufferSize = 256) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public interface IConsumerInfo
+        {
+            System.Collections.Immutable.ImmutableArray<long> ConsumerIds { get; }
+            int Size { get; }
+            long ConsumerByIndex(int index);
+            int QueueSize(long consumerId);
+        }
+    }
     public sealed class PartitionOutOfBoundsException : System.Exception
     {
         public PartitionOutOfBoundsException(string message) { }

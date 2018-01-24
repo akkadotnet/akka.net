@@ -166,7 +166,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
+                var t = MergeHub.Source<int>(16).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                    .Run(Materializer);
                 var sink = t.Item1;
                 var result = t.Item2;
 
@@ -182,7 +183,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
+                var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                    .Run(Materializer);
                 var sink = t.Item1;
                 var result = t.Item2;
 
@@ -219,7 +221,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = MergeHub.Source<int>(16).Take(2000).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
+                var t = MergeHub.Source<int>(16).Take(2000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                    .Run(Materializer);
                 var sink = t.Item1;
                 var result = t.Item2;
 
@@ -569,5 +572,341 @@ namespace Akka.Streams.Tests.Dsl
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>();
             }, Materializer);
         }
+
+        [Fact]
+        public void PartitionHub_must_work_in_the_happy_case_with_one_stream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var items = Enumerable.Range(1, 10).ToList();
+                var source = Source.From(items)
+                    .RunWith(PartitionHub.Sink<int>((size, e) => 0, 0, 8), Materializer);
+                var result = source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult();
+                result.ShouldAllBeEquivalentTo(items);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_work_in_the_happy_case_with_two_streams()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var source = Source.From(Enumerable.Range(0, 10))
+                    .RunWith(PartitionHub.Sink<int>((size, e) => e % size, 2, 8), Materializer);
+                var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
+                // it should not start publishing until startAfterNrOfConsumers = 2
+                Thread.Sleep(50);
+                var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
+                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_be_able_to_use_as_rount_robin_router()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var source = Source.From(Enumerable.Range(0, 10))
+                    .RunWith(PartitionHub.StatefulSink<int>(() =>
+                    {
+                        var n = 0L;
+                        return ((info, e) =>
+                        {
+                            n++;
+                            return info.ConsumerByIndex((int)n % info.Size);
+                        });
+                    }, 2, 8), Materializer);
+                var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
+                var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
+                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_be_able_to_use_as__sticky_session_rount_robin_router()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var source = Source.From(new[] { "usr-1", "usr-2", "usr-1", "usr-3" })
+                    .RunWith(PartitionHub.StatefulSink<string>(() =>
+                    {
+                        var session = new Dictionary<string, long>();
+                        var n = 0L;
+                        return ((info, e) =>
+                        {
+                            if (session.TryGetValue(e, out var i) && info.ConsumerIds.Contains(i))
+                                return i;
+                            n++;
+                            var id = info.ConsumerByIndex((int)n % info.Size);
+                            session[e] = id;
+                            return id;
+                        });
+                    }, 2, 8), Materializer);
+                var result1 = source.RunWith(Sink.Seq<string>(), Materializer);
+                var result2 = source.RunWith(Sink.Seq<string>(), Materializer);
+                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { "usr-2" });
+                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { "usr-1", "usr-1", "usr-3" });
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_be_able_to_use_as_fastest_consumer_router()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var items = Enumerable.Range(0, 999).ToList();
+                var source = Source.From(items)
+                    .RunWith(
+                        PartitionHub.StatefulSink<int>(() => ((info, i) => info.ConsumerIds.Min(info.QueueSize)), 2, 4),
+                        Materializer);
+                var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
+                var result2 = source.Throttle(10, TimeSpan.FromMilliseconds(100), 10, ThrottleMode.Shaping)
+                    .RunWith(Sink.Seq<int>(), Materializer);
+
+                result1.AwaitResult().Count.ShouldBeGreaterThan(result2.AwaitResult().Count);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_route_evenly()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t = this.SourceProbe<int>()
+                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 8), Keep.Both)
+                    .Run(Materializer);
+
+                var testSource = t.Item1;
+                var hub = t.Item2;
+                var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+                var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+
+                probe0.Request(3);
+                probe1.Request(10);
+                testSource.SendNext(0);
+                probe0.ExpectNext(0);
+                testSource.SendNext(1);
+                probe1.ExpectNext(1);
+
+                testSource.SendNext(2);
+                testSource.SendNext(3);
+                testSource.SendNext(4);
+                probe0.ExpectNext(2);
+                probe1.ExpectNext(3);
+                probe0.ExpectNext(4);
+
+                // probe1 has not requested more
+                testSource.SendNext(5);
+                testSource.SendNext(6);
+                testSource.SendNext(7);
+                probe1.ExpectNext(5);
+                probe1.ExpectNext(7);
+                probe0.ExpectNoMsg(TimeSpan.FromMilliseconds(50));
+                probe0.Request(10);
+                probe0.ExpectNext(6);
+
+                testSource.SendComplete();
+                probe0.ExpectComplete();
+                probe1.ExpectComplete();
+
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_route_unevenly()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t = this.SourceProbe<int>()
+                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => (e % 3) % 2, 2, 8), Keep.Both)
+                    .Run(Materializer);
+
+                var testSource = t.Item1;
+                var hub = t.Item2;
+                var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+                var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+
+                // (_ % 3) % 2
+                // 0 => 0
+                // 1 => 1
+                // 2 => 0
+                // 3 => 0
+                // 4 => 1
+
+                probe0.Request(10);
+                probe1.Request(10);
+                testSource.SendNext(0);
+                probe0.ExpectNext(0);
+                testSource.SendNext(1);
+                probe1.ExpectNext(1);
+                testSource.SendNext(2);
+                probe0.ExpectNext(2);
+                testSource.SendNext(3);
+                probe0.ExpectNext(3);
+                testSource.SendNext(4);
+                probe1.ExpectNext(4);
+
+                testSource.SendComplete();
+                probe0.ExpectComplete();
+                probe1.ExpectComplete();
+
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_backpressure()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t = this.SourceProbe<int>()
+                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => 0, 2, 4), Keep.Both)
+                    .Run(Materializer);
+
+                var testSource = t.Item1;
+                var hub = t.Item2;
+                var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+                var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
+
+                probe0.Request(10);
+                probe1.Request(10);
+                testSource.SendNext(0);
+                probe0.ExpectNext(0);
+                testSource.SendNext(1);
+                probe0.ExpectNext(1);
+                testSource.SendNext(2);
+                probe0.ExpectNext(2);
+                testSource.SendNext(3);
+                probe0.ExpectNext(3);
+                testSource.SendNext(4);
+                probe0.ExpectNext(4);
+
+                testSource.SendComplete();
+                probe0.ExpectComplete();
+                probe1.ExpectComplete();
+
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t = Source.Maybe<int>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19)), Keep.Left)
+                    .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 1), Keep.Both)
+                    .Run(Materializer);
+                var firstElement = t.Item1;
+                var source = t.Item2;
+
+                var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
+                    .RunWith(Sink.Seq<int>(), Materializer);
+
+                // Second cannot be overwhelmed since the first one throttles the overall rate, and second allows a higher rate
+                var f2 = source.Throttle(10, TimeSpan.FromMilliseconds(10), 8, ThrottleMode.Enforcing)
+                    .RunWith(Sink.Seq<int>(), Materializer);
+
+                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
+                Thread.Sleep(100);
+                // on the jvm Some 0 is used, unfortunately haven't we used Option<T> for the Maybe source
+                // and therefore firstElement.SetResult(0) will complete the source without pushing an element
+                // since 0 is the default value for int and if you set the result to default(T) it will ignore
+                // the element and complete the source. We should probably fix this in the feature. 
+                firstElement.SetResult(50);
+
+                var expectationF1 = Enumerable.Range(1, 18).Where(v => v % 2 == 0).ToList();
+                expectationF1.Insert(0, 50);
+
+                f1.AwaitResult().ShouldAllBeEquivalentTo(expectationF1);
+                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_properly_signal_error_to_consumer()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var source = Source.FromPublisher(upstream)
+                    .RunWith(PartitionHub.Sink<int>((s, e) => e % s, 2, 8), Materializer);
+
+                var downstream1 = this.CreateSubscriberProbe<int>();
+                source.RunWith(Sink.FromSubscriber(downstream1), Materializer);
+                var downstream2 = this.CreateSubscriberProbe<int>();
+                source.RunWith(Sink.FromSubscriber(downstream2), Materializer);
+
+                downstream1.Request(4);
+                downstream2.Request(8);
+
+                Enumerable.Range(0, 16).ForEach(i => upstream.SendNext(i));
+
+                downstream1.ExpectNext(0, 2, 4, 6);
+                downstream2.ExpectNext(1, 3, 5, 7, 9, 11, 13, 15);
+
+                downstream1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                downstream2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
+                var failure = new TestException("Failed");
+                upstream.SendError(failure);
+
+                downstream1.ExpectError().Should().Be(failure);
+                downstream2.ExpectError().Should().Be(failure);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var source = Source.Empty<int>().RunWith(PartitionHub.Sink<int>((s, e) => e % s, 0), Materializer);
+                // Wait enough so the Hub gets the completion. This is racy, but this is fine because both
+                // cases should work in the end
+                Thread.Sleep(50);
+
+                source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult().Should().BeEmpty();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PartitionHub_must_remeber_completion_for_materialisations_after_completion()
+        {
+            var t = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((s, e) => 0, 0), Keep.Both)
+                .Run(Materializer);
+            var sourceProbe = t.Item1;
+            var source = t.Item2;
+            var sinkProbe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
+
+            sourceProbe.SendComplete();
+
+            sinkProbe.Request(1);
+            sinkProbe.ExpectComplete();
+
+            // Materialize a second time. There was a race here, where we managed to enqueue our Source registration just
+            // immediately before the Hub shut down.
+            var sink2Probe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
+
+            sink2Probe.Request(1);
+            sink2Probe.ExpectComplete();
+        }
+
+        [Fact]
+        public void PartitionHub_must_properly_signal_error_to_consumer_arriving_after_producer_finished()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var failure = new TestException("Fail!");
+                var source = Source.Failed<int>(failure).RunWith(PartitionHub.Sink<int>((s, e) => 0, 0), Materializer);
+                // Wait enough so the Hub gets the completion. This is racy, but this is fine because both
+                // cases should work in the end
+                Thread.Sleep(50);
+
+                Action a = () => source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult();
+                a.ShouldThrow<TestException>().WithMessage("Fail!");
+            }, Materializer);
+        }
     }
+
 }
