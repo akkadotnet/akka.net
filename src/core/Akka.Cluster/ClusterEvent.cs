@@ -25,8 +25,10 @@ namespace Akka.Cluster
     /// cluster.Subscribe(actorRef, typeof(IClusterDomainEvent));
     /// </code>
     /// </summary>
-    public class ClusterEvent
+    public static class ClusterEvent
     {
+        #region messages
+        
         /// <summary>
         /// The mode for getting the current state of the cluster upon first subscribing.
         /// </summary>
@@ -719,215 +721,172 @@ namespace Akka.Cluster
                                                        (GossipStats.Equals(other.GossipStats) && SeenBy.Equals(other.SeenBy));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableList<UnreachableMember> DiffUnreachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
+        #endregion
+        
+        internal static IEnumerable<UnreachableMember> DiffUnreachable(MembershipState oldState, MembershipState newState)
         {
-            if (newGossip.Equals(oldGossip))
+            if (ReferenceEquals(oldState, newState)) yield break;
+            
+            var newGossip = newState.LatestGossip;
+            var oldUnreachableNodes = oldState.DcReachabilityNoOutsideNodes.AllUnreachableOrTerminated;
+            foreach (var node in newState.DcReachabilityNoOutsideNodes.AllUnreachableOrTerminated)
             {
-                return ImmutableList<UnreachableMember>.Empty;
+                if (!oldUnreachableNodes.Contains(node) && !node.Equals(newState.SelfUniqueAddress))
+                    yield return new UnreachableMember(newGossip.GetMember(node));
             }
-
-            var oldUnreachableNodes = oldGossip.Overview.Reachability.AllUnreachableOrTerminated;
-            return newGossip.Overview.Reachability.AllUnreachableOrTerminated
-                    .Where(node => !oldUnreachableNodes.Contains(node) && !node.Equals(selfUniqueAddress))
-                    .Select(node => new UnreachableMember(newGossip.GetMember(node)))
-                    .ToImmutableList();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableList<ReachableMember> DiffReachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
+        internal static IEnumerable<ReachableMember> DiffReachable(MembershipState oldState, MembershipState newState)
         {
-            if (newGossip.Equals(oldGossip))
-            {
-                return ImmutableList<ReachableMember>.Empty;
-            }
+            if (ReferenceEquals(oldState, newState)) yield break;
 
-            return oldGossip.Overview.Reachability.AllUnreachable
-                    .Where(node => newGossip.HasMember(node) && newGossip.Overview.Reachability.IsReachable(node) && !node.Equals(selfUniqueAddress))
-                    .Select(node => new ReachableMember(newGossip.GetMember(node)))
-                    .ToImmutableList();
+            var newGossip = newState.LatestGossip;
+            foreach (var node in oldState.DcReachabilityNoOutsideNodes.AllUnreachable)
+            {
+                if (newGossip.HasMember(node) && newState.DcReachabilityNoOutsideNodes.IsReachable(node) && node != newState.SelfUniqueAddress)
+                    yield return new ReachableMember(newGossip.GetMember(node));
+            }
         }
 
-        /// <summary>
-        /// Compares two <see cref="Gossip"/> instances and uses them to publish the appropriate <see cref="IMemberEvent"/>
-        /// for any given change to the membership of the current cluster.
-        /// </summary>
-        /// <param name="oldGossip">The previous gossip instance.</param>
-        /// <param name="newGossip">The new gossip instance.</param>
-        /// <returns>A possibly empty set of membership events to be published to all subscribers.</returns>
-        internal static ImmutableList<IMemberEvent> DiffMemberEvents(Gossip oldGossip, Gossip newGossip)
+        internal static bool IsReachable(MembershipState state, ImmutableHashSet<UniqueAddress> oldUnreachableNodes, string otherDc)
         {
-            if (newGossip.Equals(oldGossip))
+            IEnumerable<UniqueAddress> UnrelatedDcNodes(MembershipState s)
             {
-                return ImmutableList<IMemberEvent>.Empty;
-            }
-
-            var newMembers = newGossip.Members.Except(oldGossip.Members);
-            var membersGroupedByAddress = newGossip.Members
-                .Concat(oldGossip.Members)
-                .GroupBy(m => m.UniqueAddress);
-
-            var changedMembers = membersGroupedByAddress
-                .Where(g => g.Count() == 2 
-                && (g.First().Status != g.Skip(1).First().Status 
-                    || g.First().UpNumber != g.Skip(1).First().UpNumber))
-                .Select(g => g.First());
-
-            var memberEvents = CollectMemberEvents(newMembers.Union(changedMembers));
-            var removedMembers = oldGossip.Members.Except(newGossip.Members);
-            var removedEvents = removedMembers.Select(m => new MemberRemoved(m.Copy(status: MemberStatus.Removed), m.Status));
-
-            return memberEvents.Concat(removedEvents).ToImmutableList();
-        }
-
-        private static IEnumerable<IMemberEvent> CollectMemberEvents(IEnumerable<Member> members)
-        {
-            foreach (var member in members)
-            {
-                switch (member.Status)
+                foreach (var member in s.LatestGossip.Members)
                 {
-                    case MemberStatus.Joining:
-                        yield return new MemberJoined(member);
-                        break;
-                    case MemberStatus.WeaklyUp:
-                        yield return new MemberWeaklyUp(member);
-                        break;
-                    case MemberStatus.Up:
-                        yield return new MemberUp(member);
-                        break;
-                    case MemberStatus.Leaving:
-                        yield return new MemberLeft(member);
-                        break;
-                    case MemberStatus.Exiting:
-                        yield return new MemberExited(member);
-                        break;
+                    if (member.DataCenter != otherDc && member.DataCenter != s.SelfDataCenter)
+                        yield return member.UniqueAddress;
+                } 
+            }
+
+            var unrelatedDcNodes = UnrelatedDcNodes(state);
+            var reachabilityForOtherDc = state.DcReachabilityWithoutObservationsWithin.Remove(unrelatedDcNodes);
+            return reachabilityForOtherDc.AllUnreachable.IsSubsetOf(oldUnreachableNodes);
+        }
+
+        internal static IEnumerable<UnreachableDataCenter> DiffUnreachableDataCenters(MembershipState oldState, MembershipState newState)
+        {
+            if (ReferenceEquals(oldState, newState)) yield break;
+
+            var otherDcs = oldState.LatestGossip.AllDataCenters.Union(newState.LatestGossip.AllDataCenters).Remove(newState.SelfDataCenter);
+            foreach (var dc in otherDcs)
+            {
+                if (!IsReachable(newState, oldState.DcReachability.AllUnreachableOrTerminated, dc))
+                    yield return new UnreachableDataCenter(dc);
+            }
+        }
+
+        internal static IEnumerable<ReachableDataCenter> DiffReachableDataCenters(MembershipState oldState, MembershipState newState)
+        {
+            if (ReferenceEquals(oldState, newState)) yield break;
+            
+            var otherDcs = oldState.LatestGossip.AllDataCenters.Union(newState.LatestGossip.AllDataCenters).Remove(newState.SelfDataCenter);
+            foreach (var dc in otherDcs)
+            {
+                if (!IsReachable(oldState, ImmutableHashSet<UniqueAddress>.Empty, dc) && IsReachable(newState, ImmutableHashSet<UniqueAddress>.Empty, dc))
+                    yield return new ReachableDataCenter(dc);
+            }
+        }
+
+        internal static IEnumerable<IMemberEvent> DiffMemberEvents(MembershipState oldState, MembershipState newState)
+        {
+            if (ReferenceEquals(oldState, newState)) yield break;
+
+            var newMembers = newState.LatestGossip.Members;
+            var oldMembersMap = oldState.LatestGossip.Members.ToDictionary(m => m.UniqueAddress, m => m);
+
+            foreach (var newMember in newMembers)
+            {
+                if (oldMembersMap.TryGetValue(newMember.UniqueAddress, out var oldMember))
+                {
+                    // check if member has changed
+                    if (newMember.Status != oldMember.Status || newMember.UpNumber != oldMember.UpNumber)
+                        yield return MemberToEvent(newMember);
                 }
+                else yield return MemberToEvent(newMember); // if member didn't exists
             }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableList<LeaderChanged> DiffLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
-        {
-            var newLeader = newGossip.Leader(selfUniqueAddress);
-            if ((newLeader == null && oldGossip.Leader(selfUniqueAddress) == null)
-                || newLeader != null && newLeader.Equals(oldGossip.Leader(selfUniqueAddress)))
-                return ImmutableList<LeaderChanged>.Empty;
-
-            return ImmutableList.Create(newLeader == null
-                ? new LeaderChanged(null)
-                : new LeaderChanged(newLeader.Address));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableHashSet<RoleLeaderChanged> DiffRolesLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
-        {
-            return InternalDiffRolesLeader(oldGossip, newGossip, selfUniqueAddress).ToImmutableHashSet();
-        }
-
-        private static IEnumerable<RoleLeaderChanged> InternalDiffRolesLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
-        {
-            foreach (var role in oldGossip.AllRoles.Union(newGossip.AllRoles))
+            
+            var oldMembers = oldState.LatestGossip.Members;
+            foreach (var oldMember in oldMembers)
             {
-                var newLeader = newGossip.RoleLeader(role, selfUniqueAddress);
-                if (newLeader == null && oldGossip.RoleLeader(role, selfUniqueAddress) != null)
-                    yield return new RoleLeaderChanged(role, null);
-                if (newLeader != null && !newLeader.Equals(oldGossip.RoleLeader(role, selfUniqueAddress)))
-                    yield return new RoleLeaderChanged(role, newLeader.Address);
+                if (!newMembers.Contains(oldMember)) 
+                    yield return new MemberRemoved(oldMember.Copy(status: MemberStatus.Removed), oldMember.Status);
             }
         }
-
-        /// <summary>
-        /// Used for checking convergence when we don't have any information from the cluster daemon.
-        /// </summary>
-        private static readonly HashSet<UniqueAddress> EmptySet = new HashSet<UniqueAddress>();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
+        
+        private static IMemberEvent MemberToEvent(Member member)
         {
-            if (newGossip.Equals(oldGossip))
+            switch (member.Status)
             {
-                return ImmutableList<SeenChanged>.Empty;
+                case MemberStatus.Joining: return new MemberJoined(member);
+                case MemberStatus.WeaklyUp: return new MemberWeaklyUp(member);
+                case MemberStatus.Up: return new MemberUp(member);
+                case MemberStatus.Leaving: return new MemberLeft(member);
+                case MemberStatus.Exiting: return new MemberExited(member);
+                // no events for other transitions
+                default: return null;
             }
-
-            var newConvergence = newGossip.Convergence(selfUniqueAddress, EmptySet);
-            var newSeenBy = newGossip.SeenBy;
-            if (!newConvergence.Equals(oldGossip.Convergence(selfUniqueAddress, EmptySet)) || !newSeenBy.SequenceEqual(oldGossip.SeenBy))
-            {
-                return ImmutableList.Create(new SeenChanged(newConvergence, newSeenBy.Select(s => s.Address).ToImmutableHashSet()));
-            }
-
-            return ImmutableList<SeenChanged>.Empty;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
+        internal static LeaderChanged DiffLeader(MembershipState oldState, MembershipState newState)
         {
-            if (newGossip.Overview.Reachability.Equals(oldGossip.Overview.Reachability))
-                return ImmutableList<ReachabilityChanged>.Empty;
-
-            return ImmutableList.Create(new ReachabilityChanged(newGossip.Overview.Reachability));
+            var newLeader = newState.Leader;
+            return newLeader != oldState.Leader ? new LeaderChanged(newLeader.Address) : null;
         }
+
+        internal static IEnumerable<RoleLeaderChanged> DiffRolesLeader(MembershipState oldState, MembershipState newState)
+        {
+            foreach (var role in oldState.LatestGossip.AllRoles.Union(newState.LatestGossip.AllRoles))
+            {
+                var newLeader = newState.RoleLeader(role);
+                if (newLeader != oldState.RoleLeader(role))
+                    yield return new RoleLeaderChanged(role, newLeader?.Address);
+            }
+        }
+
+        internal static SeenChanged DiffSeen(MembershipState oldState, MembershipState newState)
+        {
+            if (ReferenceEquals(oldState, newState)) return null;
+
+            var newConvergence = newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty);
+            var newSeenBy = newState.LatestGossip.SeenBy;
+
+            if (newConvergence != newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty) ||
+                newSeenBy.SetEquals(oldState.LatestGossip.SeenBy))
+            {
+                return new SeenChanged(newConvergence, newSeenBy.Select(m => m.Address).ToImmutableHashSet());
+            }
+            else return null;
+        }
+
+        internal static ReachabilityChanged DiffReachability(MembershipState oldState, MembershipState newState) => 
+            ReferenceEquals(newState.Overview.Reachability, oldState.Overview.Reachability) 
+                ? null 
+                : new ReachabilityChanged(newState.Overview.Reachability);
     }
 
-    /// <summary>
-    /// INTERNAL API.
-    /// 
-    /// Publishes <see cref="ClusterEvent"/>s out to all subscribers.
-    /// </summary>
-    internal sealed class ClusterDomainEventPublisher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class ClusterDomainEventPublisher : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        private Gossip _latestGossip;
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly UniqueAddress _selfUniqueAddress = Cluster.Get(Context.System).SelfUniqueAddress;
+        private readonly MembershipState _emptyMembershipState;
+        private MembershipState _membershipState;
 
+        public string SelfDataCenter => _cluster.Settings.SelfDataCenter;
+        
         /// <summary>
         /// Default constructor for ClusterDomainEventPublisher.
         /// </summary>
         public ClusterDomainEventPublisher()
         {
-            _latestGossip = Gossip.Empty;
+            _emptyMembershipState = new MembershipState(
+                latestGossip: Gossip.Empty,
+                selfUniqueAddress: _cluster.SelfUniqueAddress,
+                selfDataCenter: _cluster.SelfDataCenter,
+                crossDataCenterConnections: _cluster.Settings.MultiDataCenter.CrossDcConnections);
+            _membershipState = _emptyMembershipState;
+            
             _eventStream = Context.System.EventStream;
-
-            Receive<InternalClusterAction.PublishChanges>(newGossip => PublishChanges(newGossip.NewGossip));
-            Receive<ClusterEvent.CurrentInternalStats>(currentStats => PublishInternalStats(currentStats));
-            Receive<InternalClusterAction.SendCurrentClusterState>(receiver => SendCurrentClusterState(receiver.Receiver));
-            Receive<InternalClusterAction.Subscribe>(sub => Subscribe(sub.Subscriber, sub.InitialStateMode, sub.To));
-            Receive<InternalClusterAction.Unsubscribe>(unsub => Unsubscribe(unsub.Subscriber, unsub.To));
-            Receive<InternalClusterAction.PublishEvent>(evt => Publish(evt));
         }
 
         /// <inheritdoc cref="ActorBase.PreRestart"/>
@@ -941,7 +900,21 @@ namespace Akka.Cluster
         {
             // publish the final removed state before shutting down
             Publish(ClusterEvent.ClusterShuttingDown.Instance);
-            PublishChanges(Gossip.Empty);
+            PublishChanges(_emptyMembershipState);
+        }
+
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case InternalClusterAction.PublishChanges publishChanges: PublishChanges(publishChanges.State); return true;
+                case ClusterEvent.CurrentInternalStats currentStats: PublishInternalStats(currentStats); return true;
+                case InternalClusterAction.SendCurrentClusterState send: SendCurrentClusterState(send.Receiver); return true;
+                case InternalClusterAction.Subscribe subscribe: Subscribe(subscribe.Subscriber, subscribe.InitialStateMode, subscribe.To); return true;
+                case InternalClusterAction.Unsubscribe unsubscribe: Unsubscribe(unsubscribe.Subscriber, unsubscribe.To); return true;
+                case InternalClusterAction.PublishEvent publishEvent: Publish(publishEvent.Event); return true;
+                default: return false;
+            }
         }
 
         private readonly EventStream _eventStream;
@@ -952,44 +925,44 @@ namespace Akka.Cluster
         /// </summary>
         private void SendCurrentClusterState(IActorRef receiver)
         {
-            var unreachable = _latestGossip.Overview.Reachability.AllUnreachableOrTerminated
-                .Where(node => !node.Equals(_selfUniqueAddress))
-                .Select(node => _latestGossip.GetMember(node))
+            var latestGossip = _membershipState.LatestGossip;
+            var unreachable = _membershipState.DcReachabilityNoOutsideNodes.AllUnreachableOrTerminated
+                .Where(node => node != _selfUniqueAddress)
+                .Select(node => latestGossip.GetMember(node))
                 .ToImmutableHashSet();
 
-            var unreachableDataCenters = !_latestGossip.IsMultiDc
+            var unreachableDataCenters = !latestGossip.IsMultiDc
                 ? ImmutableHashSet<string>.Empty
-                : _latestGossip.AllDataCenters.Where(IsReachable(_latestGossip, ImmutableHashSet<string>.Empty)).ToImmutableHashSet();
+                : latestGossip.AllDataCenters.Where(dc => ClusterEvent.IsReachable(_membershipState, ImmutableHashSet<UniqueAddress>.Empty, dc)).ToImmutableHashSet();
             
             var state = new ClusterEvent.CurrentClusterState(
-                members: _latestGossip.Members,
+                members: latestGossip.Members,
                 unreachable: unreachable,
-                seenBy: _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
-                leader: _latestGossip.Leader(_selfUniqueAddress) == null ? null : _latestGossip.Leader(_selfUniqueAddress).Address,
-                roleLeaderMap: _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
+                seenBy: latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
+                leader: _membershipState.Leader?.Address,
+                roleLeaderMap: latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
                 {
-                    var leader = _latestGossip.RoleLeader(r, _selfUniqueAddress);
-                    return leader == null ? null : leader.Address;
+                    var leader = latestGossip.RoleLeader(r, _selfUniqueAddress);
+                    return leader?.Address;
                 }),
                 unreachableDataCenters: unreachableDataCenters);
             receiver.Tell(state);
         }
 
-        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode, IEnumerable<Type> to)
+        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode, IReadOnlyCollection<Type> to)
         {
             switch (initMode)
             {
                 case ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents:
-
                     void Pub(object @event)
                     {
                         var eventType = @event.GetType();
                         if (to.Any(o => o.IsAssignableFrom(eventType)))
                             subscriber.Tell(@event);
                     }
-
-                    PublishDiff(Gossip.Empty, _latestGossip, Pub);
+                    PublishDiff(_emptyMembershipState, _membershipState, Pub);
                     break;
+                
                 case ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot:
                     SendCurrentClusterState(subscriber);
                     break;
@@ -1004,39 +977,36 @@ namespace Akka.Cluster
             else _eventStream.Unsubscribe(subscriber, to);
         }
 
-        private void PublishChanges(Gossip newGossip)
+        private void PublishChanges(MembershipState newState)
         {
-            var oldGossip = _latestGossip;
+            var oldState = _membershipState;
             // keep the _latestGossip to be sent to new subscribers
-            _latestGossip = newGossip;
-            PublishDiff(oldGossip, newGossip, Publish);
+            _membershipState = newState;
+            PublishDiff(oldState, newState, Publish);
         }
 
-        private void PublishDiff(Gossip oldGossip, Gossip newGossip, Action<object> pub)
+        private void PublishDiff(MembershipState oldState, MembershipState newState, Action<object> pub)
         {
-            foreach (var @event in ClusterEvent.DiffMemberEvents(oldGossip, newGossip)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffUnreachable(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffReachable(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffRolesLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
+            foreach (var e in ClusterEvent.DiffMemberEvents(oldState, newState)) pub(e);
+            foreach (var e in ClusterEvent.DiffUnreachable(oldState, newState)) pub(e);
+            foreach (var e in ClusterEvent.DiffReachable(oldState, newState)) pub(e);
+            foreach (var e in ClusterEvent.DiffUnreachableDataCenters(oldState, newState)) pub(e);
+            foreach (var e in ClusterEvent.DiffReachableDataCenters(oldState, newState)) pub(e);
+            
+            var leader = ClusterEvent.DiffLeader(oldState, newState); if (leader != null) pub(leader);
+            
+            foreach (var e in ClusterEvent.DiffRolesLeader(oldState, newState)) pub(e);
+            
             // publish internal SeenState for testing purposes
-            foreach (var @event in ClusterEvent.DiffSeen(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffReachability(oldGossip, newGossip)) pub(@event);
+            var seen = ClusterEvent.DiffSeen(oldState, newState); if (seen != null) pub(seen);
+            
+            var reachability = ClusterEvent.DiffReachability(oldState, newState); if (reachability != null) pub(reachability);
         }
 
-        private void PublishInternalStats(ClusterEvent.CurrentInternalStats currentStats)
-        {
-            Publish(currentStats);
-        }
+        private void PublishInternalStats(ClusterEvent.CurrentInternalStats currentStats) => Publish(currentStats);
 
-        private void Publish(object @event)
-        {
-            _eventStream.Publish(@event);
-        }
+        private void Publish(object @event) => _eventStream.Publish(@event);
 
-        private void ClearState()
-        {
-            _latestGossip = Gossip.Empty;
-        }
+        private void ClearState() => _membershipState = _emptyMembershipState;
     }
 }

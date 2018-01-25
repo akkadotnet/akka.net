@@ -763,24 +763,12 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class PublishChanges : IPublishMessage
         {
-            readonly Gossip _newGossip;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="newGossip">TBD</param>
-            internal PublishChanges(Gossip newGossip)
+            internal PublishChanges(MembershipState state)
             {
-                _newGossip = newGossip;
+                State = state;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Gossip NewGossip
-            {
-                get { return _newGossip; }
-            }
+            
+            public MembershipState State { get; }
         }
 
         /// <summary>
@@ -2525,16 +2513,19 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Publishes gossip to other nodes in the cluster.
+        /// Publishes membership state to other nodes in the cluster.
         /// </summary>
-        /// <param name="newGossip">The new gossip to share.</param>
-        public void Publish(Gossip newGossip)
+        public void PublishMembershipState()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(newGossip));
-            if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero)
+            if (_cluster.Settings.Debug.VerboseGossipLogging)
             {
-                PublishInternalStats();
+                _log.debug("Cluster Node [{0}] dc [{1}] - New gossip published [{2}]", SelfAddress, _cluster.Settings.SelfDataCenter, _membershipState.LatestGossip);
             }
+            
+            _publisher.Tell(new InternalClusterAction.PublishChanges(_membershipState));
+            
+            if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero)
+                PublishInternalStats();
         }
 
         /// <summary>
