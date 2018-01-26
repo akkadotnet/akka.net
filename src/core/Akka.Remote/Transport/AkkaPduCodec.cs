@@ -381,24 +381,20 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private static ByteString _heartbeatPdu;
+        /*
+         * Since there's never any ActorSystem-specific information coded directly
+         * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
+         * same heartbeat byte buffer and re-using it.
+         */
+        private static readonly ByteString HeartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
 
         /// <summary>
-        /// TBD
+        /// Creates a new Heartbeat message instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The Heartbeat message.</returns>
         public override ByteString ConstructHeartbeat()
         {
-            /*
-             * Since there's never any ActorSystem-specific information coded directly
-             * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
-             * same heartbeat byte buffer and re-using it.
-             */
-            if (_heartbeatPdu == null)
-            {
-                _heartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
-            }
-            return _heartbeatPdu;
+            return HeartbeatPdu;
         }
 
         /// <summary>
@@ -549,7 +545,7 @@ namespace Akka.Remote.Transport
             get { return ConstructControlMessagePdu(CommandType.DisassociateQuarantined); }
         }
 
-        private ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
+        private static ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
         {
             var controlMessage = new AkkaControlMessage() { CommandType = code };
             if (handshakeInfo != null)
