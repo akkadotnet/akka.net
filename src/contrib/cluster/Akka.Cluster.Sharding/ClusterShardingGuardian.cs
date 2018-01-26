@@ -222,7 +222,7 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
-                    var replicator = DistributedData.DistributedData.Get(Context.System).Replicator;
+                    var replicator = Replicator(settings);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
