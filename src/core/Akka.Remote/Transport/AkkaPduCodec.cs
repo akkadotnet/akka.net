@@ -556,12 +556,12 @@ namespace Akka.Remote.Transport
             return new AkkaProtocolMessage() { Instruction = controlMessage }.ToByteString();
         }
 
-        private Address DecodeAddress(AddressData origin)
+        private static Address DecodeAddress(AddressData origin)
         {
             return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
         }
 
-        private ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
+        private static ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
         {
             return new ActorRefData()
             {
@@ -571,7 +571,7 @@ namespace Akka.Remote.Transport
             };
         }
 
-        private AddressData SerializeAddress(Address address)
+        private static AddressData SerializeAddress(Address address)
         {
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
                 throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
