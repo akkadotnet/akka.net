@@ -90,8 +90,7 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                var t = msg as Terminated;
-                if (t != null && Equals(t.ActorRef, _stage._actorRef))
+                if (msg is Terminated t && Equals(t.ActorRef, _stage._actorRef))
                     CompleteStage();
 
                 //ignore all other messages

@@ -497,8 +497,8 @@ my-dispatcher1 {
                 .With<Complete>(OnComplete)
                 .With<CompleteThenStop>(OnCompleteThenStop)
                 .With<Boom>(() => { throw new Exception("boom"); })
-                .With<ThreadName
-                >(() => _probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
+                // TODO fix me when thread name is set by dispatcher
+                .With<ThreadName>(() => _probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) 
                 .WasHandled;
         }
     }

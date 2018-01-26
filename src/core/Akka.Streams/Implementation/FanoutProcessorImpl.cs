@@ -87,8 +87,7 @@ namespace Akka.Streams.Implementation
             NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
             SubReceive = new SubReceive(message =>
             {
-                var publisher = message as ExposedPublisher;
-                if (publisher == null)
+                if (!(message is ExposedPublisher publisher))
                     throw new IllegalStateException($"The first message must be ExposedPublisher but was {message}");
 
                 ExposedPublisher = publisher.Publisher;
@@ -112,22 +111,22 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected bool DownstreamRunning(object message)
         {
-            if (message is SubscribePending)
-                SubscribePending();
-            else if (message is RequestMore)
+            switch (message)
             {
-                var requestMore = (RequestMore) message;
-                MoreRequested((ActorSubscriptionWithCursor<T>) requestMore.Subscription, requestMore.Demand);
-                _pump.Pump();
+                case SubscribePending _:
+                    SubscribePending();
+                    break;
+                case RequestMore requestMore:
+                    MoreRequested((ActorSubscriptionWithCursor<T>) requestMore.Subscription, requestMore.Demand);
+                    _pump.Pump();
+                    break;
+                case Cancel cancel:
+                    UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
+                    _pump.Pump();
+                    break;
+                default:
+                    return false;
             }
-            else if (message is Cancel)
-            {
-                var cancel = (Cancel) message;
-                UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
-                _pump.Pump();
-            }
-            else
-                return false;
 
             return true;
         }

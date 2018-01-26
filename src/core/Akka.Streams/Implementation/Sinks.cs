@@ -95,8 +95,7 @@ namespace Akka.Streams.Implementation
 
         object ISinkModule.Create(MaterializationContext context, out object materializer)
         {
-            TMat m;
-            var result = Create(context, out m);
+            var result = Create(context, out var m);
             materializer = m;
             return result;
         }
@@ -133,7 +132,7 @@ namespace Akka.Streams.Implementation
             var thisN = Attributes.GetNameOrDefault(null);
             var thatN = attrs.GetNameOrDefault(null);
 
-            return (thatN == null) || thisN == thatN
+            return thatN == null || thisN == thatN
                 ? _shape
                 : new SinkShape<TIn>(new Inlet<TIn>(thatN + ".in"));
         }
