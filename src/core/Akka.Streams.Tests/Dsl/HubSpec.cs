@@ -642,12 +642,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = this.SourceProbe<int>()
+                var (testSource, hub) = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 8), Keep.Both)
                     .Run(Materializer);
 
-                var testSource = t.Item1;
-                var hub = t.Item2;
                 var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
                 var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
 
@@ -687,12 +685,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = this.SourceProbe<int>()
+                var (testSource, hub) = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => (e % 3) % 2, 2, 8), Keep.Both)
                     .Run(Materializer);
 
-                var testSource = t.Item1;
-                var hub = t.Item2;
                 var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
                 var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
 
@@ -728,12 +724,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = this.SourceProbe<int>()
+                var (testSource, hub) = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => 0, 2, 4), Keep.Both)
                     .Run(Materializer);
 
-                var testSource = t.Item1;
-                var hub = t.Item2;
                 var probe0 = hub.RunWith(this.SinkProbe<int>(), Materializer);
                 var probe1 = hub.RunWith(this.SinkProbe<int>(), Materializer);
 
@@ -762,11 +756,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.Maybe<int>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19)), Keep.Left)
+                var (firstElement, source) = Source.Maybe<int>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19)), Keep.Left)
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 1), Keep.Both)
                     .Run(Materializer);
-                var firstElement = t.Item1;
-                var source = t.Item2;
 
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 1, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
@@ -841,10 +833,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void PartitionHub_must_remeber_completion_for_materialisations_after_completion()
         {
-            var t = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((s, e) => 0, 0), Keep.Both)
+            var (sourceProbe, source) = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((s, e) => 0, 0), Keep.Both)
                 .Run(Materializer);
-            var sourceProbe = t.Item1;
-            var source = t.Item2;
             var sinkProbe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
 
             sourceProbe.SendComplete();

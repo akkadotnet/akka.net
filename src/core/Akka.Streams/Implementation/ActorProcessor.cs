@@ -201,8 +201,7 @@ namespace Akka.Streams.Implementation
             if (!_isUpstreamCompleted)
             {
                 _isUpstreamCompleted = true;
-                if (!ReferenceEquals(_upstream, null))
-                    _upstream.Cancel();
+                _upstream?.Cancel();
                 Clear();
             }
         }
@@ -292,14 +291,21 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected virtual bool WaitingForUpstream(object message)
         {
-            if (message is OnComplete)
-                OnComplete();
-            else if (message is OnSubscribe)
-                OnSubscribe(((OnSubscribe)message).Subscription);
-            else if (message is OnError)
-                OnError(((OnError)message).Cause);
-            else
-                return false;
+            switch (message)
+            {
+                case OnComplete _:
+                    OnComplete();
+                    break;
+                case OnSubscribe onSubscribe:
+                    OnSubscribe(onSubscribe.Subscription);
+                    break;
+                case OnError onError:
+                    OnError(onError.Cause);
+                    break;
+                default:
+                    return false;
+            }
+
             return true;
         }
 
@@ -310,16 +316,24 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected virtual bool UpstreamRunning(object message)
         {
-            if (message is OnNext)
-                EnqueueInputElement(((OnNext)message).Element);
-            else if (message is OnComplete)
-                OnComplete();
-            else if (message is OnSubscribe)
-                ((OnSubscribe)message).Subscription.Cancel();
-            else if (message is OnError)
-                OnError(((OnError)message).Cause);
-            else
-                return false;
+            switch (message)
+            {
+                case OnNext onNext:
+                    EnqueueInputElement(onNext.Element);
+                    break;
+                case OnComplete _:
+                    OnComplete();
+                    break;
+                case OnSubscribe onSubscribe:
+                    onSubscribe.Subscription.Cancel();
+                    break;
+                case OnError onError:
+                    OnError(onError.Cause);
+                    break;
+                default:
+                    return false;
+            }
+
             return true;
         }
 
@@ -434,8 +448,7 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (!ReferenceEquals(ExposedPublisher, null))
-                    ExposedPublisher.Shutdown(null);
+                ExposedPublisher?.Shutdown(null);
                 if (!ReferenceEquals(Subscriber, null))
                     ReactiveStreamsCompliance.TryOnComplete(Subscriber);
             }
@@ -449,8 +462,7 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (!ReferenceEquals(ExposedPublisher, null))
-                    ExposedPublisher.Shutdown(null);
+                ExposedPublisher?.Shutdown(null);
             }
         }
 
@@ -463,8 +475,7 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (!ReferenceEquals(ExposedPublisher, null))
-                    ExposedPublisher.Shutdown(e);
+                ExposedPublisher?.Shutdown(e);
                 if (!ReferenceEquals(Subscriber, null) && !(e is ISpecViolation))
                     ReactiveStreamsCompliance.TryOnError(Subscriber, e);
             }
@@ -507,9 +518,9 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected bool WaitingExposedPublisher(object message)
         {
-            if (message is ExposedPublisher)
+            if (message is ExposedPublisher publisher)
             {
-                ExposedPublisher = ((ExposedPublisher)message).Publisher;
+                ExposedPublisher = publisher.Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
@@ -524,29 +535,32 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected bool DownstreamRunning(object message)
         {
-            if (message is SubscribePending)
-                SubscribePending(ExposedPublisher.TakePendingSubscribers());
-            else if (message is RequestMore)
+            switch (message)
             {
-                var requestMore = (RequestMore)message;
-                if (requestMore.Demand < 1)
-                    Error(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
-                else
-                {
-                    DownstreamDemand += requestMore.Demand;
-                    if (DownstreamDemand < 1)
-                        DownstreamDemand = long.MaxValue;   // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
+                case SubscribePending _:
+                    SubscribePending(ExposedPublisher.TakePendingSubscribers());
+                    break;
+                case RequestMore requestMore:
+                    if (requestMore.Demand < 1)
+                        Error(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
+                    else
+                    {
+                        DownstreamDemand += requestMore.Demand;
+                        if (DownstreamDemand < 1)
+                            DownstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
+                        Pump.Pump();
+                    }
+
+                    break;
+                case Cancel _:
+                    IsDownstreamCompleted = true;
+                    ExposedPublisher.Shutdown(new NormalShutdownException(string.Empty));
                     Pump.Pump();
-                }
+                    break;
+                default:
+                    return false;
             }
-            else if (message is Cancel)
-            {
-                IsDownstreamCompleted = true;
-                ExposedPublisher.Shutdown(new NormalShutdownException(string.Empty));
-                Pump.Pump();
-            }
-            else
-                return false;
+
             return true;
         }
     }

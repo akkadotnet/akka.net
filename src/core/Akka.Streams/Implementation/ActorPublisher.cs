@@ -253,19 +253,19 @@ namespace Akka.Streams.Implementation
         {
             try
             {
-                if (_shutdownReason == null)
+                switch (_shutdownReason)
                 {
-                    ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-                    ReactiveStreamsCompliance.TryOnComplete(subscriber);
-                }
-                else if (_shutdownReason is ISpecViolation)
-                {
-                    // ok, not allowed to call OnError
-                }
-                else
-                {
-                    ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-                    ReactiveStreamsCompliance.TryOnError(subscriber, _shutdownReason);
+                    case null:
+                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
+                        ReactiveStreamsCompliance.TryOnComplete(subscriber);
+                        break;
+                    case ISpecViolation _:
+                        // ok, not allowed to call OnError
+                        break;
+                    default:
+                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
+                        ReactiveStreamsCompliance.TryOnError(subscriber, _shutdownReason);
+                        break;
                 }
             }
             catch (Exception exception)
@@ -378,8 +378,8 @@ namespace Akka.Streams.Implementation
 
         bool ISubscriptionWithCursor<TIn>.IsActive
         {
-            get { return IsActive; }
-            set { IsActive = value; }
+            get => IsActive;
+            set => IsActive = value;
         }
 
         /// <summary>
@@ -394,8 +394,8 @@ namespace Akka.Streams.Implementation
 
         long ISubscriptionWithCursor<TIn>.TotalDemand
         {
-            get { return TotalDemand; }
-            set { TotalDemand = value; }
+            get => TotalDemand;
+            set => TotalDemand = value;
         }
 
         /// <summary>
@@ -411,8 +411,8 @@ namespace Akka.Streams.Implementation
 
         int ICursor.Cursor
         {
-            get { return Cursor; }
-            set { Cursor = value; }
+            get => Cursor;
+            set => Cursor = value;
         }
     }
 }

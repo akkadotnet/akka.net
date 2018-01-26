@@ -178,29 +178,33 @@ namespace Akka.Streams.Implementation
 
         private bool DrainBufferThenComplete(object message)
         {
-            if (message is Cancel)
-                Context.Stop(Self);
-            else if (message is Status.Failure && IsActive)
+            switch (message)
             {
-                // errors must be signaled as soon as possible,
-                // even if previously valid completion was requested via Status.Success
-                OnErrorThenStop(((Status.Failure)message).Cause);
-            }
-            else if (message is Request)
-            {
-                // totalDemand is tracked by base
-                while (TotalDemand > 0L && !Buffer.IsEmpty)
-                    OnNext(Buffer.Dequeue());
+                case Cancel _:
+                    Context.Stop(Self);
+                    break;
+                case Status.Failure failure when IsActive:
+                    // errors must be signaled as soon as possible,
+                    // even if previously valid completion was requested via Status.Success
+                    OnErrorThenStop(failure.Cause);
+                    break;
+                case Request _:
+                    // totalDemand is tracked by base
+                    while (TotalDemand > 0L && !Buffer.IsEmpty)
+                        OnNext(Buffer.Dequeue());
 
-                if (Buffer.IsEmpty)
-                    Context.Stop(Self); // will complete the stream successfully
+                    if (Buffer.IsEmpty)
+                        Context.Stop(Self); // will complete the stream successfully
+                    break;
+                default:
+                    if (IsActive)
+                        Log.Debug(
+                            "Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])",
+                            message, Buffer.Used);
+                    else
+                        return false;
+                    break;
             }
-            else if (IsActive)
-                Log.Debug(
-                    "Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])",
-                    message, Buffer.Used);
-            else
-                return false;
 
             return true;
         }
