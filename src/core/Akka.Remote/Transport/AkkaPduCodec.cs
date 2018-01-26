@@ -228,14 +228,19 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public virtual ByteString EncodePdu(IAkkaPdu pdu)
         {
-            ByteString finalBytes = null;
-            pdu.Match()
-                .With<Associate>(a => finalBytes = ConstructAssociate(a.Info))
-                .With<Payload>(p => finalBytes = ConstructPayload(p.Bytes))
-                .With<Disassociate>(d => finalBytes = ConstructDisassociate(d.Reason))
-                .With<Heartbeat>(h => finalBytes = ConstructHeartbeat());
-
-            return finalBytes;
+            switch (pdu)
+            {
+                case Payload p:
+                    return ConstructPayload(p.Bytes);
+                case Heartbeat h:
+                    return ConstructHeartbeat();
+                case Associate a:
+                    return ConstructAssociate(a.Info);
+                case Disassociate d:
+                    return ConstructDisassociate(d.Reason);
+                default:
+                    return null; // unsupported message type
+            }
         }
 
         /// <summary>
@@ -376,13 +381,24 @@ namespace Akka.Remote.Transport
             }
         }
 
+        private static ByteString _heartbeatPdu;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
         public override ByteString ConstructHeartbeat()
         {
-            return ConstructControlMessagePdu(CommandType.Heartbeat);
+            /*
+             * Since there's never any ActorSystem-specific information coded directly
+             * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
+             * same heartbeat byte buffer and re-using it.
+             */
+            if (_heartbeatPdu == null)
+            {
+                _heartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
+            }
+            return _heartbeatPdu;
         }
 
         /// <summary>
