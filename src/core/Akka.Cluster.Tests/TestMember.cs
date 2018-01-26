@@ -12,15 +12,17 @@ namespace Akka.Cluster.Tests
 {
     static class TestMember
     {
-        public static Member Create(Address address, MemberStatus status, int uid = 0)
-        {
-            return Create(address, status, ImmutableHashSet.Create<string>(), uid);
-        }
+        public static Member Create(Address address, MemberStatus status) => 
+            Create(address, status, ImmutableHashSet<string>.Empty);
 
-        public static Member Create(Address address, MemberStatus status, ImmutableHashSet<string> roles, int uid = 0, int upNumber = 0)
-        {
-            return Member.Create(new UniqueAddress(address, uid), upNumber, status, roles);
-        }
+        public static Member Create(Address address, MemberStatus status, int upNumber, string dataCenter) =>
+            Create(address, status, ImmutableHashSet<string>.Empty, dataCenter, upNumber);
+        
+        public static Member Create(Address address, MemberStatus status, ImmutableHashSet<string> roles, string dataCenter = ClusterSettings.DefaultDataCenter, int upNumber = int.MaxValue) =>
+            WithUniqueAddress(new UniqueAddress(address, 0), status, roles, dataCenter, upNumber);
+        
+        public static Member WithUniqueAddress(UniqueAddress address, MemberStatus status, ImmutableHashSet<string> roles, string dataCenter, int upNumber = int.MaxValue) =>
+            new Member(address, upNumber, status, roles.Add(ClusterSettings.DcRolePrefix + dataCenter));
     }
 }
 

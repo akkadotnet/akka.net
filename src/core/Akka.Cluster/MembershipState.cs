@@ -217,7 +217,7 @@ namespace Akka.Cluster
             }
         }
 
-        private MembershipState Copy(Gossip latestGossip = null,
+        internal MembershipState Copy(Gossip latestGossip = null,
             UniqueAddress selfUniqueAddress = null,
             string selfDataCenter = null,
             int? crossDataCenterConnections = null)

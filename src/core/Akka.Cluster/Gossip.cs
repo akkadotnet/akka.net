@@ -47,6 +47,8 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class Gossip
     {
+        private static string VectorClockName(UniqueAddress node) => node.Address + "-" + node.Uid;
+        
         /// <summary>
         /// An empty set of members
         /// </summary>
@@ -129,7 +131,7 @@ namespace Akka.Cluster
         /// <param name="overview">TBD</param>
         /// <param name="version">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
-        public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version)
+        public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version, ImmutableDictionary<UniqueAddress, DateTime> tombstones)
         {
             Members = members;
             Overview = overview;
@@ -448,6 +450,28 @@ namespace Akka.Cluster
         {
             var members = string.Join(", ", Members.Select(m => m.ToString()));
             return $"Gossip(members = [{members}], overview = {Overview}, version = {Version}";
+        }
+
+        /// <summary>
+        /// Remove the given member from the set of members and mark it's removal with a tombstone to avoid having it
+        /// reintroduced when merging with another gossip that has not seen the removal.
+        /// </summary>
+        public Gossip Remove(UniqueAddress node, DateTime removalTimestamp)
+        {
+            // removing REMOVED nodes from the `seen` table
+            var newSeen = Overview.Seen.Remove(node);
+            // removing REMOVED nodes from the `reachability` table
+            var newReachability = Overview.Reachability.Remove(new[] { node });
+            var newOverview = Overview.Copy(seen: newSeen, reachability: newReachability);
+
+            // Clear the VectorClock when member is removed. The change made by the leader is stamped
+            // and will propagate as is if there are no other changes on other nodes.
+            // If other concurrent changes on other nodes (e.g. join) the pruning is also
+            // taken care of when receiving gossips.
+            var newVersion = Version.Prune(new VectorClock.Node(Gossip.VectorClockName(node)));
+            var newMembers = Members.Where(m => m.UniqueAddress != node);
+            var newTombstones = Tombstones.SetItem(node, removalTimestamp);
+            return Copy(version: newVersion, members: newMembers, overview: newOverview, tombstones: newTombstones);
         }
     }
 
