@@ -338,7 +338,7 @@ namespace Akka.Cluster
                 return null;
 
             // if the member statuses are equal, then it doesn't matter which one we return
-            if (a.Status.Equals(b.Status))
+            if (a.Status == b.Status)
                 return a;
 
             if (Member.AllowedTransitions[a.Status].Contains(b.Status))
@@ -354,24 +354,43 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="a">The first collection of members.</param>
         /// <param name="b">The second collection of members.</param>
+        /// <param name="tombstones">Tombstoned members to be removed from the result set.</param>
         /// <returns>An immutable hash set containing the members with the highest priority.</returns>
-        public static ImmutableHashSet<Member> PickHighestPriority(IEnumerable<Member> a, IEnumerable<Member> b)
+        public static ImmutableSortedSet<Member> PickHighestPriority(ImmutableSortedSet<Member> a, ImmutableSortedSet<Member> b, ImmutableDictionary<UniqueAddress, DateTime> tombstones)
         {
-            // group all members by Address => Seq[Member]
-            var groupedByAddress = (a.Concat(b)).GroupBy(x => x.UniqueAddress);
+            var amap = a.ToDictionary(x => x.UniqueAddress, x => x);
+            var bmap = b.ToDictionary(x => x.UniqueAddress, x => x);
 
-            var acc = new HashSet<Member>();
+            var result = ImmutableSortedSet<Member>.Empty.ToBuilder();
 
-            foreach (var g in groupedByAddress)
+            // first iterate over 'a' set, ignore all tombstoned elements and check for corresponding member in `b`
+            // if member was found, compare them and get more prioritized one - then remove it from `b`
+            foreach (var member in a)
             {
-                if (g.Count() == 2) acc.Add(HighestPriorityOf(g.First(), g.Skip(1).First()));
-                else
+                if (!tombstones.ContainsKey(member.UniqueAddress))
                 {
-                    var m = g.First();
-                    if (!Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
+                    if (bmap.TryGetValue(member.UniqueAddress, out var other))
+                    {
+                        var prioritized = HighestPriorityOf(member, other);
+                        result.Add(prioritized);
+                        bmap.Remove(member.UniqueAddress);
+                    }
+                    else result.Add(member);
                 }
             }
-            return acc.ToImmutableHashSet();
+
+            // at this point `bmap` should not have any members found in `a` set - they were removed before
+            foreach (var pair in bmap)
+            {
+                var address = pair.Key;
+                var member = pair.Value;
+                if (!tombstones.ContainsKey(address))
+                {
+                    result.Add(member);
+                }
+            }
+            
+            return result.ToImmutable();
         }
 
         /// <summary>
@@ -382,7 +401,7 @@ namespace Akka.Cluster
         /// <returns>The higher priority of the two members.</returns>
         public static Member HighestPriorityOf(Member m1, Member m2)
         {
-            if (m1.Status.Equals(m2.Status))
+            if (m1.Status == m2.Status)
             {
                 return m1.IsOlderThan(m2) ? m1 : m2;
             }

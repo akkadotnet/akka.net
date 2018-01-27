@@ -29,18 +29,18 @@ namespace Akka.Cluster
     /// Based on code from the 'vlock' VectorClock library by Coda Hale.
     /// </para>
     /// </summary>
-    public sealed class VectorClock
+    public sealed class VectorClock : IEquatable<VectorClock>
     {
-        private bool Equals(VectorClock other)
+        public bool Equals(VectorClock other)
         {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
             return IsSameAs(other);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            return obj is VectorClock && Equals((VectorClock) obj);
+            return obj is VectorClock vclock && Equals(vclock);
         }
 
         public override int GetHashCode()
