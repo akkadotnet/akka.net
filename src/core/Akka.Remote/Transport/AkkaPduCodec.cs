@@ -228,14 +228,19 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public virtual ByteString EncodePdu(IAkkaPdu pdu)
         {
-            ByteString finalBytes = null;
-            pdu.Match()
-                .With<Associate>(a => finalBytes = ConstructAssociate(a.Info))
-                .With<Payload>(p => finalBytes = ConstructPayload(p.Bytes))
-                .With<Disassociate>(d => finalBytes = ConstructDisassociate(d.Reason))
-                .With<Heartbeat>(h => finalBytes = ConstructHeartbeat());
-
-            return finalBytes;
+            switch (pdu)
+            {
+                case Payload p:
+                    return ConstructPayload(p.Bytes);
+                case Heartbeat h:
+                    return ConstructHeartbeat();
+                case Associate a:
+                    return ConstructAssociate(a.Info);
+                case Disassociate d:
+                    return ConstructDisassociate(d.Reason);
+                default:
+                    return null; // unsupported message type
+            }
         }
 
         /// <summary>
@@ -376,13 +381,20 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /*
+         * Since there's never any ActorSystem-specific information coded directly
+         * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
+         * same heartbeat byte buffer and re-using it.
+         */
+        private static readonly ByteString HeartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
+
         /// <summary>
-        /// TBD
+        /// Creates a new Heartbeat message instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The Heartbeat message.</returns>
         public override ByteString ConstructHeartbeat()
         {
-            return ConstructControlMessagePdu(CommandType.Heartbeat);
+            return HeartbeatPdu;
         }
 
         /// <summary>
@@ -533,7 +545,7 @@ namespace Akka.Remote.Transport
             get { return ConstructControlMessagePdu(CommandType.DisassociateQuarantined); }
         }
 
-        private ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
+        private static ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
         {
             var controlMessage = new AkkaControlMessage() { CommandType = code };
             if (handshakeInfo != null)
@@ -544,12 +556,12 @@ namespace Akka.Remote.Transport
             return new AkkaProtocolMessage() { Instruction = controlMessage }.ToByteString();
         }
 
-        private Address DecodeAddress(AddressData origin)
+        private static Address DecodeAddress(AddressData origin)
         {
             return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
         }
 
-        private ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
+        private static ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
         {
             return new ActorRefData()
             {
@@ -559,7 +571,7 @@ namespace Akka.Remote.Transport
             };
         }
 
-        private AddressData SerializeAddress(Address address)
+        private static AddressData SerializeAddress(Address address)
         {
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
                 throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
