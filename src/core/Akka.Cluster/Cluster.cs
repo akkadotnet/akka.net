@@ -102,7 +102,10 @@ namespace Akka.Cluster
 
             LogInfo("Starting up...");
 
-            FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
+            FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig, system));
+            CrossDcFailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(
+                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.ImplementationClass, 
+                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.Config, 
                 system));
 
             Scheduler = CreateScheduler(system);
@@ -487,6 +490,8 @@ namespace Akka.Cluster
         /// The set of failure detectors used for monitoring one or more nodes in the cluster.
         /// </summary>
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get; }
+        
+        public DefaultFailureDetectorRegistry<Address> CrossDcFailureDetector { get; }
 
         /// <summary>
         /// TBD
@@ -539,33 +544,68 @@ namespace Akka.Cluster
         internal IActorRef ClusterCore => _clusterCore ?? (_clusterCore = GetClusterCoreRef().Result);
 
         /// <summary>
+        /// Current snapshot of the member itself.
+        /// </summary>
+        public Member SelfMember => ReadView.Self;
+
+        /// <summary>
         /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>
         /// <param name="message">The message being logged.</param>
         internal void LogInfo(string message)
         {
-            _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
+            if (_log.IsInfoEnabled)
+            {
+                if (Settings.SelfDataCenter == ClusterSettings.DefaultDataCenter)
+                    _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
+                else 
+                    _log.Info("Cluster Node [{0}] DC [{1}] - {2}", SelfAddress, SelfDataCenter, message);
+            }
         }
-
+        
         /// <summary>
-        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>
-        /// <param name="template">The template being rendered and logged.</param>
-        /// <param name="arg1">The argument that fills in the template placeholder.</param>
-        internal void LogInfo(string template, object arg1)
+        /// <param name="message">The message being logged.</param>
+        internal void LogInfo(string message, object arg1)
         {
-            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
+            if (_log.IsInfoEnabled)
+            {
+                if (Settings.SelfDataCenter == ClusterSettings.DefaultDataCenter)
+                    _log.Info("Cluster Node [{1}] - " + message, arg1, SelfAddress);
+                else 
+                    _log.Info("Cluster Node [{1}] DC [{2}] - " + message, arg1, SelfAddress, SelfDataCenter);
+            }
         }
-
+        
         /// <summary>
-        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>
-        /// <param name="template">The template being rendered and logged.</param>
-        /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
-        /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
-        internal void LogInfo(string template, object arg1, object arg2)
+        /// <param name="message">The message being logged.</param>
+        internal void LogInfo(string message, object arg1, object arg2)
         {
-            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
+            if (_log.IsInfoEnabled)
+            {
+                if (Settings.SelfDataCenter == ClusterSettings.DefaultDataCenter)
+                    _log.Info("Cluster Node [{2}] - " + message, arg1, arg2, SelfAddress);
+                else 
+                    _log.Info("Cluster Node [{2}] DC [{3}] - " + message, arg1, arg2, SelfAddress, SelfDataCenter);
+            }
+        }
+        
+        /// <summary>
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
+        /// </summary>
+        /// <param name="message">The message being logged.</param>
+        internal void LogInfo(string message, object arg1, object arg2, object arg3)
+        {
+            if (_log.IsInfoEnabled)
+            {
+                if (Settings.SelfDataCenter == ClusterSettings.DefaultDataCenter)
+                    _log.Info("Cluster Node [{3}] - " + message, arg1, arg2, arg3, SelfAddress);
+                else 
+                    _log.Info("Cluster Node [{3}] DC [{4}] - " + message, arg1, arg2, arg3, SelfAddress, SelfDataCenter);
+            }
         }
     }
 

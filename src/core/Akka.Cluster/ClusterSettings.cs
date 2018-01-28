@@ -88,6 +88,16 @@ namespace Akka.Cluster
 
             SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
             MultiDataCenter = new MultiDataCenter(cc.GetConfig("multi-data-center"));
+
+            if (config.GetString("shutdown-after-unsuccessful-join-seed-nodes").ToLowerInvariant() == "off")
+                ShutdownAfterUnsuccessfulJoinSeedNodes = null;
+            else
+            {
+                var t = config.GetTimeSpan("shutdown-after-unsuccessful-join-seed-nodes");
+                if (t == TimeSpan.Zero) throw new ArgumentException("`shutdown-after-unsuccessful-join-seed-nodes` must be greater than zero");
+                
+                ShutdownAfterUnsuccessfulJoinSeedNodes = t;
+            }
         }
 
         /// <summary>
@@ -250,6 +260,7 @@ namespace Akka.Cluster
         public string SelfDataCenter { get; }
 
         public MultiDataCenter MultiDataCenter { get; }
+        public TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; set; }
     }
 
     public sealed class MultiDataCenter
@@ -272,7 +283,7 @@ namespace Akka.Cluster
             crossDcConnections: config.GetInt("cross-data-center-connections"),
             crossDcGossipProbability: config.GetInt("cross-data-center-gossip-probability"),
             crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(
-                implementationType: Type.GetType(config.GetString("failure-detector.implementation-class"), throwOnError: true),
+                implementationClass: config.GetString("failure-detector.implementation-class"),
                 heartbeatInterval: config.GetTimeSpan("failure-detector.heartbeat-interval"),
                 heartbeatExpectedResponseAfter: config.GetTimeSpan("failure-detector.expected-response-after"),
                 nrOfMonitoringActors: config.GetInt("cross-data-center-connections")))
@@ -282,17 +293,17 @@ namespace Akka.Cluster
 
     public sealed class CrossDcFailureDetectorSettings
     {
-        public Type ImplementationType { get; }
+        public string ImplementationClass { get; }
         public TimeSpan HeartbeatInterval { get; }
         public TimeSpan HeartbeatExpectedResponseAfter { get; }
         public int NrOfMonitoringActors { get; }
 
-        public CrossDcFailureDetectorSettings(Type implementationType, TimeSpan heartbeatInterval, TimeSpan heartbeatExpectedResponseAfter, int nrOfMonitoringActors)
+        public CrossDcFailureDetectorSettings(string implementationClass, TimeSpan heartbeatInterval, TimeSpan heartbeatExpectedResponseAfter, int nrOfMonitoringActors)
         {
             if (heartbeatInterval == TimeSpan.Zero) throw new ArgumentException("failure-detector.heartbeat-interval must be > 0", nameof(heartbeatInterval));
             if (heartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("failure-detector.expected-response-after > 0", nameof(heartbeatExpectedResponseAfter));
 
-            ImplementationType = implementationType;
+            ImplementationClass = implementationClass;
             HeartbeatInterval = heartbeatInterval;
             HeartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
             NrOfMonitoringActors = nrOfMonitoringActors;

@@ -47,7 +47,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class Gossip
     {
-        private static string VectorClockName(UniqueAddress node) => node.Address + "-" + node.Uid;
+        public static string VectorClockName(UniqueAddress node) => node.Address + "-" + node.Uid;
         
         /// <summary>
         /// An empty set of members

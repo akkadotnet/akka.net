@@ -115,6 +115,39 @@ namespace Akka.Actor
     /// </summary>
     public sealed class CoordinatedShutdown : IExtension
     {
+        #region internal messages
+
+        /// <summary>
+        /// Reason for the shutdown, which can be used by tasks in case they need to do
+        /// different things depending on what caused the shutdown. There are some
+        /// predefined reasons, but external libraries applications may also define
+        /// other reasons.
+        /// </summary>
+        public enum Reason
+        {
+            /// <summary>
+            /// The reason for the shutdown was unknown. Needed for backwards compatibility.
+            /// </summary>
+            Unknown,
+            
+            /// <summary>
+            /// The shutdown was initiated by a CLR shutdown hook, e.g. triggered by SIGTERM.
+            /// </summary>
+            ClrExit,
+            
+            /// <summary>
+            /// The shutdown was initiated by Cluster downing.
+            /// </summary>
+            ClusterDowning,
+            
+            /// <summary>
+            /// The shutdown was initiated by Cluster leaving.
+            /// </summary>
+            ClusterLeaving
+        }
+
+        #endregion
+        
         /// <summary>
         /// Initializes a new <see cref="CoordinatedShutdown"/> instance.
         /// </summary>
@@ -175,7 +208,7 @@ namespace Akka.Actor
         internal readonly List<string> OrderedPhases;
 
         private readonly ConcurrentBag<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<Done>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>>();
+        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task>>>>();
         private readonly AtomicBoolean _runStarted = new AtomicBoolean(false);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
         private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
@@ -211,13 +244,38 @@ namespace Akka.Actor
         /// </remarks>
         public void AddTask(string phase, string taskName, Func<Task<Done>> task)
         {
+            Func<Task> retyped = task;
+            AddTask(phase, taskName, retyped);
+        }
+
+        /// <summary>
+        /// Add a task to a phase. It doesn't remove previously added tasks.
+        /// 
+        /// Tasks added to the same phase are executed in parallel without any
+        /// ordering assumptions. Next phase will not start until all tasks of
+        /// previous phase have completed.
+        /// </summary>
+        /// <param name="phase">The phase to add this task to.</param>
+        /// <param name="taskName">The name of the task to add to this phase.</param>
+        /// <param name="task">The delegate that produces a <see cref="Task"/> that will be executed.</param>
+        /// <remarks>
+        /// Tasks should typically be registered as early as possible after system
+        /// startup. When running the <see cref="CoordinatedShutdown"/> tasks that have been
+        /// registered will be performed but tasks that are added too late will not be run.
+        /// 
+        /// 
+        /// It is possible to add a task to a later phase from within a task in an earlier phase
+        /// and it will be performed.
+        /// </remarks>
+        public void AddTask(string phase, string taskName, Func<Task> task)
+        {
             if (!_knownPhases.Contains(phase))
                 throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
-                    "All phases (along with their optional dependencies) must be defined in configuration.");
+                                                 "All phases (along with their optional dependencies) must be defined in configuration.");
 
             if (!_tasks.TryGetValue(phase, out var current))
             {
-                if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
+                if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task>>>.Empty.Add(Tuple.Create(taskName, task))))
                     AddTask(phase, taskName, task); // CAS failed, retry
             }
             else
@@ -281,6 +339,12 @@ namespace Akka.Actor
             }
 
             return ClrShutdownTask;
+        }
+
+        public Task Run(Reason reason)
+        {
+            throw new NotImplementedException();
+            return Run(fromPhase: reason.ToString());
         }
 
         /// <summary>
