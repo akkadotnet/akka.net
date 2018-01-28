@@ -189,7 +189,7 @@ namespace Akka.Persistence.Fsm
                 oldTimer.Cancel();
             }
 
-            var timer = new FSMBase.Timer(name, msg, repeat, _timerGen.Next(), Context);
+            var timer = new FSMBase.Timer(name, msg, repeat, _timerGen.Next(), Self, Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
