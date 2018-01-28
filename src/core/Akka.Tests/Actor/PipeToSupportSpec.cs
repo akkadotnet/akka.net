@@ -73,5 +73,13 @@ namespace Akka.Tests.Actor
             ExpectMsg("Such a failure...");
             ExpectMsg("Such a failure...");
         }
+
+        [Fact]
+        public void Should_raise_task_canceled_failure_message_if_caller_cancels_the_task()
+        {
+            _task.PipeTo(TestActor);
+            _taskCompletionSource.SetCanceled();
+            ExpectMsg<Status.Failure>(x => x.Cause is TaskCanceledException);
+        }
     }
 }

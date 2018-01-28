@@ -34,9 +34,15 @@ namespace Akka.Actor
             return taskToPipe.ContinueWith(tresult =>
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
+                {
+                    var taskException = tresult.IsCanceled 
+                        ? (Exception)new TaskCanceledException(taskToPipe) 
+                        : tresult.Exception;
+
                     recipient.Tell(failure != null
-                        ? failure(tresult.Exception)
-                        : new Status.Failure(tresult.Exception), sender);
+                        ? failure(taskException)
+                        : new Status.Failure(taskException), sender);
+                }
                 else if (tresult.IsCompleted)
                     recipient.Tell(success != null
                         ? success(tresult.Result)
