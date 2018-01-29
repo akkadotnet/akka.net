@@ -448,7 +448,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return _paths;
         }
 
         /// <summary>
@@ -461,7 +461,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public ScatterGatherFirstCompletedGroup WithDispatcher(string dispatcher)
         {
-            return new ScatterGatherFirstCompletedGroup(Paths, Within, RouterDispatcher);
+            return new ScatterGatherFirstCompletedGroup(_paths, Within, RouterDispatcher);
         }
 
         #region Surrogate
@@ -474,7 +474,7 @@ namespace Akka.Routing
         {
             return new ScatterGatherFirstCompletedGroupSurrogate
             {
-                Paths = Paths,
+                Paths = _paths,
                 Within = Within,
                 RouterDispatcher = RouterDispatcher
             };

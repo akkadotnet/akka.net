@@ -290,7 +290,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return _paths;
         }
 
         /// <summary>
@@ -313,7 +313,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public RandomGroup WithDispatcher(string dispatcher)
         {
-            return new RandomGroup(Paths, dispatcher);
+            return new RandomGroup(_paths, dispatcher);
         }
 
         /// <summary>
@@ -325,7 +325,7 @@ namespace Akka.Routing
         {
             return new RandomGroupSurrogate
             {
-                Paths = Paths,
+                Paths = _paths,
                 RouterDispatcher = RouterDispatcher
             };
         }

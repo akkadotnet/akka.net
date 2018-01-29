@@ -456,7 +456,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return _paths;
         }
 
         /// <summary>
@@ -469,7 +469,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public TailChoppingGroup WithDispatcher(string dispatcher)
         {
-            return new TailChoppingGroup(Paths, Within, Interval, dispatcher);
+            return new TailChoppingGroup(_paths, Within, Interval, dispatcher);
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace Akka.Routing
         {
             return new TailChoppingGroupSurrogate
             {
-                Paths = Paths,
+                Paths = _paths,
                 Within = Within,
                 Interval = Interval,
                 RouterDispatcher = RouterDispatcher

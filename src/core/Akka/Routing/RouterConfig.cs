@@ -145,14 +145,20 @@ namespace Akka.Routing
         /// <param name="routerDispatcher">TBD</param>
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
-            Paths = paths;
+            // equivalent of turning the paths into an immutable sequence
+            _paths = paths.ToArray();
         }
+
+        /// <summary>
+        /// Internal property for holding the supplied paths
+        /// </summary>
+        protected readonly string[] _paths;
 
         /// <summary>
         /// Retrieves the paths of all routees declared on this router.
         /// </summary>
         [Obsolete("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
-        public IEnumerable<string> Paths { get; }
+        public IEnumerable<string> Paths => null;
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
@@ -195,7 +201,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Paths.SequenceEqual(other.Paths);
+            return _paths.SequenceEqual(other._paths);
         }
 
         /// <inheritdoc/>
@@ -208,7 +214,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode() => Paths?.GetHashCode() ?? 0;
+        public override int GetHashCode() => _paths?.GetHashCode() ?? 0;
     }
 
     /// <summary>
