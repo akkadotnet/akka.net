@@ -152,7 +152,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The maximum number of routee actors that can be deployed per valid node.
         /// </summary>
         public int MaxInstancesPerNode { get; }
 

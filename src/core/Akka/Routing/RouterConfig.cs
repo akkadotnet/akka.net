@@ -146,7 +146,7 @@ namespace Akka.Routing
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
             // equivalent of turning the paths into an immutable sequence
-            _paths = paths.ToArray();
+            _paths = paths?.ToArray() ?? new string[0];
         }
 
         /// <summary>
