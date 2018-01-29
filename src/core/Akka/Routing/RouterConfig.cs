@@ -149,8 +149,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the paths of all routees declared on this router.
         /// </summary>
+        [Obsolete("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
         public IEnumerable<string> Paths { get; }
 
         /// <summary>
