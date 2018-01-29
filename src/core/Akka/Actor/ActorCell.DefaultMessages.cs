@@ -171,10 +171,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Receives the next message from the mailbox and feeds it to the underlying actor instance.
         /// </summary>
-        /// <param name="message">TBD</param>
-        internal void ReceiveMessage(object message)
+        /// <param name="message">The message that will be sent to the actor.</param>
+        protected virtual void ReceiveMessage(object message)
         {
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 

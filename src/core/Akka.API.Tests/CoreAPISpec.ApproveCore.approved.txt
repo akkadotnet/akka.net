@@ -93,6 +93,7 @@ namespace Akka.Actor
         protected void PrepareForNewActor() { }
         protected virtual void PreStart() { }
         protected void ReceivedTerminated(Akka.Actor.Terminated t) { }
+        protected virtual void ReceiveMessage(object message) { }
         public void ReceiveMessageForTest(Akka.Actor.Envelope envelope) { }
         protected Akka.Actor.Internal.SuspendReason RemoveChildAndGetStateChange(Akka.Actor.IActorRef child) { }
         protected void RemWatcher(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
