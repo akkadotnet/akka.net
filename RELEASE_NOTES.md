@@ -1,4 +1,7 @@
-#### 1.3.3 January 19 2019 ####
+#### 1.3.4 January 28 2018 ####
+Placeholder
+
+#### 1.3.3 January 19 2018 ####
 **Maintenance Release for Akka.NET 1.3**
 
 The largest changes featured in Akka.NET v1.3.3 are the introduction of [Splint brain resolvers](http://getakka.net/articles/clustering/split-brain-resolver.html) and `WeaklyUp` members in Akka.Cluster.
