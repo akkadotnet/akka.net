@@ -121,6 +121,7 @@ namespace Akka.Remote
         void Remove(T resource);
         void Reset();
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface IRemoteRef : Akka.Actor.IActorRefScope { }
     public class PhiAccrualFailureDetector : Akka.Remote.FailureDetector
     {
