@@ -696,7 +696,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return _paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -722,7 +722,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public ConsistentHashingGroup WithDispatcher(string dispatcher)
         {
-            return new ConsistentHashingGroup(_paths, VirtualNodesFactor, _hashMapping, dispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, _hashMapping, dispatcher);
         }
 
         /// <summary>
@@ -736,7 +736,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
         public ConsistentHashingGroup WithVirtualNodesFactor(int vnodes)
         {
-            return new ConsistentHashingGroup(_paths, vnodes, _hashMapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, vnodes, _hashMapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -750,7 +750,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="mapping"/>.</returns>
         public ConsistentHashingGroup WithHashMapping(ConsistentHashMapping mapping)
         {
-            return new ConsistentHashingGroup(_paths, VirtualNodesFactor, mapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, mapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -786,7 +786,7 @@ namespace Akka.Routing
         {
             return new ConsistentHashingGroupSurrogate
             {
-                Paths = _paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }
