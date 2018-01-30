@@ -74,7 +74,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
-            return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+            return new RARP((RemoteActorRefProvider)system.Provider);
         }
 
         /// <summary>
