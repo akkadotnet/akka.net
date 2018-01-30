@@ -352,13 +352,7 @@ namespace Akka.Remote
             {
                 return RootGuardian;
             }
-            return new RemoteActorRef(
-                Transport,
-                Transport.LocalAddressForRemote(address),
-                new RootActorPath(address),
-                ActorRefs.Nobody,
-                Props.None,
-                Deploy.None);
+            return CreateRemoteRef(new RootActorPath(address), Transport.LocalAddressForRemote(address));
         }
 
         private IInternalActorRef LocalActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor,
@@ -404,7 +398,7 @@ namespace Akka.Remote
                     return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
                 }
 
-                return CreateRemoteRef(actorPath, localAddress);
+                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
@@ -419,7 +413,7 @@ namespace Akka.Remote
         /// <returns>An <see cref="IInternalActorRef"/> instance.</returns>
         protected virtual IInternalActorRef CreateRemoteRef(ActorPath actorPath, Address localAddress)
         {
-            return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
+            return new RemoteActorRef(Transport, localAddress, actorPath, ActorRefs.Nobody, Props.None, Deploy.None);
         }
 
         /// <summary>
@@ -471,12 +465,7 @@ namespace Akka.Remote
             }
             try
             {
-                return new RemoteActorRef(Transport,
-                    Transport.LocalAddressForRemote(actorPath.Address),
-                    actorPath, 
-                    ActorRefs.Nobody,
-                    Props.None,
-                    Deploy.None);
+                return CreateRemoteRef(actorPath, Transport.LocalAddressForRemote(actorPath.Address));
             }
             catch (Exception ex)
             {
