@@ -354,7 +354,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return _paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -377,7 +377,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public Group WithDispatcher(string dispatcherId)
         {
-            return new RoundRobinGroup(_paths, dispatcherId);
+            return new RoundRobinGroup(InternalPaths, dispatcherId);
         }
 
         /// <summary>
@@ -389,7 +389,7 @@ namespace Akka.Routing
         {
             return new RoundRobinGroupSurrogate
             {
-                Paths = _paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }
