@@ -96,14 +96,7 @@ namespace Akka.Cluster.Tests.Routing
             var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router3");
             Assert.IsType<RoutedActorRef>(router);
 
-            try
-            {
-                var result = await router.Ask<string>("foo");
-            }
-            catch (Exception ex)
-            {
-                Assert.IsType<TaskCanceledException>(ex);
-            }
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await router.Ask<int>("foo"));
         }
     }
 }
