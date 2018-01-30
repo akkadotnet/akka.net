@@ -178,6 +178,7 @@ namespace Akka.Remote
         public Akka.Remote.RemoteTransport Transport { get; }
         public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteDeploymentWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        protected virtual Akka.Actor.IInternalActorRef CreateRemoteRef(Akka.Actor.ActorPath actorPath, Akka.Actor.Address localAddress) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> CreateRemoteWatcherFailureDetector(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }

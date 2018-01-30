@@ -403,11 +403,23 @@ namespace Akka.Remote
                         return RootGuardian;
                     return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
                 }
-                    
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
+
+                return CreateRemoteRef(actorPath, localAddress);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
+        }
+
+        
+        /// <summary>
+        /// Used to create <see cref="RemoteActorRef"/> instances upon deserialiation inside the Akka.Remote pipeline.
+        /// </summary>
+        /// <param name="actorPath">The remote path of the actor on its physical location on the network.</param>
+        /// <param name="localAddress">The local path of the actor.</param>
+        /// <returns>An <see cref="IInternalActorRef"/> instance.</returns>
+        protected virtual IInternalActorRef CreateRemoteRef(ActorPath actorPath, Address localAddress)
+        {
+            return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
         }
 
         /// <summary>
