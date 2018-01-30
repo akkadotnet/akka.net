@@ -146,13 +146,13 @@ namespace Akka.Routing
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
             // equivalent of turning the paths into an immutable sequence
-            _paths = paths?.ToArray() ?? new string[0];
+            InternalPaths = paths?.ToArray() ?? new string[0];
         }
 
         /// <summary>
         /// Internal property for holding the supplied paths
         /// </summary>
-        protected readonly string[] _paths;
+        protected readonly string[] InternalPaths;
 
         /// <summary>
         /// Retrieves the paths of all routees declared on this router.
@@ -201,7 +201,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return _paths.SequenceEqual(other._paths);
+            return InternalPaths.SequenceEqual(other.InternalPaths);
         }
 
         /// <inheritdoc/>
@@ -214,7 +214,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode() => _paths?.GetHashCode() ?? 0;
+        public override int GetHashCode() => InternalPaths?.GetHashCode() ?? 0;
     }
 
     /// <summary>
