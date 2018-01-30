@@ -44,7 +44,7 @@ namespace Akka.Routing
         /// <returns>A <see cref="ScatterGatherFirstCompletedRoutees" /> that receives the <paramref name="message" />.</returns>
         public override Routee Select(object message, Routee[] routees)
         {
-            return new ScatterGatherFirstCompletedRoutees(routees,_within);
+            return new ScatterGatherFirstCompletedRoutees(routees, _within);
         }
     }
 
@@ -77,38 +77,31 @@ namespace Akka.Routing
         /// <param name="sender">The actor sending the message.</param>
         public override void Send(object message, IActorRef sender)
         {
-            var tcs = new TaskCompletionSource<object>();
+            SendMessage(message).PipeTo(sender);
+        }
 
+        private async Task<object> SendMessage(object message)
+        {
             if (_routees.IsNullOrEmpty())
             {
-                tcs.SetResult(new Status.Failure(new AskTimeoutException("Timeout due to no routees")));
+                return new Status.Failure(new AskTimeoutException("Timeout due to no routees"));
             }
-            else
+
+            try
             {
+
                 var tasks = _routees
                     .Select(routee => routee.Ask(message, _within))
                     .ToList();
 
-                Task
-                    .WhenAny(tasks)
-                    .ContinueWith(task =>
-                    {
-                        if (task.Result.IsCanceled)
-                        {
-                            tcs.SetResult(new Status.Failure(new AskTimeoutException($"Timeout after {_within.TotalSeconds} seconds")));
-                        }
-                        else if (task.Result.IsFaulted)
-                        {
-                            tcs.SetResult(new Status.Failure(task.Result.Exception));
-                        }
-                        else
-                        {
-                            tcs.SetResult(task.Result.Result);
-                        }
-                    });
-            }
+                var firstFinishedTask = await Task.WhenAny(tasks);
 
-            tcs.Task.PipeTo(sender);
+                return await firstFinishedTask;
+            }
+            catch (Exception e)
+            {
+                return new Status.Failure(e);
+            }
         }
     }
 

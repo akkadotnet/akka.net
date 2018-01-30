@@ -4894,7 +4894,6 @@ namespace Akka.Util.Internal
     [Akka.Annotations.InternalApiAttribute()]
     public class static TaskExtensions
     {
-        public static System.Threading.Tasks.Task<TResult> CastTask<TTask, TResult>(this System.Threading.Tasks.Task<TTask> task) { }
         public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
     }
 }
