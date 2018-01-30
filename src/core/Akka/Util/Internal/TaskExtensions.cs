@@ -21,40 +21,6 @@ namespace Akka.Util.Internal
     public static class TaskExtensions
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TTask">TBD</typeparam>
-        /// <typeparam name="TResult">TBD</typeparam>
-        /// <param name="task">TBD</param>
-        /// <returns>TBD</returns>
-        public static Task<TResult> CastTask<TTask, TResult>(this Task<TTask> task)
-        {
-            if (task.IsCompleted)
-                return Task.FromResult((TResult) (object)task.Result);
-            var tcs = new TaskCompletionSource<TResult>();
-            if (task.IsFaulted)
-                tcs.SetException(task.Exception);
-            else
-                task.ContinueWith(_ =>
-                {
-                    if (task.IsFaulted || task.Exception != null)
-                        tcs.SetException(task.Exception);
-                    else if (task.IsCanceled)
-                        tcs.SetCanceled();
-                    else
-                        try
-                        {
-                            tcs.SetResult((TResult) (object) task.Result);
-                        }
-                        catch (Exception e)
-                        {
-                            tcs.SetException(e);
-                        }
-                }, TaskContinuationOptions.ExecuteSynchronously);
-            return tcs.Task;
-        }
-
-        /// <summary>
         /// Returns the task which completes with result of original task if cancellation token not canceled it before completion.
         /// </summary>
         /// <param name="task">The original task.</param>

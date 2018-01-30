@@ -102,11 +102,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
+            await SynchronizationContextManager.RemoveContext;
+
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return (T) await Ask(self, message, provider, timeout, cancellationToken).ConfigureAwait(false);
+            return (T) await Ask(self, message, provider, timeout, cancellationToken);
         }
 
         /// <summary>
@@ -132,54 +134,68 @@ namespace Akka.Actor
         private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
 
 
-        private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
+        private static async Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
             TimeSpan? timeout, CancellationToken cancellationToken)
         {
             TaskCompletionSource<object> result;
             if (isRunContinuationsAsynchronouslyAvailable)
+            {
                 result = new TaskCompletionSource<object>((TaskCreationOptions)RunContinuationsAsynchronously);
+            }
             else
+            {
                 result = new TaskCompletionSource<object>();
+            }
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
-            List<CancellationTokenRegistration> ctrList = new List<CancellationTokenRegistration>(2);
+            var ctrList = new List<CancellationTokenRegistration>(2);
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetCanceled()));
+
+                ctrList.Add(timeoutCancellation.Token.Register(() =>
+                {
+                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
+                }));
+
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
             if (cancellationToken.CanBeCanceled)
+            {
                 ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
-            
+            }
+
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
-            //callback to unregister from tempcontainer
-            Action unregister =
-                () =>
-                {
-                    // cancelling timeout (if any) in order to prevent memory leaks
-                    // (a reference to 'result' variable in CancellationToken's callback)
-                    if (timeoutCancellation != null)
-                    {
-                        timeoutCancellation.Cancel();
-                        timeoutCancellation.Dispose();
-                    }
-                    for (var i = 0; i < ctrList.Count; i++)
-                    {
-                        ctrList[i].Dispose();
-                    }
-                    provider.UnregisterTempActor(path);
-                };
 
-            var future = new FutureActorRef(result, unregister, path, isRunContinuationsAsynchronouslyAvailable);
+            var future = new FutureActorRef(result, () => { }, path, isRunContinuationsAsynchronouslyAvailable);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             self.Tell(message, future);
-            return result.Task;
+
+            try
+            {
+                return await result.Task;
+            }
+            finally
+            {
+                //callback to unregister from tempcontainer
+
+                provider.UnregisterTempActor(path);
+
+                for (var i = 0; i < ctrList.Count; i++)
+                {
+                    ctrList[i].Dispose();
+                }
+
+                if (timeoutCancellation != null)
+                {
+                    timeoutCancellation.Dispose();
+                }
+            }
         }
     }
 
