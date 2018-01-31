@@ -84,7 +84,7 @@ namespace Akka.Cluster.Tests
             deployment.Path.ShouldBe(service);
             deployment.RouterConfig.GetType().ShouldBe(typeof(ClusterRouterGroup));
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.GetType().ShouldBe(typeof(RoundRobinGroup));
-            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<RoundRobinGroup>().Paths.ShouldBe(new[]{ "/user/myservice" });
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<RoundRobinGroup>().GetPaths(Sys).ShouldBe(new[]{ "/user/myservice" });
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.TotalInstances.ShouldBe(20);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AllowLocalRoutees.ShouldBe(false);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.UseRole.ShouldBe("backend");
@@ -104,7 +104,7 @@ namespace Akka.Cluster.Tests
             deployment.Path.ShouldBe(service);
             deployment.RouterConfig.GetType().ShouldBe(typeof(ClusterRouterGroup));
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.GetType().ShouldBe(typeof(BroadcastGroup));
-            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<BroadcastGroup>().Paths.ShouldBe(new[] { "/user/myservice" });
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<BroadcastGroup>().GetPaths(Sys).ShouldBe(new[] { "/user/myservice" });
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.TotalInstances.ShouldBe(10000);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AllowLocalRoutees.ShouldBe(false);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.UseRole.ShouldBe("backend");
