@@ -27,7 +27,71 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    public class RemoteActorRefProvider : IActorRefProvider
+    public interface IRemoteActorRefProvider : IActorRefProvider
+    {
+        /// <summary>
+        /// Remoting system daemon responsible for powering remote deployment capabilities.
+        /// </summary>
+        IInternalActorRef RemoteDaemon { get; }
+
+        /// <summary>
+        /// The remote transport. Wraps all of the underlying physical network transports.
+        /// </summary>
+        RemoteTransport Transport { get; }
+
+        /// <summary>
+        /// The remoting settings
+        /// </summary>
+        RemoteSettings RemoteSettings { get; }
+
+        /// <summary>
+        /// Looks up local overrides for remote deployments
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        Deploy LookUpRemotes(IEnumerable<string> p);
+
+        /// <summary>
+        /// Determines if a particular network address is assigned to any of this <see cref="ActorSystem"/>'s transports.
+        /// </summary>
+        /// <param name="address">The address to check.</param>
+        /// <returns><c>true</c> if the address is assigned to any bound transports; false otherwise.</returns>
+        bool HasAddress(Address address);
+
+        /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// Called in deserialization of incoming remote messages where the correct local address is known.
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <returns>TBD</returns>
+        IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor);
+
+        /// <summary>
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
+        /// </summary>
+        /// <param name="address">Address of the remote system to be quarantined</param>
+        /// <param name="uid">UID of the remote system, if the uid is not defined it will not be a strong quarantine but
+        /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
+        /// </param>
+        void Quarantine(Address address, int? uid);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
+    public class RemoteActorRefProvider : IRemoteActorRefProvider
     {
         private readonly ILoggingAdapter _log;
 
@@ -80,7 +144,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remoting settings
         /// </summary>
-        internal RemoteSettings RemoteSettings { get; private set; }
+        public RemoteSettings RemoteSettings { get; private set; }
 
         /* these are only available after Init() is called */
 
@@ -328,7 +392,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        private Deploy LookUpRemotes(IEnumerable<string> p)
+        public Deploy LookUpRemotes(IEnumerable<string> p)
         {
             if (p == null || !p.Any()) return Deploy.None;
             if (p.Head().Equals("remote")) return LookUpRemotes(p.Drop(3));
@@ -336,7 +400,7 @@ namespace Akka.Remote
             return Deploy.None;
         }
 
-        private bool HasAddress(Address address)
+        public bool HasAddress(Address address)
         {
             return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
         }
@@ -384,7 +448,7 @@ namespace Akka.Remote
         /// <param name="path">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
+        public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             ActorPath actorPath;
             if (TryParseCachedPath(path, out actorPath))
