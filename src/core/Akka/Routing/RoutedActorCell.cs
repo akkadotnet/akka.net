@@ -167,7 +167,7 @@ namespace Akka.Routing
                 var deprecatedPaths = group.Paths;
 
                 var paths = deprecatedPaths == null
-                        ? group.GetPaths(System).ToArray()
+                        ? group.GetPaths(System)?.ToArray()
                         : deprecatedPaths.ToArray();
 
                 if (paths.NonEmpty())

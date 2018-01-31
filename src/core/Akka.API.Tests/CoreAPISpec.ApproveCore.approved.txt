@@ -4061,7 +4061,9 @@ namespace Akka.Routing
     }
     public abstract class Group : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Group>
     {
+        protected readonly string[] InternalPaths;
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
+        [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
         public System.Collections.Generic.IEnumerable<string> Paths { get; }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
