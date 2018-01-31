@@ -860,7 +860,7 @@ namespace Akka.Remote.Transport
                             {
                                 //Otherwise, retry
                                 SetTimer("associate-retry", new HandleMsg(wrappedHandle),
-                                    ((RemoteActorRefProvider)((ActorSystemImpl)Context.System).Provider) //TODO: rewrite using RARP ActorSystem Extension
+                                    RARP.For(Context.System).Provider
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
                             }

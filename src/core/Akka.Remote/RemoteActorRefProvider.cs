@@ -35,6 +35,11 @@ namespace Akka.Remote
         IInternalActorRef RemoteDaemon { get; }
 
         /// <summary>
+        /// The remote death watcher.
+        /// </summary>
+        IActorRef RemoteWatcher { get; }
+
+        /// <summary>
         /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
         RemoteTransport Transport { get; }
@@ -67,6 +72,14 @@ namespace Akka.Remote
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
         IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress);
+
+        /// <summary>
+        /// INTERNAL API: this is used by the <see cref="ActorRefResolveCache"/> via the public
+        /// <see cref="IActorRefProvider.ResolveActorRef(string)"/> method.
+        /// </summary>
+        /// <param name="path">The path of the actor we intend to resolve.</param>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        IActorRef InternalResolveActorRef(string path);
 
         /// <summary>
         /// TBD
@@ -210,7 +223,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remote death watcher.
         /// </summary>
-        internal IActorRef RemoteWatcher => _remoteWatcher;
+        public IActorRef RemoteWatcher => _remoteWatcher;
         private volatile IActorRef _remoteDeploymentWatcher;
 
         /// <inheritdoc/>
@@ -502,7 +515,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="path">The path of the actor we intend to resolve.</param>
         /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
-        internal IActorRef InternalResolveActorRef(string path)
+        public IActorRef InternalResolveActorRef(string path)
         {
             if (path == String.Empty)
                 return ActorRefs.NoSender;

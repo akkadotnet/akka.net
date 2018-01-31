@@ -95,7 +95,7 @@ namespace Akka.Remote
             get { return Remote.Provider; }
         }
 
-        private RemoteActorRefProvider RemoteProvider => Provider as RemoteActorRefProvider;
+        private IRemoteActorRefProvider RemoteProvider => Provider as IRemoteActorRefProvider;
 
         /// <summary>
         /// Obsolete. Use <see cref="Watch"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>

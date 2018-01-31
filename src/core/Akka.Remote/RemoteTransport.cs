@@ -42,6 +42,7 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public ExtendedActorSystem System { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
