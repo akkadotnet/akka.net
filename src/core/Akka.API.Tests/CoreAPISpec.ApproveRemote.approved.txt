@@ -126,8 +126,10 @@ namespace Akka.Remote
     {
         Akka.Actor.IInternalActorRef RemoteDaemon { get; }
         Akka.Remote.RemoteSettings RemoteSettings { get; }
+        Akka.Actor.IActorRef RemoteWatcher { get; }
         Akka.Remote.RemoteTransport Transport { get; }
         bool HasAddress(Akka.Actor.Address address);
+        Akka.Actor.IActorRef InternalResolveActorRef(string path);
         Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p);
         void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
         Akka.Actor.IInternalActorRef ResolveActorRefWithLocalAddress(string path, Akka.Actor.Address localAddress);
@@ -182,6 +184,7 @@ namespace Akka.Remote
         public Akka.Actor.LocalActorRef Guardian { get; }
         public Akka.Actor.IInternalActorRef RemoteDaemon { get; }
         public Akka.Remote.RemoteSettings RemoteSettings { get; }
+        public Akka.Actor.IActorRef RemoteWatcher { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
         public Akka.Actor.Settings Settings { get; }
@@ -197,6 +200,7 @@ namespace Akka.Remote
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
         public bool HasAddress(Akka.Actor.Address address) { }
         public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public Akka.Actor.IActorRef InternalResolveActorRef(string path) { }
         public Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p) { }
         public void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid) { }
         public void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path) { }
