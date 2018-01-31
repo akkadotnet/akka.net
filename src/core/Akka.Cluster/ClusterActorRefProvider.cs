@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Routing;
 using Akka.Configuration;
@@ -25,7 +26,8 @@ namespace Akka.Cluster
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
-    internal class ClusterActorRefProvider : RemoteActorRefProvider
+    [InternalApi]
+    public class ClusterActorRefProvider : RemoteActorRefProvider
     {
         /// <summary>
         /// TBD

@@ -48,6 +48,13 @@ namespace Akka.Cluster
         public void Unsubscribe(Akka.Actor.IActorRef subscriber) { }
         public void Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type to) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider
+    {
+        public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
+        protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public override void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+    }
     public class ClusterEvent
     {
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
