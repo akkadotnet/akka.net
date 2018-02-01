@@ -52,8 +52,6 @@ namespace Akka.Cluster
     /// </summary>
     public class Cluster : IExtension
     {
-        //TODO: Issue with missing overrides for Get and Lookup
-
         /// <summary>
         /// Retrieves the extension from the specified actor system.
         /// </summary>
@@ -95,10 +93,9 @@ namespace Akka.Cluster
             System = system;
             Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
-            var provider = system.Provider as ClusterActorRefProvider;
-            if (provider == null)
+            if (!(system.Provider is IClusterActorRefProvider provider))
                 throw new ConfigurationException(
-                    $"ActorSystem {system} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
+                    $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");

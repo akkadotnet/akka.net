@@ -47,8 +47,7 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            ActorPath actorPath;
-            if (ActorPath.TryParse(k, out actorPath))
+            if (ActorPath.TryParse(k, out var actorPath))
                 return actorPath;
             return null;
         }
