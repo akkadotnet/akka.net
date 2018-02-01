@@ -1,5 +1,25 @@
-#### 1.3.4 January 28 2018 ####
-Placeholder
+#### 1.3.4 February 1 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.4 is a minor patch mostly focused on bugfixes.
+
+**Updates and Bugfixes**
+1. [Akka: Ask interface should be clean](https://github.com/akkadotnet/akka.net/pull/3220)
+1. [Akka.Cluster.Sharding: DData replicator is always assigned](https://github.com/akkadotnet/akka.net/issues/3297)
+2. [Akka.Cluster: Akka.Cluster Group Routers don't respect role setting when running with allow-local-routees](https://github.com/akkadotnet/akka.net/issues/3294)
+3. [Akka.Streams: Implement PartitionHub](https://github.com/akkadotnet/akka.net/pull/3287)
+4. [Akka.Remote AkkaPduCodec performance fixes](https://github.com/akkadotnet/akka.net/pull/3299)
+5. [Akka.Serialization.Hyperion updated](https://github.com/akkadotnet/akka.net/pull/3306) to [Hyperion v0.9.8](https://github.com/akkadotnet/Hyperion/releases/tag/v0.9.8)
+
+You can see [the full set of changes for Akka.NET v1.3.4 here](https://github.com/akkadotnet/akka.net/milestone/22).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 304 | 209 | Aaron Stannard |
+| 1 | 250 | 220 | Maxim Cherednik |
+| 1 | 1278 | 42 | Marc Piechura |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Vasily Kirichenko |
 
 #### 1.3.3 January 19 2018 ####
 **Maintenance Release for Akka.NET 1.3**
