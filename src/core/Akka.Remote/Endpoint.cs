@@ -50,11 +50,11 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private ActorSystem system;
-        private RemoteActorRefProvider provider;
-        private ILoggingAdapter log;
-        private IInternalActorRef remoteDaemon;
-        private RemoteSettings settings;
+        private readonly ActorSystem _system;
+        private readonly IRemoteActorRefProvider _provider;
+        private readonly ILoggingAdapter _log;
+        private readonly IInternalActorRef _remoteDaemon;
+        private readonly RemoteSettings _settings;
 
         /// <summary>
         /// TBD
@@ -62,13 +62,13 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
-            this.system = system;
-            this.provider = provider;
-            this.log = log;
-            remoteDaemon = provider.RemoteDaemon;
-            settings = provider.RemoteSettings;
+            this._system = system;
+            this._provider = provider;
+            this._log = log;
+            _remoteDaemon = provider.RemoteDaemon;
+            _settings = provider.RemoteSettings;
         }
 
         /// <summary>
@@ -81,45 +81,45 @@ namespace Akka.Remote
         public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null)
         {
-            var payload = MessageSerializer.Deserialize(system, message);
+            var payload = MessageSerializer.Deserialize(_system, message);
             Type payloadClass = payload?.GetType();
-            var sender = senderOption ?? system.DeadLetters;
+            var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
-            if (recipient.Equals(remoteDaemon))
+            if (recipient.Equals(_remoteDaemon))
             {
-                if (settings.UntrustedMode) log.Debug("dropping daemon message in untrusted mode");
+                if (_settings.UntrustedMode) _log.Debug("dropping daemon message in untrusted mode");
                 else
                 {
-                    if (settings.LogReceive)
+                    if (_settings.LogReceive)
                     {
                         var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
-                        log.Debug("received daemon message [{0}]", msgLog);
+                        _log.Debug("received daemon message [{0}]", msgLog);
                     }
-                    remoteDaemon.Tell(payload);
+                    _remoteDaemon.Tell(payload);
                 }
             }
 
             //message is intended for a local recipient
             else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
-                if (settings.LogReceive)
+                if (_settings.LogReceive)
                 {
                     var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
-                    log.Debug("received local message [{0}]", msgLog);
+                    _log.Debug("received local message [{0}]", msgLog);
                 }
                 if (payload is ActorSelectionMessage)
                 {
                     var sel = (ActorSelectionMessage)payload;
 
                     var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
-                    if (settings.UntrustedMode
-                        && (!settings.TrustedSelectionPaths.Contains(actorPath)
+                    if (_settings.UntrustedMode
+                        && (!_settings.TrustedSelectionPaths.Contains(actorPath)
                             || sel.Message is IPossiblyHarmful
-                            || !recipient.Equals(provider.RootGuardian)))
+                            || !recipient.Equals(_provider.RootGuardian)))
                     {
-                        log.Debug(
+                        _log.Debug(
                             "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
                             "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
                             actorPath);
@@ -130,9 +130,9 @@ namespace Akka.Remote
                         ActorSelection.DeliverSelection(recipient, sender, sel);
                     }
                 }
-                else if (payload is IPossiblyHarmful && settings.UntrustedMode)
+                else if (payload is IPossiblyHarmful && _settings.UntrustedMode)
                 {
-                    log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
+                    _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
                         payload.GetType());
                 }
                 else if (payload is ISystemMessage)
@@ -147,30 +147,30 @@ namespace Akka.Remote
 
             // message is intended for a remote-deployed recipient
             else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal &&
-                     !settings.UntrustedMode)
+                     !_settings.UntrustedMode)
             {
-                if (settings.LogReceive)
+                if (_settings.LogReceive)
                 {
                     var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver, sender);
-                    log.Debug("received remote-destined message {0}", msgLog);
+                    _log.Debug("received remote-destined message {0}", msgLog);
                 }
-                if (provider.Transport.Addresses.Contains(recipientAddress))
+                if (_provider.Transport.Addresses.Contains(recipientAddress))
                 {
                     //if it was originally addressed to us but is in fact remote from our point of view (i.e. remote-deployed)
                     recipient.Tell(payload, sender);
                 }
                 else
                 {
-                    log.Error(
+                    _log.Error(
                         "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                        payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
+                        payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
                 }
             }
             else
             {
-                log.Error(
+                _log.Error(
                     "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                    payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
+                    payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
             }
         }
     }
@@ -1036,7 +1036,7 @@ namespace Akka.Remote
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ActorSystem _system;
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
 
@@ -1847,7 +1847,7 @@ namespace Akka.Remote
         private readonly int _uid;
         private readonly IInboundMessageDispatcher _msgDispatch;
 
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
 #region ActorBase overrides

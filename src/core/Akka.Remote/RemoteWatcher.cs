@@ -375,7 +375,7 @@ namespace Akka.Remote
         {
             _failureDetector = failureDetector;
             _heartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
-            var systemProvider = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider as RemoteActorRefProvider;
+            var systemProvider = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider as IRemoteActorRefProvider;
             if (systemProvider != null) _remoteProvider = systemProvider;
             else throw new ConfigurationException(
                 $"ActorSystem {Context.System} needs to have a 'RemoteActorRefProvider' enabled in the configuration, current uses {Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.GetType().FullName}");
@@ -384,11 +384,11 @@ namespace Akka.Remote
             _failureDetectorReaperCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(unreachableReaperInterval, unreachableReaperInterval, Self, ReapUnreachableTick.Instance, Self);
         }
 
-        readonly IFailureDetectorRegistry<Address> _failureDetector;
-        readonly TimeSpan _heartbeatExpectedResponseAfter;
-        readonly IScheduler _scheduler = Context.System.Scheduler;
-        readonly RemoteActorRefProvider _remoteProvider;
-        readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
+        private readonly IFailureDetectorRegistry<Address> _failureDetector;
+        private readonly TimeSpan _heartbeatExpectedResponseAfter;
+        private readonly IScheduler _scheduler = Context.System.Scheduler;
+        private readonly IRemoteActorRefProvider _remoteProvider;
+        private readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
        
         /// <summary>
         ///  Actors that this node is watching, map of watchee --> Set(watchers)
@@ -409,10 +409,10 @@ namespace Akka.Remote
         /// </summary>
         protected HashSet<Address> Unreachable { get; } = new HashSet<Address>();
 
-        readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
+        private readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
-        readonly ICancelable _heartbeatCancelable;
-        readonly ICancelable _failureDetectorReaperCancelable;
+        private readonly ICancelable _heartbeatCancelable;
+        private readonly ICancelable _failureDetectorReaperCancelable;
 
         /// <summary>
         /// TBD
