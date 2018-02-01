@@ -277,7 +277,7 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public abstract AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
+        public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
 
         /// <summary>
         /// TBD
@@ -409,7 +409,7 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public override AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress)
+        public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
 

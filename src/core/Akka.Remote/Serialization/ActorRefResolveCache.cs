@@ -16,11 +16,11 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorRefResolveThreadLocalCache : ExtensionIdProvider<ActorRefResolveThreadLocalCache>, IExtension
     {
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
 
         public ActorRefResolveThreadLocalCache() { }
 
-        public ActorRefResolveThreadLocalCache(RemoteActorRefProvider provider)
+        public ActorRefResolveThreadLocalCache(IRemoteActorRefProvider provider)
         {
             _provider = provider;
             _current = new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider));
@@ -28,7 +28,7 @@ namespace Akka.Remote.Serialization
 
         public override ActorRefResolveThreadLocalCache CreateExtension(ExtendedActorSystem system)
         {
-            return new ActorRefResolveThreadLocalCache(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+            return new ActorRefResolveThreadLocalCache((IRemoteActorRefProvider)system.Provider);
         }
 
         private readonly ThreadLocal<ActorRefResolveCache> _current;
@@ -46,9 +46,9 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorRefResolveCache : LruBoundedCache<string, IActorRef>
     {
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
 
-        public ActorRefResolveCache(RemoteActorRefProvider provider, int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
+        public ActorRefResolveCache(IRemoteActorRefProvider provider, int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
         {
             _provider = provider;
         }
