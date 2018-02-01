@@ -20,6 +20,15 @@ using Akka.Routing;
 namespace Akka.Cluster
 {
     /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Marker interface for signifying that this <see cref="IActorRefProvider"/> can be used in combination with the
+    /// <see cref="Cluster"/> ActorSystem extension.
+    /// </summary>
+    [InternalApi]
+    public interface IClusterActorRefProvider : IRemoteActorRefProvider { }
+
+    /// <summary>
     /// INTERNAL API
     /// 
     /// The `ClusterActorRefProvider` will load the <see cref="Cluster"/>
@@ -27,7 +36,7 @@ namespace Akka.Cluster
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
     [InternalApi]
-    public class ClusterActorRefProvider : RemoteActorRefProvider
+    public class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
     {
         /// <summary>
         /// TBD
