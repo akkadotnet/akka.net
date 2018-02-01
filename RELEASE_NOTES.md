@@ -1,4 +1,4 @@
-#### 1.3.4 January 28 2018 ####
+#### 1.3.4 February 1 2018 ####
 **Maintenance Release for Akka.NET 1.3**
 
 Akka.NET v1.3.4 is a minor patch mostly focused on bugfixes.
