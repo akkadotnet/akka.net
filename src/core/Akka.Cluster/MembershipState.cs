@@ -171,6 +171,8 @@ namespace Akka.Cluster
 
         public UniqueAddress Leader => LeaderOf(Members);
 
+        public Member YoungestMember => DcMembers.MaxBy(m => m.UpNumber == int.MaxValue ? 0 : m.UpNumber);
+
         public bool IsLeader(UniqueAddress node) => Leader == node;
 
         public UniqueAddress RoleLeader(string role) => LeaderOf(Members.Where(m => m.HasRole(role)));

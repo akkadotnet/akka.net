@@ -683,26 +683,14 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class CurrentInternalStats : IClusterDomainEvent
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="gossipStats">TBD</param>
-            /// <param name="vclockStats">TBD</param>
-            public CurrentInternalStats(GossipStats gossipStats, VectorClockStats vclockStats)
+            public CurrentInternalStats(ClusterUserAction.GossipStats gossipStats, ClusterUserAction.VectorClockStats vclockStats)
             {
                 GossipStats = gossipStats;
                 SeenBy = vclockStats;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public GossipStats GossipStats { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public VectorClockStats SeenBy { get; }
+            public ClusterUserAction.GossipStats GossipStats { get; }
+            public ClusterUserAction.VectorClockStats SeenBy { get; }
 
             /// <inheritdoc/>
             public override int GetHashCode()
@@ -907,12 +895,12 @@ namespace Akka.Cluster
         {
             switch (message)
             {
-                case InternalClusterAction.PublishChanges publishChanges: PublishChanges(publishChanges.State); return true;
+                case ClusterUserAction.InternalClusterAction.PublishChanges publishChanges: PublishChanges(publishChanges.State); return true;
                 case ClusterEvent.CurrentInternalStats currentStats: PublishInternalStats(currentStats); return true;
-                case InternalClusterAction.SendCurrentClusterState send: SendCurrentClusterState(send.Receiver); return true;
-                case InternalClusterAction.Subscribe subscribe: Subscribe(subscribe.Subscriber, subscribe.InitialStateMode, subscribe.To); return true;
-                case InternalClusterAction.Unsubscribe unsubscribe: Unsubscribe(unsubscribe.Subscriber, unsubscribe.To); return true;
-                case InternalClusterAction.PublishEvent publishEvent: Publish(publishEvent.Event); return true;
+                case ClusterUserAction.InternalClusterAction.SendCurrentClusterState send: SendCurrentClusterState(send.Receiver); return true;
+                case ClusterUserAction.InternalClusterAction.Subscribe subscribe: Subscribe(subscribe.Subscriber, subscribe.InitialStateMode, subscribe.To); return true;
+                case ClusterUserAction.InternalClusterAction.Unsubscribe unsubscribe: Unsubscribe(unsubscribe.Subscriber, unsubscribe.To); return true;
+                case ClusterUserAction.InternalClusterAction.PublishEvent publishEvent: Publish(publishEvent.Event); return true;
                 default: return false;
             }
         }

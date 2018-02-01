@@ -305,7 +305,16 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public bool IsSingletonCluster => Members.Count == 1;
-
+        
+        /// <summary>
+        /// Returns true if <paramref name="fromAddress"/> should be able to reach <paramref name="toAddress"/>
+        /// based on the unreachability data and their respective data centers
+        /// </summary>
+        public bool IsReachable(UniqueAddress fromAddress, UniqueAddress toAddress)
+        {
+            return HasMember(toAddress) && Overview.Reachability.IsReachable(fromAddress, toAddress);
+        }
+        
         /// <summary>
         /// Returns a <see cref="Member"/> with provided <paramref name="node"/> address.
         /// If it was not found, it means it was removed. 
@@ -397,6 +406,11 @@ namespace Akka.Cluster
             var members = string.Join(", ", Members.Select(m => m.ToString()));
             var tombstones = string.Join(", ", Tombstones.Select(p => Tuple.Create(p.Key, p.Value)));
             return $"Gossip(members: [{members}], overview: {Overview}, version: {Version}, tombstones: [{tombstones}])";
+        }
+
+        public Gossip Update(ImmutableSortedSet<Member> changedMembers)
+        {
+            return Copy(members: changedMembers.Union(Members));
         }
     }
 

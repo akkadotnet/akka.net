@@ -51,7 +51,7 @@ namespace Akka.Actor
         }
 
         #endregion
-
+        
         /// <summary>
         /// An <see cref="Address"/> comparer. Compares two addresses by their protocol, name, host and port.
         /// </summary>

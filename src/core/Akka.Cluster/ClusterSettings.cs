@@ -87,7 +87,14 @@ namespace Akka.Cluster
             AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
 
             SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
-            MultiDataCenter = new MultiDataCenter(cc.GetConfig("multi-data-center"));
+            MultiDataCenter = new MultiDataCenterSettings(cc.GetConfig("multi-data-center"));
+            PruneGossipTombstonesAfter = cc.GetTimeSpan("prune-gossip-tombstones-after");
+            
+            if (PruneGossipTombstonesAfter == TimeSpan.Zero) throw new ArgumentException("`prune-gossip-tombstones-after` must be greater than zero");
+            
+            Debug = new DebugSettings(
+                verboseHeartbeatLogging: cc.GetBoolean("debug.verbose-heartbeat-logging"),
+                verboseGossipLogging: cc.GetBoolean("debug.verbose-gossip-logging"));
 
             if (config.GetString("shutdown-after-unsuccessful-join-seed-nodes").ToLowerInvariant() == "off")
                 ShutdownAfterUnsuccessfulJoinSeedNodes = null;
@@ -259,17 +266,19 @@ namespace Akka.Cluster
 
         public string SelfDataCenter { get; }
 
-        public MultiDataCenter MultiDataCenter { get; }
-        public TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; set; }
+        public MultiDataCenterSettings MultiDataCenter { get; }
+        public DebugSettings Debug { get; }
+        public TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
+        public TimeSpan PruneGossipTombstonesAfter { get; set; }
     }
 
-    public sealed class MultiDataCenter
+    public sealed class MultiDataCenterSettings
     {
         public int CrossDcConnections { get; }
         public double CrossDcGossipProbability { get; }
         public CrossDcFailureDetectorSettings CrossDcFailureDetectorSettings { get; }
 
-        public MultiDataCenter(int crossDcConnections, double crossDcGossipProbability, CrossDcFailureDetectorSettings crossDcFailureDetectorSettings)
+        public MultiDataCenterSettings(int crossDcConnections, double crossDcGossipProbability, CrossDcFailureDetectorSettings crossDcFailureDetectorSettings)
         {
             if (crossDcConnections <= 0) throw new ArgumentException("cross-data-center-connections must be > 0", nameof(crossDcConnections));
             if (crossDcGossipProbability < 0 || crossDcGossipProbability > 1) throw new ArgumentException("cross-data-center-gossip-probability must be >= 0.0 and <= 1.0", nameof(crossDcGossipProbability));
@@ -279,7 +288,7 @@ namespace Akka.Cluster
             CrossDcFailureDetectorSettings = crossDcFailureDetectorSettings;
         }
 
-        public MultiDataCenter(Config config) : this(
+        public MultiDataCenterSettings(Config config) : this(
             crossDcConnections: config.GetInt("cross-data-center-connections"),
             crossDcGossipProbability: config.GetInt("cross-data-center-gossip-probability"),
             crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(
@@ -288,6 +297,18 @@ namespace Akka.Cluster
                 heartbeatExpectedResponseAfter: config.GetTimeSpan("failure-detector.expected-response-after"),
                 nrOfMonitoringActors: config.GetInt("cross-data-center-connections")))
         {
+        }
+    }
+
+    public sealed class DebugSettings
+    {
+        public bool VerboseHeartbeatLogging { get; }
+        public bool VerboseGossipLogging { get; }
+
+        public DebugSettings(bool verboseHeartbeatLogging, bool verboseGossipLogging)
+        {
+            VerboseHeartbeatLogging = verboseHeartbeatLogging;
+            VerboseGossipLogging = verboseGossipLogging;
         }
     }
 
