@@ -288,7 +288,8 @@ public class Supervisor2 : UntypedActor
     {
         if (message is Props p)
         {
-            Sender.Tell(p);
+            var child = Context.ActorOf(p); // create child
+            Sender.Tell(child); // send back reference to child actor
         }
     }
 }
