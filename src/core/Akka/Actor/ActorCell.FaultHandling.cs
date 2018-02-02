@@ -85,7 +85,7 @@ namespace Akka.Actor
                 }
 
                 global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());
-                if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
+                if (!SetChildrenTerminationReason(new SuspendReason(cause)))
                 {
                     FinishRecreate(cause, failedActor);
                 }
@@ -156,7 +156,7 @@ namespace Akka.Actor
             // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
             StopChildren();
 
-            if (!SetChildrenTerminationReason(new SuspendReason.Creation()))
+            if (!SetChildrenTerminationReason(SuspendReason.Creation))
                 FinishCreate();
         }
 
@@ -202,7 +202,7 @@ namespace Akka.Actor
                 }
             }
             var wasTerminating = IsTerminating;
-            if (SetChildrenTerminationReason(SuspendReason.Termination.Instance))
+            if (SetChildrenTerminationReason(SuspendReason.Termination))
             {
                 if (!wasTerminating)
                 {
@@ -424,18 +424,17 @@ namespace Akka.Actor
 
             // if the removal changed the state of the (terminating) children container,
             // then we are continuing the previously suspended recreate/create/terminate action
-            var recreation = status as SuspendReason.Recreation;
-            if (recreation != null)
+            switch (status.Status)
             {
-                FinishRecreate(recreation.Cause, _actor);
-            }
-            else if (status is SuspendReason.Creation)
-            {
-                FinishCreate();
-            }
-            else if (status is SuspendReason.Termination)
-            {
-                FinishTerminate();
+                case SuspendReasonStatus.Recreation:
+                    FinishRecreate(status.Cause, _actor);
+                    break;
+                case SuspendReasonStatus.Creation:
+                    FinishCreate();
+                    break;
+                case SuspendReasonStatus.Termination:
+                    FinishTerminate();
+                    break;
             }
         }
 

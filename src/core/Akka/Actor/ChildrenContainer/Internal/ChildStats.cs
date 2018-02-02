@@ -22,18 +22,15 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildNameReserved : IChildStats
     {
-        private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static ChildNameReserved Instance { get { return _instance; } }
+        public static ChildNameReserved Instance { get; } = new ChildNameReserved();
+
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return "Name Reserved";
-        }
+        public override string ToString() => "Name Reserved";
     }
 
     /// <summary>
@@ -42,7 +39,6 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildRestartStats : IChildStats
     {
-        private readonly IInternalActorRef _child;
         private uint _maxNrOfRetriesCount;
         private long _restartTimeWindowStartTicks;
 
@@ -54,7 +50,7 @@ namespace Akka.Actor.Internal
         /// <param name="restartTimeWindowStartTicks">TBD</param>
         public ChildRestartStats(IInternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
         {
-            _child = child;
+            Child = child;
             _maxNrOfRetriesCount = maxNrOfRetriesCount;
             _restartTimeWindowStartTicks = restartTimeWindowStartTicks;
         }
@@ -62,22 +58,22 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public long Uid { get { return Child.Path.Uid; } }
+        public long Uid => Child.Path.Uid;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IInternalActorRef Child { get { return _child; } }
+        public IInternalActorRef Child { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public uint MaxNrOfRetriesCount { get { return _maxNrOfRetriesCount; } }
+        public uint MaxNrOfRetriesCount => _maxNrOfRetriesCount;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public long RestartTimeWindowStartTicks { get { return _restartTimeWindowStartTicks; } }
+        public long RestartTimeWindowStartTicks => _restartTimeWindowStartTicks;
 
         /// <summary>
         /// TBD

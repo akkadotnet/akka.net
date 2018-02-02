@@ -55,25 +55,25 @@ namespace Akka.Actor.Internal
             }
         }
 
-        private readonly IImmutableDictionary<string, IChildStats> _children;
-
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="children">TBD</param>
-        protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
+        protected ChildrenContainerBase(ImmutableDictionary<string, IChildStats> children)
         {
-            _children = children;
+            InternalChildren = children;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsTerminating { get { return false; } }
+        public virtual bool IsTerminating => false;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsNormal { get { return true; } }
+        public virtual bool IsNormal => true;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -138,7 +138,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
+        protected ImmutableDictionary<string, IChildStats> InternalChildren { get; }
 
         /// <summary>
         /// TBD
@@ -165,8 +165,7 @@ namespace Akka.Actor.Internal
             if (InternalChildren.TryGetValue(actor.Path.Name, out var stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
-                var crStats = stats as ChildRestartStats;
-                if (crStats != null && actor.Equals(crStats.Child))
+                if (stats is ChildRestartStats crStats && actor.Equals(crStats.Child))
                 {
                     childRestartStats = crStats;
                     return true;
@@ -181,11 +180,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
-        public bool Contains(IActorRef actor)
-        {
-            ChildRestartStats stats;
-            return TryGetByRef(actor, out stats);
-        }
+        public bool Contains(IActorRef actor) => TryGetByRef(actor, out _);
 
         /// <summary>
         /// TBD
@@ -197,8 +192,7 @@ namespace Akka.Actor.Internal
         {
             sb.Append('<');
             var childStats = kvp.Value;
-            var childRestartStats = childStats as ChildRestartStats;
-            if (childRestartStats != null)
+            if (childStats is ChildRestartStats childRestartStats)
             {
                 sb.Append(childRestartStats.Child.Path.ToStringWithUid()).Append(':');
                 sb.Append(childRestartStats.MaxNrOfRetriesCount).Append(" retries>");

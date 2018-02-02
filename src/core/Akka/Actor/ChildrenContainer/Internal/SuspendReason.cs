@@ -6,83 +6,69 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Actor.Internal
 {
-    /// <summary>
-    /// TBD
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-    /// </summary>
-    public abstract class SuspendReason
+    internal static class SuspendReasonStatus
     {
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        // ReSharper disable once InconsistentNaming
-        public interface IWaitingForChildren
+        public const int Creation = 1;
+        public const int Recreation = 2;
+        public const int Termination = 4;
+        public const int UserRequest = 8;
+
+        public const int WaitingForChildren = Creation | Recreation;
+    }
+
+    public struct SuspendReason
+    {
+        public static readonly SuspendReason Creation = new SuspendReason(SuspendReasonStatus.Creation);
+        public static readonly SuspendReason Termination = new SuspendReason(SuspendReasonStatus.Termination);
+        public static readonly SuspendReason UserRequest = new SuspendReason(SuspendReasonStatus.UserRequest);
+
+        public int Status { get; }
+        public Exception Cause { get; }
+
+        private SuspendReason(int status)
         {
-            //Intentionally left blank
+            Status = status;
+            Cause = null;
         }
 
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public class Creation : SuspendReason, IWaitingForChildren
+        public SuspendReason(Exception cause)
         {
-            //Intentionally left blank
+            Status = SuspendReasonStatus.Recreation;
+            Cause = cause;
         }
 
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public class Recreation : SuspendReason, IWaitingForChildren
+        public bool IsCreation
         {
-            private readonly Exception _cause;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="cause">TBD</param>
-            public Recreation(Exception cause)
-            {
-                _cause = cause;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Exception Cause { get { return _cause; } }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Status & SuspendReasonStatus.Creation) != 0; }
         }
 
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public class Termination : SuspendReason
+        public bool IsRecreation
         {
-            private static readonly Termination _instance = new Termination();
-            private Termination() { }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static Termination Instance { get { return _instance; } }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Status & SuspendReasonStatus.Recreation) != 0; }
         }
 
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public class UserRequest : SuspendReason
+        public bool IsTermination
         {
-            private static readonly UserRequest _instance = new UserRequest();
-            private UserRequest() { }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static UserRequest Instance { get { return _instance; } }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Status & SuspendReasonStatus.Termination) != 0; }
+        }
+
+        public bool IsUserRequest
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Status & SuspendReasonStatus.UserRequest) != 0; }
+        }
+
+        public bool IsWaitingForChildren
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Status & SuspendReasonStatus.WaitingForChildren) != 0; }
         }
     }
 }
