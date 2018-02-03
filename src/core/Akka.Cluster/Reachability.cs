@@ -29,17 +29,9 @@ namespace Akka.Cluster
     /// </summary>
     internal class Reachability //TODO: ISerializable?
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static readonly Reachability Empty = 
             new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="records">TBD</param>
-        /// <param name="versions">TBD</param>
         public Reachability(ImmutableList<Record> records, ImmutableDictionary<UniqueAddress, long> versions)
         {
             _cache = new Lazy<Cache>(() => new Cache(records));
@@ -47,38 +39,13 @@ namespace Akka.Cluster
             Records = records;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public sealed class Record
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public UniqueAddress Observer { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
             public UniqueAddress Subject { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
             public ReachabilityStatus Status { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
             public long Version { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="observer">TBD</param>
-            /// <param name="subject">TBD</param>
-            /// <param name="status">TBD</param>
-            /// <param name="version">TBD</param>
+            
             public Record(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status, long version)
             {
                 Observer = observer;
@@ -110,67 +77,23 @@ namespace Akka.Cluster
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public enum ReachabilityStatus
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             Reachable,
-            /// <summary>
-            /// TBD
-            /// </summary>
             Unreachable,
-            /// <summary>
-            /// TBD
-            /// </summary>
             Terminated
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public ImmutableList<Record> Records { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public ImmutableDictionary<UniqueAddress, long> Versions { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         class Cache
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap
-            {
-                get;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap { get; }
             public ImmutableHashSet<UniqueAddress> AllTerminated { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachable { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="records">TBD</param>
+            
             public Cache(ImmutableList<Record> records)
             {
                 if (records.IsEmpty)
@@ -219,34 +142,16 @@ namespace Akka.Cluster
             return observerRows;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
         public Reachability Unreachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Unreachable);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
         public Reachability Reachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Reachable);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
         public Reachability Terminated(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Terminated);
@@ -290,12 +195,6 @@ namespace Akka.Cluster
             return new Reachability(newRecords, newVersions);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="allowed">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
         public Reachability Merge(IEnumerable<UniqueAddress> allowed, Reachability other)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Record>();

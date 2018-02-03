@@ -291,11 +291,7 @@ namespace Akka.Cluster
         public MultiDataCenterSettings(Config config) : this(
             crossDcConnections: config.GetInt("cross-data-center-connections"),
             crossDcGossipProbability: config.GetInt("cross-data-center-gossip-probability"),
-            crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(
-                implementationClass: config.GetString("failure-detector.implementation-class"),
-                heartbeatInterval: config.GetTimeSpan("failure-detector.heartbeat-interval"),
-                heartbeatExpectedResponseAfter: config.GetTimeSpan("failure-detector.expected-response-after"),
-                nrOfMonitoringActors: config.GetInt("cross-data-center-connections")))
+            crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(config.GetConfig("failure-detector"), config.GetInt("cross-data-center-connections")))
         {
         }
     }
@@ -314,20 +310,22 @@ namespace Akka.Cluster
 
     public sealed class CrossDcFailureDetectorSettings
     {
+        public Config Config { get; }
         public string ImplementationClass { get; }
         public TimeSpan HeartbeatInterval { get; }
         public TimeSpan HeartbeatExpectedResponseAfter { get; }
         public int NrOfMonitoringActors { get; }
 
-        public CrossDcFailureDetectorSettings(string implementationClass, TimeSpan heartbeatInterval, TimeSpan heartbeatExpectedResponseAfter, int nrOfMonitoringActors)
+        public CrossDcFailureDetectorSettings(Config config, int nrOfMonitoringActors)
         {
-            if (heartbeatInterval == TimeSpan.Zero) throw new ArgumentException("failure-detector.heartbeat-interval must be > 0", nameof(heartbeatInterval));
-            if (heartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("failure-detector.expected-response-after > 0", nameof(heartbeatExpectedResponseAfter));
-
-            ImplementationClass = implementationClass;
-            HeartbeatInterval = heartbeatInterval;
-            HeartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
+            Config = config;
+            ImplementationClass = config.GetString("failure-detector.implementation-class");
+            HeartbeatInterval = config.GetTimeSpan("failure-detector.heartbeat-interval");
+            HeartbeatExpectedResponseAfter = config.GetTimeSpan("failure-detector.expected-response-after");
             NrOfMonitoringActors = nrOfMonitoringActors;
+            
+            if (HeartbeatInterval == TimeSpan.Zero) throw new ArgumentException("failure-detector.heartbeat-interval must be > 0", nameof(config));
+            if (HeartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("failure-detector.expected-response-after > 0", nameof(config));
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Akka.Remote
     /// <summary>
     /// This class represents the latest date or time by which an operation should be completed.
     /// </summary>
-    public struct Deadline : IEquatable<Deadline>
+    public sealed class Deadline : IEquatable<Deadline>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Deadline"/> class.

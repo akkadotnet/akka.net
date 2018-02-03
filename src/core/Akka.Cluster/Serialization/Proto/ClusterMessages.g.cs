@@ -43,7 +43,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             "AQoMR29zc2lwU3RhdHVzEkEKBGZyb20YASABKAsyMy5Ba2thLkNsdXN0ZXIu",
             "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxIRCglhbGxI",
             "YXNoZXMYAiADKAkSQgoHdmVyc2lvbhgDIAEoCzIxLkFra2EuQ2x1c3Rlci5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5WZWN0b3JDbG9jayLDAgoGR29zc2lw",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5WZWN0b3JDbG9jayKIAwoGR29zc2lw",
             "EkkKDGFsbEFkZHJlc3NlcxgBIAMoCzIzLkFra2EuQ2x1c3Rlci5TZXJpYWxp",
             "emF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEhAKCGFsbFJvbGVzGAIg",
             "AygJEhEKCWFsbEhhc2hlcxgDIAMoCRI9CgdtZW1iZXJzGAQgAygLMiwuQWtr",
@@ -51,37 +51,40 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             "dmVydmlldxgFIAEoCzI0LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlBy",
             "b3RvLk1zZy5Hb3NzaXBPdmVydmlldxJCCgd2ZXJzaW9uGAYgASgLMjEuQWtr",
             "YS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZlY3RvckNsb2Nr",
-            "IngKDkdvc3NpcE92ZXJ2aWV3EgwKBHNlZW4YASADKAUSWAoUb2JzZXJ2ZXJS",
-            "ZWFjaGFiaWxpdHkYAiADKAsyOi5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuT2JzZXJ2ZXJSZWFjaGFiaWxpdHkilQEKFE9ic2VydmVy",
-            "UmVhY2hhYmlsaXR5EhQKDGFkZHJlc3NJbmRleBgBIAEoBRIPCgd2ZXJzaW9u",
-            "GAQgASgDElYKE3N1YmplY3RSZWFjaGFiaWxpdHkYAiADKAsyOS5Ba2thLkNs",
-            "dXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuU3ViamVjdFJlYWNoYWJp",
-            "bGl0eSLgAQoTU3ViamVjdFJlYWNoYWJpbGl0eRIUCgxhZGRyZXNzSW5kZXgY",
-            "ASABKAUSXAoGc3RhdHVzGAMgASgOMkwuQWtrYS5DbHVzdGVyLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLlN1YmplY3RSZWFjaGFiaWxpdHkuUmVhY2hhYmls",
-            "aXR5U3RhdHVzEg8KB3ZlcnNpb24YBCABKAMiRAoSUmVhY2hhYmlsaXR5U3Rh",
-            "dHVzEg0KCVJlYWNoYWJsZRAAEg8KC1VucmVhY2hhYmxlEAESDgoKVGVybWlu",
-            "YXRlZBACIvkBCgZNZW1iZXISFAoMYWRkcmVzc0luZGV4GAEgASgFEhAKCHVw",
-            "TnVtYmVyGAIgASgFEkkKBnN0YXR1cxgDIAEoDjI5LkFra2EuQ2x1c3Rlci5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5NZW1iZXIuTWVtYmVyU3RhdHVzEhgK",
-            "DHJvbGVzSW5kZXhlcxgEIAMoBUICEAEiYgoMTWVtYmVyU3RhdHVzEgsKB0pv",
-            "aW5pbmcQABIGCgJVcBABEgsKB0xlYXZpbmcQAhILCgdFeGl0aW5nEAMSCAoE",
-            "RG93bhAEEgsKB1JlbW92ZWQQBRIMCghXZWFrbHlVcBAGIp4BCgtWZWN0b3JD",
-            "bG9jaxIRCgl0aW1lc3RhbXAYASABKAMSSwoIdmVyc2lvbnMYAiADKAsyOS5B",
-            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVjdG9yQ2xv",
-            "Y2suVmVyc2lvbhovCgdWZXJzaW9uEhEKCWhhc2hJbmRleBgBIAEoBRIRCgl0",
-            "aW1lc3RhbXAYAiABKAMiXwoNVW5pcXVlQWRkcmVzcxJBCgdhZGRyZXNzGAEg",
-            "ASgLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRk",
-            "cmVzc0RhdGESCwoDdWlkGAIgASgNIqABChFDbHVzdGVyUm91dGVyUG9vbBI4",
-            "CgRwb29sGAEgASgLMiouQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLlBvb2wSUQoIc2V0dGluZ3MYAiABKAsyPy5Ba2thLkNsdXN0ZXIu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQ2x1c3RlclJvdXRlclBvb2xTZXR0",
-            "aW5ncyI8CgRQb29sEhQKDHNlcmlhbGl6ZXJJZBgBIAEoDRIQCghtYW5pZmVz",
-            "dBgCIAEoCRIMCgRkYXRhGAMgASgMInwKGUNsdXN0ZXJSb3V0ZXJQb29sU2V0",
-            "dGluZ3MSFgoOdG90YWxJbnN0YW5jZXMYASABKA0SGwoTbWF4SW5zdGFuY2Vz",
-            "UGVyTm9kZRgCIAEoDRIZChFhbGxvd0xvY2FsUm91dGVlcxgDIAEoCBIPCgd1",
-            "c2VSb2xlGAQgASgJYgZwcm90bzM="));
+            "EkMKCnRvbWJzdG9uZXMYByADKAsyLy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuVG9tYnN0b25lIngKDkdvc3NpcE92ZXJ2aWV3EgwK",
+            "BHNlZW4YASADKAUSWAoUb2JzZXJ2ZXJSZWFjaGFiaWxpdHkYAiADKAsyOi5B",
+            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT2JzZXJ2ZXJS",
+            "ZWFjaGFiaWxpdHkilQEKFE9ic2VydmVyUmVhY2hhYmlsaXR5EhQKDGFkZHJl",
+            "c3NJbmRleBgBIAEoBRIPCgd2ZXJzaW9uGAQgASgDElYKE3N1YmplY3RSZWFj",
+            "aGFiaWxpdHkYAiADKAsyOS5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuU3ViamVjdFJlYWNoYWJpbGl0eSLgAQoTU3ViamVjdFJlYWNo",
+            "YWJpbGl0eRIUCgxhZGRyZXNzSW5kZXgYASABKAUSXAoGc3RhdHVzGAMgASgO",
+            "MkwuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlN1Ympl",
+            "Y3RSZWFjaGFiaWxpdHkuUmVhY2hhYmlsaXR5U3RhdHVzEg8KB3ZlcnNpb24Y",
+            "BCABKAMiRAoSUmVhY2hhYmlsaXR5U3RhdHVzEg0KCVJlYWNoYWJsZRAAEg8K",
+            "C1VucmVhY2hhYmxlEAESDgoKVGVybWluYXRlZBACIjQKCVRvbWJzdG9uZRIU",
+            "CgxhZGRyZXNzSW5kZXgYASABKAUSEQoJdGltZXN0YW1wGAIgASgDIvkBCgZN",
+            "ZW1iZXISFAoMYWRkcmVzc0luZGV4GAEgASgFEhAKCHVwTnVtYmVyGAIgASgF",
+            "EkkKBnN0YXR1cxgDIAEoDjI5LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5NZW1iZXIuTWVtYmVyU3RhdHVzEhgKDHJvbGVzSW5kZXhl",
+            "cxgEIAMoBUICEAEiYgoMTWVtYmVyU3RhdHVzEgsKB0pvaW5pbmcQABIGCgJV",
+            "cBABEgsKB0xlYXZpbmcQAhILCgdFeGl0aW5nEAMSCAoERG93bhAEEgsKB1Jl",
+            "bW92ZWQQBRIMCghXZWFrbHlVcBAGIp4BCgtWZWN0b3JDbG9jaxIRCgl0aW1l",
+            "c3RhbXAYASABKAMSSwoIdmVyc2lvbnMYAiADKAsyOS5Ba2thLkNsdXN0ZXIu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVjdG9yQ2xvY2suVmVyc2lvbhov",
+            "CgdWZXJzaW9uEhEKCWhhc2hJbmRleBgBIAEoBRIRCgl0aW1lc3RhbXAYAiAB",
+            "KAMiXwoNVW5pcXVlQWRkcmVzcxJBCgdhZGRyZXNzGAEgASgLMjAuQWtrYS5S",
+            "ZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzc0RhdGESCwoD",
+            "dWlkGAIgASgNIqABChFDbHVzdGVyUm91dGVyUG9vbBI4CgRwb29sGAEgASgL",
+            "MiouQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBvb2wS",
+            "UQoIc2V0dGluZ3MYAiABKAsyPy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuQ2x1c3RlclJvdXRlclBvb2xTZXR0aW5ncyI8CgRQb29s",
+            "EhQKDHNlcmlhbGl6ZXJJZBgBIAEoDRIQCghtYW5pZmVzdBgCIAEoCRIMCgRk",
+            "YXRhGAMgASgMInwKGUNsdXN0ZXJSb3V0ZXJQb29sU2V0dGluZ3MSFgoOdG90",
+            "YWxJbnN0YW5jZXMYASABKA0SGwoTbWF4SW5zdGFuY2VzUGVyTm9kZRgCIAEo",
+            "DRIZChFhbGxvd0xvY2FsUm91dGVlcxgDIAEoCBIPCgd1c2VSb2xlGAQgASgJ",
+            "YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -89,10 +92,11 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Welcome), global::Akka.Cluster.Serialization.Proto.Msg.Welcome.Parser, new[]{ "From", "Gossip" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope), global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope.Parser, new[]{ "From", "To", "SerializedGossip" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus), global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus.Parser, new[]{ "From", "AllHashes", "Version" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Gossip), global::Akka.Cluster.Serialization.Proto.Msg.Gossip.Parser, new[]{ "AllAddresses", "AllRoles", "AllHashes", "Members", "Overview", "Version" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Gossip), global::Akka.Cluster.Serialization.Proto.Msg.Gossip.Parser, new[]{ "AllAddresses", "AllRoles", "AllHashes", "Members", "Overview", "Version", "Tombstones" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview), global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview.Parser, new[]{ "Seen", "ObserverReachability" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability), global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability.Parser, new[]{ "AddressIndex", "Version", "SubjectReachability" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability), global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Parser, new[]{ "AddressIndex", "Status", "Version" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus) }, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Tombstone), global::Akka.Cluster.Serialization.Proto.Msg.Tombstone.Parser, new[]{ "AddressIndex", "Timestamp" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member), global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser, new[]{ "AddressIndex", "UpNumber", "Status", "RolesIndexes" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) }, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Parser, new[]{ "Timestamp", "Versions" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser, new[]{ "HashIndex", "Timestamp" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress), global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid" }, null, null, null),
@@ -812,6 +816,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       members_ = other.members_.Clone();
       Overview = other.overview_ != null ? other.Overview.Clone() : null;
       Version = other.version_ != null ? other.Version.Clone() : null;
+      tombstones_ = other.tombstones_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -881,6 +886,16 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "tombstones" field.</summary>
+    public const int TombstonesFieldNumber = 7;
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.Tombstone> _repeated_tombstones_codec
+        = pb::FieldCodec.ForMessage(58, global::Akka.Cluster.Serialization.Proto.Msg.Tombstone.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Tombstone> tombstones_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Tombstone>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Tombstone> Tombstones {
+      get { return tombstones_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Gossip);
@@ -900,6 +915,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if(!members_.Equals(other.members_)) return false;
       if (!object.Equals(Overview, other.Overview)) return false;
       if (!object.Equals(Version, other.Version)) return false;
+      if(!tombstones_.Equals(other.tombstones_)) return false;
       return true;
     }
 
@@ -912,6 +928,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       hash ^= members_.GetHashCode();
       if (overview_ != null) hash ^= Overview.GetHashCode();
       if (version_ != null) hash ^= Version.GetHashCode();
+      hash ^= tombstones_.GetHashCode();
       return hash;
     }
 
@@ -934,6 +951,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteRawTag(50);
         output.WriteMessage(Version);
       }
+      tombstones_.WriteTo(output, _repeated_tombstones_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -949,6 +967,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (version_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Version);
       }
+      size += tombstones_.CalculateSize(_repeated_tombstones_codec);
       return size;
     }
 
@@ -973,6 +992,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         }
         Version.MergeFrom(other.Version);
       }
+      tombstones_.Add(other.tombstones_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1011,6 +1031,10 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
               version_ = new global::Akka.Cluster.Serialization.Proto.Msg.VectorClock();
             }
             input.ReadMessage(version_);
+            break;
+          }
+          case 58: {
+            tombstones_.AddEntriesFrom(input, _repeated_tombstones_codec);
             break;
           }
         }
@@ -1509,6 +1533,151 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
+  internal sealed partial class Tombstone : pb::IMessage<Tombstone> {
+    private static readonly pb::MessageParser<Tombstone> _parser = new pb::MessageParser<Tombstone>(() => new Tombstone());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Tombstone> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Tombstone() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Tombstone(Tombstone other) : this() {
+      addressIndex_ = other.addressIndex_;
+      timestamp_ = other.timestamp_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Tombstone Clone() {
+      return new Tombstone(this);
+    }
+
+    /// <summary>Field number for the "addressIndex" field.</summary>
+    public const int AddressIndexFieldNumber = 1;
+    private int addressIndex_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int AddressIndex {
+      get { return addressIndex_; }
+      set {
+        addressIndex_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 2;
+    private long timestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Tombstone);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Tombstone other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (AddressIndex != other.AddressIndex) return false;
+      if (Timestamp != other.Timestamp) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
+      if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (AddressIndex != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(AddressIndex);
+      }
+      if (Timestamp != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(Timestamp);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (AddressIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(AddressIndex);
+      }
+      if (Timestamp != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(Timestamp);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Tombstone other) {
+      if (other == null) {
+        return;
+      }
+      if (other.AddressIndex != 0) {
+        AddressIndex = other.AddressIndex;
+      }
+      if (other.Timestamp != 0L) {
+        Timestamp = other.Timestamp;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            AddressIndex = input.ReadInt32();
+            break;
+          }
+          case 16: {
+            Timestamp = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
   /// <summary>
   /// Member
   /// </summary>
@@ -1519,7 +1688,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1733,7 +1902,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[9]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[10]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2028,7 +2197,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[10]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2179,7 +2348,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[11]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2336,7 +2505,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[12]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[13]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2509,7 +2678,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[14]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

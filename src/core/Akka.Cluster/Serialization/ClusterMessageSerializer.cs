@@ -11,12 +11,14 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
-using Akka.Cluster.Routing;
+using Akka.Cluster.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using AddressData = Akka.Remote.Serialization.Proto.Msg.AddressData;
+using ClusterRouterPool = Akka.Cluster.Routing.ClusterRouterPool;
+using ClusterRouterPoolSettings = Akka.Cluster.Routing.ClusterRouterPoolSettings;
 
 namespace Akka.Cluster.Serialization
 {
@@ -37,7 +39,7 @@ namespace Akka.Cluster.Serialization
                 [typeof(InternalClusterAction.Welcome)] = WelcomeFrom,
                 [typeof(ClusterUserAction.Leave)] = bytes => new ClusterUserAction.Leave(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(ClusterUserAction.Down)] = bytes => new ClusterUserAction.Down(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
-                [typeof(InternalClusterAction.InitJoin)] = bytes => new InternalClusterAction.InitJoin(),
+                [typeof(InternalClusterAction.InitJoin)] = bytes => InternalClusterAction.InitJoin.Instance,
                 [typeof(InternalClusterAction.InitJoinAck)] = bytes => new InternalClusterAction.InitJoinAck(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(InternalClusterAction.InitJoinNack)] = bytes => new InternalClusterAction.InitJoinNack(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(InternalClusterAction.ExitingConfirmed)] = bytes => new InternalClusterAction.ExitingConfirmed(UniqueAddressFrom(Proto.Msg.UniqueAddress.Parser.ParseFrom(bytes))),
@@ -249,6 +251,12 @@ namespace Akka.Cluster.Serialization
             overview.Seen.AddRange(seenProtos);
             overview.ObserverReachability.AddRange(reachabilityProto);
 
+            var tombstones = gossip.Tombstones.Select(t => new Tombstone
+            {
+                AddressIndex = MapUniqueAddress(t.Key),
+                Timestamp = t.Value.Ticks / TimeSpan.TicksPerMillisecond // we operate in milliseconds
+            });
+
             var message = new Proto.Msg.Gossip();
             message.AllAddresses.AddRange(allAddresses.Select(UniqueAddressToProto));
             message.AllRoles.AddRange(allRoles);
@@ -256,6 +264,7 @@ namespace Akka.Cluster.Serialization
             message.Members.AddRange(membersProtos);
             message.Overview = overview;
             message.Version = VectorClockToProto(gossip.Version, hashMapping);
+            message.Tombstones.AddRange(tombstones);
             return message;
         }
 
@@ -272,12 +281,18 @@ namespace Akka.Cluster.Serialization
                     (MemberStatus)member.Status, 
                     member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet());
 
-            var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
+            var members = gossip.Members.Select(MemberFromProto).ToImmutableSortedSet(Member.Ordering);
             var reachability = ReachabilityFromProto(gossip.Overview.ObserverReachability, addressMapping);
             var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
             var overview = new GossipOverview(seen, reachability);
+            var tombstones = gossip.Tombstones.Select(t =>
+            {
+                var addr = addressMapping[t.AddressIndex];
+                var date = new DateTime(t.Timestamp * TimeSpan.TicksPerMillisecond);
+                return new KeyValuePair<UniqueAddress,DateTime>(addr, date);
+            }).ToImmutableDictionary();
 
-            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping));
+            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping), tombstones);
         }
 
         private static IEnumerable<Proto.Msg.ObserverReachability> ReachabilityToProto(Reachability reachability, Dictionary<UniqueAddress, int> addressMapping)

@@ -683,14 +683,14 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class CurrentInternalStats : IClusterDomainEvent
         {
-            public CurrentInternalStats(ClusterUserAction.GossipStats gossipStats, ClusterUserAction.VectorClockStats vclockStats)
+            public CurrentInternalStats(GossipStats gossipStats, VectorClockStats vclockStats)
             {
                 GossipStats = gossipStats;
                 SeenBy = vclockStats;
             }
 
-            public ClusterUserAction.GossipStats GossipStats { get; }
-            public ClusterUserAction.VectorClockStats SeenBy { get; }
+            public GossipStats GossipStats { get; }
+            public VectorClockStats SeenBy { get; }
 
             /// <inheritdoc/>
             public override int GetHashCode()
@@ -895,12 +895,12 @@ namespace Akka.Cluster
         {
             switch (message)
             {
-                case ClusterUserAction.InternalClusterAction.PublishChanges publishChanges: PublishChanges(publishChanges.State); return true;
+                case InternalClusterAction.PublishChanges publishChanges: PublishChanges(publishChanges.State); return true;
                 case ClusterEvent.CurrentInternalStats currentStats: PublishInternalStats(currentStats); return true;
-                case ClusterUserAction.InternalClusterAction.SendCurrentClusterState send: SendCurrentClusterState(send.Receiver); return true;
-                case ClusterUserAction.InternalClusterAction.Subscribe subscribe: Subscribe(subscribe.Subscriber, subscribe.InitialStateMode, subscribe.To); return true;
-                case ClusterUserAction.InternalClusterAction.Unsubscribe unsubscribe: Unsubscribe(unsubscribe.Subscriber, unsubscribe.To); return true;
-                case ClusterUserAction.InternalClusterAction.PublishEvent publishEvent: Publish(publishEvent.Event); return true;
+                case InternalClusterAction.SendCurrentClusterState send: SendCurrentClusterState(send.Receiver); return true;
+                case InternalClusterAction.Subscribe subscribe: Subscribe(subscribe.Subscriber, subscribe.InitialStateMode, subscribe.To); return true;
+                case InternalClusterAction.Unsubscribe unsubscribe: Unsubscribe(unsubscribe.Subscriber, unsubscribe.To); return true;
+                case InternalClusterAction.PublishEvent publishEvent: Publish(publishEvent.Event); return true;
                 default: return false;
             }
         }
@@ -930,7 +930,7 @@ namespace Akka.Cluster
                 leader: _membershipState.Leader?.Address,
                 roleLeaderMap: latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
                 {
-                    var leader = latestGossip.RoleLeader(r, _selfUniqueAddress);
+                    var leader = _membershipState.RoleLeader(r);
                     return leader?.Address;
                 }),
                 unreachableDataCenters: unreachableDataCenters);

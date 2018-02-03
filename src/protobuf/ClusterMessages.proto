@@ -93,6 +93,7 @@ message Gossip {
   repeated Member members = 4;
   GossipOverview overview = 5;
   VectorClock version = 6;
+  repeated Tombstone tombstones = 7;
 }
 
 // Gossip Overview
@@ -118,6 +119,11 @@ message SubjectReachability {
   int32 addressIndex = 1;
   ReachabilityStatus status = 3;
   int64 version = 4;
+}
+
+message Tombstone {
+  int32 addressIndex = 1;
+  int64 timestamp = 2;
 }
 
 // Member
