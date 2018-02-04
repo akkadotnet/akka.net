@@ -199,7 +199,7 @@ namespace Akka.Cluster.TestKit
                     typeof(GossipEnvelope),
                     typeof(GossipStatus), 
                     typeof(GossipStatus),
-                    typeof(InternalClusterAction.ITick),
+                    typeof(InternalClusterAction.Tick),
                     typeof(PoisonPill),
                     typeof(DeathWatchNotification),
                     typeof(Disassociated),

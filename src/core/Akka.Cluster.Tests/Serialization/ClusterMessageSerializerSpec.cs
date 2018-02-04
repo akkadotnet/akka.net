@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tests.Serialization
         [Fact]
         public void Can_serialize_InitJoin()
         {
-            var message = new InternalClusterAction.InitJoin();
+            var message = InternalClusterAction.InitJoin.Instance;
             AssertEqual(message);
         }
 
