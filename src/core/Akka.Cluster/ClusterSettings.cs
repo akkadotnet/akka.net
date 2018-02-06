@@ -96,11 +96,11 @@ namespace Akka.Cluster
                 verboseHeartbeatLogging: cc.GetBoolean("debug.verbose-heartbeat-logging"),
                 verboseGossipLogging: cc.GetBoolean("debug.verbose-gossip-logging"));
 
-            if (config.GetString("shutdown-after-unsuccessful-join-seed-nodes").ToLowerInvariant() == "off")
+            if (cc.GetString("shutdown-after-unsuccessful-join-seed-nodes").ToLowerInvariant() == "off")
                 ShutdownAfterUnsuccessfulJoinSeedNodes = null;
             else
             {
-                var t = config.GetTimeSpan("shutdown-after-unsuccessful-join-seed-nodes");
+                var t = cc.GetTimeSpan("shutdown-after-unsuccessful-join-seed-nodes");
                 if (t == TimeSpan.Zero) throw new ArgumentException("`shutdown-after-unsuccessful-join-seed-nodes` must be greater than zero");
                 
                 ShutdownAfterUnsuccessfulJoinSeedNodes = t;
@@ -290,7 +290,7 @@ namespace Akka.Cluster
 
         public MultiDataCenterSettings(Config config) : this(
             crossDcConnections: config.GetInt("cross-data-center-connections"),
-            crossDcGossipProbability: config.GetInt("cross-data-center-gossip-probability"),
+            crossDcGossipProbability: config.GetDouble("cross-data-center-gossip-probability"),
             crossDcFailureDetectorSettings: new CrossDcFailureDetectorSettings(config.GetConfig("failure-detector"), config.GetInt("cross-data-center-connections")))
         {
         }
@@ -319,13 +319,13 @@ namespace Akka.Cluster
         public CrossDcFailureDetectorSettings(Config config, int nrOfMonitoringActors)
         {
             Config = config;
-            ImplementationClass = config.GetString("failure-detector.implementation-class");
-            HeartbeatInterval = config.GetTimeSpan("failure-detector.heartbeat-interval");
-            HeartbeatExpectedResponseAfter = config.GetTimeSpan("failure-detector.expected-response-after");
+            ImplementationClass = config.GetString("implementation-class");
+            HeartbeatInterval = config.GetTimeSpan("heartbeat-interval");
+            HeartbeatExpectedResponseAfter = config.GetTimeSpan("expected-response-after");
             NrOfMonitoringActors = nrOfMonitoringActors;
             
-            if (HeartbeatInterval == TimeSpan.Zero) throw new ArgumentException("failure-detector.heartbeat-interval must be > 0", nameof(config));
-            if (HeartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("failure-detector.expected-response-after > 0", nameof(config));
+            if (HeartbeatInterval == TimeSpan.Zero) throw new ArgumentException("heartbeat-interval must be > 0", nameof(config));
+            if (HeartbeatExpectedResponseAfter == TimeSpan.Zero) throw new ArgumentException("expected-response-after > 0", nameof(config));
         }
     }
 }
