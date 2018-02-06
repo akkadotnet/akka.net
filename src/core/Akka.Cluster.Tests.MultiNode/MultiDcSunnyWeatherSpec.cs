@@ -147,7 +147,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     // must not heartbeat myself
                     a.State.ActiveReceivers.Should().NotContain(Cluster.SelfUniqueAddress);
                     // not any of the members in the same datacenter; it's "cross-dc" after all
-                    var myDataCenterMembers = a.State.State?.[Cluster.SelfDataCenter] ?? ImmutableHashSet<Member>.Empty;
+                    var myDataCenterMembers = a.State.State != null ? a.State.State[Cluster.SelfDataCenter] : ImmutableSortedSet<Member>.Empty;
                     foreach (var member in myDataCenterMembers)
                     {
                         a.State.ActiveReceivers.Should().NotContain(member.UniqueAddress);

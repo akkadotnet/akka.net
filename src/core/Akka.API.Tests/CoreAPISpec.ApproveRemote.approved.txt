@@ -60,7 +60,7 @@ namespace Akka.Remote
         public override string ToString() { }
     }
     public delegate long Clock();
-    public class Deadline
+    public sealed class Deadline : System.IEquatable<Akka.Remote.Deadline>
     {
         public Deadline(System.DateTime when) { }
         public bool HasTimeLeft { get; }
@@ -68,7 +68,8 @@ namespace Akka.Remote
         public static Akka.Remote.Deadline Now { get; }
         public System.TimeSpan TimeLeft { get; }
         public System.DateTime When { get; }
-        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Remote.Deadline other) { }
+        public override bool Equals(object o) { }
         public override int GetHashCode() { }
     }
     public class DeadlineFailureDetector : Akka.Remote.FailureDetector

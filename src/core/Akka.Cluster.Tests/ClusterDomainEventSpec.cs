@@ -262,7 +262,7 @@ namespace Akka.Cluster.Tests
             var bUpDc2 = TestMember.Create(bUp.Address, MemberStatus.Up, bRoles, dataCenter: "dc2");
             var bUpDc2Removed = TestMember.Create(bUpDc2.Address, MemberStatus.Removed, bRoles, dataCenter: "dc2");
             var bUpDc2Restarted =
-                TestMember.WithUniqueAddress(new UniqueAddress(bUpDc2.Address, 2L), MemberStatus.Up, bRoles, dataCenter: "dc2");
+                TestMember.WithUniqueAddress(new UniqueAddress(bUpDc2.Address, 2), MemberStatus.Up, bRoles, dataCenter: "dc2");
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUpDc2));
             var g2 = g1
                 .Remove(bUpDc2.UniqueAddress, DateTime.UtcNow) // adds tombstone

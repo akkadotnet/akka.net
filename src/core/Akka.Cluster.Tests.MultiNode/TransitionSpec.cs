@@ -122,12 +122,12 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void LeaderActions()
         {
-            Cluster.ClusterCore.Tell(InternalClusterAction.LeaderActionsTick.Instance);
+            Cluster.ClusterCore.Tell(InternalClusterAction.Tick.LeaderActionsTick);
         }
 
         private void ReapUnreachable()
         {
-            Cluster.ClusterCore.Tell(InternalClusterAction.ReapUnreachableTick.Instance);
+            Cluster.ClusterCore.Tell(InternalClusterAction.Tick.ReapUnreachableTick);
         }
 
         private int _gossipBarrierCounter = 0;

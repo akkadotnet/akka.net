@@ -566,6 +566,29 @@ namespace Akka.Cluster.Sharding
                     Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance),
                 PoisonPill.Instance);
         }
+        
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role.
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the  entity from the incoming message,
+        /// if the partial function does not match the message will  be `unhandled`, i.e.posted as `Unhandled` messages
+        /// on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef StartProxy(string typeName, string role, ExtractEntityId extractEntityId, ExtractShardId extractShardId) =>
+            StartProxy(typeName, role, null, extractEntityId, extractShardId);
 
         /// <summary>
         /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
@@ -587,7 +610,7 @@ namespace Akka.Cluster.Sharding
         /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
-        public IActorRef StartProxy(string typeName, string role, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+        public IActorRef StartProxy(string typeName, string role, string dataCenter, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
         {
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
@@ -607,6 +630,29 @@ namespace Akka.Cluster.Sharding
                     throw new ActorInitializationException($"Unsupported guardian response: {reply}");
             }
         }
+        
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role.
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the  entity from the incoming message,
+        /// if the partial function does not match the message will  be `unhandled`, i.e.posted as `Unhandled` messages
+        /// on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartProxyAsync(string typeName, string role, ExtractEntityId extractEntityId, ExtractShardId extractShardId) =>
+            StartProxyAsync(typeName, role, null, extractEntityId, extractShardId);
 
         /// <summary>
         /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
@@ -628,7 +674,7 @@ namespace Akka.Cluster.Sharding
         /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
-        public async Task<IActorRef> StartProxyAsync(string typeName, string role, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+        public async Task<IActorRef> StartProxyAsync(string typeName, string role, string dataCenter, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
         {
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
@@ -664,7 +710,25 @@ namespace Akka.Cluster.Sharding
         /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
-        public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
+        public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor) => 
+            StartProxy(typeName, role, null, messageExtractor);
+
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role.
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef StartProxy(string typeName, string role, string dataCenter, IMessageExtractor messageExtractor)
         {
             Tuple<EntityId, Msg> extractEntityId(Msg msg)
             {
@@ -673,7 +737,7 @@ namespace Akka.Cluster.Sharding
                 return Tuple.Create(entityId, entityMessage);
             };
 
-            return StartProxy(typeName, role, extractEntityId, messageExtractor.ShardId);
+            return StartProxy(typeName, role, dataCenter, extractEntityId, messageExtractor.ShardId);
         }
 
         /// <summary>
@@ -691,7 +755,25 @@ namespace Akka.Cluster.Sharding
         /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
-        public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
+        public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor) =>
+            StartProxyAsync(typeName, role, null, messageExtractor);
+
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role.
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartProxyAsync(string typeName, string role, string dataCenter, IMessageExtractor messageExtractor)
         {
             Tuple<EntityId, Msg> extractEntityId(Msg msg)
             {
@@ -700,7 +782,7 @@ namespace Akka.Cluster.Sharding
                 return Tuple.Create(entityId, entityMessage);
             };
 
-            return StartProxyAsync(typeName, role, extractEntityId, messageExtractor.ShardId);
+            return StartProxyAsync(typeName, role, dataCenter, extractEntityId, messageExtractor.ShardId);
         }
 
         /// <summary>

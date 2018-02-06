@@ -21,10 +21,13 @@ namespace Akka.Cluster
     public class Cluster : Akka.Actor.IExtension
     {
         public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> CrossDcFailureDetector { get; }
         public Akka.Cluster.IDowningProvider DowningProvider { get; }
         public Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> FailureDetector { get; }
         public bool IsTerminated { get; }
         public Akka.Actor.Address SelfAddress { get; }
+        public string SelfDataCenter { get; }
+        public Akka.Cluster.Member SelfMember { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> SelfRoles { get; }
         public Akka.Cluster.UniqueAddress SelfUniqueAddress { get; }
         public Akka.Cluster.ClusterSettings Settings { get; }
@@ -55,11 +58,10 @@ namespace Akka.Cluster
         protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         public override void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
     }
-    public class ClusterEvent
+    public class static ClusterEvent
     {
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsSnapshot;
-        public ClusterEvent() { }
         public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
@@ -68,14 +70,23 @@ namespace Akka.Cluster
         public sealed class CurrentClusterState
         {
             public CurrentClusterState() { }
-            public CurrentClusterState(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy, Akka.Actor.Address leader, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap) { }
+            public CurrentClusterState(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy, Akka.Actor.Address leader, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap, System.Collections.Immutable.ImmutableHashSet<string> unreachableDataCenters) { }
             public System.Collections.Immutable.ImmutableHashSet<string> AllRoles { get; }
             public Akka.Actor.Address Leader { get; }
             public System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> Members { get; }
             public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> SeenBy { get; }
             public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> Unreachable { get; }
-            public Akka.Cluster.ClusterEvent.CurrentClusterState Copy(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy = null, Akka.Actor.Address leader = null, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap = null) { }
+            public System.Collections.Immutable.ImmutableHashSet<string> UnreachableDataCenters { get; }
+            public Akka.Cluster.ClusterEvent.CurrentClusterState Copy(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy = null, Akka.Actor.Address leader = null, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap = null, System.Collections.Immutable.ImmutableHashSet<string> unreachableDataCenters = null) { }
             public Akka.Actor.Address RoleLeader(string role) { }
+        }
+        public abstract class DataCenterReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            protected DataCenterReachabilityEvent(string dataCenter) { }
+            public string DataCenter { get; }
+            protected bool Equals(Akka.Cluster.ClusterEvent.DataCenterReachabilityEvent other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
         public interface IClusterDomainEvent { }
         public interface IMemberEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent
@@ -112,7 +123,6 @@ namespace Akka.Cluster
         }
         public abstract class MemberStatusChange : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IMemberEvent
         {
-            protected readonly Akka.Cluster.Member _member;
             protected MemberStatusChange(Akka.Cluster.Member member, Akka.Cluster.MemberStatus validStatus) { }
             public Akka.Cluster.Member Member { get; }
             public override bool Equals(object obj) { }
@@ -135,6 +145,10 @@ namespace Akka.Cluster
             public override int GetHashCode() { }
             public override string ToString() { }
         }
+        public sealed class ReachableDataCenter : Akka.Cluster.ClusterEvent.DataCenterReachabilityEvent
+        {
+            public ReachableDataCenter(string dataCenter) { }
+        }
         public sealed class ReachableMember : Akka.Cluster.ClusterEvent.ReachabilityEvent
         {
             public ReachableMember(Akka.Cluster.Member member) { }
@@ -152,6 +166,10 @@ namespace Akka.Cluster
         {
             InitialStateAsSnapshot = 0,
             InitialStateAsEvents = 1,
+        }
+        public sealed class UnreachableDataCenter : Akka.Cluster.ClusterEvent.DataCenterReachabilityEvent
+        {
+            public UnreachableDataCenter(string dataCenter) { }
         }
         public sealed class UnreachableMember : Akka.Cluster.ClusterEvent.ReachabilityEvent
         {
@@ -178,6 +196,7 @@ namespace Akka.Cluster
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public bool AllowWeaklyUpMembers { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
+        public Akka.Cluster.DebugSettings Debug { get; }
         public System.Type DowningProviderType { get; }
         [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public System.TimeSpan DownRemovalMargin { get; }
@@ -193,7 +212,9 @@ namespace Akka.Cluster
         public int MinNrOfMembers { get; }
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }
+        public Akka.Cluster.MultiDataCenterSettings MultiDataCenter { get; }
         public System.TimeSpan PeriodicTasksInitialDelay { get; }
+        public System.TimeSpan PruneGossipTombstonesAfter { get; set; }
         public System.Nullable<System.TimeSpan> PublishStatsInterval { get; }
         public int ReduceGossipDifferentViewProbability { get; }
         public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
@@ -203,6 +224,8 @@ namespace Akka.Cluster
         public int SchedulerTicksPerWheel { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
+        public string SelfDataCenter { get; }
+        public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
@@ -210,6 +233,21 @@ namespace Akka.Cluster
     }
     [Akka.Annotations.InternalApiAttribute()]
     public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
+    public sealed class CrossDcFailureDetectorSettings
+    {
+        public CrossDcFailureDetectorSettings(Akka.Configuration.Config config, int nrOfMonitoringActors) { }
+        public Akka.Configuration.Config Config { get; }
+        public System.TimeSpan HeartbeatExpectedResponseAfter { get; }
+        public System.TimeSpan HeartbeatInterval { get; }
+        public string ImplementationClass { get; }
+        public int NrOfMonitoringActors { get; }
+    }
+    public sealed class DebugSettings
+    {
+        public DebugSettings(bool verboseHeartbeatLogging, bool verboseGossipLogging) { }
+        public bool VerboseGossipLogging { get; }
+        public bool VerboseHeartbeatLogging { get; }
+    }
     public interface IClusterMessage { }
     public interface IDowningProvider
     {
@@ -220,6 +258,7 @@ namespace Akka.Cluster
     {
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
         public Akka.Actor.Address Address { get; }
+        public string DataCenter { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
         public Akka.Cluster.MemberStatus Status { get; }
         public Akka.Cluster.UniqueAddress UniqueAddress { get; }
@@ -246,6 +285,14 @@ namespace Akka.Cluster
         Removed = 5,
         WeaklyUp = 6,
     }
+    public sealed class MultiDataCenterSettings
+    {
+        public MultiDataCenterSettings(int crossDcConnections, double crossDcGossipProbability, Akka.Cluster.CrossDcFailureDetectorSettings crossDcFailureDetectorSettings) { }
+        public MultiDataCenterSettings(Akka.Configuration.Config config) { }
+        public int CrossDcConnections { get; }
+        public Akka.Cluster.CrossDcFailureDetectorSettings CrossDcFailureDetectorSettings { get; }
+        public double CrossDcGossipProbability { get; }
+    }
     public sealed class NoDowning : Akka.Cluster.IDowningProvider
     {
         public NoDowning(Akka.Actor.ActorSystem system) { }
@@ -270,12 +317,13 @@ namespace Akka.Cluster
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class VectorClock
+    public sealed class VectorClock : System.IEquatable<Akka.Cluster.VectorClock>
     {
         public System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> Versions { get; }
         public Akka.Cluster.VectorClock.Ordering CompareTo(Akka.Cluster.VectorClock that) { }
         public static Akka.Cluster.VectorClock Create() { }
         public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
+        public bool Equals(Akka.Cluster.VectorClock other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public Akka.Cluster.VectorClock Increment(Akka.Cluster.VectorClock.Node node) { }
