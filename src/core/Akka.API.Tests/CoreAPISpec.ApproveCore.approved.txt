@@ -3736,15 +3736,16 @@ namespace Akka.Pattern
         public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
         public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
         public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
         public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
     }
     public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
-        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
-        public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped) { }
         protected override bool Receive(object message) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
         public sealed class CurrentChild
@@ -3784,6 +3785,7 @@ namespace Akka.Pattern
         protected Akka.Actor.IActorRef Child { get; set; }
         protected string ChildName { get; }
         protected Akka.Actor.Props ChildProps { get; }
+        protected object ReplyWhileStopped { get; set; }
         protected Akka.Pattern.IBackoffReset Reset { get; }
         protected int RestartCountN { get; set; }
         protected bool HandleBackoff(object message) { }

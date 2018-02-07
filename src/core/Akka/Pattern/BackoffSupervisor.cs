@@ -113,7 +113,7 @@ namespace Akka.Pattern
             string childName,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
-            double randomFactor) : this(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, Actor.SupervisorStrategy.DefaultStrategy)
+            double randomFactor) : this(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, Actor.SupervisorStrategy.DefaultStrategy, null)
         {
         }
 
@@ -124,7 +124,8 @@ namespace Akka.Pattern
             TimeSpan maxBackoff,
             IBackoffReset reset,
             double randomFactor,
-            SupervisorStrategy strategy) : base(childProps, childName, reset)
+            SupervisorStrategy strategy,
+            object replyWhileStopped) : base(childProps, childName, reset, replyWhileStopped)
         {
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
@@ -173,7 +174,7 @@ namespace Akka.Pattern
             double randomFactor)
         {
             return PropsWithSupervisorStrategy(childProps, childName, minBackoff, maxBackoff, randomFactor,
-                Actor.SupervisorStrategy.DefaultStrategy);
+                Actor.SupervisorStrategy.DefaultStrategy, null);
         }
 
         /// <summary>
@@ -195,16 +196,19 @@ namespace Akka.Pattern
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
         /// <param name="strategy">The supervision strategy to use for handling exceptions in the child</param>
+        /// <param name="replyWhileStopped">The message that the supervisor will send in response to all messages while its child is stopped.</param>
         public static Props PropsWithSupervisorStrategy(
             Props childProps,
             string childName,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             double randomFactor,
-            SupervisorStrategy strategy)
+            SupervisorStrategy strategy,
+            object replyWhileStopped
+            )
         {
              return Actor.Props.Create(
-                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy));
+                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, replyWhileStopped));
         }
 
         internal static TimeSpan CalculateDelay(

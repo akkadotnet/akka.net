@@ -46,6 +46,14 @@ namespace Akka.Tests.Pattern
             {
                 return Akka.Actor.Props.Create(() => new Child(probe));
             }
+
+            public static Props ReplyWhileStoppedProps(IActorRef probeRef)
+            {
+                var options = Backoff.OnFailure(Props(probeRef), "someChildName", 100.Milliseconds(), 3.Seconds(), 0.2)
+                    .WithReplyWhileStopped("CHILD_STOPPED");
+
+                return BackoffSupervisor.Props(options);
+            }
         }
 
         internal class ManualChild : ReceiveActor
@@ -110,6 +118,27 @@ namespace Akka.Tests.Pattern
 
             assertForward(Create(OnStopOptions()));
             assertForward(Create(OnFailureOptions()));
+        }
+
+        [Fact]
+        public void BackoffSupervisor_must_reply_to_sender_if_reply_while_stopped_is_set()
+        {
+            var probe = CreateTestProbe();
+            var supervisor = Sys.ActorOf(Child.ReplyWhileStoppedProps(probe.Ref));
+            supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            Watch(c1);
+            c1.Tell("boom");
+            ExpectTerminated(c1);
+
+            supervisor.Tell("PING");
+            ExpectMsgFrom(supervisor, "CHILD_STOPPED");
+            AwaitAssert(() =>
+            {
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+            });
+            Assert.False(probe.HasMessages);
         }
 
         [Fact]

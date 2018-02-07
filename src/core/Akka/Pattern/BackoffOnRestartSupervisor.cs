@@ -26,7 +26,8 @@ namespace Akka.Pattern
             TimeSpan maxBackoff,
             IBackoffReset reset,
             double randomFactor,
-            OneForOneStrategy strategy) : base(childProps, childName, reset)
+            OneForOneStrategy strategy,
+            object replyWhileStopped) : base(childProps, childName, reset, replyWhileStopped)
         {
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;

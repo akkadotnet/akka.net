@@ -67,6 +67,13 @@ namespace Akka.Pattern
         public abstract BackoffOptions WithDefaultStoppingStrategy();
 
         /// <summary>
+        /// Returns a new <see cref="BackoffOptions"/> with a constant reply to messages that the supervisor receives while its child is stopped. By default, a message received while the child is stopped is forwarded to `deadLetters`. With this option, the supervisor will reply to the sender instead.
+        /// </summary>
+        /// <param name="replyWhileStopped">The message that the supervisor will send in response to all messages while its child is stopped.</param>
+        /// <returns></returns>
+        public abstract BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
+
+        /// <summary>
         /// Returns the props to create the back-off supervisor.
         /// </summary>
         internal abstract Props Props { get; }
@@ -82,13 +89,14 @@ namespace Akka.Pattern
         private readonly double _randomFactor;
         private readonly IBackoffReset _reset;
         private readonly OneForOneStrategy _strategy;
+        private readonly object _replyWhileStopped;
 
         public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset = null) 
-            : this(backoffType, childProps, childName, minBackoff, maxBackoff, randomFactor, reset, new OneForOneStrategy(SupervisorStrategy.DefaultDecider))
+            : this(backoffType, childProps, childName, minBackoff, maxBackoff, randomFactor, reset, new OneForOneStrategy(SupervisorStrategy.DefaultDecider), null)
         {
         }
 
-        public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset, OneForOneStrategy strategy)
+        public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset, OneForOneStrategy strategy, object replyWhileStopped)
         {
             _backoffType = backoffType ?? RestartImpliesFailure.Instance;
             _childProps = childProps;
@@ -98,26 +106,32 @@ namespace Akka.Pattern
             _randomFactor = randomFactor;
             _reset = reset ?? new AutoReset(_minBackoff);
             _strategy = strategy;
+            _replyWhileStopped = replyWhileStopped;
         }
 
         public override BackoffOptions WithAutoReset(TimeSpan resetBackoff)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new AutoReset(resetBackoff), _strategy);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new AutoReset(resetBackoff), _strategy, _replyWhileStopped);
         }
 
         public override BackoffOptions WithManualReset()
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new ManualReset(), _strategy);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new ManualReset(), _strategy, _replyWhileStopped);
         }
 
         public override BackoffOptions WithSupervisorStrategy(OneForOneStrategy supervisorStrategy)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, supervisorStrategy);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, supervisorStrategy, _replyWhileStopped);
         }
 
         public override BackoffOptions WithDefaultStoppingStrategy()
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, SupervisorStrategy.StoppingStrategy);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, SupervisorStrategy.StoppingStrategy, _replyWhileStopped);
+        }
+
+        public override BackoffOptions WithReplyWhileStopped(object replyWhileStopped)
+        {
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy, replyWhileStopped);
         }
 
         internal override Props Props
@@ -145,12 +159,12 @@ namespace Akka.Pattern
                 if (_backoffType is RestartImpliesFailure)
                 {
                     return Props.Create(
-                         () => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy));
+                         () => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped));
                 }
                 else if (_backoffType is StopImpliesFailure)
                 {
                     return Props.Create(
-                        () => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy));
+                        () => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped));
                 }
                 else
                 {
