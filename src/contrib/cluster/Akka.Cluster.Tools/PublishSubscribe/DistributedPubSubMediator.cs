@@ -220,7 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
-                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
+                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && !Equals(valueHolder.Ref, ActorRefs.Nobody))
                     {
                         Context.Unwatch(valueHolder.Ref);
                         PutToRegistry(remove.Path, ActorRefs.Nobody);
@@ -371,7 +371,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<ClusterEvent.IMemberEvent>(_ => { /* ignore */ });
             Receive<Count>(_ =>
             {
-                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => kv.Value.Ref != null));
+                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => !Equals(kv.Value.Ref, ActorRefs.Nobody)));
                 Sender.Tell(count);
             });
             Receive<DeltaCount>(_ =>
