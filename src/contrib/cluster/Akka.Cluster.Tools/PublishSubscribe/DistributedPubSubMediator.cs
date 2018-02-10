@@ -223,7 +223,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
                     {
                         Context.Unwatch(valueHolder.Ref);
-                        PutToRegistry(remove.Path, null);
+                        PutToRegistry(remove.Path, ActorRefs.Nobody);
                     }
                 }
             });
@@ -329,7 +329,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                     if (bucket.Content.TryGetValue(key, out var holder) && terminated.ActorRef.Equals(holder.Ref))
-                        PutToRegistry(key, null); // remove
+                        PutToRegistry(key, ActorRefs.Nobody); // remove
 
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
             });
@@ -549,7 +549,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var bucket = entry.Value;
 
                 var oldRemoved = bucket.Content
-                    .Where(kv => (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
+                    .Where(kv => Equals(kv.Value.Ref, ActorRefs.Nobody) && (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
                     .Select(kv => kv.Key);
 
                 if (oldRemoved.Any())
