@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests
     internal sealed class DataSourceActor : ActorBase
     {
         public static Props Props(IActorRef probe) =>
-            Akka.Actor.Props.Create(() => new DataSourceActor(probe)).WithDispatcher("akka.test.stream-dispatcher");
+            Akka.Actor.Props.Create(() => new DataSourceActor(probe));//.WithDispatcher("akka.test.stream-dispatcher");
 
         private readonly IActorRef _probe;
         private readonly ActorMaterializer _materializer;
@@ -109,24 +109,24 @@ namespace Akka.Streams.Tests
                 }
                 case "receive-32":
                 {
-                    var t = StreamRefs.SinkRef<string>()
-                        .ToMaterialized(TestSink.SinkProbe<string>(Context.System), Keep.Both)
-                        .Run(_materializer);
-
-                    var sink = t.Item1;
-                    var driver = t.Item2;
-                    Task.Run(() =>
-                    {
-                        driver.EnsureSubscription();
-                        driver.Request(2);
-                        driver.ExpectNext();
-                        driver.ExpectNext();
-                        driver.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                        driver.Request(30);
-                        driver.ExpectNextN(30);
-
-                        return "<COMPLETED>";
-                    }).PipeTo(_probe);
+//                    var t = StreamRefs.SinkRef<string>()
+//                        .ToMaterialized(TestSink.SinkProbe<string>(Context.System), Keep.Both)
+//                        .Run(_materializer);
+//
+//                    var sink = t.Item1;
+//                    var driver = t.Item2;
+//                    Task.Run(() =>
+//                    {
+//                        driver.EnsureSubscription();
+//                        driver.Request(2);
+//                        driver.ExpectNext();
+//                        driver.ExpectNext();
+//                        driver.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+//                        driver.Request(30);
+//                        driver.ExpectNextN(30);
+//
+//                        return "<COMPLETED>";
+//                    }).PipeTo(_probe);
 
                     return true;
                 }
@@ -188,8 +188,8 @@ namespace Akka.Streams.Tests
                 serialize-messages = off
               }}
               remote.netty.tcp {{
-                port = ${address.Port}
-                hostname = ""${address.Address}""
+                port = {address.Port}
+                hostname = ""{address.Address}""
               }}
             }}").WithFallback(ConfigurationFactory.Load());
         }
@@ -201,7 +201,8 @@ namespace Akka.Streams.Tests
         protected StreamRefsSpec(Config config, ITestOutputHelper output = null) : base(config, output)
         {
             Materializer = Sys.Materializer();
-            RemoteSystem = ActorSystem.Create("remote-system", Config());
+            RemoteSystem = ActorSystem.Create("remote-system", Sys.Settings.Config);
+            InitializeLogger(RemoteSystem);
             _probe = CreateTestProbe();
 
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");

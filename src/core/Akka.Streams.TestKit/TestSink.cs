@@ -20,11 +20,6 @@ namespace Akka.Streams.TestKit
         /// <param name="testKit"></param>
         /// <returns></returns>
         public static Sink<T, TestSubscriber.Probe<T>> SinkProbe<T>(this TestKitBase testKit) => 
-            SinkProbe<T>(testKit.Sys);
-
-        public static Sink<T, TestSubscriber.Probe<T>> SinkProbe<T>(ActorSystem system)
-        {
-            return new Sink<T, TestSubscriber.Probe<T>>(new StreamTestKit.ProbeSink<T>(system, Attributes.None, new SinkShape<T>(new Inlet<T>("ProbeSink.in"))));
-        }
+            new Sink<T, TestSubscriber.Probe<T>>(new StreamTestKit.ProbeSink<T>(testKit, Attributes.None, new SinkShape<T>(new Inlet<T>("ProbeSink.in"))));
     }
 }
