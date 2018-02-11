@@ -23,25 +23,30 @@ namespace Akka.Streams.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChdTdHJlYW1SZWZNZXNzYWdlcy5wcm90bxIkQWtrYS5TdHJlYW1zLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnIkwKB1NpbmtSZWYSQQoJdGFyZ2V0UmVmGAEg",
-            "ASgLMi4uQWtrYS5TdHJlYW1zLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFj",
-            "dG9yUmVmIk4KCVNvdXJjZVJlZhJBCglvcmlnaW5SZWYYASABKAsyLi5Ba2th",
-            "LlN0cmVhbXMuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWYiGAoI",
-            "QWN0b3JSZWYSDAoEcGF0aBgBIAEoCSJRCgdQYXlsb2FkEhcKD2VuY2xvc2Vk",
-            "TWVzc2FnZRgBIAEoDBIUCgxzZXJpYWxpemVySWQYAiABKAUSFwoPbWVzc2Fn",
-            "ZU1hbmlmZXN0GAMgASgMIlkKFE9uU3Vic2NyaWJlSGFuZHNoYWtlEkEKCXRh",
-            "cmdldFJlZhgBIAEoCzIuLkFra2EuU3RyZWFtcy5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5BY3RvclJlZiIhChBDdW11bGF0aXZlRGVtYW5kEg0KBXNlcU5y",
-            "GAEgASgDImAKD1NlcXVlbmNlZE9uTmV4dBINCgVzZXFOchgBIAEoAxI+Cgdw",
-            "YXlsb2FkGAIgASgLMi0uQWtrYS5TdHJlYW1zLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLlBheWxvYWQiJAoTUmVtb3RlU3RyZWFtRmFpbHVyZRINCgVjYXVz",
-            "ZRgBIAEoDCImChVSZW1vdGVTdHJlYW1Db21wbGV0ZWQSDQoFc2VxTnIYASAB",
-            "KANCAkgBYgZwcm90bzM="));
+            "bGl6YXRpb24uUHJvdG8uTXNnIh0KCUV2ZW50VHlwZRIQCgh0eXBlTmFtZRgB",
+            "IAEoCSKQAQoHU2lua1JlZhJBCgl0YXJnZXRSZWYYASABKAsyLi5Ba2thLlN0",
+            "cmVhbXMuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWYSQgoJZXZl",
+            "bnRUeXBlGAIgASgLMi8uQWtrYS5TdHJlYW1zLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLkV2ZW50VHlwZSKSAQoJU291cmNlUmVmEkEKCW9yaWdpblJlZhgB",
+            "IAEoCzIuLkFra2EuU3RyZWFtcy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5B",
+            "Y3RvclJlZhJCCglldmVudFR5cGUYAiABKAsyLy5Ba2thLlN0cmVhbXMuU2Vy",
+            "aWFsaXphdGlvbi5Qcm90by5Nc2cuRXZlbnRUeXBlIhgKCEFjdG9yUmVmEgwK",
+            "BHBhdGgYASABKAkiUQoHUGF5bG9hZBIXCg9lbmNsb3NlZE1lc3NhZ2UYASAB",
+            "KAwSFAoMc2VyaWFsaXplcklkGAIgASgFEhcKD21lc3NhZ2VNYW5pZmVzdBgD",
+            "IAEoDCJZChRPblN1YnNjcmliZUhhbmRzaGFrZRJBCgl0YXJnZXRSZWYYASAB",
+            "KAsyLi5Ba2thLlN0cmVhbXMuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0",
+            "b3JSZWYiIQoQQ3VtdWxhdGl2ZURlbWFuZBINCgVzZXFOchgBIAEoAyJgCg9T",
+            "ZXF1ZW5jZWRPbk5leHQSDQoFc2VxTnIYASABKAMSPgoHcGF5bG9hZBgCIAEo",
+            "CzItLkFra2EuU3RyZWFtcy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXls",
+            "b2FkIiQKE1JlbW90ZVN0cmVhbUZhaWx1cmUSDQoFY2F1c2UYASABKAwiJgoV",
+            "UmVtb3RlU3RyZWFtQ29tcGxldGVkEg0KBXNlcU5yGAEgASgDQgJIAWIGcHJv",
+            "dG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.SinkRef), global::Akka.Streams.Serialization.Proto.Msg.SinkRef.Parser, new[]{ "TargetRef" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.SourceRef), global::Akka.Streams.Serialization.Proto.Msg.SourceRef.Parser, new[]{ "OriginRef" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.EventType), global::Akka.Streams.Serialization.Proto.Msg.EventType.Parser, new[]{ "TypeName" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.SinkRef), global::Akka.Streams.Serialization.Proto.Msg.SinkRef.Parser, new[]{ "TargetRef", "EventType" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.SourceRef), global::Akka.Streams.Serialization.Proto.Msg.SourceRef.Parser, new[]{ "OriginRef", "EventType" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.ActorRef), global::Akka.Streams.Serialization.Proto.Msg.ActorRef.Parser, new[]{ "Path" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.Payload), global::Akka.Streams.Serialization.Proto.Msg.Payload.Parser, new[]{ "EnclosedMessage", "SerializerId", "MessageManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Streams.Serialization.Proto.Msg.OnSubscribeHandshake), global::Akka.Streams.Serialization.Proto.Msg.OnSubscribeHandshake.Parser, new[]{ "TargetRef" }, null, null, null),
@@ -55,6 +60,123 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
   }
   #region Messages
+  internal sealed partial class EventType : pb::IMessage<EventType> {
+    private static readonly pb::MessageParser<EventType> _parser = new pb::MessageParser<EventType>(() => new EventType());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<EventType> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[0]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public EventType() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public EventType(EventType other) : this() {
+      typeName_ = other.typeName_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public EventType Clone() {
+      return new EventType(this);
+    }
+
+    /// <summary>Field number for the "typeName" field.</summary>
+    public const int TypeNameFieldNumber = 1;
+    private string typeName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string TypeName {
+      get { return typeName_; }
+      set {
+        typeName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as EventType);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(EventType other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TypeName != other.TypeName) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TypeName.Length != 0) hash ^= TypeName.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (TypeName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TypeName);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (TypeName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TypeName);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(EventType other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TypeName.Length != 0) {
+        TypeName = other.TypeName;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            TypeName = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
   internal sealed partial class SinkRef : pb::IMessage<SinkRef> {
     private static readonly pb::MessageParser<SinkRef> _parser = new pb::MessageParser<SinkRef>(() => new SinkRef());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -62,7 +184,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[0]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -80,6 +202,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public SinkRef(SinkRef other) : this() {
       TargetRef = other.targetRef_ != null ? other.TargetRef.Clone() : null;
+      EventType = other.eventType_ != null ? other.EventType.Clone() : null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -98,6 +221,17 @@ namespace Akka.Streams.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "eventType" field.</summary>
+    public const int EventTypeFieldNumber = 2;
+    private global::Akka.Streams.Serialization.Proto.Msg.EventType eventType_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Streams.Serialization.Proto.Msg.EventType EventType {
+      get { return eventType_; }
+      set {
+        eventType_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as SinkRef);
@@ -112,6 +246,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
         return true;
       }
       if (!object.Equals(TargetRef, other.TargetRef)) return false;
+      if (!object.Equals(EventType, other.EventType)) return false;
       return true;
     }
 
@@ -119,6 +254,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       if (targetRef_ != null) hash ^= TargetRef.GetHashCode();
+      if (eventType_ != null) hash ^= EventType.GetHashCode();
       return hash;
     }
 
@@ -133,6 +269,10 @@ namespace Akka.Streams.Serialization.Proto.Msg {
         output.WriteRawTag(10);
         output.WriteMessage(TargetRef);
       }
+      if (eventType_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(EventType);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -140,6 +280,9 @@ namespace Akka.Streams.Serialization.Proto.Msg {
       int size = 0;
       if (targetRef_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(TargetRef);
+      }
+      if (eventType_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(EventType);
       }
       return size;
     }
@@ -154,6 +297,12 @@ namespace Akka.Streams.Serialization.Proto.Msg {
           targetRef_ = new global::Akka.Streams.Serialization.Proto.Msg.ActorRef();
         }
         TargetRef.MergeFrom(other.TargetRef);
+      }
+      if (other.eventType_ != null) {
+        if (eventType_ == null) {
+          eventType_ = new global::Akka.Streams.Serialization.Proto.Msg.EventType();
+        }
+        EventType.MergeFrom(other.EventType);
       }
     }
 
@@ -172,6 +321,13 @@ namespace Akka.Streams.Serialization.Proto.Msg {
             input.ReadMessage(targetRef_);
             break;
           }
+          case 18: {
+            if (eventType_ == null) {
+              eventType_ = new global::Akka.Streams.Serialization.Proto.Msg.EventType();
+            }
+            input.ReadMessage(eventType_);
+            break;
+          }
         }
       }
     }
@@ -185,7 +341,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -203,6 +359,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public SourceRef(SourceRef other) : this() {
       OriginRef = other.originRef_ != null ? other.OriginRef.Clone() : null;
+      EventType = other.eventType_ != null ? other.EventType.Clone() : null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -221,6 +378,17 @@ namespace Akka.Streams.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "eventType" field.</summary>
+    public const int EventTypeFieldNumber = 2;
+    private global::Akka.Streams.Serialization.Proto.Msg.EventType eventType_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Streams.Serialization.Proto.Msg.EventType EventType {
+      get { return eventType_; }
+      set {
+        eventType_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as SourceRef);
@@ -235,6 +403,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
         return true;
       }
       if (!object.Equals(OriginRef, other.OriginRef)) return false;
+      if (!object.Equals(EventType, other.EventType)) return false;
       return true;
     }
 
@@ -242,6 +411,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       if (originRef_ != null) hash ^= OriginRef.GetHashCode();
+      if (eventType_ != null) hash ^= EventType.GetHashCode();
       return hash;
     }
 
@@ -256,6 +426,10 @@ namespace Akka.Streams.Serialization.Proto.Msg {
         output.WriteRawTag(10);
         output.WriteMessage(OriginRef);
       }
+      if (eventType_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(EventType);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -263,6 +437,9 @@ namespace Akka.Streams.Serialization.Proto.Msg {
       int size = 0;
       if (originRef_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(OriginRef);
+      }
+      if (eventType_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(EventType);
       }
       return size;
     }
@@ -277,6 +454,12 @@ namespace Akka.Streams.Serialization.Proto.Msg {
           originRef_ = new global::Akka.Streams.Serialization.Proto.Msg.ActorRef();
         }
         OriginRef.MergeFrom(other.OriginRef);
+      }
+      if (other.eventType_ != null) {
+        if (eventType_ == null) {
+          eventType_ = new global::Akka.Streams.Serialization.Proto.Msg.EventType();
+        }
+        EventType.MergeFrom(other.EventType);
       }
     }
 
@@ -295,6 +478,13 @@ namespace Akka.Streams.Serialization.Proto.Msg {
             input.ReadMessage(originRef_);
             break;
           }
+          case 18: {
+            if (eventType_ == null) {
+              eventType_ = new global::Akka.Streams.Serialization.Proto.Msg.EventType();
+            }
+            input.ReadMessage(eventType_);
+            break;
+          }
         }
       }
     }
@@ -308,7 +498,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -425,7 +615,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -598,7 +788,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -721,7 +911,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -838,7 +1028,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -989,7 +1179,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1106,7 +1296,7 @@ namespace Akka.Streams.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Streams.Serialization.Proto.Msg.StreamRefMessagesReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

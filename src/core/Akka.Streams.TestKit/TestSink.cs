@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 
@@ -18,9 +19,12 @@ namespace Akka.Streams.TestKit
         /// <typeparam name="T"></typeparam>
         /// <param name="testKit"></param>
         /// <returns></returns>
-        public static Sink<T, TestSubscriber.Probe<T>> SinkProbe<T>(this TestKitBase testKit)
+        public static Sink<T, TestSubscriber.Probe<T>> SinkProbe<T>(this TestKitBase testKit) => 
+            SinkProbe<T>(testKit.Sys);
+
+        public static Sink<T, TestSubscriber.Probe<T>> SinkProbe<T>(ActorSystem system)
         {
-            return new Sink<T, TestSubscriber.Probe<T>>(new StreamTestKit.ProbeSink<T>(testKit, Attributes.None, new SinkShape<T>(new Inlet<T>("ProbeSink.in"))));
+            return new Sink<T, TestSubscriber.Probe<T>>(new StreamTestKit.ProbeSink<T>(system, Attributes.None, new SinkShape<T>(new Inlet<T>("ProbeSink.in"))));
         }
     }
 }

@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests
                 case "receive-32":
                 {
                     var t = StreamRefs.SinkRef<string>()
-                        .ToMaterialized(((TestKitBase)Context.System).SinkProbe<string>(), Keep.Both)
+                        .ToMaterialized(TestSink.SinkProbe<string>(Context.System), Keep.Both)
                         .Run(_materializer);
 
                     var sink = t.Item1;

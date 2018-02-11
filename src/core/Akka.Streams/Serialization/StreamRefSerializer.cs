@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
 using Akka.Streams.Implementation;
@@ -22,6 +23,7 @@ namespace Akka.Streams.Serialization
 {
     public sealed class StreamRefSerializer : SerializerWithStringManifest
     {
+        private readonly ExtendedActorSystem _system;
         private readonly Akka.Serialization.Serialization _serialization;
 
         private const string SequencedOnNextManifest = "A";
@@ -34,6 +36,7 @@ namespace Akka.Streams.Serialization
 
         public StreamRefSerializer(ExtendedActorSystem system) : base(system)
         {
+            _system = system;
             _serialization = system.Serialization;
         }
 
@@ -46,8 +49,8 @@ namespace Akka.Streams.Serialization
                 case OnSubscribeHandshake _: return OnSubscribeHandshakeManifest;
                 case RemoteStreamFailure _: return RemoteSinkFailureManifest;
                 case RemoteStreamCompleted _: return RemoteSinkCompletedManifest;
-                case ISourceRefImpl _: return SourceRefManifest;
-                case ISinkRefImpl _: return SinkRefManifest;
+                case SourceRefImpl _: return SourceRefManifest;
+                case SinkRefImpl _: return SinkRefManifest;
                 default: throw new ArgumentException($"Unsupported object of type {o.GetType()}", nameof(o));
             }
         }
@@ -61,8 +64,8 @@ namespace Akka.Streams.Serialization
                 case OnSubscribeHandshake handshake: return SerializeOnSubscribeHandshake(handshake).ToByteArray();
                 case RemoteStreamFailure failure: return SerializeRemoteStreamFailure(failure).ToByteArray();
                 case RemoteStreamCompleted completed: return SerializeRemoteStreamCompleted(completed).ToByteArray();
-                case ISourceRefImpl sourceRef: return SerializeSourceRef(sourceRef).ToByteArray();
-                case ISinkRefImpl sinkRef: return SerializeSinkRef(sinkRef).ToByteArray();
+                case SourceRefImpl sourceRef: return SerializeSourceRef(sourceRef).ToByteArray();
+                case SinkRefImpl sinkRef: return SerializeSinkRef(sinkRef).ToByteArray();
                 default: throw new ArgumentException($"Unsupported object of type {o.GetType()}", nameof(o));
             }
         }
@@ -82,54 +85,99 @@ namespace Akka.Streams.Serialization
             }
         }
 
-        private ISinkRefImpl DeserializeSinkRef(byte[] bytes)
+        private Type TypeFromProto(Proto.Msg.EventType eventType)
         {
-            var sinkRef = SinkRef.Parser.ParseFrom(bytes);
-            throw new NotImplementedException();
+            var typeName = eventType.TypeName;
+            return Type.GetType(typeName, throwOnError: true);
         }
 
-        private ISourceRefImpl DeserializeSourceRef(byte[] bytes)
+        private Proto.Msg.EventType TypeToProto(Type clrType) => new Proto.Msg.EventType
         {
-            throw new NotImplementedException();
+            TypeName = clrType.TypeQualifiedName()
+        };
+
+        private SinkRefImpl DeserializeSinkRef(byte[] bytes)
+        {
+            var sinkRef = SinkRef.Parser.ParseFrom(bytes);
+            var type = TypeFromProto(sinkRef.EventType);
+            var targetRef = _system.Provider.ResolveActorRef(sinkRef.TargetRef.Path);
+            return SinkRefImpl.Create(type, targetRef);
+        }
+
+        private SourceRefImpl DeserializeSourceRef(byte[] bytes)
+        {
+            var sourceRef = SourceRef.Parser.ParseFrom(bytes);
+            var type = TypeFromProto(sourceRef.EventType);
+            var originRef = _system.Provider.ResolveActorRef(sourceRef.OriginRef.Path);
+            return SourceRefImpl.Create(type, originRef);
         }
 
         private RemoteStreamCompleted DeserializeRemoteSinkCompleted(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var completed = Proto.Msg.RemoteStreamCompleted.Parser.ParseFrom(bytes);
+            return new RemoteStreamCompleted(completed.SeqNr);
         }
 
         private RemoteStreamFailure DeserializeRemoteSinkFailure(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var failure = Proto.Msg.RemoteStreamFailure.Parser.ParseFrom(bytes);
+            var errorMessage = Encoding.UTF8.GetString(failure.Cause.ToByteArray());
+            return new RemoteStreamFailure(errorMessage);
         }
 
         private OnSubscribeHandshake DeserializeOnSubscribeHandshake(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var handshake = Proto.Msg.OnSubscribeHandshake.Parser.ParseFrom(bytes);
+            var targetRef = _system.Provider.ResolveActorRef(handshake.TargetRef.Path);
+            return new OnSubscribeHandshake(targetRef);
         }
 
         private CumulativeDemand DeserializeCumulativeDemand(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var demand = Proto.Msg.CumulativeDemand.Parser.ParseFrom(bytes);
+            return new CumulativeDemand(demand.SeqNr);
         }
 
         private SequencedOnNext DeserializeSequenceOnNext(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var onNext = Proto.Msg.SequencedOnNext.Parser.ParseFrom(bytes);
+            var serializer = _serialization.GetSerializerById(onNext.Payload.SerializerId);
+            object payload;
+            if (onNext.Payload.MessageManifest != null)
+            {
+                var manifest = Encoding.UTF8.GetString(onNext.Payload.MessageManifest.ToByteArray());
+                if (serializer is SerializerWithStringManifest s)
+                {
+                    payload = s.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), manifest);
+                }
+                else
+                {
+                    var type = Type.GetType(manifest, throwOnError: true);
+                    payload = serializer.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), type);
+                }
+            }
+            else
+            {
+                payload = serializer.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), null);
+            }
+            
+            return new SequencedOnNext(onNext.SeqNr, payload);
         }
 
-        private ByteString SerializeSinkRef(ISinkRefImpl sinkRef) => new SinkRef
+        private ByteString SerializeSinkRef(SinkRefImpl sinkRef) => new SinkRef
         {
+            EventType = TypeToProto(sinkRef.EventType),
             TargetRef = new ActorRef
             {
                 Path = Akka.Serialization.Serialization.SerializedActorPath(sinkRef.InitialPartnerRef)
             }
         }.ToByteString();
 
-        private ByteString SerializeSourceRef(ISourceRefImpl sourceRef)
+        private ByteString SerializeSourceRef(SourceRefImpl sourceRef)
         {
             return new SourceRef
             {
+                EventType = TypeToProto(sourceRef.EventType),
                 OriginRef = new ActorRef
                 {
                     Path = Akka.Serialization.Serialization.SerializedActorPath(sourceRef.InitialPartnerRef)

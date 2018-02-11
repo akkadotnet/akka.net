@@ -201,41 +201,56 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// Marker interface used only for serialization of <see cref="SourceRefImpl{T}"/>.
+    /// Abstract class defined serialization purposes of <see cref="SourceRefImpl{T}"/>.
     /// </summary>
-    internal interface ISourceRefImpl 
+    internal abstract class SourceRefImpl 
     {
-        IActorRef InitialPartnerRef { get; }
-    }
-    internal sealed class SourceRefImpl<T> : ISourceRef<T>, ISourceRefImpl
-    {
-        public IActorRef InitialPartnerRef { get; }
-
-        public SourceRefImpl(IActorRef initialPartnerRef)
+        public static SourceRefImpl Create(Type eventType, IActorRef initialPartnerRef)
+        {
+            var destType = typeof(SourceRefImpl<>).MakeGenericType(eventType);
+            return (SourceRefImpl)Activator.CreateInstance(destType, initialPartnerRef);
+        }
+        
+        protected SourceRefImpl(IActorRef initialPartnerRef)
         {
             InitialPartnerRef = initialPartnerRef;
         }
 
+        public IActorRef InitialPartnerRef { get; }
+        public abstract Type EventType { get; }
+    }
+    internal sealed class SourceRefImpl<T> : SourceRefImpl, ISourceRef<T>
+    {
+        public SourceRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
+        public override Type EventType => typeof(T);
         public Source<T, NotUsed> Source => 
             Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
     }
 
     /// <summary>
-    /// Marker interface used only for serialization of <see cref="SinkRefImpl{T}"/>.
+    /// Abstract class defined serialization purposes of <see cref="SinkRefImpl{T}"/>.
     /// </summary>
-    internal interface ISinkRefImpl
+    internal abstract class SinkRefImpl
     {
-        IActorRef InitialPartnerRef { get; }
-    }
-    internal sealed class SinkRefImpl<T> : ISinkRef<T>, ISinkRefImpl
-    {
-        public IActorRef InitialPartnerRef { get; }
-
-        public SinkRefImpl(IActorRef initialPartnerRef)
+        public static SinkRefImpl Create(Type eventType, IActorRef initialPartnerRef)
+        {
+            var destType = typeof(SinkRefImpl<>).MakeGenericType(eventType);
+            return (SinkRefImpl)Activator.CreateInstance(destType, initialPartnerRef);
+        }
+        
+        protected SinkRefImpl(IActorRef initialPartnerRef)
         {
             InitialPartnerRef = initialPartnerRef;
         }
 
+        public IActorRef InitialPartnerRef { get; }
+        public abstract Type EventType { get; }
+    }
+    
+    internal sealed class SinkRefImpl<T> : SinkRefImpl, ISinkRef<T>
+    {
+        public SinkRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
+        public override Type EventType => typeof(T);
         public Sink<T, NotUsed> Sink => Dsl.Sink.FromGraph(new SinkRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
     }
     
