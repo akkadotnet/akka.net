@@ -301,7 +301,7 @@ namespace Akka.Streams.Tests.Dsl
                 private readonly SumTestStage _stage;
                 private readonly TaskCompletionSource<int> _promise;
                 private int _sum;
-                private StageActorRef _self;
+                private IActorRef Self => StageActor.Ref;
 
                 public Logic(SumTestStage stage, TaskCompletionSource<int> promise) : base(stage.Shape)
                 {
@@ -327,8 +327,8 @@ namespace Akka.Streams.Tests.Dsl
                 public override void PreStart()
                 {
                     Pull(_stage._inlet);
-                    _self = GetStageActorRef(Behaviour);
-                    _stage._probe.Tell(_self);
+                    GetStageActor(Behaviour);
+                    _stage._probe.Tell(Self);
                 }
 
                 private void Behaviour(Tuple<IActorRef, object> args)
@@ -339,8 +339,8 @@ namespace Akka.Streams.Tests.Dsl
                     msg.Match()
                         .With<Add>(a => _sum += a.N)
                         .With<PullNow>(() => Pull(_stage._inlet))
-                        .With<CallInitStageActorRef>(() => sender.Tell(GetStageActorRef(Behaviour), _self))
-                        .With<BecomeStringEcho>(() => GetStageActorRef(tuple => tuple.Item1.Tell(tuple.Item2.ToString())))
+                        .With<CallInitStageActorRef>(() => sender.Tell(GetStageActor(Behaviour), Self))
+                        .With<BecomeStringEcho>(() => GetStageActor(tuple => tuple.Item1.Tell(tuple.Item2.ToString())))
                         .With<StopNow>(() =>
                         {
                             _promise.TrySetResult(_sum);
@@ -348,9 +348,9 @@ namespace Akka.Streams.Tests.Dsl
                         }).With<AddAndTell>(a =>
                         {
                             _sum += a.N;
-                            sender.Tell(_sum, _self);
+                            sender.Tell(_sum, Self);
                         })
-                        .With<WatchMe>(w => _self.Watch(w.Watchee))
+                        .With<WatchMe>(w => StageActor.Watch(w.Watchee))
                         .With<Terminated>(t => _stage._probe.Tell(new WatcheeTerminated(t.ActorRef)));
                 }
             }
