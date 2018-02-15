@@ -356,12 +356,6 @@ Target "PublishMntr" (fun _ ->
                     VersionSuffix = versionSuffix }))
 )
 
-//--------------------------------------------------------------------------------
-// Clean nuget directory
-
-Target "CleanNuget" <| fun _ ->
-    CleanDir nugetDir
-
 Target "CreateMntrNuget" (fun _ -> 
     // uses the template file to create a temporary .nuspec file with the correct version
     CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
