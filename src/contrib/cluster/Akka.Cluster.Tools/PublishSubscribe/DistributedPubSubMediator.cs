@@ -220,7 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
-                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
+                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && !valueHolder.Ref.IsNobody())
                     {
                         Context.Unwatch(valueHolder.Ref);
                         PutToRegistry(remove.Path, null);
@@ -371,7 +371,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<ClusterEvent.IMemberEvent>(_ => { /* ignore */ });
             Receive<Count>(_ =>
             {
-                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => kv.Value.Ref != null));
+                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => !kv.Value.Ref.IsNobody()));
                 Sender.Tell(count);
             });
             Receive<DeltaCount>(_ =>
@@ -488,7 +488,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                     if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
                     {
-                        if (valueHolder != null && !Equals(valueHolder.Ref, ActorRefs.Nobody))
+                        if (valueHolder != null && !valueHolder.Ref.IsNobody())
                             yield return valueHolder.Ref;
                     }
                 }
@@ -549,7 +549,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var bucket = entry.Value;
 
                 var oldRemoved = bucket.Content
-                    .Where(kv => (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
+                    .Where(kv => kv.Value.Ref.IsNobody() && (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
                     .Select(kv => kv.Key);
 
                 if (oldRemoved.Any())
