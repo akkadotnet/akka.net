@@ -223,7 +223,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && !valueHolder.Ref.IsNobody())
                     {
                         Context.Unwatch(valueHolder.Ref);
-                        PutToRegistry(remove.Path, ActorRefs.Nobody);
+                        PutToRegistry(remove.Path, null);
                     }
                 }
             });
@@ -329,7 +329,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                     if (bucket.Content.TryGetValue(key, out var holder) && terminated.ActorRef.Equals(holder.Ref))
-                        PutToRegistry(key, ActorRefs.Nobody); // remove
+                        PutToRegistry(key, null); // remove
 
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
             });
