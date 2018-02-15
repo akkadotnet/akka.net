@@ -2384,7 +2384,7 @@ namespace Akka.Streams.Stage
             StageActorRef.Receive initialReceive,
             string name = null)
         {
-            _callback = getAsyncCallback(initialReceive);
+            _callback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
 
             switch (materializer.Supervisor)
@@ -2400,7 +2400,7 @@ namespace Akka.Streams.Stage
                 {
                     case PoisonPill _:
                     case Kill _:
-                        materializer.Logger.Warning("{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor." +
+                        materializer.Logger.Warning("{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor. " +
                                                     "Use a custom message type to communicate with it instead.", message, _functionRef.Path);
                         break;
                     default: _callback(Tuple.Create(sender, message)); break;
