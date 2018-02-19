@@ -265,7 +265,7 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();
             var result = await actor.Ask<Status.Failure>("return-cancelled", timeout: TimeSpan.FromSeconds(3));
-            result.IsCancelled.ShouldBe(true);
+            result.Cause.ShouldBe(null);
         }
     }
 }

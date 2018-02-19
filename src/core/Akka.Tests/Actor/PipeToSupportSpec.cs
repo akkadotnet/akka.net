@@ -81,7 +81,7 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor);
             _taskWithoutResult.PipeTo(TestActor, failure: e => $"Exception found: [{e}]" );
             _taskCompletionSource.SetCanceled();
-            ExpectMsg<Status.Failure>(x => x.IsCancelled && x.Cause == null);
+            ExpectMsg<Status.Failure>(x => x.Cause == null);
             ExpectMsg("Exception found: []");
         }
     }

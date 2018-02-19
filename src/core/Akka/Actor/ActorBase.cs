@@ -38,8 +38,9 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// Indicates the failure of some operation that was requested and includes an
-        /// <see cref="Exception"/> describing the underlying cause of the problem.
+        /// Indicates the failure of some operation that was requested and includes an <see cref="Exception"/>
+        /// describing the underlying cause of the problem. It is possible for a <see cref="Cause"/> to return null -
+        /// this case indicates, that operation which produced a failure message, has been prematurely cancelled. 
         /// </summary>
         public class Failure : Status
         {
@@ -56,11 +57,6 @@ namespace Akka.Actor
             {
                 Cause = cause;
             }
-
-            /// <summary>
-            /// Checks if a provided failure message was a result of cancelled operation.
-            /// </summary>
-            public bool IsCancelled => Cause == null;
 
             /// <inheritdoc/>
             public override string ToString() => $"Failure: {Cause}";

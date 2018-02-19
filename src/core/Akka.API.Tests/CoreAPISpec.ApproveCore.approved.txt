@@ -1653,7 +1653,6 @@ namespace Akka.Actor
         {
             public readonly System.Exception Cause;
             public Failure(System.Exception cause) { }
-            public bool IsCancelled { get; }
             public override string ToString() { }
         }
         public class Success : Akka.Actor.Status
