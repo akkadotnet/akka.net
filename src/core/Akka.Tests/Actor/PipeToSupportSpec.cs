@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -29,7 +30,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_by_default_send_task_result_as_message()
+        public void PipeTo_should_by_default_send_task_result_as_message()
         {
             _task.PipeTo(TestActor);
             _taskCompletionSource.SetResult("Hello");
@@ -37,7 +38,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
+        public void PipeTo_should_by_default_not_send_a_success_message_if_the_task_does_not_produce_a_result()
         {
             _taskWithoutResult.PipeTo(TestActor);
             _taskCompletionSource.SetResult("Hello");
@@ -45,7 +46,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_by_default_send_task_exception_as_status_failure_message()
+        public void PipeTo_should_by_default_send_task_exception_as_status_failure_message()
         {
             _task.PipeTo(TestActor);
             _taskWithoutResult.PipeTo(TestActor);
@@ -55,7 +56,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_use_success_handling_to_transform_task_result()
+        public void PipeTo_should_use_success_handling_to_transform_task_result()
         {
             _task.PipeTo(TestActor, success: x => "Hello " + x);
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
@@ -65,13 +66,23 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Should_use_failure_handling_to_transform_task_exception()
+        public void PipeTo_should_use_failure_handling_to_transform_task_exception()
         {
             _task.PipeTo(TestActor, failure: e => "Such a " + e.InnerException.Message);
             _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.InnerException.Message);
             _taskCompletionSource.SetException(new Exception("failure..."));
             ExpectMsg("Such a failure...");
             ExpectMsg("Such a failure...");
+        }
+
+        [Fact]
+        public void PipeTo_should_by_default_inform_about_task_cancellation()
+        {
+            _task.PipeTo(TestActor);
+            _taskWithoutResult.PipeTo(TestActor, failure: e => $"Exception found: [{e}]" );
+            _taskCompletionSource.SetCanceled();
+            ExpectMsg<Status.Failure>(x => x.IsCancelled && x.Cause == null);
+            ExpectMsg("Exception found: []");
         }
     }
 }

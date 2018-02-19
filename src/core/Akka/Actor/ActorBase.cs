@@ -57,11 +57,13 @@ namespace Akka.Actor
                 Cause = cause;
             }
 
+            /// <summary>
+            /// Checks if a provided failure message was a result of cancelled operation.
+            /// </summary>
+            public bool IsCancelled => Cause == null;
+
             /// <inheritdoc/>
-            public override string ToString()
-            {
-                return $"Failure: {Cause}";
-            }
+            public override string ToString() => $"Failure: {Cause}";
         }
     }
 
