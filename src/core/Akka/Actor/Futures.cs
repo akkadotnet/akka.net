@@ -117,11 +117,22 @@ namespace Akka.Actor
             if (result is Status.Failure f && typeof(T) != FailureType)
             {
                 // if failure was result of cancelled task, exception will be null
-                var cause = f.Cause?.InnerException ?? new TaskCanceledException();
+                var cause = GetCauseOrCancelled(f.Cause);
                 ExceptionDispatchInfo.Capture(cause).Throw();
                 return default(T);
             }
             else return (T) result;
+        }
+
+        private static Exception GetCauseOrCancelled(Exception e)
+        {
+            // a result of asynchronous task forward, unwrap it
+            if (e is AggregateException aggregate && aggregate.InnerExceptions.Count == 1)
+            {
+                e = aggregate.InnerExceptions[0];
+            }
+            
+            return e ?? new TaskCanceledException();
         }
 
         /// <summary>
