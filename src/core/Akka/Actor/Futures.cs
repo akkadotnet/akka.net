@@ -117,7 +117,7 @@ namespace Akka.Actor
             if (result is Status.Failure f && typeof(T) != FailureType)
             {
                 // if failure was result of cancelled task, exception will be null
-                var cause = f.Cause ?? new TaskCanceledException();
+                var cause = f.Cause?.InnerException ?? new TaskCanceledException();
                 ExceptionDispatchInfo.Capture(cause).Throw();
                 return default(T);
             }

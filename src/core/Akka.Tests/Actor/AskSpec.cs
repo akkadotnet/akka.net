@@ -225,17 +225,19 @@ namespace Akka.Tests.Actor
         }
         
         [Fact]
-        public void Generic_Ask_when_Failure_is_returned_should_throw_error_payload_and_preserve_stack_trace()
+        public async Task Generic_Ask_when_Failure_is_returned_should_throw_error_payload_and_preserve_stack_trace()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var aggregateException = Assert.Throws<AggregateException>(() =>
+
+            try
             {
-                var result = actor.Ask<string>("throw", timeout: TimeSpan.FromSeconds(3)).Result;
-            });
-            var exception = aggregateException.Flatten().InnerException;
-            exception.GetType().ShouldBe(typeof(ExpectedTestException));
-            exception.Message.ShouldBe("BOOM!");
-            exception.StackTrace.Contains(nameof(SomeActor.ThrowNested)).ShouldBeTrue("stack trace should be preserved");
+                await actor.Ask<string>("throw", timeout: TimeSpan.FromSeconds(3));
+            }
+            catch (ExpectedTestException exception)
+            {
+                exception.Message.ShouldBe("BOOM!");
+                exception.StackTrace.Contains(nameof(SomeActor.ThrowNested)).ShouldBeTrue("stack trace should be preserved");
+            }
         }
         
         [Fact]
@@ -252,12 +254,10 @@ namespace Akka.Tests.Actor
         public async Task Generic_Ask_when_asker_task_was_cancelled_and_should_fail()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var aggregateException = Assert.Throws<AggregateException>(() =>
+            await Assert.ThrowsAsync<TaskCanceledException>(async () =>
             {
-                var result = actor.Ask<string>("return-cancelled", timeout: TimeSpan.FromSeconds(3)).Result;
+                var result = await actor.Ask<string>("return-cancelled", timeout: TimeSpan.FromSeconds(3));
             });
-            var exception = aggregateException.Flatten().InnerException;
-            exception.GetType().ShouldBe(typeof(TaskCanceledException));
         }
         
         [Fact]
