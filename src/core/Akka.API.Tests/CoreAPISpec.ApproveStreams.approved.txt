@@ -4127,7 +4127,9 @@ namespace Akka.Streams.Stage
         public Akka.Event.ILoggingAdapter Log { get; }
         protected object LogSource { get; }
         protected Akka.Streams.IMaterializer Materializer { get; }
-        public Akka.Streams.Stage.StageActorRef StageActorRef { get; }
+        public Akka.Streams.Stage.StageActor StageActor { get; }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        protected virtual string StageActorName { get; }
         protected Akka.Streams.IMaterializer SubFusingMaterializer { get; }
         protected internal void AbortEmitting<T>(Akka.Streams.Outlet<T> outlet) { }
         protected void AbortReading<T>(Akka.Streams.Inlet<T> inlet) { }
@@ -4152,7 +4154,7 @@ namespace Akka.Streams.Stage
         protected Akka.Streams.Stage.IInHandler GetHandler<T>(Akka.Streams.Inlet<T> inlet) { }
         protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
-        protected Akka.Streams.Stage.StageActorRef GetStageActorRef(Akka.Streams.Stage.StageActorRef.Receive receive) { }
+        protected Akka.Streams.Stage.StageActor GetStageActor(Akka.Streams.Stage.StageActorRef.Receive receive) { }
         protected internal T Grab<T>(Akka.Streams.Inlet<T> inlet) { }
         protected bool HasBeenPulled<T>(Akka.Streams.Inlet<T> inlet) { }
         protected internal bool IsAvailable<T>(Akka.Streams.Inlet<T> inlet) { }
@@ -4400,21 +4402,17 @@ namespace Akka.Streams.Stage
         protected PushStage() { }
         public virtual Akka.Streams.Stage.ISyncDirective OnPull(Akka.Streams.Stage.IContext<TOut> context) { }
     }
-    public sealed class StageActorRef : Akka.Actor.MinimalActorRef
+    public sealed class StageActor
     {
-        public readonly Akka.Event.ILoggingAdapter Log;
-        public static readonly Akka.Streams.Implementation.EnumerableActorName Name;
-        public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> StageTerminatedTombstone;
-        public StageActorRef(Akka.Actor.IActorRefProvider provider, Akka.Event.ILoggingAdapter log, System.Func<Akka.Streams.Stage.StageActorRef.Receive, System.Action<System.Tuple<Akka.Actor.IActorRef, object>>> getAsyncCallback, Akka.Streams.Stage.StageActorRef.Receive initialReceive, Akka.Actor.ActorPath path) { }
-        public override bool IsTerminated { get; }
-        public override Akka.Actor.ActorPath Path { get; }
-        public override Akka.Actor.IActorRefProvider Provider { get; }
-        public void Become(Akka.Streams.Stage.StageActorRef.Receive behavior) { }
-        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
-        public override void Stop() { }
-        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+        public StageActor(Akka.Streams.ActorMaterializer materializer, System.Func<Akka.Streams.Stage.StageActorRef.Receive, System.Action<System.Tuple<Akka.Actor.IActorRef, object>>> getAsyncCallback, Akka.Streams.Stage.StageActorRef.Receive initialReceive, string name = null) { }
+        public Akka.Actor.IActorRef Ref { get; }
+        public void Become(Akka.Streams.Stage.StageActorRef.Receive receive) { }
+        public void Stop() { }
         public void Unwatch(Akka.Actor.IActorRef actorRef) { }
         public void Watch(Akka.Actor.IActorRef actorRef) { }
+    }
+    public class static StageActorRef
+    {
         public delegate void Receive(System.Tuple<Akka.Actor.IActorRef, object> args);
     }
     public class StageActorRefNotInitializedException : System.Exception
