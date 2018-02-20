@@ -1,7 +1,12 @@
 ﻿$lineBreak = "`r`n"
 $currentYear = get-date -Format yyyy
-$noticeTemplate = "//-----------------------------------------------------------------------$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-$currentYear Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-$currentYear .NET Foundation <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak//-----------------------------------------------------------------------$lineBreak$lineBreak"
+$copyRightBoundary = "//-----------------------------------------------------------------------"
+$noticeTemplate = "$copyRightBoundary$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-$currentYear Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-$currentYear .NET Foundation <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak$copyRightBoundary$lineBreak$lineBreak"
 $tokenToReplace = [regex]::Escape("[FileName]")
+
+
+$escapedBoundary = [regex]::Escape($copyRightBoundary)
+$currentHeaderRegex = [regex]"($escapedBoundary)(.*)($escapedBoundary)"
 
 Function CreateFileSpecificNotice($sourcePath){
     $fileName = Split-Path $sourcePath -Leaf
@@ -10,10 +15,8 @@ Function CreateFileSpecificNotice($sourcePath){
 }
 
 Function SourceFileContainsNotice($sourcePath){
-    $copyrightSnippet = [regex]::Escape("<copyright")
-
     $fileSpecificNotice = CreateFileSpecificNotice($sourcePath)
-    $arrMatchResults = Get-Content $sourcePath | Select-String $copyrightSnippet
+    $arrMatchResults = Get-Content $sourcePath | Select-String $fileSpecificNotice
 
     if ($arrMatchResults -ne $null -and $arrMatchResults.count -gt 0){
         return $true 
@@ -30,15 +33,26 @@ Function AddHeaderToSourceFile($sourcePath) {
     # "Contains notice: $containsNotice"
 
     if ($containsNotice){
-        #"Source file already contains notice -- not adding"
+        #"Source file already contains correct notice"
     }
     else {
-        #"Source file does not contain notice -- adding"
+        #"Source file does not contain notice -- adding or replacing"
         $noticeToInsert = CreateFileSpecificNotice($sourcePath)
+        $copyrightSnippet = [regex]::Escape("<copyright")
 
         $fileLines = (Get-Content $sourcePath) -join $lineBreak
+
+        $arrMatchResults = $fileLines | Select-String $copyrightSnippet
+
+        if ($arrMatchResults -ne $null -and $arrMatchResults.count -gt 0){
+            $content = $noticeToInsert + $fileLines + $lineBreak
+        }
+        else{ 
+            # don't have any copyright header
+            $content = ([regex]::replace($fileLines, $currentHeaderRegex, $noticeToInsert)) + $lineBreak
+        }
     
-        $content = $noticeToInsert + $fileLines + $lineBreak
+        
 
         $content | Out-File $sourcePath -Encoding utf8
 
