@@ -14,9 +14,8 @@ Function CreateFileSpecificNotice($sourcePath){
     return $fileSpecificNotice
 }
 
-Function SourceFileContainsNotice($sourcePath){
-    $fileSpecificNotice = CreateFileSpecificNotice($sourcePath)
-    $arrMatchResults = Get-Content $sourcePath | Select-String $fileSpecificNotice
+Function SourceFileContainsNotice($sourcePath, $notice){
+    $arrMatchResults = Get-Content $sourcePath | Select-String $notice
 
     if ($arrMatchResults -ne $null -and $arrMatchResults.count -gt 0){
         return $true 
@@ -29,7 +28,9 @@ Function SourceFileContainsNotice($sourcePath){
 Function AddHeaderToSourceFile($sourcePath) {
     # "Source path is: $sourcePath"
     
-    $containsNotice = SourceFileContainsNotice($sourcePath)
+    $noticeToInsert = CreateFileSpecificNotice($sourcePath)
+    $copyrightSnippet = [regex]::Escape("<copyright")
+    $containsNotice = SourceFileContainsNotice($sourcePath, $noticeToInsert)
     # "Contains notice: $containsNotice"
 
     if ($containsNotice){
@@ -37,21 +38,18 @@ Function AddHeaderToSourceFile($sourcePath) {
     }
     else {
         #"Source file does not contain notice -- adding or replacing"
-        $noticeToInsert = CreateFileSpecificNotice($sourcePath)
-        $copyrightSnippet = [regex]::Escape("<copyright")
+        $containsAnyNotice = SourceFileContainsNotice($sourcePath, $copyrightSnippet)
 
-        $fileLines = (Get-Content $sourcePath) -join $lineBreak
+        $fileLines = (Get-Content $sourcePath) -join $lineBreak        
 
-        $arrMatchResults = $fileLines | Select-String $copyrightSnippet
-
-        if ($arrMatchResults -ne $null -and $arrMatchResults.count -gt 0){
+        if ($containsNotice){
             Write-Host "$sourcePath has no headers. Adding them"
-            $content = $noticeToInsert + $fileLines + $lineBreak
+            $content = $noticeToInsert + $fileLines
         }
         else{ 
-             Write-Host "$sourcePath has pre-existing headers. Replacing them."
+            Write-Host "$sourcePath has pre-existing headers. Replacing them."
             # don't have any copyright header
-            $content = ([regex]::replace($fileLines, $currentHeaderRegex, $noticeToInsert)) + $lineBreak
+            $content = ([regex]::replace($fileLines, $currentHeaderRegex, $noticeToInsert))
         }
     
         
