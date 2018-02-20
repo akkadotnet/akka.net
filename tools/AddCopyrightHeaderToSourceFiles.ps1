@@ -1,5 +1,6 @@
 ﻿$lineBreak = "`r`n"
-$noticeTemplate = "//-----------------------------------------------------------------------$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak//-----------------------------------------------------------------------$lineBreak$lineBreak"
+$currentYear = get-date -Format yyyy
+$noticeTemplate = "//-----------------------------------------------------------------------$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-$currentYear Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-$currentYear .NET Foundation <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak//-----------------------------------------------------------------------$lineBreak$lineBreak"
 $tokenToReplace = [regex]::Escape("[FileName]")
 
 Function CreateFileSpecificNotice($sourcePath){
