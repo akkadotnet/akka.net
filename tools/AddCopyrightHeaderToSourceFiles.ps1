@@ -45,9 +45,11 @@ Function AddHeaderToSourceFile($sourcePath) {
         $arrMatchResults = $fileLines | Select-String $copyrightSnippet
 
         if ($arrMatchResults -ne $null -and $arrMatchResults.count -gt 0){
+            Write-Host "$sourcePath has no headers. Adding them"
             $content = $noticeToInsert + $fileLines + $lineBreak
         }
         else{ 
+             Write-Host "$sourcePath has pre-existing headers. Replacing them."
             # don't have any copyright header
             $content = ([regex]::replace($fileLines, $currentHeaderRegex, $noticeToInsert)) + $lineBreak
         }
