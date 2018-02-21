@@ -187,7 +187,7 @@ namespace Akka.Streams.Tests
                 provider = remote
                 serialize-messages = off
               }}
-              remote.netty.tcp {{
+              remote.dot-netty.tcp {{
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}
@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests
         protected StreamRefsSpec(Config config, ITestOutputHelper output = null) : base(config, output)
         {
             Materializer = Sys.Materializer();
-            RemoteSystem = ActorSystem.Create("remote-system", Sys.Settings.Config);
+            RemoteSystem = ActorSystem.Create("remote-system", Config());
             InitializeLogger(RemoteSystem);
             _probe = CreateTestProbe();
 
@@ -246,7 +246,7 @@ namespace Akka.Streams.Tests
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
 
             var f = _probe.ExpectMsg<Status.Failure>();
-            f.Cause.Message.Should().Contain("Remote stream(");
+            f.Cause.Message.Should().Contain("Remote stream (");
             f.Cause.Message.Should().Contain("Boom!");
         }
 
@@ -278,7 +278,7 @@ namespace Akka.Streams.Tests
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             probe.Request(20);
-            probe.ExpectNextN(Enumerable.Range(1, 20).Select(i => "ping-" + i));
+            probe.ExpectNextN(Enumerable.Range(1, 20).Select(i => "ping-" + (i + 1)));
             probe.Cancel();
 
             // since no demand anyway
@@ -366,14 +366,14 @@ namespace Akka.Streams.Tests
 
             var probe = this.SourceProbe<string>().To(remoteSink.Sink).Run(Materializer);
 
-            var failure = _probe.ExpectMsg<Failure>();
-            failure.Exception.Message.Should().Contain("Remote side did not subscribe (materialize) handed out Sink reference");
+            var failure = _probe.ExpectMsg<Status.Failure>();
+            failure.Cause.Message.Should().Contain("Remote side did not subscribe (materialize) handed out Sink reference");
             
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
             probe.ExpectCancellation();
         }
 
-        [Fact]
+        [Fact(Skip="FIXME: how to pass test assertions to remote system?")]
         public void SinkRef_must_respect_backpressure_implied_by_origin_Sink()
         {
             _remoteActor.Tell("receive-32");

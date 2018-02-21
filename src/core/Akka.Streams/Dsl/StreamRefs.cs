@@ -271,13 +271,20 @@ namespace Akka.Streams.Implementation
             
             private readonly SinkRefStageImpl<TIn> _stage;
             private readonly TaskCompletionSource<ISourceRef<TIn>> _promise;
+            private readonly Attributes _inheritedAttributes;
+
+            private StreamRefsMaster _streamRefsMaster;
+            private StreamRefSettings _settings;
+            private StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
+            private string _stageActorName;
             
-            private readonly StreamRefsMaster _streamRefsMaster;
-            private readonly StreamRefSettings _settings;
-            private readonly StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
-            private readonly string _stageActorName;
+            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ?? (_streamRefsMaster = StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System));
+            private StreamRefSettings Settings => _settings ?? (_settings = ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings);
+            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ?? (_subscriptionTimeout = 
+                                                                                       _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout)));
+            protected override string StageActorName => _stageActorName ?? (_stageActorName = StreamRefsMaster.NextSinkRefName());
             
-            private StageActorRef _self;
+            private StageActor _stageActor;
 
             private IActorRef _partnerRef = null;
 
@@ -287,7 +294,8 @@ namespace Akka.Streams.Implementation
             #endregion
 
             private Status _completedBeforeRemoteConnected = null;
-            
+
+            public IActorRef Self => _stageActor.Ref;
             public IActorRef PartnerRef
             {
                 get
@@ -297,16 +305,12 @@ namespace Akka.Streams.Implementation
                 }
             }
             
-            public Logic(SinkRefStageImpl<TIn> stage, TaskCompletionSource<ISourceRef<TIn>> promise) : base(stage.Shape)
+            public Logic(SinkRefStageImpl<TIn> stage, TaskCompletionSource<ISourceRef<TIn>> promise,
+                Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
                 _promise = promise;
-
-                var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                _streamRefsMaster = StreamRefsMaster.Get(materializer.System);
-                _settings = materializer.Settings.StreamRefSettings;
-                _subscriptionTimeout = _stage.InitialAttributes.GetAttribute<StreamRefAttributes.SubscriptionTimeout>();
-                _stageActorName = _streamRefsMaster.NextSinkRefName();
+                _inheritedAttributes = inheritedAttributes;
                 
                 this.SetHandler(_stage.Inlet, 
                     onPush: OnPush,
@@ -316,22 +320,22 @@ namespace Akka.Streams.Implementation
 
             public override void PreStart()
             {
-                _self = GetStageActorRef(InitialReceive);
+                _stageActor = GetStageActor(InitialReceive);
                 var initialPartnerRef = _stage._initialPartnerRef;
                 if (initialPartnerRef != null)
                     ObserveAndValidateSender(initialPartnerRef, "Illegal initialPartnerRef! This would be a bug in the SinkRef usage or impl.");
                 
-                Log.Debug("Created SinkRef, pointing to remote Sink receiver: {0}, local worker: {1}", initialPartnerRef, _self);
+                Log.Debug("Created SinkRef, pointing to remote Sink receiver: {0}, local worker: {1}", initialPartnerRef, Self);
                 
-                _promise.SetResult(new SourceRefImpl<TIn>(_self));
+                _promise.SetResult(new SourceRefImpl<TIn>(Self));
 
                 if (_partnerRef != null)
                 {
-                    _partnerRef.Tell(new OnSubscribeHandshake(_self));
+                    _partnerRef.Tell(new OnSubscribeHandshake(Self), Self);
                     TryPull();
                 }
                 
-                ScheduleOnce(SubscriptionTimeoutKey, _subscriptionTimeout.Timeout);
+                ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
             }
 
             private void InitialReceive(Tuple<IActorRef, object> args)
@@ -342,8 +346,8 @@ namespace Akka.Streams.Implementation
                 switch (message)
                 {
                     case Terminated terminated:
-                        if (terminated.ActorRef == PartnerRef)
-                            FailStage(new RemoteStreamRefActorTerminatedException("Remote target receiver of data $partnerRef terminated. " + 
+                        if (Equals(terminated.ActorRef, PartnerRef))
+                            FailStage(new RemoteStreamRefActorTerminatedException($"Remote target receiver of data {PartnerRef} terminated. " + 
                                                                                   "Local stream terminating, message loss (on remote side) may have happened."));
                         break;
                     case CumulativeDemand demand:
@@ -362,7 +366,7 @@ namespace Akka.Streams.Implementation
             private void OnPush()
             {
                 var element = GrabSequenced(_stage.Inlet);
-                PartnerRef.Tell(element);
+                PartnerRef.Tell(element, Self);
                 Log.Debug("Sending sequenced: {0} to {1}", element, PartnerRef);
                 TryPull();
             }
@@ -377,10 +381,10 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (timerKey == SubscriptionTimeoutKey)
+                if ((string)timerKey == SubscriptionTimeoutKey)
                 {
                     // we know the future has been competed by now, since it is in preStart
-                    var ex = new StreamRefSubscriptionTimeoutException($"[{_stageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [${_promise.Task.Result}], " +
+                    var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [${_promise.Task.Result}], " +
                                                                        "within subscription timeout: ${PrettyDuration.format(subscriptionTimeout.timeout)}!");
 
                     throw ex; // this will also log the exception, unlike failStage; this should fail rarely, but would be good to have it "loud"
@@ -398,8 +402,8 @@ namespace Akka.Streams.Implementation
             {
                 if (_partnerRef != null)
                 {
-                    _partnerRef.Tell(new RemoteStreamFailure(cause.ToString()));
-                    _self.Unwatch(_partnerRef);
+                    _partnerRef.Tell(new RemoteStreamFailure(cause.ToString()), Self);
+                    _stageActor.Unwatch(_partnerRef);
                     FailStage(cause);
                 }
                 else
@@ -415,8 +419,8 @@ namespace Akka.Streams.Implementation
             {
                 if (_partnerRef != null)
                 {
-                    _partnerRef.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed));
-                    _self.Unwatch(_partnerRef);
+                    _partnerRef.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed), Self);
+                    _stageActor.Unwatch(_partnerRef);
                     CompleteStage();
                 }
                 else
@@ -432,25 +436,25 @@ namespace Akka.Streams.Implementation
                 if (_partnerRef == null)
                 {
                     _partnerRef = partner;
-                    _self.Watch(_partnerRef);
+                    _stageActor.Watch(_partnerRef);
 
                     switch (_completedBeforeRemoteConnected)
                     {
                         case Status.Failure failure:
                             Log.Warning("Stream already terminated with exception before remote side materialized, failing now.");
-                            partner.Tell(new RemoteStreamFailure(failure.Cause.ToString()));
+                            partner.Tell(new RemoteStreamFailure(failure.Cause.ToString()), Self);
                             FailStage(failure.Cause);
                             break;
                         case Status.Success _:
                             Log.Warning("Stream already completed before remote side materialized, failing now.");
-                            partner.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed));
+                            partner.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed), Self);
                             CompleteStage();
                             break;
                         case null:
                             if (!Equals(partner, PartnerRef))
                             {
                                 var ex = new InvalidPartnerActorException(partner, PartnerRef, failureMessage);
-                                partner.Tell(new RemoteStreamFailure(ex.ToString()));
+                                partner.Tell(new RemoteStreamFailure(ex.ToString()), Self);
                                 throw ex;
                             }
                             break;
@@ -466,6 +470,7 @@ namespace Akka.Streams.Implementation
         public SinkRefStageImpl(IActorRef initialPartnerRef)
         {
             _initialPartnerRef = initialPartnerRef;
+            Shape = new SinkShape<TIn>(Inlet);
         }
 
         public Inlet<TIn> Inlet { get; } = new Inlet<TIn>("SinkRef.in");
@@ -473,7 +478,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<ISourceRef<TIn>>();
-            return new LogicAndMaterializedValue<Task<ISourceRef<TIn>>>(new Logic(this, promise), promise.Task);
+            return new LogicAndMaterializedValue<Task<ISourceRef<TIn>>>(new Logic(this, promise, inheritedAttributes), promise.Task);
         }
     }
     
@@ -496,15 +501,23 @@ namespace Akka.Streams.Implementation
             
             private readonly SourceRefStageImpl<TOut> _stage;
             private readonly TaskCompletionSource<ISinkRef<TOut>> _promise;
+            private readonly Attributes _inheritedAttributes;
+
+            private StreamRefsMaster _streamRefsMaster;
+            private StreamRefSettings _settings;
+            private StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
+            private string _stageActorName;
             
-            private readonly StreamRefsMaster _streamRefsMaster;
-            private readonly StreamRefSettings _settings;
-            private readonly StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
-            private readonly string _stageActorName;
-            
-            private StageActorRef _self;
+            private StageActor _stageActor;
             private IActorRef _partnerRef = null;
 
+            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ?? (_streamRefsMaster = StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System));
+            private StreamRefSettings Settings => _settings ?? (_settings = ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings);
+            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ?? (_subscriptionTimeout = 
+                                                                                       _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout)));
+            protected override string StageActorName => _stageActorName ?? (_stageActorName = StreamRefsMaster.NextSourceRefName());
+            
+            public IActorRef Self => _stageActor.Ref;
             public IActorRef PartnerRef
             {
                 get
@@ -524,36 +537,31 @@ namespace Akka.Streams.Implementation
             private IRequestStrategy _requestStrategy; // initialized in preStart since depends on receiveBuffer's size
             #endregion
 
-            public Logic(SourceRefStageImpl<TOut> stage, TaskCompletionSource<ISinkRef<TOut>> promise) : base(stage.Shape)
+            public Logic(SourceRefStageImpl<TOut> stage, TaskCompletionSource<ISinkRef<TOut>> promise, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
                 _promise = promise;
-                
-                var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                _streamRefsMaster = StreamRefsMaster.Get(materializer.System);
-                _settings = materializer.Settings.StreamRefSettings;
-                _subscriptionTimeout = _stage.InitialAttributes.GetAttribute<StreamRefAttributes.SubscriptionTimeout>();
-                _stageActorName = _streamRefsMaster.NextSinkRefName();
+                _inheritedAttributes = inheritedAttributes;
                 
                 SetHandler(_stage.Outlet, onPull: OnPull);
             }
 
             public override void PreStart()
             {
-                _receiveBuffer = new ModuloFixedSizeBuffer<TOut>(_settings.BufferCapacity);
+                _receiveBuffer = new ModuloFixedSizeBuffer<TOut>(Settings.BufferCapacity);
                 _requestStrategy = new WatermarkRequestStrategy(highWatermark: _receiveBuffer.Capacity);
 
-                _self = GetStageActorRef(InitialReceive);
+                _stageActor = GetStageActor(InitialReceive);
                 
-                Log.Debug("[{0}] Allocated receiver: {1}", _stageActorName, _self);
+                Log.Debug("[{0}] Allocated receiver: {1}", StageActorName, Self);
 
                 var initialPartnerRef = _stage._initialPartnerRef;
                 if (initialPartnerRef != null) // this will set the partnerRef
                     ObserveAndValidateSender(initialPartnerRef, "<should never happen>");
                 
-                _promise.SetResult(new SinkRefImpl<TOut>(_self));
+                _promise.SetResult(new SinkRefImpl<TOut>(Self));
                 
-                ScheduleOnce(SubscriptionTimeoutKey, _subscriptionTimeout.Timeout);
+                ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
             }
 
             private void OnPull()
@@ -578,14 +586,14 @@ namespace Akka.Streams.Implementation
                         var demand = new CumulativeDemand(_localCumulativeDemand);
                         
                         Log.Debug("[{0}] Demanding until [{1}] (+{2})", _stageActorName, _localCumulativeDemand, addDemand);
-                        PartnerRef.Tell(demand);
+                        PartnerRef.Tell(demand, Self);
                         ScheduleDemandRedelivery();
                     }
                 }
             }
 
             private void ScheduleDemandRedelivery() => 
-                ScheduleOnce(DemandRedeliveryTimerKey, _settings.DemandRedeliveryInterval);
+                ScheduleOnce(DemandRedeliveryTimerKey, Settings.DemandRedeliveryInterval);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -594,12 +602,12 @@ namespace Akka.Streams.Implementation
                     case SubscriptionTimeoutKey:
                         var ex = new StreamRefSubscriptionTimeoutException(
                             // we know the future has been competed by now, since it is in preStart
-                            $"[{_stageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [{_promise.Task.Result}]," +
-                            $"within subscription timeout: {_subscriptionTimeout.Timeout}!");
+                            $"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [{_promise.Task.Result}]," +
+                            $"within subscription timeout: {SubscriptionTimeout.Timeout}!");
                         throw ex;
                     case DemandRedeliveryTimerKey:
-                        Log.Debug("[{0}] Scheduled re-delivery of demand until [{1}]", _stageActorName, _localCumulativeDemand);
-                        PartnerRef.Tell(new CumulativeDemand(_localCumulativeDemand));
+                        Log.Debug("[{0}] Scheduled re-delivery of demand until [{1}]", StageActorName, _localCumulativeDemand);
+                        PartnerRef.Tell(new CumulativeDemand(_localCumulativeDemand), Self);
                         ScheduleDemandRedelivery();
                         break;
                 }
@@ -615,34 +623,34 @@ namespace Akka.Streams.Implementation
                     case OnSubscribeHandshake handshake: 
                         CancelTimer(SubscriptionTimeoutKey);
                         ObserveAndValidateSender(sender, "Illegal sender in OnSubscribeHandshake");
-                        Log.Debug("[{0}] Received handshake {1} from {2}", _stageActorName, message, sender);
+                        Log.Debug("[{0}] Received handshake {1} from {2}", StageActorName, message, sender);
                         TriggerCumulativeDemand();
                         break;
                     case SequencedOnNext onNext: 
                         ObserveAndValidateSender(sender, "Illegal sender in SequencedOnNext");
                         ObserveAndValidateSequenceNr(onNext.SeqNr, "Illegal sequence nr in SequencedOnNext");
-                        Log.Debug("[{0}] Received seq {1} from {2}", _stageActorName, message, sender);
+                        Log.Debug("[{0}] Received seq {1} from {2}", StageActorName, message, sender);
                         OnReceiveElement(onNext.Payload);
                         TriggerCumulativeDemand();
                         break;
                     case RemoteStreamCompleted completed:
                         ObserveAndValidateSender(sender, "Illegal sender in RemoteStreamCompleted");
                         ObserveAndValidateSequenceNr(completed.SeqNr, "Illegal sequence nr in RemoteStreamCompleted");
-                        Log.Debug("[{0}] The remote stream has completed, completing as well...", _stageActorName);
-                        _self.Unwatch(sender);
+                        Log.Debug("[{0}] The remote stream has completed, completing as well...", StageActorName);
+                        _stageActor.Unwatch(sender);
                         _completed = true;
                         TryPush();
                         break;
                     case RemoteStreamFailure failure:
                         ObserveAndValidateSender(sender, "Illegal sender in RemoteStreamFailure"); 
-                        Log.Warning("[{0}] The remote stream has failed, failing (reason: {1})", _stageActorName, failure.Message);
-                        _self.Unwatch(sender);
+                        Log.Warning("[{0}] The remote stream has failed, failing (reason: {1})", StageActorName, failure.Message);
+                        _stageActor.Unwatch(sender);
                         FailStage(new RemoteStreamRefActorTerminatedException($"Remote stream ({sender.Path}) failed, reason: {failure.Message}"));
                         break;
                     case Terminated terminated:
                         if (Equals(_partnerRef, terminated.ActorRef))
                             FailStage(new RemoteStreamRefActorTerminatedException(
-                                "The remote partner $ref has terminated! Tearing down this side of the stream as well."));
+                                $"The remote partner {terminated.ActorRef} has terminated! Tearing down this side of the stream as well."));
                         else
                             FailStage(new RemoteStreamRefActorTerminatedException(
                                 $"Received UNEXPECTED Terminated({terminated.ActorRef}) message! This actor was NOT our trusted remote partner, which was: {_partnerRef}. Tearing down."));
@@ -679,12 +687,12 @@ namespace Akka.Streams.Implementation
                 {
                     Log.Debug("Received first message from {0}, assuming it to be the remote partner for this stage", partner);
                     _partnerRef = partner;
-                    _self.Watch(partner);
+                    _stageActor.Watch(partner);
                 }
-                else if (_partnerRef != partner)
+                else if (!Equals(_partnerRef, partner))
                 {
                     var ex = new InvalidPartnerActorException(partner, PartnerRef, failureMessage);
-                    partner.Tell(new RemoteStreamFailure(ex.Message));
+                    partner.Tell(new RemoteStreamFailure(ex.Message), Self);
                     throw ex;
                 }
             }
@@ -715,7 +723,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<ISinkRef<TOut>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise= new TaskCompletionSource<ISinkRef<TOut>>();
-            return new LogicAndMaterializedValue<Task<ISinkRef<TOut>>>(new Logic(this, promise), promise.Task);
+            return new LogicAndMaterializedValue<Task<ISinkRef<TOut>>>(new Logic(this, promise, inheritedAttributes), promise.Task);
         }
     }
 }
