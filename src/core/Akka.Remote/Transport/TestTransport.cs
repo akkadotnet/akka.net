@@ -162,10 +162,10 @@ namespace Akka.Remote.Transport
         private async Task<AssociationHandle> DefaultAssociate(Address remoteAddress)
         {
             var transport = _registry.TransportFor(remoteAddress);
-            if (transport.Item1 != null && transport.Item2 != null)
+            if (transport.HasValue)
             {
-                var remoteAssociationListenerTask = transport.Item2;
-                var handlers = CreateHandlePair(transport.Item1, remoteAddress);
+                var remoteAssociationListenerTask = transport.Value.Item2;
+                var handlers = CreateHandlePair(transport.Value.Item1, remoteAddress);
                 var localHandle = handlers.Item1;
                 var remoteHandle = handlers.Item2;
                 localHandle.Writeable = false;
@@ -189,7 +189,7 @@ namespace Akka.Remote.Transport
                     remoteHandle.Writeable = true;
                 }, TaskContinuationOptions.ExecuteSynchronously);
 
-                return (AssociationHandle) localHandle;
+                return (AssociationHandle)localHandle;
             }
 
             throw new InvalidAssociationException($"No registered transport: {remoteAddress}");
@@ -226,10 +226,10 @@ namespace Akka.Remote.Transport
         public Task<bool> DefaultDisassociate(TestAssociationHandle handle)
         {
             var handlers = _registry.DeregisterAssociation(handle.Key);
-            if (handlers.Item1 != null && handlers.Item2 != null)
+            if (handlers.HasValue)
             {
-                handlers.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
-                handlers.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
+                handlers.Value.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
+                handlers.Value.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
             }
 
             return Task.FromResult(true);
@@ -697,7 +697,7 @@ namespace Akka.Remote.Transport
         ///     initiator.
         /// </param>
         /// <returns>The original entries, or null if the key wasn't found in the table.</returns>
-        public (IHandleEventListener, IHandleEventListener) DeregisterAssociation((Address, Address) key)
+        public (IHandleEventListener, IHandleEventListener)? DeregisterAssociation((Address, Address) key)
         {
             _listenersTable.TryRemove(key, out (IHandleEventListener, IHandleEventListener) listeners);
             return listeners;
@@ -734,7 +734,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="address">The address bound to the transport.</param>
         /// <returns>The transport, if it exists.</returns>
-        public (TestTransport, Task<IAssociationEventListener>) TransportFor(Address address)
+        public (TestTransport, Task<IAssociationEventListener>)? TransportFor(Address address)
         {
             _transportTable.TryGetValue(address, out var transport);
             return transport;

@@ -201,7 +201,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case Get msg:
                     return (msg.CounterId.ToString(), message);
             }
-            return (default(string), default(object));
+            return ((string, object)?)null;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>
@@ -215,7 +215,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case ShardRegion.StartEntity msg:
                     return (long.Parse(msg.EntityId) % NumberOfShards).ToString();
             }
-            return default(string);
+            return null;
         };
 
         public const int NumberOfShards = 12;

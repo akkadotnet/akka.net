@@ -81,7 +81,7 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class PersistentClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
     {
-        public PersistentClusterShardingMinMembersSpec() :this(new PersistentClusterShardingMinMembersSpecConfig()) { }
+        public PersistentClusterShardingMinMembersSpec() : this(new PersistentClusterShardingMinMembersSpecConfig()) { }
         protected PersistentClusterShardingMinMembersSpec(PersistentClusterShardingMinMembersSpecConfig config) : base(config, typeof(PersistentClusterShardingMinMembersSpec)) { }
     }
     public class DDataClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
@@ -111,14 +111,14 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : (default(string), default(object));
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : ((string, object)?)null;
 
-        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : default(string);
+        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 
         private Lazy<IActorRef> _region;
 
         private readonly ClusterShardingMinMembersSpecConfig _config;
-        
+
         private readonly List<FileInfo> _storageLocations;
 
         protected ClusterShardingMinMembersSpec(ClusterShardingMinMembersSpecConfig config, Type type)
@@ -137,7 +137,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("startup");
         }
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();

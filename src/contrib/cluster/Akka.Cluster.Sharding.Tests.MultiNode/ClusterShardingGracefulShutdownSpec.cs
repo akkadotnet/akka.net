@@ -106,9 +106,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : (default(string), default(object));
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : ((string, object)?)null;
 
-        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : default(string);
+        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 
         private readonly Lazy<IActorRef> _region;
 
@@ -131,7 +131,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("startup");
         }
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();

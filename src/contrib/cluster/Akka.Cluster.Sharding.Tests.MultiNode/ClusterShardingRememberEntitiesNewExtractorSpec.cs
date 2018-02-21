@@ -133,7 +133,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         static readonly int ShardCount = 3;
 
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : (default(string), default(object));
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : ((string, object)?)null;
 
         internal static ExtractShardId extractShardId1 = message =>
         {
@@ -144,7 +144,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case ShardRegion.StartEntity msg:
                     return extractShardId1(msg.EntityId);
             }
-            return default(string);
+            return null;
         };
 
         internal static ExtractShardId extractShardId2 = message =>
@@ -156,7 +156,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case ShardRegion.StartEntity msg:
                     return extractShardId2(msg.EntityId);
             }
-            return default(string);
+            return null;
         };
 
         static readonly string TypeName = "Entity";

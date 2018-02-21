@@ -143,8 +143,8 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id, message) : (default(string), default(object));
-        internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : default(string);
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id, message) : ((string, object)?)null;
+        internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : null;
 
         private readonly Lazy<IActorRef> _region;
 
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();

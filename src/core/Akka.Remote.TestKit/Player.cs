@@ -40,8 +40,8 @@ namespace Akka.Remote.TestKit
         {
             get
             {
-                if(_client == null) throw new IllegalStateException("TestConductor client not yet started");
-                if(_system.WhenTerminated.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
+                if (_client == null) throw new IllegalStateException("TestConductor client not yet started");
+                if (_system.WhenTerminated.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
                 return _client;
             }
         }
@@ -56,9 +56,9 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<Done> StartClient(RoleName name, IPEndPoint controllerAddr)
         {
-            if(_client != null) throw new IllegalStateException("TestConductorClient already started");
-                _client =
-                _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
+            if (_client != null) throw new IllegalStateException("TestConductorClient already started");
+            _client =
+            _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
 
             //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
@@ -147,7 +147,7 @@ namespace Akka.Remote.TestKit
                 }
                 catch (OperationCanceledException)
                 {
-                   _system.Log.Debug("OperationCanceledException was thrown instead of AggregateException");
+                    _system.Log.Debug("OperationCanceledException was thrown instead of AggregateException");
                 }
                 _system.Log.Debug("passed barrier {0}", name);
             }
@@ -175,7 +175,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     [InternalApi]
     class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
-        //TODO: RequireMessageQueue
+    //TODO: RequireMessageQueue
     {
         public enum State
         {
@@ -189,10 +189,10 @@ namespace Akka.Remote.TestKit
         {
             readonly IChannel _channel;
             public IChannel Channel { get { return _channel; } }
-            readonly (string, IActorRef) _runningOp;
-            public (string, IActorRef) RunningOp { get { return _runningOp; } }
+            readonly (string, IActorRef)? _runningOp;
+            public (string, IActorRef)? RunningOp { get { return _runningOp; } }
 
-            public Data(IChannel channel, (string, IActorRef) runningOp)
+            public Data(IChannel channel, (string, IActorRef)? runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
@@ -219,7 +219,7 @@ namespace Akka.Remote.TestKit
                 unchecked
                 {
                     return ((_channel != null ? _channel.GetHashCode() : 0) * 397)
-                        ^ (_runningOp.GetHashCode());
+                        ^ (_runningOp.HasValue ? _runningOp.Value.GetHashCode() : 0);
                 }
             }
 
@@ -245,7 +245,7 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            public Data Copy((string, IActorRef) runningOp)
+            public Data Copy((string, IActorRef)? runningOp)
             {
                 return new Data(Channel, runningOp);
             }
@@ -254,7 +254,7 @@ namespace Akka.Remote.TestKit
         internal class Connected : INoSerializationVerificationNeeded
         {
             readonly IChannel _channel;
-            public IChannel Channel{get { return _channel; }}
+            public IChannel Channel { get { return _channel; } }
 
             public Connected(IChannel channel)
             {
@@ -272,7 +272,7 @@ namespace Akka.Remote.TestKit
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != this.GetType()) return false;
-                return Equals((Connected) obj);
+                return Equals((Connected)obj);
             }
 
             /// <inheritdoc/>
@@ -329,7 +329,7 @@ namespace Akka.Remote.TestKit
                 {
                     return _instance;
                 }
-            }            
+            }
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -350,7 +350,7 @@ namespace Akka.Remote.TestKit
 
         public void InitFSM()
         {
-            StartWith(State.Connecting, new Data(null, (default(string), default(IActorRef))));
+            StartWith(State.Connecting, new Data(null, null));
 
             When(State.Connecting, @event =>
             {
@@ -362,7 +362,7 @@ namespace Akka.Remote.TestKit
                 if (connected != null)
                 {
                     connected.Channel.WriteAndFlushAsync(new Hello(_name.Name, TestConductor.Get(Context.System).Address));
-                    return GoTo(State.AwaitDone).Using(new Data(connected.Channel, (default(string), default(IActorRef))));
+                    return GoTo(State.AwaitDone).Using(new Data(connected.Channel, null));
                 }
                 if (@event.FsmEvent is ConnectionFailure)
                 {
@@ -408,16 +408,15 @@ namespace Akka.Remote.TestKit
                     _log.Info("disconnected from TestConductor");
                     throw new ConnectionFailure("disconnect");
                 }
-                if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null)
+                if (@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null)
                 {
                     @event.StateData.Channel.WriteAndFlushAsync(Done.Instance);
                     return Stay();
                 }
                 var toServer = @event.FsmEvent as IToServer;
-                var runningOpIsEmpty = string.IsNullOrEmpty(@event.StateData.RunningOp.Item1) &&
-                                       EqualityComparer<IActorRef>.Default.Equals(@event.StateData.RunningOp.Item2, default(IActorRef));
+
                 if (toServer != null && @event.StateData.Channel != null &&
-                    runningOpIsEmpty)
+                    !@event.StateData.RunningOp.HasValue)
                 {
                     @event.StateData.Channel.WriteAndFlushAsync(toServer.Msg);
                     string token = null;
@@ -431,7 +430,7 @@ namespace Akka.Remote.TestKit
                     return Stay().Using(@event.StateData.Copy(runningOp: (token, Sender)));
                 }
                 if (toServer != null && @event.StateData.Channel != null &&
-                    !runningOpIsEmpty)
+                    @event.StateData.RunningOp.HasValue)
                 {
                     _log.Error("cannot write {0} while waiting for {1}", toServer.Msg, @event.StateData.RunningOp);
                     return Stay();
@@ -441,46 +440,46 @@ namespace Akka.Remote.TestKit
                     var barrierResult = @event.FsmEvent as BarrierResult;
                     if (barrierResult != null)
                     {
-                        if (runningOpIsEmpty)
+                        if (!@event.StateData.RunningOp.HasValue)
                         {
                             _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
                             object response;
-                            if (barrierResult.Name != @event.StateData.RunningOp.Item1)
+                            if (barrierResult.Name != @event.StateData.RunningOp.Value.Item1)
                             {
                                 response =
                                     new Failure(
                                         new Exception("wrong barrier " + barrierResult + " received while waiting for " +
-                                                      @event.StateData.RunningOp.Item1));
+                                                      @event.StateData.RunningOp.Value.Item1));
                             }
                             else if (!barrierResult.Success)
                             {
                                 response =
                                     new Failure(
-                                        new Exception("barrier failed:" + @event.StateData.RunningOp.Item1));
+                                        new Exception("barrier failed:" + @event.StateData.RunningOp.Value.Item1));
                             }
                             else
                             {
                                 response = barrierResult.Name;
                             }
-                            @event.StateData.RunningOp.Item2.Tell(response);
+                            @event.StateData.RunningOp.Value.Item2.Tell(response);
                         }
-                        return Stay().Using(@event.StateData.Copy(runningOp: (default(string), default(IActorRef))));
+                        return Stay().Using(@event.StateData.Copy(runningOp: null));
                     }
                     var addressReply = @event.FsmEvent as AddressReply;
                     if (addressReply != null)
                     {
-                        if (runningOpIsEmpty)
+                        if (!@event.StateData.RunningOp.HasValue)
                         {
                             _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
-                            @event.StateData.RunningOp.Item2.Tell(addressReply.Addr);
+                            @event.StateData.RunningOp.Value.Item2.Tell(addressReply.Addr);
                         }
-                        return Stay().Using(@event.StateData.Copy(runningOp: (default(string), default(IActorRef))));
+                        return Stay().Using(@event.StateData.Copy(runningOp: null));
                     }
                     var throttleMsg = @event.FsmEvent as ThrottleMsg;
                     if (@event.FsmEvent is ThrottleMsg)
@@ -488,7 +487,7 @@ namespace Akka.Remote.TestKit
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
                         else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
-                        else mode = new Transport.TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
+                        else mode = new Transport.TokenBucket(1000, throttleMsg.RateMBit * 125000, 0, 0);
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
@@ -558,7 +557,7 @@ namespace Akka.Remote.TestKit
                 }
             });
 
-            Initialize();            
+            Initialize();
         }
     }
 
@@ -577,7 +576,7 @@ namespace Akka.Remote.TestKit
         readonly ILoggingAdapter _log;
         readonly IScheduler _scheduler;
         private bool _loggedDisconnect = false;
-        
+
         Deadline _nextAttempt;
 
         /// <summary>
@@ -633,7 +632,7 @@ namespace Akka.Remote.TestKit
             _nextAttempt = Deadline.Now + _backoff;
             RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(tr =>
             {
-                _log.Debug("Failed to connect.... Retrying again in {0}s. {1} attempts left.", _nextAttempt.TimeLeft,_reconnects);
+                _log.Debug("Failed to connect.... Retrying again in {0}s. {1} attempts left.", _nextAttempt.TimeLeft, _reconnects);
                 if (_reconnects > 0)
                 {
                     _reconnects -= 1;

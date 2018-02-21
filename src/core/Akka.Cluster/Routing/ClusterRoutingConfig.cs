@@ -890,10 +890,10 @@ namespace Akka.Cluster.Routing
             doAddRoutees = () =>
             {
                 var deploymentTarget = SelectDeploymentTarget();
-                if (deploymentTarget.Item1 != null && !string.IsNullOrEmpty(deploymentTarget.Item2))
+                if (deploymentTarget.HasValue)
                 {
-                    var address = deploymentTarget.Item1;
-                    var path = deploymentTarget.Item2;
+                    var address = deploymentTarget.Value.Item1;
+                    var path = deploymentTarget.Value.Item2;
                     var routee = _group.RouteeFor(address + path, Context);
                     UsedRouteePaths = UsedRouteePaths.SetItem(
                         address,
@@ -913,11 +913,11 @@ namespace Akka.Cluster.Routing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public (Address, string) SelectDeploymentTarget()
+        public (Address, string)? SelectDeploymentTarget()
         {
             var currentRoutees = Cell.Router.Routees.ToList();
             var currentNodes = AvailableNodes;
-            if (currentNodes.IsEmpty || currentRoutees.Count >= Settings.TotalInstances) return (default(Address), default(string));
+            if (currentNodes.IsEmpty || currentRoutees.Count >= Settings.TotalInstances) return null;
 
             //find the node with the least routees
             var unusedNodes = currentNodes.Except(UsedRouteePaths.Keys);
@@ -935,7 +935,7 @@ namespace Akka.Cluster.Routing
 
                 // pick next of unused paths
                 var minPath = Settings.RouteesPaths.FirstOrDefault(p => !minNode.Used.Contains(p));
-                return minPath == null ? (default(Address), default(string)) : (minNode.Address, minPath);
+                return minPath == null ? null : ((Address, string)?)(minNode.Address, minPath);
             }
         }
 

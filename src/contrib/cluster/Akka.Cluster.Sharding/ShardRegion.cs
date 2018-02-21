@@ -529,7 +529,7 @@ namespace Akka.Cluster.Sharding
                 case StartEntity _:
                     DeliverStartEntity(message, Sender);
                     return true;
-                case var _ when !ExtractEntityId(message).Equals((default(string), default(object))):
+                case var _ when ExtractEntityId(message) != null:
                     DeliverMessage(message, Sender);
                     return true;
                 default:
