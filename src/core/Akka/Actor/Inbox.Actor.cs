@@ -185,14 +185,16 @@ namespace Akka.Actor
 
             if (_clients.Count == 0)
             {
-                _currentDeadline.Item2.Cancel();
+                _currentDeadline.Item2?.Cancel();
+                _currentDeadline.Item2 = null;
             }
             else
             {
                 var next = _clientsByTimeout.FirstOrDefault();
                 if (next != null)
                 {
-                    _currentDeadline.Item2.Cancel();
+                    _currentDeadline.Item2?.Cancel();
+                    _currentDeadline.Item2 = null;
 
                     var delay = next.Deadline - Context.System.Scheduler.MonotonicClock;
 

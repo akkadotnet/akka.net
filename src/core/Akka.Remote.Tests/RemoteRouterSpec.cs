@@ -40,9 +40,8 @@ namespace Akka.Remote.Tests
         {
             protected override void OnReceive(object message)
             {
-                if (message is ValueTuple<Props, string>)
+                if (message is ValueTuple<Props, string> tuple)
                 {
-                    var tuple = ((Props, string))message;
                     Sender.Tell(Context.ActorOf(tuple.Item1, tuple.Item2));
                 }
             }
