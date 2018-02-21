@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
@@ -24,6 +25,8 @@ namespace Akka.Actor
     /// </summary>
     public static class Futures
     {
+        private static readonly Type FailureType = typeof(Status.Failure);
+        
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
         /// <summary>
         /// TBD
@@ -108,7 +111,28 @@ namespace Akka.Actor
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return (T) await Ask(self, message, provider, timeout, cancellationToken);
+            var result = await Ask(self, message, provider, timeout, cancellationToken);
+            
+            // if failure was delivered and not expected, rethrow it
+            if (result is Status.Failure f && typeof(T) != FailureType)
+            {
+                // if failure was result of cancelled task, exception will be null
+                var cause = GetCauseOrCancelled(f.Cause);
+                ExceptionDispatchInfo.Capture(cause).Throw();
+                return default(T);
+            }
+            else return (T) result;
+        }
+
+        private static Exception GetCauseOrCancelled(Exception e)
+        {
+            // a result of asynchronous task forward, unwrap it
+            if (e is AggregateException aggregate && aggregate.InnerExceptions.Count == 1)
+            {
+                e = aggregate.InnerExceptions[0];
+            }
+            
+            return e ?? new TaskCanceledException();
         }
 
         /// <summary>

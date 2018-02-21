@@ -21,19 +21,39 @@ namespace Akka.Tests.Actor
             : base(@"akka.actor.ask-timeout = 3000ms")
         { }
 
+        public class ExpectedTestException : Exception
+        {
+            public ExpectedTestException(string message) : base(message)
+            {
+            }
+        }
+        
         public class SomeActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
-                if (message.Equals("timeout"))
+                switch (message)
                 {
-                    Thread.Sleep(5000);
+                    case "timeout":
+                        Thread.Sleep(5000);
+                        break;
+                    case "answer":
+                        Sender.Tell("answer");
+                        break;
+                    case "throw":
+                        Task.Run(ThrowNested).PipeTo(Sender); 
+                        break;
+                    case "return-cancelled":
+                        var token = new CancellationToken(canceled: true);
+                        new Task(() => { }, token).PipeTo(Sender);
+                        break;
                 }
-
-                if (message.Equals("answer"))
-                {
-                    Sender.Tell("answer");
-                }
+            }
+            
+            internal async Task ThrowNested()
+            {
+                await Task.Delay(1);
+                throw new ExpectedTestException("BOOM!");
             }
         }
 
@@ -202,6 +222,50 @@ namespace Akka.Tests.Actor
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
             ExpectMsg("bar");
+        }
+        
+        [Fact]
+        public async Task Generic_Ask_when_Failure_is_returned_should_throw_error_payload_and_preserve_stack_trace()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            try
+            {
+                await actor.Ask<string>("throw", timeout: TimeSpan.FromSeconds(3));
+            }
+            catch (ExpectedTestException exception)
+            {
+                exception.Message.ShouldBe("BOOM!");
+                exception.StackTrace.Contains(nameof(SomeActor.ThrowNested)).ShouldBeTrue("stack trace should be preserved");
+            }
+        }
+        
+        [Fact]
+        public async Task Generic_Ask_when_Failure_is_and_Failure_was_expected_should_not_throw()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var result = await actor.Ask<Status.Failure>("throw", timeout: TimeSpan.FromSeconds(3));
+            var exception = ((AggregateException)result.Cause).Flatten().InnerException;
+            exception.GetType().ShouldBe(typeof(ExpectedTestException));
+            exception.Message.ShouldBe("BOOM!");
+        }
+        
+        [Fact]
+        public async Task Generic_Ask_when_asker_task_was_cancelled_and_should_fail()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            await Assert.ThrowsAsync<TaskCanceledException>(async () =>
+            {
+                var result = await actor.Ask<string>("return-cancelled", timeout: TimeSpan.FromSeconds(3));
+            });
+        }
+        
+        [Fact]
+        public async Task Generic_Ask_when_asker_task_was_cancelled_and_Failure_was_expected_should_return_a_Failure()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var result = await actor.Ask<Status.Failure>("return-cancelled", timeout: TimeSpan.FromSeconds(3));
+            result.Cause.ShouldBe(null);
         }
     }
 }
