@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 
+
 namespace Akka.Remote.Transport
 {
     /// <summary>
@@ -37,7 +38,7 @@ namespace Akka.Remote.Transport
         /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
         {
-            return new TransportAdapters((ActorSystemImpl) system);
+            return new TransportAdapters((ActorSystemImpl)system);
         }
 
         #region Static methods
@@ -69,7 +70,7 @@ namespace Akka.Remote.Transport
         public TransportAdapters(ExtendedActorSystem system)
         {
             System = system;
-            Settings = ((RemoteActorRefProvider)system.Provider).RemoteSettings;
+            Settings = ((IRemoteActorRefProvider)system.Provider).RemoteSettings;
         }
 
         /// <summary>
@@ -122,21 +123,24 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// Used to augment the protocol scheme of transports when enabled.
     /// </summary>
     public class SchemeAugmenter
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="SchemeAugmenter"/> instance.
         /// </summary>
-        /// <param name="addedSchemeIdentifier">TBD</param>
+        /// <param name="addedSchemeIdentifier">The new identifier that will be added to the front of the pipeline.</param>
         public SchemeAugmenter(string addedSchemeIdentifier)
         {
             AddedSchemeIdentifier = addedSchemeIdentifier;
         }
 
         /// <summary>
-        /// TBD
+        /// The scheme that will be added to the front of the protocol.
+        /// I.E. if using a TLS augmentor, the this field might read "ssl"
+        /// and the full scheme of addresses generated using this transport
+        /// might read "akka.tcp.ssl", the latter part being added by this augmenter.
         /// </summary>
         public readonly string AddedSchemeIdentifier;
 
@@ -364,7 +368,7 @@ namespace Akka.Remote.Transport
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((AbstractTransportAdapterHandle) obj);
+            return Equals((AbstractTransportAdapterHandle)obj);
         }
 
         /// <inheritdoc/>
@@ -618,4 +622,3 @@ namespace Akka.Remote.Transport
         protected abstract void Ready(object message);
     }
 }
-
