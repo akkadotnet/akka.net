@@ -745,9 +745,12 @@ namespace Akka.Remote
 
                 // Stop inbound read-only associations
                 var readPolicy = (_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
-                if (readPolicy.Item1.Item1 != null && quarantine.Uid == null)
-                    Context.Stop(readPolicy.Item1.Item1);
-                else if (readPolicy.Item1.Item1 != null && quarantine.Uid != null && readPolicy.Item1.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
+
+                var readOnlyEndpointExists = readPolicy.Item1?.Item1 != null;
+
+                if (readOnlyEndpointExists && quarantine.Uid == null)
+                    Context.Stop(readPolicy.Item1.Value.Item1);
+                else if (readOnlyEndpointExists && quarantine.Uid != null && readPolicy.Item1.Value.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Value.Item1); }
                 else { } // nothing to stop
 
                 bool MatchesQuarantine(AkkaProtocolHandle handle)
@@ -915,9 +918,9 @@ namespace Akka.Remote
         {
             var readonlyEndpoint = _endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
             var handle = ((AkkaProtocolHandle)ia.Association);
-            if (readonlyEndpoint.Item1 != null)
+            if (readonlyEndpoint?.Item1 != null)
             {
-                var endpoint = readonlyEndpoint.Item1;
+                var endpoint = readonlyEndpoint.Value.Item1;
                 if (_pendingReadHandoffs.TryGetValue(endpoint, out var protocolHandle))
                     protocolHandle.Disassociate("the existing readOnly association was replaced by a new incoming one", _log);
 

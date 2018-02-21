@@ -138,7 +138,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">The remote address to check.</param>
         /// <returns>A tuple containing the actor reference and the remote system UID, if they exist. Otherwise <c>null</c>.</returns>
-        public (IActorRef, int) ReadOnlyEndpointFor(Address address)
+        public (IActorRef, int)? ReadOnlyEndpointFor(Address address)
         {
             _addressToReadonly.TryGetValue(address, out var tmp);
             return tmp;

@@ -158,8 +158,9 @@ namespace Akka.Remote.Tests
             reg.RegisterReadOnlyEndpoint(address1, endpoint, 2);
 
             var ep = reg.ReadOnlyEndpointFor(address1);
-            ep.Item1.ShouldBe(endpoint);
-            ep.Item2.ShouldBe(2);
+            ep.Should(notNull => notNull.HasValue, $"{nameof(ep)} is null");
+            ep.Value.Item1.ShouldBe(endpoint);
+            ep.Value.Item2.ShouldBe(2);
         }
 
         [Fact]
