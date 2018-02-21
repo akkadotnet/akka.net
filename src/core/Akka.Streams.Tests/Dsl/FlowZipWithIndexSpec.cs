@@ -1,6 +1,7 @@
-﻿// <copyright file="FlowZipWithIndexSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2017 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+﻿//-----------------------------------------------------------------------
+// <copyright file="FlowZipWithIndexSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
