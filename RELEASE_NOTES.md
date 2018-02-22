@@ -1,3 +1,18 @@
+#### 1.3.5 February 21 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.5 is a minor patch containing only bugfixes.
+
+**Updates and Bugfixes**
+1. [Akka.Cluster.Tools: DistributedPubSub Fix premature pruning of topics](https://github.com/akkadotnet/akka.net/pull/3322)
+
+You can see [the full set of changes for Akka.NET v1.3.4 here](https://github.com/akkadotnet/akka.net/milestone/23).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 4405 | 4284 | Aaron Stannard |
+| 1 | 4 | 4 | Joshua Garnett |
+
 #### 1.3.4 February 1 2018 ####
 **Maintenance Release for Akka.NET 1.3**
 

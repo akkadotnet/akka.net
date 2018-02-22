@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------
 // <copyright file="Queue.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,12 +50,12 @@ namespace Akka.Streams
     public interface ISourceQueueWithComplete<in T> : ISourceQueue<T>
     {
         /// <summary>
-        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operationâ€™s success.
         /// </summary>
         void Complete();
 
         /// <summary>
-        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operationâ€™s success.
         /// </summary>
         /// <param name="ex">TBD</param>
         void Fail(Exception ex);

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayout.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -2020,8 +2020,8 @@ namespace Akka.Streams.Implementation
     /// with the actual materialization. Therefore we implement a minimal shell here
     /// that plugs the downstream and the upstream together as soon as both are known.
     /// Using a VirtualProcessor would technically also work, but it would defeat the
-    /// purpose of subscription timeouts�the subscription would always already be
-    /// established from the Actor�s perspective, regardless of whether a downstream
+    /// purpose of subscription timeoutsï¿½the subscription would always already be
+    /// established from the Actorï¿½s perspective, regardless of whether a downstream
     /// will ever be connected.
     /// 
     /// One important consideration is that this <see cref="IPublisher{T}"/> must not retain a reference
