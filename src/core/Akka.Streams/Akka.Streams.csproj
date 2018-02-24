@@ -66,7 +66,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.5.1" />
     <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Serialization\Proto" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>
