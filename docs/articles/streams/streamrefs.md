@@ -83,7 +83,7 @@ offer.SourceRef.RunForeach(Console.WriteLine, materializer);
 
 The process of preparing and running a `ISourceRef<T>` powered distributed stream is shown by the animation below:
 
-![]()
+![source ref](/images/source-ref-animation.gif)
 
 > **Warning**
 A `ISourceRef<T>` is by design “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean.
@@ -151,7 +151,7 @@ localMetrics().RunWith(ready.SinkRef, materializer);
 
 The process of preparing and running a `ISinkRef<>` powered distributed stream is shown by the animation below:
 
-![]()
+![sink ref](/images/sink-ref-animation.gif)
 
 > **Warning**
 A `ISinkRef<>` is *by design* “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean. If you have an use case for building a fan-in operation accepting writes from multiple remote nodes, you can build your `Sink` and prepend it with a `Merge` stage, each time materializing a new `ISinkRef<>` targeting that `Merge`. This has the added benefit of giving you full control how to merge these streams (i.e. by using “merge preferred” or any other variation of the fan-in stages).

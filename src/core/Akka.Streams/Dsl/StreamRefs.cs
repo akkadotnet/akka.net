@@ -127,7 +127,7 @@ namespace Akka.Streams.Implementation
     {
         public CumulativeDemand(long seqNr)
         {
-            if (seqNr < 0) throw ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException;
+            if (seqNr <= 0) throw ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException;
             SeqNr = seqNr;
         }
 
@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation
     {
         #region logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler
         {
             private const string SubscriptionTimeoutKey = "SubscriptionTimeoutKey";
             
@@ -312,10 +312,7 @@ namespace Akka.Streams.Implementation
                 _promise = promise;
                 _inheritedAttributes = inheritedAttributes;
                 
-                this.SetHandler(_stage.Inlet, 
-                    onPush: OnPush,
-                    onUpstreamFinish: OnUpstreamFinish,
-                    onUpstreamFailure: OnUpstreamFailure);
+                this.SetHandler(_stage.Inlet, this);
             }
 
             public override void PreStart()
@@ -363,7 +360,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void OnPush()
+            public void OnPush()
             {
                 var element = GrabSequenced(_stage.Inlet);
                 PartnerRef.Tell(element, Self);
@@ -398,7 +395,7 @@ namespace Akka.Streams.Implementation
                 return onNext;
             }
 
-            private void OnUpstreamFailure(Exception cause)
+            public void OnUpstreamFailure(Exception cause)
             {
                 if (_partnerRef != null)
                 {
@@ -415,7 +412,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void OnUpstreamFinish()
+            public void OnUpstreamFinish()
             {
                 if (_partnerRef != null)
                 {
@@ -494,7 +491,7 @@ namespace Akka.Streams.Implementation
 
         #region logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IOutHandler
         {
             private const string SubscriptionTimeoutKey = "SubscriptionTimeoutKey";
             private const string DemandRedeliveryTimerKey = "DemandRedeliveryTimerKey";
@@ -543,7 +540,7 @@ namespace Akka.Streams.Implementation
                 _promise = promise;
                 _inheritedAttributes = inheritedAttributes;
                 
-                SetHandler(_stage.Outlet, onPull: OnPull);
+                SetHandler(_stage.Outlet, this);
             }
 
             public override void PreStart()
@@ -564,10 +561,15 @@ namespace Akka.Streams.Implementation
                 ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
             }
 
-            private void OnPull()
+            public void OnPull()
             {
                 TryPush();
                 TriggerCumulativeDemand();
+            }
+
+            public void OnDownstreamFinish()
+            {
+                /* IOutHandler impl */
             }
 
             private void TriggerCumulativeDemand()
@@ -661,8 +663,8 @@ namespace Akka.Streams.Implementation
 
             private void TryPush()
             {
-                if (!_receiveBuffer.IsEmpty) Push(_stage.Outlet, _receiveBuffer.Dequeue());
-                else if (_completed) CompleteStage();
+                if (!_receiveBuffer.IsEmpty && IsAvailable(_stage.Outlet)) Push(_stage.Outlet, _receiveBuffer.Dequeue());
+                else if (_receiveBuffer.IsEmpty && _completed) CompleteStage();
             }
 
             private void OnReceiveElement(object payload)
