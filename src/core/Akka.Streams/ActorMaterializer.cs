@@ -319,7 +319,7 @@ namespace Akka.Streams
                 isAutoFusing: config.GetBoolean("auto-fusing", true),
                 maxFixedBufferSize: config.GetInt("max-fixed-buffer-size", 1000000000),
                 syncProcessingLimit: config.GetInt("sync-processing-limit", 1000),
-                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref")));
+                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref") ?? Config.Empty));
         }
 
         private const int DefaultlMaxFixedbufferSize = 1000;

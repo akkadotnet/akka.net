@@ -170,9 +170,9 @@ namespace Akka.Streams.Implementation
             if (config == null) throw new ArgumentNullException(nameof(config), "`akka.stream.materializer.stream-ref` was not present");
             
             return new StreamRefSettings(
-                bufferCapacity: config.GetInt("buffer-capacity"),
-                demandRedeliveryInterval: config.GetTimeSpan("demand-redelivery-interval"),
-                subscriptionTimeout: config.GetTimeSpan("subscription-timeout"));
+                bufferCapacity: config.GetInt("buffer-capacity", 32),
+                demandRedeliveryInterval: config.GetTimeSpan("demand-redelivery-interval", TimeSpan.FromSeconds(1)),
+                subscriptionTimeout: config.GetTimeSpan("subscription-timeout", TimeSpan.FromSeconds(30)));
         }
         
         public int BufferCapacity { get; }
