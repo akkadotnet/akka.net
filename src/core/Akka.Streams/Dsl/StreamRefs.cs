@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefs.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,11 +14,12 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
 using Reactive.Streams;
 
-namespace Akka.Streams.Implementation
+namespace Akka.Streams.Dsl
 {
     
     /// <summary> 
@@ -479,7 +480,6 @@ namespace Akka.Streams.Implementation
         }
     }
     
-    
     /// <summary>
     /// INTERNAL API: Actual stage implementation backing [[SourceRef]]s.
     /// 
@@ -569,7 +569,7 @@ namespace Akka.Streams.Implementation
 
             public void OnDownstreamFinish()
             {
-                /* IOutHandler impl */
+                CompleteStage();
             }
 
             private void TriggerCumulativeDemand()

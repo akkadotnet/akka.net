@@ -71,11 +71,11 @@ namespace Akka.Streams
         public readonly int MaxFixedBufferSize;
         public readonly int MaxInputBufferSize;
         public readonly int OutputBurstLimit;
-        public readonly Akka.Streams.Implementation.StreamRefSettings StreamRefSettings;
+        public readonly Akka.Streams.Dsl.StreamRefSettings StreamRefSettings;
         public readonly Akka.Streams.StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings;
         public readonly Akka.Streams.Supervision.Decider SupervisionDecider;
         public readonly int SyncProcessingLimit;
-        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Implementation.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
+        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
@@ -83,7 +83,7 @@ namespace Akka.Streams
         public Akka.Streams.ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode) { }
         public Akka.Streams.ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize) { }
         public Akka.Streams.ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize) { }
-        public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Implementation.StreamRefSettings settings) { }
+        public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Dsl.StreamRefSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
         public Akka.Streams.ActorMaterializerSettings WithSyncProcessingLimit(int limit) { }
@@ -1742,6 +1742,27 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromInputStream(System.Func<System.IO.Stream> createInputStream, int chunkSize = 8192) { }
         public static Akka.Streams.Dsl.Sink<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromOutputStream(System.Func<System.IO.Stream> createOutputStream, bool autoFlush = False) { }
     }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public class static StreamRefs
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<Akka.Streams.ISinkRef<T>>> SinkRef<T>() { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Tasks.Task<Akka.Streams.ISourceRef<T>>> SourceRef<T>() { }
+    }
+    public sealed class StreamRefSettings
+    {
+        public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout) { }
+        public int BufferCapacity { get; }
+        public System.TimeSpan DemandRedeliveryInterval { get; }
+        public string ProductPrefix { get; }
+        public System.TimeSpan SubscriptionTimeout { get; }
+        public Akka.Streams.Dsl.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null) { }
+        public static Akka.Streams.Dsl.StreamRefSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Streams.Dsl.StreamRefSettings WithBufferCapacity(int value) { }
+        public Akka.Streams.Dsl.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
+        public Akka.Streams.Dsl.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }
+    }
     public abstract class SubFlow<TOut, TMat, TClosed> : Akka.Streams.Dsl.IFlow<TOut, TMat>
     {
         protected SubFlow() { }
@@ -3108,27 +3129,6 @@ namespace Akka.Streams.Implementation
             public Transform(System.Func<object, object> transformator, Akka.Streams.Implementation.StreamLayout.IMaterializedValueNode node) { }
             public override string ToString() { }
         }
-    }
-    [Akka.Annotations.ApiMayChangeAttribute()]
-    public class static StreamRefs
-    {
-        [Akka.Annotations.ApiMayChangeAttribute()]
-        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<Akka.Streams.ISinkRef<T>>> SinkRef<T>() { }
-        [Akka.Annotations.ApiMayChangeAttribute()]
-        public static Akka.Streams.Dsl.Sink<T, System.Threading.Tasks.Task<Akka.Streams.ISourceRef<T>>> SourceRef<T>() { }
-    }
-    public sealed class StreamRefSettings
-    {
-        public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout) { }
-        public int BufferCapacity { get; }
-        public System.TimeSpan DemandRedeliveryInterval { get; }
-        public string ProductPrefix { get; }
-        public System.TimeSpan SubscriptionTimeout { get; }
-        public Akka.Streams.Implementation.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null) { }
-        public static Akka.Streams.Implementation.StreamRefSettings Create(Akka.Configuration.Config config) { }
-        public Akka.Streams.Implementation.StreamRefSettings WithBufferCapacity(int value) { }
-        public Akka.Streams.Implementation.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
-        public Akka.Streams.Implementation.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }
     }
     public class StreamSupervisor : Akka.Actor.ActorBase
     {

@@ -32,54 +32,11 @@ A `SourceRef` can be offered to a remote actor system in order for it to consume
 
 In order to share a `Source` with a remote endpoint you need to materialize it by running it into the `StreamRefs.SourceRef`. That sink materializes the `ISourceRef<T>` that you can then send to other nodes. Please note that it materializes into a Task so you will have to use the continuation (either `PipeTo` or async/await pattern).
 
-```csharp
-public sealed class RequestLogs 
-{
-    public int StreamId { get; }
-    public RequestLogs(int streamId)
-    {
-        StreamId = streamId;
-    }
-}
-
-public sealed class LogsOffer
-{
-    public int StreamId { get; }
-    public ISourceRef<string> SourceRef { get; }
-    public RequestLogs(int streamId, ISourceRef<string> sourceRef)
-    {
-        StreamId = streamId;
-        SourceRef = sourceRef;
-    }
-}
-
-public class DataSource : ReceiveActor 
-{
-    public DataSource() 
-    {
-        Receive<RequestLogs>(request => 
-        {
-            // create a source
-            StreamLogs(request.StreamId)
-                // materialize it using stream refs
-                .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
-                // and send to sender
-                .PipeTo(Sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
-        });
-    }
-
-    private Source<string, NotUsed> StreamLogs(int streamId) => ...
-}
-```
+[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-source-actor)]
 
 The origin actor which creates and owns the `Source` could also perform some validation or additional setup when preparing the source. Once it has handed out the `ISourceRef<T>` the remote side can run it like this:
 
-```csharp
-var sourceActor = system.ActorOf(Props.Create<DataSource>(), "dataSource");
-
-var offer = await sourceActor.Ask<LogsOffer>(new RequestLogs(1337));
-offer.SourceRef.RunForeach(Console.WriteLine, materializer);
-```
+[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=source-ref-materialization)]
 
 The process of preparing and running a `ISourceRef<T>` powered distributed stream is shown by the animation below:
 
@@ -96,58 +53,11 @@ They can be used to offer the other side the capability to send to the origin si
 > **Note**
 To form a good mental model of `SinkRef`s, you can think of them as being similar to “passive mode” in FTP.
 
-```csharp
-public sealed class PrepareUpload
-{
-    public string Id { get; }
-    public PrepareUpload(string id)
-    {
-        Id = id;
-    }
-}
-
-public sealed class MeasurementsSinkReady
-{
-    public string Id { get; }
-    public ISinkRef<string> SinkRef { get; }
-    public MeasurementsSinkReady(string id, ISinkRef<string> sinkRef)
-    {
-        Id = id;
-        SinkRef = sinkRef;
-    }
-}
-
-class DataReceiver : ReceiveActor
-{
-    public DataReceiver() 
-    {
-        Receive<PrepareUpload>(prepare => 
-        {
-            // obtain a source you want to offer
-            var sink = LogsSinksFor(prepare.Id)
-            
-            // materialize sink ref (remote is source data for us)
-            StreamRefs.SinkRef<string>()
-                .To(sink)
-                .Run(Context.System.Materializer())
-                .PipeTo(Sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
-        });
-    }
-
-    private Sink<string, NotUsed> LogsSinksFor(string id) => ...
-}
-```
+[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-sink-actor)]
 
 Using the offered `ISinkRef<>` to send data to the origin of the `Sink` is also simple, as we can treat the `ISinkRef<>` just as any other sink and directly runWith or run with it.
 
-```csharp
-var receiver = system.ActorOf(Props.Create<DataReceiver>(), "receiver");
-
-var ready = await receiver.Ask<MeasurementsSinkReady>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
-
-// stream local metrics to Sink's origin:
-localMetrics().RunWith(ready.SinkRef, materializer);
-```
+[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=sink-ref-materialization)]
 
 The process of preparing and running a `ISinkRef<>` powered distributed stream is shown by the animation below:
 
