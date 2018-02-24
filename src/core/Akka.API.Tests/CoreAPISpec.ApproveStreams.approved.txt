@@ -71,10 +71,11 @@ namespace Akka.Streams
         public readonly int MaxFixedBufferSize;
         public readonly int MaxInputBufferSize;
         public readonly int OutputBurstLimit;
+        public readonly Akka.Streams.Implementation.StreamRefSettings StreamRefSettings;
         public readonly Akka.Streams.StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings;
         public readonly Akka.Streams.Supervision.Decider SupervisionDecider;
         public readonly int SyncProcessingLimit;
-        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
+        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Implementation.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
@@ -82,6 +83,7 @@ namespace Akka.Streams
         public Akka.Streams.ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode) { }
         public Akka.Streams.ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize) { }
         public Akka.Streams.ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize) { }
+        public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Implementation.StreamRefSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
         public Akka.Streams.ActorMaterializerSettings WithSyncProcessingLimit(int limit) { }
@@ -604,10 +606,26 @@ namespace Akka.Streams
     {
         protected InPort() { }
     }
+    public sealed class InvalidPartnerActorException : Akka.Pattern.IllegalStateException
+    {
+        public InvalidPartnerActorException(Akka.Actor.IActorRef expectedRef, Akka.Actor.IActorRef gotRef, string message) { }
+        public Akka.Actor.IActorRef ExpectedRef { get; }
+        public Akka.Actor.IActorRef GotRef { get; }
+    }
+    public sealed class InvalidSequenceNumberException : Akka.Pattern.IllegalStateException
+    {
+        public InvalidSequenceNumberException(long expectedSeqNr, long gotSeqNr, string message) { }
+        public long ExpectedSeqNr { get; }
+        public long GotSeqNr { get; }
+    }
     public interface IQueueOfferResult { }
     public interface ISinkQueue<T>
     {
         System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>> PullAsync();
+    }
+    public interface ISinkRef<TIn>
+    {
+        Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Sink { get; }
     }
     public interface ISourceQueue<in T>
     {
@@ -619,6 +637,10 @@ namespace Akka.Streams
         void Complete();
         void Fail(System.Exception ex);
         new System.Threading.Tasks.Task WatchCompletionAsync();
+    }
+    public interface ISourceRef<TOut>
+    {
+        Akka.Streams.Dsl.Source<TOut, Akka.NotUsed> Source { get; }
     }
     public interface ITransformerLike<in TIn, out TOut>
     {
@@ -718,6 +740,10 @@ namespace Akka.Streams
             public static readonly Akka.Streams.QueueOfferResult.QueueClosed Instance;
         }
     }
+    public sealed class RemoteStreamRefActorTerminatedException : System.Exception
+    {
+        public RemoteStreamRefActorTerminatedException(string message) { }
+    }
     public abstract class Shape : System.ICloneable
     {
         protected Shape() { }
@@ -764,6 +790,20 @@ namespace Akka.Streams
         public StreamLimitReachedException(long max) { }
         protected StreamLimitReachedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
+    public class static StreamRefAttributes
+    {
+        public static Akka.Streams.Attributes CreateSubscriptionTimeout(System.TimeSpan timeout) { }
+        public interface IStreamRefAttribute : Akka.Streams.Attributes.IAttribute { }
+        public sealed class SubscriptionTimeout : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute
+        {
+            public SubscriptionTimeout(System.TimeSpan timeout) { }
+            public System.TimeSpan Timeout { get; }
+        }
+    }
+    public sealed class StreamRefSubscriptionTimeoutException : Akka.Pattern.IllegalStateException
+    {
+        public StreamRefSubscriptionTimeoutException(string message) { }
+    }
     public sealed class StreamSubscriptionTimeoutSettings : System.IEquatable<Akka.Streams.StreamSubscriptionTimeoutSettings>
     {
         public readonly Akka.Streams.StreamSubscriptionTimeoutTerminationMode Mode;
@@ -791,6 +831,10 @@ namespace Akka.Streams
     {
         Propagate = 0,
         Drain = 1,
+    }
+    public sealed class TargetRefNotInitializedYetException : Akka.Pattern.IllegalStateException
+    {
+        public TargetRefNotInitializedYetException() { }
     }
     public enum ThrottleMode
     {
@@ -3065,6 +3109,27 @@ namespace Akka.Streams.Implementation
             public override string ToString() { }
         }
     }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public class static StreamRefs
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<Akka.Streams.ISinkRef<T>>> SinkRef<T>() { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Sink<T, System.Threading.Tasks.Task<Akka.Streams.ISourceRef<T>>> SourceRef<T>() { }
+    }
+    public sealed class StreamRefSettings
+    {
+        public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout) { }
+        public int BufferCapacity { get; }
+        public System.TimeSpan DemandRedeliveryInterval { get; }
+        public string ProductPrefix { get; }
+        public System.TimeSpan SubscriptionTimeout { get; }
+        public Akka.Streams.Implementation.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null) { }
+        public static Akka.Streams.Implementation.StreamRefSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Streams.Implementation.StreamRefSettings WithBufferCapacity(int value) { }
+        public Akka.Streams.Implementation.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
+        public Akka.Streams.Implementation.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }
+    }
     public class StreamSupervisor : Akka.Actor.ActorBase
     {
         public readonly Akka.Util.AtomicBoolean HaveShutdown;
@@ -4032,6 +4097,16 @@ namespace Akka.Streams.IO
         public bool WasSuccessful { get; }
         public static Akka.Streams.IO.IOResult Failed(long count, System.Exception reason) { }
         public static Akka.Streams.IO.IOResult Success(long count) { }
+    }
+}
+namespace Akka.Streams.Serialization
+{
+    public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object o) { }
     }
 }
 namespace Akka.Streams.Stage
