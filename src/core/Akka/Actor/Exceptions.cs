@@ -115,6 +115,40 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// This exception is thrown when an Ask expects message of type A, but receives B.
+    /// </summary>
+    public class InvalidAskResponseException : AkkaException
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AskTimeoutException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="responseMsg">The unexpected message object received by the actor.</param>
+        public InvalidAskResponseException(string message, object responseMsg)
+            : base(message)
+        {
+            ResponseMsg = responseMsg;
+        }
+
+        /// <summary>
+        /// The message received by the Ask
+        /// </summary>
+        public object ResponseMsg { get; }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AskTimeoutException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected InvalidAskResponseException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
+    }
+
+    /// <summary>
     /// This exception is thrown when an actor is interrupted in the midst of processing messages.
     /// 
     /// This is an exception typically thrown when the underlying dispatcher's threads are aborted.
