@@ -145,7 +145,7 @@ namespace Akka.Streams.Implementation
             public void Cancel()
             {
                 _done = true;
-                _promise.TrySetResult(default(T));
+                _promise.TrySetResult(Option<T>.None);
             }
         }
 
