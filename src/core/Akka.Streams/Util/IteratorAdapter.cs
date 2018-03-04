@@ -83,7 +83,7 @@ namespace Akka.Streams.Util
             if (!HasNext())
                 throw new InvalidOperationException();
             if (_exception != null)
-                throw _exception;
+                throw new AggregateException(_exception);
 
             _hasNext = null;
             _exception = null;
