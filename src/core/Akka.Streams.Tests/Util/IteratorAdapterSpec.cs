@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IteratorAdapterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Akka.Streams.Util;
@@ -15,7 +22,9 @@ namespace Akka.Streams.Tests.Util
             var iteratorAdapter = new IteratorAdapter<object>(new ThrowExceptioEnumerator<object>());
             Action action = () => iteratorAdapter.Next();
 
-            action.ShouldThrow<AggregateException>();
+            action.ShouldThrow<AggregateException>()
+                .And.StackTrace
+                .Contains("at Akka.Streams.Tests.Util.IteratorAdapterSpec.ThrowExceptioEnumerator`1.MoveNext()");
         }
 
         class ThrowExceptioEnumerator<T> : IEnumerator<T>
