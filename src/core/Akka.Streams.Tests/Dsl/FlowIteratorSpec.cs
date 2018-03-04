@@ -56,8 +56,10 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(1);
             c.ExpectNext(1);
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            EventFilter.Exception<IllegalStateException>("not two").ExpectOne(() => sub.Request(2));
-            c.ExpectError().Message.Should().Be("not two");
+            EventFilter.Exception<AggregateException>()
+                .And.Exception<IllegalStateException>("not two").ExpectOne(() => sub.Request(2));
+            var error = c.ExpectError().InnerException;
+            error.Message.Should().Be("not two");
             sub.Request(2);
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
@@ -78,7 +80,8 @@ namespace Akka.Streams.Tests.Dsl
             var p = Source.From(new ThrowEnumerable(false)).RunWith(Sink.AsPublisher<int>(false), Materializer);
             var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
-            c.ExpectSubscriptionAndError().Message.Should().Be("no next");
+            var error = c.ExpectSubscriptionAndError().InnerException;
+            error.Message.Should().Be("no next");
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
 
