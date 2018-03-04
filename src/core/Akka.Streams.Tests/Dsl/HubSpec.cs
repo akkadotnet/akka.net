@@ -18,6 +18,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Akka.Actor;
+using Akka.Streams.Util;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
@@ -292,7 +293,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
@@ -317,7 +318,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
@@ -359,7 +360,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
@@ -385,7 +386,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
@@ -411,7 +412,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
@@ -441,7 +442,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                    .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null);
                 var t = Source.Maybe<int>()
                     .Concat(other)
                     .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)

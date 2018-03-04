@@ -1610,7 +1610,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromPublisher<T>(Reactive.Streams.IPublisher<T> publisher) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
         public static Akka.Streams.Dsl.Source<TOut, System.Threading.Tasks.Task<TMat>> Lazily<TOut, TMat>(System.Func<Akka.Streams.Dsl.Source<TOut, TMat>> create) { }
-        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.TaskCompletionSource<T>> Maybe<T>() { }
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.TaskCompletionSource<Akka.Streams.Util.Option<T>>> Maybe<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.Streams.ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Repeat<T>(T element) { }
         public static Akka.Streams.SourceShape<T> Shape<T>(string name) { }
@@ -2832,12 +2832,12 @@ namespace Akka.Streams.Implementation
         }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class MaybeSource<TOut> : Akka.Streams.Implementation.SourceModule<TOut, System.Threading.Tasks.TaskCompletionSource<TOut>>
+    public sealed class MaybeSource<TOut> : Akka.Streams.Implementation.SourceModule<TOut, System.Threading.Tasks.TaskCompletionSource<Akka.Streams.Util.Option<TOut>>>
     {
         public MaybeSource(Akka.Streams.Attributes attributes, Akka.Streams.SourceShape<TOut> shape) { }
         public override Akka.Streams.Attributes Attributes { get; }
         public override Reactive.Streams.IPublisher<TOut> Create(Akka.Streams.MaterializationContext context, out System.Threading.Tasks.TaskCompletionSource<> materializer) { }
-        protected override Akka.Streams.Implementation.SourceModule<TOut, System.Threading.Tasks.TaskCompletionSource<TOut>> NewInstance(Akka.Streams.SourceShape<TOut> shape) { }
+        protected override Akka.Streams.Implementation.SourceModule<TOut, System.Threading.Tasks.TaskCompletionSource<Akka.Streams.Util.Option<TOut>>> NewInstance(Akka.Streams.SourceShape<TOut> shape) { }
         public override Akka.Streams.Implementation.IModule WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     public abstract class Module : Akka.Streams.Implementation.IModule, System.IComparable<Akka.Streams.Implementation.IModule>

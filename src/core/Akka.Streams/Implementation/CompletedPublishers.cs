@@ -113,10 +113,10 @@ namespace Akka.Streams.Implementation
         private class MaybeSubscription : ISubscription
         {
             private readonly ISubscriber<T> _subscriber;
-            private readonly TaskCompletionSource<T> _promise;
+            private readonly TaskCompletionSource<Option<T>> _promise;
             private bool _done;
 
-            public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<T> promise)
+            public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<Option<T>> promise)
             {
                 _subscriber = subscriber;
                 _promise = promise;
@@ -131,9 +131,9 @@ namespace Akka.Streams.Implementation
                     _done = true;
                     _promise.Task.ContinueWith(t =>
                     {
-                        if (!_promise.Task.Result.IsDefaultForType())
+                        if (!_promise.Task.Result.Equals(Option<T>.None))
                         {
-                            ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result);
+                            ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result.Value);
                             ReactiveStreamsCompliance.TryOnComplete(_subscriber);
                         }
                         else
@@ -145,14 +145,14 @@ namespace Akka.Streams.Implementation
             public void Cancel()
             {
                 _done = true;
-                _promise.TrySetResult(default(T));
+                _promise.TrySetResult(Option<T>.None);
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly TaskCompletionSource<T> Promise;
+        public readonly TaskCompletionSource<Option<T>> Promise;
         /// <summary>
         /// TBD
         /// </summary>
@@ -163,7 +163,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="promise">TBD</param>
         /// <param name="name">TBD</param>
-        public MaybePublisher(TaskCompletionSource<T> promise, string name)
+        public MaybePublisher(TaskCompletionSource<Option<T>> promise, string name)
         {
             Promise = promise;
             Name = name;
