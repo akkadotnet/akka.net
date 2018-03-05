@@ -269,7 +269,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new OnError(TE()), new Cancel());
+                    var events = lastEvents();
+                    events.OfType<OnError>().Select(x => x.Cause.InnerException).Should().BeEquivalentTo(TE());
+                    events.OfType<Cancel>().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
