@@ -22,7 +22,7 @@ A `ClusterEvent.MemberUp` message will cause the cluster to add a new routee (al
 
 ## Types of Clustered Routers
 ### Clustered `Group` Routers
-The first type of router we're going to look at at clustered `Group` routers.
+The first type of router we're going to look at is clustered `Group` routers.
 
 ![Akka.Cluster group routers in action](/images/akka-cluster-routers.png)
 
