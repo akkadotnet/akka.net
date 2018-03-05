@@ -144,7 +144,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static T GetOrElse<T>(this T obj, T elseValue)
         {
-            if (obj.Equals(default(T)))
+            if (Equals(obj, default(T)))
                 return elseValue;
             return obj;
         }

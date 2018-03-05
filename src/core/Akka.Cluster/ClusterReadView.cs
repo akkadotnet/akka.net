@@ -25,7 +25,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public ClusterEvent.CurrentClusterState State { get { return _state; } }
+        public ClusterEvent.CurrentClusterState State => _state;
 
         /// <summary>
         /// Current state
@@ -35,7 +35,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        internal Reachability Reachability { get { return _reachability; } }
+        internal Reachability Reachability => _reachability;
 
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Akka.Cluster
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal ClusterEvent.CurrentInternalStats LatestStats { get { return _latestStats; } }
+        internal ClusterEvent.CurrentInternalStats LatestStats => _latestStats;
 
         /// <summary>
         /// Current internal cluster stats, updated periodically via event bus.
@@ -58,10 +58,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public Address SelfAddress
-        {
-            get { return _selfAddress; }
-        }
+        public Address SelfAddress => _selfAddress;
 
         readonly IActorRef _eventBusListener;
 
@@ -182,8 +179,7 @@ namespace Akka.Cluster
             get
             {
                 return _state.Members.SingleOrDefault(member => member.UniqueAddress == _cluster.SelfUniqueAddress)
-                        .GetOrElse(
-                            Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed));
+                        ?? Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed);
             }
         }
 

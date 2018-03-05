@@ -147,9 +147,11 @@ namespace Akka.Cluster.Tests
             var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.RoleLeaderChanged))));
             subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
-            _publisher.Tell(new InternalClusterAction.PublishChanges(State(new Gossip(ImmutableSortedSet.Create(cJoining, dUp)), dUp.UniqueAddress)));
-            subscriber.ExpectMsg(new ClusterEvent.RoleLeaderChanged("GRP", dUp.Address));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(State(new Gossip(ImmutableSortedSet.Create(cUp, dUp)), dUp.UniqueAddress)));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(State(new Gossip(ImmutableSortedSet.Create(cJoining, dUp)), dUp.UniqueAddress, ClusterSettings.DefaultDataCenter)));
+            subscriber.ExpectMsgAllOf(
+                new ClusterEvent.RoleLeaderChanged("GRP", dUp.Address),
+                new ClusterEvent.RoleLeaderChanged(ClusterSettings.DcRolePrefix + ClusterSettings.DefaultDataCenter, dUp.Address));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(State(new Gossip(ImmutableSortedSet.Create(cUp, dUp)), dUp.UniqueAddress, ClusterSettings.DefaultDataCenter)));
             subscriber.ExpectMsg(new ClusterEvent.RoleLeaderChanged("GRP", cUp.Address));
         }
 
