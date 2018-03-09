@@ -179,7 +179,7 @@ namespace Akka.Cluster.Tests
             var g2 = new Gossip(ImmutableSortedSet.Create(a1, b1, c3), new GossipOverview(r2));
 
             var merged1 = g1.Merge(g2);
-            merged1.Members.Should().BeEquivalentTo(ImmutableHashSet.Create(a1, b1));
+            merged1.Members.Should().BeEquivalentTo(ImmutableSortedSet.Create(a1, b1));
             merged1.Overview.Reachability.AllUnreachable.Should()
                 .BeEquivalentTo(ImmutableHashSet.Create(a1.UniqueAddress));
 

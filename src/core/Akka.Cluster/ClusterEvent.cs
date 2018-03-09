@@ -839,8 +839,8 @@ namespace Akka.Cluster
             var newConvergence = newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty);
             var newSeenBy = newState.LatestGossip.SeenBy;
 
-            if (newConvergence != newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty) ||
-                newSeenBy.SetEquals(oldState.LatestGossip.SeenBy))
+            if (newConvergence != oldState.Convergence(ImmutableHashSet<UniqueAddress>.Empty) ||
+                !newSeenBy.SetEquals(oldState.LatestGossip.SeenBy))
             {
                 return new SeenChanged(newConvergence, newSeenBy.Select(m => m.Address).ToImmutableHashSet());
             }

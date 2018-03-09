@@ -293,13 +293,13 @@ namespace Akka.Cluster.Tests
             ClusterEvent.DiffSeen(State(g1), State(g2))
                 .Should()
                 .Be(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address)));
-            ClusterEvent.DiffMemberEvents(State(g1), State(g2))
+            ClusterEvent.DiffMemberEvents(State(g2), State(g1))
                 .Should()
                 .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>());
-            ClusterEvent.DiffUnreachable(State(g1), State(g2))
+            ClusterEvent.DiffUnreachable(State(g2), State(g1))
                 .Should()
                 .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
-            ClusterEvent.DiffSeen(State(g1), State(g2))
+            ClusterEvent.DiffSeen(State(g2), State(g1))
                 .Should()
                 .Be(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address, eJoining.Address)));
         }
@@ -335,7 +335,9 @@ namespace Akka.Cluster.Tests
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, cUp, dLeaving, eJoining));
             var g2 = new Gossip(ImmutableSortedSet.Create(bUp, cUp, dExiting, eJoining));
 
-            ClusterEvent.DiffRolesLeader(State(g1), State(g2)).Should().BeEquivalentTo(
+            ClusterEvent.DiffRolesLeader(State(g0), State(g1)).Should().BeEquivalentTo(
+                // since this role is implicitly added
+                new ClusterEvent.RoleLeaderChanged(ClusterSettings.DcRolePrefix + ClusterSettings.DefaultDataCenter, aUp.Address),
                 new ClusterEvent.RoleLeaderChanged("AA", aUp.Address),
                 new ClusterEvent.RoleLeaderChanged("AB", aUp.Address),
                 new ClusterEvent.RoleLeaderChanged("BB", bUp.Address),
@@ -344,6 +346,7 @@ namespace Akka.Cluster.Tests
                 new ClusterEvent.RoleLeaderChanged("EE", eUp.Address));
 
             ClusterEvent.DiffRolesLeader(State(g1), State(g2)).Should().BeEquivalentTo(
+                new ClusterEvent.RoleLeaderChanged(ClusterSettings.DcRolePrefix + ClusterSettings.DefaultDataCenter, bUp.Address),
                 new ClusterEvent.RoleLeaderChanged("AA", null),
                 new ClusterEvent.RoleLeaderChanged("AB", bUp.Address),
                 new ClusterEvent.RoleLeaderChanged("DE", eJoining.Address));

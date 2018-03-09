@@ -77,6 +77,7 @@ namespace Akka.Cluster
         public CrossDcHeartbeatSender()
         {
             _activeOrIntrospecting = message => Active(message) || Introspecting(message);
+            _crossDcSettings = _cluster.Settings.MultiDataCenter.CrossDcFailureDetectorSettings;
             _isVerboseHeartbeat = _cluster.Settings.VerboseHeartbeatLogging;
             IsExternalClusterMember = member => member.DataCenter != SelfDataCenter;
             _crossDcFailureDetector = _cluster.FailureDetector;
