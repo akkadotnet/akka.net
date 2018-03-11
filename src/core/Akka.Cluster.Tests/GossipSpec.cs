@@ -510,8 +510,8 @@ namespace Akka.Cluster.Tests
             merged1.Members.Should().BeEquivalentTo(dc1a1, dc2d1);
 
             merged1.Version.Versions.Keys.Should().BeEquivalentTo(
-                Gossip.VectorClockName(dc1a1.UniqueAddress),
-                Gossip.VectorClockName(dc2d1.UniqueAddress));
+                VectorClock.Node.Create(Gossip.VectorClockName(dc1a1.UniqueAddress)),
+                VectorClock.Node.Create(Gossip.VectorClockName(dc2d1.UniqueAddress)));
         }
         
         [Fact]
@@ -524,10 +524,9 @@ namespace Akka.Cluster.Tests
             g.Tombstones.Keys.Should().Contain(dc1b1.UniqueAddress);
 
             var pruned = g.PruneTombstones(timestamp.AddMilliseconds(1));
-            pruned.Tombstones.Keys.Should().NotContain(dc1b1.UniqueAddress);
 
             // when we merge the two, it should not be reintroduced
-            pruned.Merge(g).Tombstones.Keys.Should().NotContain(dc1b1.UniqueAddress);
+            pruned.Tombstones.Keys.Should().NotContain(dc1b1.UniqueAddress);
         }
         
         [Fact]

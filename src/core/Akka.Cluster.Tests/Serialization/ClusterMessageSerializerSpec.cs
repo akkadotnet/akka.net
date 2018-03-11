@@ -50,8 +50,8 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress2 = new UniqueAddress(address, 18);
-            var node1 = new VectorClock.Node("node1");
-            var node2 = new VectorClock.Node("node2");
+            var node1 = VectorClock.Node.Create("node1");
+            var node2 = VectorClock.Node.Create("node2");
 
             var g1 = new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1)).Increment(node1)
                     .Increment(node2)
@@ -70,10 +70,10 @@ namespace Akka.Cluster.Tests.Serialization
         [Fact]
         public void Can_serialize_GossipStatus()
         {
-            var node1 = new VectorClock.Node("node1");
-            var node2 = new VectorClock.Node("node2");
-            var node3 = new VectorClock.Node("node3");
-            var node4 = new VectorClock.Node("node4");
+            var node1 = VectorClock.Node.Create("node1");
+            var node2 = VectorClock.Node.Create("node2");
+            var node3 = VectorClock.Node.Create("node3");
+            var node4 = VectorClock.Node.Create("node4");
             var g1 =
                 new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1)).Increment(node1)
                     .Increment(node2)
@@ -100,10 +100,10 @@ namespace Akka.Cluster.Tests.Serialization
         [Fact]
         public void Can_serialize_Welcome()
         {
-            var node1 = new VectorClock.Node("node1");
-            var node2 = new VectorClock.Node("node2");
-            var node3 = new VectorClock.Node("node3");
-            var node4 = new VectorClock.Node("node4");
+            var node1 = VectorClock.Node.Create("node1");
+            var node2 = VectorClock.Node.Create("node2");
+            var node3 = VectorClock.Node.Create("node3");
+            var node4 = VectorClock.Node.Create("node4");
             var g1 =
                 new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1)).Increment(node1)
                     .Increment(node2)

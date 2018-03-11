@@ -350,7 +350,7 @@ namespace Akka.Cluster
             // and will propagate as is if there are no other changes on other nodes.
             // If other concurrent changes on other nodes (e.g. join) the pruning is also
             // taken care of when receiving gossips.
-            var newVersion = Version.Prune(new VectorClock.Node(Gossip.VectorClockName(node)));
+            var newVersion = Version.Prune(VectorClock.Node.Create(Gossip.VectorClockName(node)));
             var newMembers = Members.Where(m => m.UniqueAddress != node).ToImmutableSortedSet();
             var newTombstones = Tombstones.SetItem(node, removalTimestamp);
             return Copy(version: newVersion, members: newMembers, overview: newOverview, tombstones: newTombstones);
@@ -408,9 +408,13 @@ namespace Akka.Cluster
             return $"Gossip(members: [{members}], overview: {Overview}, version: {Version}, tombstones: [{tombstones}])";
         }
 
-        public Gossip Update(ImmutableSortedSet<Member> changedMembers)
+        public Gossip Update(ImmutableSortedSet<Member> updatedMembers)
         {
-            return Copy(members: changedMembers.Union(Members));
+            var builder = updatedMembers.ToBuilder();
+            foreach (var member in Members)
+                builder.Add(member);
+
+            return Copy(members: builder.ToImmutable());
         }
     }
 

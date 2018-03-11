@@ -367,7 +367,7 @@ namespace Akka.Cluster
             // if member was found, compare them and get more prioritized one - then remove it from `b`
             foreach (var member in a)
             {
-                if (!tombstones.ContainsKey(member.UniqueAddress))
+                if (member.Status != MemberStatus.Down && member.Status != MemberStatus.Exiting && !tombstones.ContainsKey(member.UniqueAddress))
                 {
                     if (bmap.TryGetValue(member.UniqueAddress, out var other))
                     {
@@ -384,7 +384,7 @@ namespace Akka.Cluster
             {
                 var address = pair.Key;
                 var member = pair.Value;
-                if (!tombstones.ContainsKey(address))
+                if (member.Status != MemberStatus.Down && member.Status != MemberStatus.Exiting && !tombstones.ContainsKey(address))
                 {
                     result.Add(member);
                 }

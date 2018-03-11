@@ -71,7 +71,7 @@ namespace Akka.Cluster
             /// Creates a new vectorclock node.
             /// </summary>
             /// <param name="value">The hash value of the string.</param>
-            public Node(string value)
+            private Node(string value)
             {
                 _value = value;
                 _computedHashValue = 23;
