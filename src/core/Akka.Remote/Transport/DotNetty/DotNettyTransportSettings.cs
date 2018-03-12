@@ -121,9 +121,9 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly int Port;
 
         /// <summary>
-        /// The local port the transport binds on.
-        /// Defaults to 'port'
-        /// This port needs to be unique for each actor system on the same machine.
+        /// If this value is set, this becomes the public port for the actor system on this
+        /// transport, which might be different than the physical port
+        /// this is designed to make it easy to support private / public addressing schemes
         /// </summary>
         public readonly int? PublicPort;
 
