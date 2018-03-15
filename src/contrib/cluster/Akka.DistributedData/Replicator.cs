@@ -1017,7 +1017,7 @@ namespace Akka.DistributedData
                         _statusTotChunks = totChunks;
                     }
                     var chunk = (int)(_statusCount % totChunks);
-                    var entries = _dataEntries.Where(x => Math.Abs(x.Key.GetHashCode()) % totChunks == chunk)
+                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key)) % totChunks == chunk)
                         .Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key)))
                         .ToImmutableDictionary();
                     var status = new Internal.Status(entries, chunk, totChunks);
@@ -1064,7 +1064,7 @@ namespace Akka.DistributedData
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
-                    : _dataEntries.Keys.Where(x => Math.Abs(x.GetHashCode()) % totChunks == chunk))
+                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x)) % totChunks == chunk))
                 .ToImmutableHashSet();
 
             var otherMissingKeys = myKeys.Except(otherKeys);
