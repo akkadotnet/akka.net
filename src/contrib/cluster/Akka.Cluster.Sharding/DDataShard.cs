@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.DistributedData;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Cluster.Sharding
 {
@@ -110,7 +111,7 @@ namespace Akka.Cluster.Sharding
 
         private ORSetKey<EntryId> Key(EntryId entityId)
         {
-            var i = (Math.Abs(entityId.GetHashCode()) % NrOfKeys);
+            var i = Math.Abs(MurmurHash.StringHash(entityId)) % NrOfKeys;
             return _stateKeys[i];
         }
 
