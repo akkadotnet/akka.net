@@ -93,8 +93,8 @@ namespace Akka.Cluster
 
             private ClusterEvent.CurrentClusterState State
             {
-                get { return _readView._state; }
-                set { _readView._state = value; }
+                get => _readView._state;
+                set => _readView._state = value;
             }
 
             public EventBusListener(Cluster cluster, ClusterReadView readView)
@@ -186,23 +186,17 @@ namespace Akka.Cluster
         /// <summary>
         /// Returns true if this cluster instance has been shutdown.
         /// </summary>
-        public bool IsTerminated
-        {
-            get { return _cluster.IsTerminated; }
-        }
+        public bool IsTerminated => _cluster.IsTerminated;
 
         /// <summary>
         /// Current cluster members, sorted by address
         /// </summary>
-        public ImmutableSortedSet<Member> Members
-        {
-            get { return State.Members; }
-        }
+        public ImmutableSortedSet<Member> Members => State.Members;
 
         /// <summary>
         /// Members that have been detected as unreachable
         /// </summary>
-        public ImmutableHashSet<Member> UnreachableMembers { get { return State.Unreachable; } }
+        public ImmutableHashSet<Member> UnreachableMembers => State.Unreachable;
 
         /// <summary>
         /// <see cref="MemberStatus"/> for this node.
@@ -211,34 +205,22 @@ namespace Akka.Cluster
         /// and is no longer present in the node ring or any other part of the gossiping state. However in order to maintain the
         /// model and the semantics the user would expect, this method will in this situation return <see cref="MemberStatus.Removed"/>.
         /// </summary>
-        public MemberStatus Status
-        {
-            get { return Self.Status; }
-        }
+        public MemberStatus Status => Self.Status;
 
         /// <summary>
         /// Get the address of the current leader.
         /// </summary>
-        public Address Leader
-        {
-            get { return State.Leader; }
-        }
+        public Address Leader => State.Leader;
 
         /// <summary>
         /// Is this node the leader?
         /// </summary>
-        public bool IsLeader
-        {
-            get { return Leader == SelfAddress; }
-        }
+        public bool IsLeader => Leader == SelfAddress;
 
         /// <summary>
         /// Does the cluster consist of only one member?
         /// </summary>
-        public bool IsSingletonCluster
-        {
-            get { return Members.Count == 1; }
-        }
+        public bool IsSingletonCluster => Members.Count == 1;
 
         /// <summary>
         /// Returns true if the node is no reachable and not <see cref="MemberStatus.Down"/>
@@ -266,7 +248,7 @@ namespace Akka.Cluster
         /// INTERNAL API
         /// The nodes that have seen current version of the <see cref="Gossip"/>
         /// </summary>
-        internal ImmutableHashSet<Address> SeenBy { get { return State.SeenBy; } }
+        internal ImmutableHashSet<Address> SeenBy => State.SeenBy;
 
         /// <inheritdoc/>
         public void Dispose()

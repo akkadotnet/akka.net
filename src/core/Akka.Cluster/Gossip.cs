@@ -65,22 +65,7 @@ namespace Akka.Cluster
         /// <param name="members">The current membership of the cluster.</param>
         /// <returns>A gossip object for the given members.</returns>
         public static Gossip Create(ImmutableSortedSet<Member> members) => members.IsEmpty ? Empty : Empty.Copy(members: members);
-
-        private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
-
-        /// <summary>
-        /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
-        /// </summary>
-        public static readonly ImmutableHashSet<MemberStatus> ConvergenceSkipUnreachableWithMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
-
-        /// <summary>
-        /// If there are unreachable members in the cluster with any of these statuses, they will be pruned from the local gossip
-        /// </summary>
-        public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
-
+        
         /// <summary>
         /// The current members of the cluster
         /// </summary>

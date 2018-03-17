@@ -1155,7 +1155,7 @@ namespace Akka.Cluster
         private void InitJoin()
         {
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
-            if (Gossip.RemoveUnreachableWithMemberStatus.Contains(selfStatus))
+            if (MembershipState.IsRemoveUnreachableWithMemberStatus(selfStatus))
             {
                 // prevents a Down and Exiting node from being used for joining
                 _cluster.LogInfo("Sending InitJoinNack message from node {0} to {1}", SelfAddress, Sender);
@@ -1277,26 +1277,26 @@ namespace Akka.Cluster
         /// Received `Join` message and replies with `Welcome` message, containing
         /// current gossip state, including the new joining member.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="joiningNode">TBD</param>
         /// <param name="roles">TBD</param>
-        private void Joining(UniqueAddress node, ImmutableHashSet<string> roles)
+        private void Joining(UniqueAddress joiningNode, ImmutableHashSet<string> roles)
         {
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
-            if (node.Address.Protocol != _cluster.SelfAddress.Protocol)
+            if (joiningNode.Address.Protocol != _cluster.SelfAddress.Protocol)
             {
                 _log.Warning(
                     "Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
-                    _cluster.SelfAddress.Protocol, node.Address.Protocol);
+                    _cluster.SelfAddress.Protocol, joiningNode.Address.Protocol);
             }
-            else if (node.Address.System != _cluster.SelfAddress.System)
+            else if (joiningNode.Address.System != _cluster.SelfAddress.System)
             {
                 _log.Warning(
                     "Member with wrong ActorSystem name tried to join, but was ignored, expected [{0}] but was [{1}]",
-                    _cluster.SelfAddress.System, node.Address.System);
+                    _cluster.SelfAddress.System, joiningNode.Address.System);
             }
-            else if (Gossip.RemoveUnreachableWithMemberStatus.Contains(selfStatus))
+            else if (MembershipState.IsRemoveUnreachableWithMemberStatus(selfStatus))
             {
-                _log.Info("Trying to join [{0}] to [{1}] member, ignoring. Use a member that is Up instead.", node,
+                _log.Info("Trying to join [{0}] to [{1}] member, ignoring. Use a member that is Up instead.", joiningNode,
                     selfStatus);
             }
             else
@@ -1305,12 +1305,12 @@ namespace Akka.Cluster
 
                 // check by address without uid to make sure that node with same host:port is not allowed
                 // to join until previous node with that host:port has been removed from the cluster
-                var localMember = localMembers.FirstOrDefault(m => m.Address.Equals(node.Address));
-                if (localMember != null && localMember.UniqueAddress.Equals(node))
+                var localMember = localMembers.FirstOrDefault(m => m.Address.Equals(joiningNode.Address));
+                if (localMember != null && localMember.UniqueAddress.Equals(joiningNode))
                 {
                     // node retried join attempt, probably due to lost Welcome message
-                    _cluster.LogInfo("Existing member [{0}] is joining again.", node);
-                    if (!node.Equals(SelfUniqueAddress))
+                    _cluster.LogInfo("Existing member [{0}] is joining again.", joiningNode);
+                    if (!joiningNode.Equals(SelfUniqueAddress))
                     {
                         Sender.Tell(new InternalClusterAction.Welcome(SelfUniqueAddress, LatestGossip));
                     }
@@ -1322,7 +1322,7 @@ namespace Akka.Cluster
                     // new node will retry join
                     _cluster.LogInfo(
                         "New incarnation of existing member [{0}] is trying to join. Existing will be removed from the cluster and then new member will be allowed to join.",
-                        node);
+                        joiningNode);
                     if (localMember.Status != MemberStatus.Down)
                     {
                         // we can confirm it as terminated/unreachable immediately
@@ -1339,21 +1339,21 @@ namespace Akka.Cluster
                 else
                 {
                     // remove the node from the failure detector
-                    _cluster.FailureDetector.Remove(node.Address);
-                    _cluster.CrossDcFailureDetector.Remove(node.Address);
+                    _cluster.FailureDetector.Remove(joiningNode.Address);
+                    _cluster.CrossDcFailureDetector.Remove(joiningNode.Address);
 
                     // add joining node as Joining
                     // add self in case someone else joins before self has joined (Set discards duplicates)
                     var newMembers = localMembers
-                        .Add(Member.Create(node, roles))
+                        .Add(Member.Create(joiningNode, roles))
                         .Add(Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles));
                     var newGossip = LatestGossip.Copy(members: newMembers);
 
                     UpdateLatestGossip(newGossip);
 
-                    _cluster.LogInfo("Node [{0}] is JOINING, roles [{1}]", node.Address, string.Join(",", roles));
+                    _cluster.LogInfo("Node [{0}] is JOINING, roles [{1}]", joiningNode.Address, string.Join(",", roles));
 
-                    if (node.Equals(SelfUniqueAddress))
+                    if (joiningNode.Equals(SelfUniqueAddress))
                     {
                         if (localMembers.IsEmpty)
                         {
@@ -1673,7 +1673,7 @@ namespace Akka.Cluster
                     // Removal of member itself is handled in merge (pickHighestPriority)
                     var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (gossip, member) =>
                     {
-                        if (Gossip.RemoveUnreachableWithMemberStatus.Contains(member.Status) &&
+                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) &&
                             !remoteGossip.Members.Contains(member))
                         {
                             _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}",
@@ -1686,7 +1686,7 @@ namespace Akka.Cluster
 
                     var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (gossip, member) =>
                     {
-                        if (Gossip.RemoveUnreachableWithMemberStatus.Contains(member.Status) &&
+                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) &&
                             !localGossip.Members.Contains(member))
                         {
                             _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}",
@@ -1945,8 +1945,7 @@ namespace Akka.Cluster
 
             var removedUnreachable = _membershipState.DcReachability.AllUnreachableOrTerminated
                 .Select(latestGossip.GetMember)
-                .Where(m => m.DataCenter == _selfDataCenter &&
-                            (m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting))
+                .Where(m => m.DataCenter == _selfDataCenter && MembershipState.IsRemoveUnreachableWithMemberStatus(m.Status))
                 .ToImmutableHashSet();
 
             var removedExitingConfirmed =
@@ -1959,8 +1958,7 @@ namespace Akka.Cluster
 
             var removedOtherDc = latestGossip.IsMultiDc
                 ? latestGossip.Members
-                    .Where(m => m.DataCenter == _selfDataCenter &&
-                                (m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting))
+                    .Where(m => m.DataCenter == _selfDataCenter && MembershipState.IsRemoveUnreachableWithMemberStatus(m.Status))
                     .ToImmutableHashSet()
                 : ImmutableHashSet<Member>.Empty;
 
@@ -2056,7 +2054,7 @@ namespace Akka.Cluster
 
             var pruned =
                 updatedGossip.PruneTombstones(DateTime.UtcNow - _cluster.Settings.PruneGossipTombstonesAfter);
-            if (ReferenceEquals(latestGossip, pruned))
+            if (!ReferenceEquals(latestGossip, pruned))
             {
                 UpdateLatestGossip(pruned);
                 PublishMembershipState();

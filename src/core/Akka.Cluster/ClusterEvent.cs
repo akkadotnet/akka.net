@@ -642,6 +642,8 @@ namespace Akka.Cluster
                     return hash;
                 }
             }
+
+            public override string ToString() => $"SeenChanged(convergence: {Convergence}, seenBy: [{string.Join(",", SeenBy)}])";
         }
 
         /// <summary>
@@ -993,8 +995,9 @@ namespace Akka.Cluster
 
         private void PublishInternalStats(ClusterEvent.CurrentInternalStats currentStats) => Publish(currentStats);
 
-        private void Publish(object @event) => _eventStream.Publish(@event);
-
-        private void ClearState() => _membershipState = _emptyMembershipState;
+        private void Publish(object @event)
+        {
+            _eventStream.Publish(@event);
+        }
     }
 }

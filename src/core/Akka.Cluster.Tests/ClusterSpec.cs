@@ -29,11 +29,17 @@ namespace Akka.Cluster.Tests
          */
 
         const string Config = @"    
+            akka.loglevel = DEBUG
             akka.cluster {
               auto-down-unreachable-after = 0s
               periodic-tasks-initial-delay = 120 s
               publish-stats-interval = 0 s # always, when it happens
               run-coordinated-shutdown-when-down = off
+              debug {
+                verbose-heartbeat-logging = on
+	            verbose-receive-gossip-logging = on
+                verbose-gossip-logging = on
+              }
             }
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.coordinated-shutdown.terminate-actor-system = off

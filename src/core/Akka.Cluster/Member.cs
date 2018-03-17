@@ -384,7 +384,7 @@ namespace Akka.Cluster
             {
                 var address = pair.Key;
                 var member = pair.Value;
-                if (member.Status != MemberStatus.Down && member.Status != MemberStatus.Exiting && !tombstones.ContainsKey(address))
+                if (!tombstones.ContainsKey(address) && !MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status))
                 {
                     result.Add(member);
                 }
@@ -561,10 +561,7 @@ namespace Akka.Cluster
         /// <param name="left">The first unique address used for comparison</param>
         /// <param name="right">The second unique address used for comparison</param>
         /// <returns><c>true</c> if both unique addresses are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(UniqueAddress left, UniqueAddress right)
-        {
-            return Equals(left, right);
-        }
+        public static bool operator ==(UniqueAddress left, UniqueAddress right) => Equals(left, right);
 
         /// <summary>
         /// Compares two specified unique addresses for inequality.
@@ -572,10 +569,7 @@ namespace Akka.Cluster
         /// <param name="left">The first unique address used for comparison</param>
         /// <param name="right">The second unique address used for comparison</param>
         /// <returns><c>true</c> if both unique addresses are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(UniqueAddress left, UniqueAddress right)
-        {
-            return !Equals(left, right);
-        }
+        public static bool operator !=(UniqueAddress left, UniqueAddress right) => !Equals(left, right);
 
         #endregion
     }

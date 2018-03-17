@@ -139,9 +139,6 @@ namespace Akka.Cluster
     /// </summary>
     internal abstract class AutoDownBase : UntypedActor
     {
-        private readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
-            Gossip.ConvergenceSkipUnreachableWithMemberStatus;
-
         private ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
             ImmutableDictionary.Create<UniqueAddress, ICancelable>();
         private ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
@@ -227,7 +224,7 @@ namespace Akka.Cluster
 
         private void UnreachableMember(Member m)
         {
-            if(!_skipMemberStatus.Contains(m.Status) && !_scheduledUnreachable.ContainsKey(m.UniqueAddress))
+            if(!MembershipState.IsConvergenceSkipUnreachableWithMemberStatus(m.Status) && !_scheduledUnreachable.ContainsKey(m.UniqueAddress))
                 ScheduleUnreachable(m.UniqueAddress);
         }
 

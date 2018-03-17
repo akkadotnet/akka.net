@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -18,11 +19,23 @@ namespace Akka.Cluster
 {
     internal sealed class MembershipState
     {
-        private static readonly MemberStatus[] LeaderMemberStatus = { MemberStatus.Up, MemberStatus.Leaving };
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsLeaderMemberStatus(MemberStatus status) => status == MemberStatus.Up || status == MemberStatus.Leaving;
 
-        private static readonly MemberStatus[] ConvergenceMemberStatus = { MemberStatus.Up, MemberStatus.Leaving };
-        public static readonly MemberStatus[] ConvergenceSkipUnreachableWithMemberStatus = { MemberStatus.Down, MemberStatus.Exiting };
-        public static readonly MemberStatus[] RemoveUnreachableWithMemberStatus = { MemberStatus.Down, MemberStatus.Exiting };
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsConvergenceMemberStatus(MemberStatus status) => status == MemberStatus.Up || status == MemberStatus.Leaving;
+
+        /// <summary>
+        /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsConvergenceSkipUnreachableWithMemberStatus(MemberStatus status) => status == MemberStatus.Down || status == MemberStatus.Exiting;
+
+        /// <summary>
+        /// If there are unreachable members in the cluster with any of these statuses, they will be pruned from the local gossip
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsRemoveUnreachableWithMemberStatus(MemberStatus status) => status == MemberStatus.Down || status == MemberStatus.Exiting;
 
         public Gossip LatestGossip { get; }
         public UniqueAddress SelfUniqueAddress { get; }
@@ -153,7 +166,7 @@ namespace Akka.Cluster
             // convergence cannot be reached
             var memberHinderingConvergenceExists = Members.Any(member =>
                 member.DataCenter == SelfDataCenter
-                && (member.Status == MemberStatus.Up || member.Status == MemberStatus.Leaving)
+                && IsConvergenceMemberStatus(member.Status)
                 && !(LatestGossip.SeenByNode(member.UniqueAddress) || exitingConfirmed.Contains(member.UniqueAddress)));
 
             // Find cluster members in the data center that are unreachable from other members of the data center
@@ -163,7 +176,7 @@ namespace Akka.Cluster
                 .Select(node => LatestGossip.GetMember(node));
 
             // unreachables outside of the data center or with status DOWN or EXITING does not affect convergence
-            var allUnreachablesCanBeIgnored = unreachableInDc.All(unreachable => unreachable.Status == MemberStatus.Down || unreachable.Status == MemberStatus.Exiting);
+            var allUnreachablesCanBeIgnored = unreachableInDc.All(unreachable => IsConvergenceSkipUnreachableWithMemberStatus(unreachable.Status));
             return allUnreachablesCanBeIgnored && !memberHinderingConvergenceExists;
         }
 
@@ -173,7 +186,7 @@ namespace Akka.Cluster
 
         public Member YoungestMember => DcMembers.MaxBy(m => m.UpNumber == int.MaxValue ? 0 : m.UpNumber);
 
-        public bool IsLeader(UniqueAddress node) => Leader == node;
+        public bool IsLeader(UniqueAddress node) => Leader == null || Leader == node;
 
         public UniqueAddress RoleLeader(string role) => LeaderOf(Members.Where(m => m.HasRole(role)));
 
@@ -188,7 +201,7 @@ namespace Akka.Cluster
             else
             {
                 var found = reachableMembersInDc
-                    .FirstOrDefault(m => m.Status == MemberStatus.Up || m.Status == MemberStatus.Leaving) ?? reachableMembersInDc.First();
+                    .FirstOrDefault(m => IsLeaderMemberStatus(m.Status)) ?? reachableMembersInDc.Min(Member.LeaderStatusOrdering);
                 return found.UniqueAddress;
             }
         }
