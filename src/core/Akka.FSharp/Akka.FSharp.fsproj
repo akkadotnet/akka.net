@@ -27,8 +27,4 @@
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.3.4" />
-  </ItemGroup>
-
 </Project>
