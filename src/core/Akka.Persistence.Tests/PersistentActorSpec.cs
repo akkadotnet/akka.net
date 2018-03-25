@@ -611,5 +611,13 @@ namespace Akka.Persistence.Tests
             persistentActor.Tell("boom");
             ExpectMsg("failed with TestException while processing boom");
         }
+
+        [Fact]
+        public void PersistentActor_should_stop_actor_when_direct_exception_from_receiveRecover()
+        {
+            var persistentActor = ActorOf(Props.Create(() => new ExceptionActor(Name)));
+            Watch(persistentActor);
+            ExpectTerminated(persistentActor);
+        }
     }
 }
