@@ -110,6 +110,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else if (message is RecoveryTick tick && tick.Snapshot)
                     {
@@ -123,6 +124,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else
                     {
@@ -210,6 +212,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else if (message is RecoveryTick tick && !tick.Snapshot)
                     {
@@ -226,6 +229,7 @@ namespace Akka.Persistence
                             {
                                 Context.Stop(Self);
                             }
+                            ReturnRecoveryPermit();
                         }
                         else
                         {
