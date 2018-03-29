@@ -124,7 +124,8 @@ namespace Akka.Pattern
             TimeSpan maxBackoff,
             IBackoffReset reset,
             double randomFactor,
-            SupervisorStrategy strategy) : base(childProps, childName, reset)
+            SupervisorStrategy strategy,
+            object replyWhileStopped = null) : base(childProps, childName, reset, replyWhileStopped)
         {
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
@@ -172,8 +173,7 @@ namespace Akka.Pattern
             TimeSpan maxBackoff,
             double randomFactor)
         {
-            return PropsWithSupervisorStrategy(childProps, childName, minBackoff, maxBackoff, randomFactor,
-                Actor.SupervisorStrategy.DefaultStrategy);
+            return PropsWithSupervisorStrategy(childProps, childName, minBackoff, maxBackoff, randomFactor, Actor.SupervisorStrategy.DefaultStrategy);
         }
 
         /// <summary>
@@ -204,7 +204,7 @@ namespace Akka.Pattern
             SupervisorStrategy strategy)
         {
              return Actor.Props.Create(
-                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy));
+                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, null));
         }
 
         internal static TimeSpan CalculateDelay(

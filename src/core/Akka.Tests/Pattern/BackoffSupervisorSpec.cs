@@ -258,5 +258,61 @@ namespace Akka.Tests.Pattern
                         .WithSupervisorStrategy(restartingStrategy)));
             });
         }
+
+        [Fact]
+        public void BackoffSupervisor_reply_to_sender_if_replyWhileStopped_is_specified()
+        {
+            EventFilter.Exception<TestException>().Expect(1, () =>
+            {
+                var supervisor = Create(
+                    Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2)
+                        .WithReplyWhileStopped("child was stopped"));
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+
+                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                Watch(c1);
+                supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+
+                c1.Tell("boom");
+                ExpectTerminated(c1);
+
+                AwaitAssert(() =>
+                {
+                    supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                    ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                });
+
+                supervisor.Tell("boom");
+                ExpectMsg("child was stopped");
+            });
+        }
+
+        [Fact]
+        public void BackoffSupervisor_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
+        {
+            EventFilter.Exception<TestException>().Expect(1, () =>
+            {
+                var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2));
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+
+                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                Watch(c1);
+                supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+
+                c1.Tell("boom");
+                ExpectTerminated(c1);
+
+                AwaitAssert(() =>
+                {
+                    supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                    ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+                });
+
+                supervisor.Tell("boom"); //this will be sent to deadLetters
+                ExpectNoMsg(500);
+            });
+        }
     }
 }

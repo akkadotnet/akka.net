@@ -14,18 +14,20 @@ namespace Akka.Pattern
     /// </summary>
     public abstract class BackoffSupervisorBase : ActorBase
     {
-        internal BackoffSupervisorBase(Props childProps, string childName, IBackoffReset reset)
+        internal BackoffSupervisorBase(Props childProps, string childName, IBackoffReset reset, object replyWhileStopped = null)
         {
             ChildProps = childProps;
             ChildName = childName;
             Reset = reset;
+            ReplyWhileStopped = replyWhileStopped;
         }
 
         protected Props ChildProps { get; }
         protected string ChildName { get; }
         protected IBackoffReset Reset { get; }
-        protected IActorRef Child { get; set; } = null;
-        protected int RestartCountN { get; set; } = 0;
+        protected object ReplyWhileStopped { get; }
+        protected IActorRef Child { get; set; }
+        protected int RestartCountN { get; set; }
 
         protected override void PreStart()
         {
@@ -96,7 +98,14 @@ namespace Akka.Pattern
                 }
                 else
                 {
-                    Context.System.DeadLetters.Forward(message);
+                    if (ReplyWhileStopped != null)
+                    {
+                        Sender.Tell(ReplyWhileStopped);
+                    }
+                    else
+                    {
+                        Context.System.DeadLetters.Forward(message);
+                    }
                 }
             }
 
