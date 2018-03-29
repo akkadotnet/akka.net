@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Pattern
 {
@@ -214,22 +216,8 @@ namespace Akka.Pattern
             double randomFactor)
         {
             var rand = 1.0 + ThreadLocalRandom.Current.NextDouble() * randomFactor;
-            if (restartCount >= 30)
-            {
-                return maxBackoff; // duration overflow protection (> 100 years)
-            }
-            else
-            {
-                var max = Math.Min(maxBackoff.Ticks, minBackoff.Ticks * Math.Pow(2, restartCount)) * rand;
-                if (max >= double.MaxValue)
-                {
-                    return maxBackoff;
-                }
-                else
-                {
-                    return new TimeSpan((long)max);
-                }
-            }
+            var calculateDuration = Math.Min(maxBackoff.Ticks, minBackoff.Ticks * Math.Pow(2, restartCount)) * rand;
+            return calculateDuration < 0d || calculateDuration >= long.MaxValue ? maxBackoff : new TimeSpan((long)calculateDuration);
         }
     }
 }

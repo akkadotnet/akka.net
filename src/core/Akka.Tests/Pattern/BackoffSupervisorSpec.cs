@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
@@ -313,6 +315,29 @@ namespace Akka.Tests.Pattern
                 supervisor.Tell("boom"); //this will be sent to deadLetters
                 ExpectNoMsg(500);
             });
+        }
+
+        [Theory, ClassData(typeof(DelayTable))]
+        public void BackoffSupervisor_correctly_calculate_the_delay(int restartCount, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, TimeSpan expectedResult)
+        {
+            Assert.Equal(expectedResult, BackoffSupervisor.CalculateDelay(restartCount, minBackoff, maxBackoff, randomFactor));
+        }
+
+        internal class DelayTable : IEnumerable<object[]>
+        {
+            private readonly List<object[]> delayTable = new List<object[]>
+            {
+                new object[] { 0, TimeSpan.Zero, TimeSpan.Zero, 0.0, TimeSpan.Zero },
+                new object[] { 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(7), 0d, TimeSpan.FromMinutes(5) },
+                new object[] { 2, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(7), 0d, TimeSpan.FromSeconds(7) },
+                new object[] { 2, TimeSpan.FromSeconds(5), TimeSpan.FromDays(7), 0d, TimeSpan.FromSeconds(20) },
+                new object[] { 29, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10), 0d, TimeSpan.FromMinutes(10) },
+                new object[] { 29, TimeSpan.FromDays(10000), TimeSpan.FromDays(10000), 0d, TimeSpan.FromDays(10000) },
+                new object[] { int.MaxValue, TimeSpan.FromDays(10000), TimeSpan.FromDays(10000), 0d, TimeSpan.FromDays(10000) }
+            };
+
+            public IEnumerator<object[]> GetEnumerator() => delayTable.GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }
