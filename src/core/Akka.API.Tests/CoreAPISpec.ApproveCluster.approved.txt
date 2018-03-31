@@ -231,8 +231,6 @@ namespace Akka.Cluster
         public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
     }
-    [Akka.Annotations.InternalApiAttribute()]
-    public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
     public sealed class CrossDcFailureDetectorSettings
     {
         public CrossDcFailureDetectorSettings(Akka.Configuration.Config config, int nrOfMonitoringActors) { }
@@ -248,6 +246,8 @@ namespace Akka.Cluster
         public bool VerboseGossipLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
     public interface IClusterMessage { }
     public interface IDowningProvider
     {
@@ -270,7 +270,7 @@ namespace Akka.Cluster
         public bool HasRole(string role) { }
         public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
         public bool IsOlderThan(Akka.Cluster.Member other) { }
-        public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> a, System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> b, System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, System.DateTime> tombstones) { }
         public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
         public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
         public override string ToString() { }
@@ -336,7 +336,6 @@ namespace Akka.Cluster
         public override string ToString() { }
         public class Node : System.IComparable<Akka.Cluster.VectorClock.Node>
         {
-            public Node(string value) { }
             public int CompareTo(Akka.Cluster.VectorClock.Node other) { }
             public static Akka.Cluster.VectorClock.Node Create(string name) { }
             public override bool Equals(object obj) { }
