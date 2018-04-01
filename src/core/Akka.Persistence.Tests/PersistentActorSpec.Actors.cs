@@ -1121,6 +1121,20 @@ namespace Akka.Persistence.Tests
                 return false;
             }
         }
+
+        internal class ExceptionActor : ExamplePersistentActor
+        {
+            public ExceptionActor(string name) 
+                : base(name)
+            { }
+
+            protected override bool ReceiveCommand(object message) => CommonBehavior(message);
+            protected override bool ReceiveRecover(object message)
+            {
+                if (message is RecoveryCompleted _) throw new TestException("boom");
+                return false;
+            }
+        }
     }
 }
 
