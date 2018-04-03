@@ -23,30 +23,29 @@ namespace Akka.Streams.Dsl
         {
             private readonly Sample<T> _sample;
             private int _counter;
+            private int _step;
 
             public Logic(Sample<T> sample) : base(sample.Shape)
             {
                 _sample = sample;
-                var step = GetNextStep();
+                _step = GetNextStep();
 
-                SetHandler(sample.Shape.Inlet, onPush: () =>
+                SetHandler(sample.In, onPush: () =>
                 {
                     _counter += 1;
-                    if (_counter >= step)
+                    if (_counter >= _step)
                     {
                         _counter = 0;
-                        step = GetNextStep();
-                        Push(sample.Shape.Outlet, Grab(sample.Shape.Inlet));
+                        _step = GetNextStep();
+                        Push(sample.Out, Grab(sample.In));
                     }
                     else
-                    {
-                        Pull(sample.Shape.Inlet);
-                    }
+                        Pull(sample.In);
                 });
 
-                SetHandler(sample.Shape.Outlet, onPull: () =>
+                SetHandler(sample.Out, onPull: () =>
                 {
-                    Pull(sample.Shape.Inlet);
+                    Pull(sample.In);
                 });
             }
 
@@ -78,10 +77,10 @@ namespace Akka.Streams.Dsl
         private readonly Func<int> _next;
 
         /// <summary>
-        /// Returns every <paramref name="n"/>th elements
+        /// Returns every <paramref name="nth"/> element
         /// </summary>
-        /// <param name="n"><paramref name="n"/>th element. <paramref name="n"/> must > 0</param>
-        public Sample(int n) : this(() => n)
+        /// <param name="nth"><paramref name="nth"/> element. <paramref name="nth"/> must > 0</param>
+        public Sample(int nth) : this(() => nth)
         {
         }
 

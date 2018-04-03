@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="LastElementSpec.cs" company="Akka.NET Project">
+// <copyright file="PartitionWithSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void PartitionWith_should_not_emit_any_value_for_an_empty_source()
         {
-            var t = Source.Empty<int>()
+            Source.Empty<int>()
                 .Via(_flow)
                 .RunWith(this.SinkProbe<int>(), Sys.Materializer())
                 .Request(99)

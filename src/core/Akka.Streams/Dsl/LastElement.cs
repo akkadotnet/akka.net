@@ -13,7 +13,7 @@ namespace Akka.Streams.Dsl
 {
     /// <summary>
     /// This stage materializes to the last element pushed before upstream completion, if any, thereby recovering from any
-    /// failure.Pushed elements are just passed along.
+    /// failure. Pushed elements are just passed along.
     /// </summary>
     /// <typeparam name="T">input and output type</typeparam>
     public class LastElement<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Option<T>>>
@@ -26,7 +26,7 @@ namespace Akka.Streams.Dsl
             {
                 var currentElement = Option<T>.None;
 
-                SetHandler(lastElement.Shape.Inlet, onPush: () =>
+                SetHandler(lastElement.In, onPush: () =>
                 {
                     var element = Grab(lastElement.In);
                     currentElement = new Option<T>(element);
