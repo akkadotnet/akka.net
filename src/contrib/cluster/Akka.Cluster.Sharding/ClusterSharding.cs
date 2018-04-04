@@ -228,6 +228,7 @@ namespace Akka.Cluster.Sharding
     {
         private readonly Lazy<IActorRef> _guardian;
         private readonly ConcurrentDictionary<string, IActorRef> _regions = new ConcurrentDictionary<string, IActorRef>();
+        private readonly ConcurrentDictionary<string, IActorRef> _proxies = new ConcurrentDictionary<string, IActorRef>();
         private readonly ExtendedActorSystem _system;
         private readonly Cluster _cluster;
 
@@ -601,6 +602,8 @@ namespace Akka.Cluster.Sharding
         /// Specifies that this entity type is located on cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
         /// </param>
+        /// <param name="dataCenter">The data center of the cluster nodes where the cluster sharding is running.
+        /// If null then the same data center as current node.</param>
         /// <param name="extractEntityId">
         /// Partial function to extract the entity id and the message to send to the  entity from the incoming message,
         /// if the partial function does not match the message will  be `unhandled`, i.e.posted as `Unhandled` messages
@@ -614,12 +617,13 @@ namespace Akka.Cluster.Sharding
         {
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
-            var startMsg = new ClusterShardingGuardian.StartProxy(typeName, settings, extractEntityId, extractShardId);
+            var startMsg = new ClusterShardingGuardian.StartProxy(typeName, dataCenter, settings, extractEntityId, extractShardId);
             var reply = _guardian.Value.Ask(startMsg, timeout).Result;
             switch (reply)
             {
                 case ClusterShardingGuardian.Started started:
-                    _regions.TryAdd(typeName, started.ShardRegion);
+                    // it must be possible to start several proxies, one per data center
+                    _proxies.TryAdd(ProxyName(typeName, dataCenter), started.ShardRegion);
                     return started.ShardRegion;
 
                 case Status.Failure failure:
@@ -630,7 +634,11 @@ namespace Akka.Cluster.Sharding
                     throw new ActorInitializationException($"Unsupported guardian response: {reply}");
             }
         }
-        
+
+        private static string ProxyName(string typeName, string dataCenter) => string.IsNullOrEmpty(dataCenter)
+            ? typeName + "Proxy"
+            : typeName + "Proxy-" + dataCenter;
+
         /// <summary>
         /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will
         /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
@@ -661,6 +669,8 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardRegion"/>  method.
         /// </summary>
         /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="dataCenter">The data center of the cluster nodes where the cluster sharding is running.
+        /// If null then the same data center as current node.</param>
         /// <param name="role">
         /// Specifies that this entity type is located on cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
@@ -678,7 +688,7 @@ namespace Akka.Cluster.Sharding
         {
             var timeout = _system.Settings.CreationTimeout;
             var settings = ClusterShardingSettings.Create(_system).WithRole(role);
-            var startMsg = new ClusterShardingGuardian.StartProxy(typeName, settings, extractEntityId, extractShardId);
+            var startMsg = new ClusterShardingGuardian.StartProxy(typeName, dataCenter, settings, extractEntityId, extractShardId);
             var reply = await _guardian.Value.Ask(startMsg, timeout);
             switch (reply)
             {
@@ -724,20 +734,24 @@ namespace Akka.Cluster.Sharding
         /// Specifies that this entity type is located on cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
         /// </param>
+        /// <param name="dataCenter">
+        /// The data center of the cluster nodes where the cluster sharding is running.
+        /// If null then the same data center as current node.
+        /// </param>
         /// <param name="messageExtractor">
         /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef StartProxy(string typeName, string role, string dataCenter, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Tuple<EntityId, Msg> ExtractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
                 return Tuple.Create(entityId, entityMessage);
             };
 
-            return StartProxy(typeName, role, dataCenter, extractEntityId, messageExtractor.ShardId);
+            return StartProxy(typeName, role, dataCenter, ExtractEntityId, messageExtractor.ShardId);
         }
 
         /// <summary>
@@ -775,14 +789,14 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public Task<IActorRef> StartProxyAsync(string typeName, string role, string dataCenter, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Tuple<EntityId, Msg> ExtractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
                 return Tuple.Create(entityId, entityMessage);
             };
 
-            return StartProxyAsync(typeName, role, dataCenter, extractEntityId, messageExtractor.ShardId);
+            return StartProxyAsync(typeName, role, dataCenter, ExtractEntityId, messageExtractor.ShardId);
         }
 
         /// <summary>
@@ -797,8 +811,23 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public IActorRef ShardRegion(string typeName)
         {
-            if (_regions.TryGetValue(typeName, out var region))
-                return region;
+            if (_regions.TryGetValue(typeName, out var aref)) return aref;
+            if (_proxies.TryGetValue(ProxyName(typeName, null), out aref)) return aref;
+
+            throw new ArgumentException($"Shard type [{typeName}] must be started first");
+        }
+
+        /// <summary>
+        /// Retrieve the actor reference of the <see cref="ShardRegion"/> actor that will act as a proxy to the
+        /// named entity type running in another data center. A proxy within the same data center can be accessed
+        /// with <see cref="ShardRegion"/> instead of this method. The entity type must be registered with the
+        /// <see cref="StartProxy(string,string,Akka.Cluster.Sharding.ExtractEntityId,Akka.Cluster.Sharding.ExtractShardId)"/>
+        /// or <see cref="StartProxyAsync(string,string,Akka.Cluster.Sharding.ExtractEntityId,Akka.Cluster.Sharding.ExtractShardId)"/> 
+        /// method before it can be used here. Messages to the entity is always sent via the <see cref="ShardRegion"/>.
+        /// </summary>
+        public IActorRef ShardRegionProxy(string typeName, string dataCenter = null)
+        {
+            if (_proxies.TryGetValue(ProxyName(typeName, dataCenter), out var aref)) return aref;
 
             throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }

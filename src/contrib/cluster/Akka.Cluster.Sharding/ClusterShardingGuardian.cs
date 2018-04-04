@@ -22,7 +22,9 @@ namespace Akka.Cluster.Sharding
         #region messages
 
         /// <summary>
-        /// TBD
+        /// A response message for a <see cref="Start"/> and <see cref="StartProxy"/> requests.
+        /// It returns an <see cref="IActorRef"/> of a local shard region or shard region proxy
+        /// that can be used as a communication channel to a specific entities.
         /// </summary>
         [Serializable]
         public sealed class Started : INoSerializationVerificationNeeded
@@ -43,37 +45,55 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// A message send to a <see cref="ClusterShardingGuardian"/> living on a current node in order
+        /// to start shard region (identified by a given <see cref="TypeName"/>), which is able to host
+        /// and manage the lifecycle of the entities initialized with <see cref="EntityProps"/> object.
+        /// 
+        /// This message is not serializable and should not be send to remote actor systems.
         /// </summary>
         [Serializable]
         public sealed class Start : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// A type name used to identify shard regions of the same type, but living on different nodes.
             /// </summary>
             public readonly string TypeName;
+
             /// <summary>
-            /// TBD
+            /// A <see cref="Props"/> used to incarnate actor entities. Entities are created ad-hoc, when
+            /// the messages are routed to them or when a `akka.cluster.sharding.remember-entities` option
+            /// is set on and entities have been migrated using <see cref="ShardRegion.StartEntity"/> message.
+            /// 
+            /// All shard regions sharing the same <see cref="TypeName"/> are supposed to use the same 
+            /// <see cref="EntityProps"/> in order to create entities of the same type and capabilities.
             /// </summary>
             public readonly Props EntityProps;
+
             /// <summary>
-            /// TBD
+            /// A cluster sharding settings used to configured specific details around cluster sharding capabilities.
             /// </summary>
             public readonly ClusterShardingSettings Settings;
+
             /// <summary>
-            /// TBD
+            /// A delegate used to extract an entity id from a routed message.
             /// </summary>
             public readonly ExtractEntityId ExtractEntityId;
+
             /// <summary>
-            /// TBD
+            /// A delegate used to extract a shard id from a routed message.
             /// </summary>
             public readonly ExtractShardId ExtractShardId;
+
             /// <summary>
-            /// TBD
+            /// An implementation of <see cref="IShardAllocationStrategy"/> interface, used to provide 
+            /// logic necessary to determine placement of newly created shards or their new placement
+            /// when a rebalance event triggers.
             /// </summary>
             public readonly IShardAllocationStrategy AllocationStrategy;
+
             /// <summary>
-            /// TBD
+            /// A hand off message used to stop entities living on a target shard prior its migration
+            /// to another node.
             /// </summary>
             public readonly object HandOffStopMessage;
 
@@ -107,43 +127,56 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// A message send to the <see cref="ClusterShardingGuardian"/> in order to initialize
+        /// a shard region proxy capabilities. While shard region proxies are not able to host
+        /// shards, they can participate in routing messages to given shard entities and can
+        /// preserve them during shard migrations.
+        /// 
+        /// This message is not serializable and should not be send to remote actor systems.
         /// </summary>
-        [Serializable]
         public sealed class StartProxy : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// Type name of a given shard region, current proxy is routing to.
             /// </summary>
             public readonly string TypeName;
+
             /// <summary>
-            /// TBD
+            /// A data center, in context of which proxy is routing. If null, then proxy is
+            /// expected to work for shard region living in the same data center as a current node.
+            /// </summary>
+            public readonly string DataCenter;
+
+            /// <summary>
+            /// Cluster sharding settings used to configure specific details of cluster sharding communication.
             /// </summary>
             public readonly ClusterShardingSettings Settings;
+
             /// <summary>
-            /// TBD
+            /// A delegate used to extract entity id from incoming messages.
             /// </summary>
             public readonly ExtractEntityId ExtractEntityId;
+
             /// <summary>
-            /// TBD
+            /// A delegate used to extract shard id from incoming messages.
             /// </summary>
             public readonly ExtractShardId ExtractShardId;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of a <see cref="StartProxy"/> class, used to initialize
+            /// cluster sharding proxying capabilities over regions identified by <paramref name="typeName"/>
+            /// in context of a given <paramref name="dataCenter"/>.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="settings">TBD</param>
-            /// <param name="extractEntityId">TBD</param>
-            /// <param name="extractShardId">TBD</param>
-            /// <exception cref="ArgumentException">
+            /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
             /// </exception>
-            public StartProxy(string typeName, ClusterShardingSettings settings, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+            public StartProxy(string typeName, string dataCenter, ClusterShardingSettings settings,
+                ExtractEntityId extractEntityId, ExtractShardId extractShardId)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start proxy requires type name to be provided");
 
                 TypeName = typeName;
+                DataCenter = dataCenter;
                 Settings = settings;
                 ExtractEntityId = extractEntityId;
                 ExtractShardId = extractShardId;
@@ -218,10 +251,22 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = startProxy.Settings;
+<<<<<<< HEAD
                     var encName = Uri.EscapeDataString(startProxy.TypeName);
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
+=======
+                    var coordinatorPath = CoordinatorPath(startProxy.TypeName);
+
+                    // it must be possible to start several proxies, one per data center
+                    var actorName = string.IsNullOrEmpty(startProxy.DataCenter)
+                        ? Uri.EscapeDataString(startProxy.TypeName + "Proxy")
+                        : Uri.EscapeDataString(startProxy.TypeName + "-" + startProxy.DataCenter);
+
+                    var shardRegion = Context.Child(actorName);
+                    var replicator = Replicator(settings);
+>>>>>>> added dc support for cluster sharding proxies
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -232,8 +277,13 @@ namespace Akka.Cluster.Sharding
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
                             extractShardId: startProxy.ExtractShardId,
+<<<<<<< HEAD
                             replicator: Context.System.DeadLetters,
                             majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
+=======
+                            replicator: replicator,
+                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), actorName);
+>>>>>>> added dc support for cluster sharding proxies
                     }
 
                     Sender.Tell(new Started(shardRegion));
