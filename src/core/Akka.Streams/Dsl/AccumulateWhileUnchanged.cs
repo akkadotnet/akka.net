@@ -38,7 +38,7 @@ namespace Akka.Streams.Dsl
                     if (!_currentState.HasValue)
                         _currentState = new Option<TProperty>(nextState);
 
-                    if (_currentState.Equals(new Option<TProperty>(nextState)))
+                    if (EqualityComparer<TProperty>.Default.Equals(_currentState.Value, nextState))
                     {
                         _buffer.Add(nextElement);
                         Pull(accumulateWhileUnchanged.In);
