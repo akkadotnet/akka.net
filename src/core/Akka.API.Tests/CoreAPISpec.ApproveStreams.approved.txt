@@ -997,6 +997,14 @@ namespace Akka.Streams.Actors
 }
 namespace Akka.Streams.Dsl
 {
+    public class AccumulateWhileUnchanged<TElement, TProperty> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TElement, System.Collections.Generic.IEnumerable<TElement>>>
+    {
+        public AccumulateWhileUnchanged(System.Func<TElement, TProperty> propertyExtractor) { }
+        public Akka.Streams.Inlet<TElement> In { get; }
+        public Akka.Streams.Outlet<System.Collections.Generic.IEnumerable<TElement>> Out { get; }
+        public override Akka.Streams.FlowShape<TElement, System.Collections.Generic.IEnumerable<TElement>> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public sealed class Balance<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
     {
         public Balance(int outputPorts, bool waitForAllDownstreams = False) { }
@@ -1329,6 +1337,14 @@ namespace Akka.Streams.Dsl
         public static Akka.NotUsed None<TLeft, TRight>(TLeft left, TRight right) { }
         public static TRight Right<TLeft, TRight>(TLeft left, TRight right) { }
     }
+    public class LastElement<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<T, T>, System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>>
+    {
+        public LastElement() { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public sealed class Merge<T> : Akka.Streams.Dsl.Merge<T, T>
     {
         public Merge(int inputPorts, bool eagerComplete = False) { }
@@ -1447,6 +1463,12 @@ namespace Akka.Streams.Dsl
     {
         public PartitionOutOfBoundsException(string message) { }
     }
+    public class PartitionWith<TIn, TOut0, TOut1> : Akka.Streams.Stage.GraphStage<Akka.Streams.FanOutShape<TIn, TOut0, TOut1>>
+    {
+        public PartitionWith(System.Func<TIn, Akka.Util.Either<TOut0, TOut1>> partitionWith) { }
+        public override Akka.Streams.FanOutShape<TIn, TOut0, TOut1> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public class static RestartFlow
     {
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
@@ -1504,6 +1526,16 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name) { }
         public TMat Run(Akka.Streams.IMaterializer materializer) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
+    }
+    public class Sample<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    {
+        public Akka.Streams.Inlet<T> In;
+        public Akka.Streams.Outlet<T> Out;
+        public Sample(int nth) { }
+        public Sample(System.Func<int> next) { }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public static Akka.Streams.Dsl.Sample<T> Random(int maxStep = 1000) { }
     }
     public class static Sink
     {
