@@ -6,7 +6,7 @@ title: Transports
 # Akka.Remote Transports
 In the [Akka.Remote overview](index.md) we introduced the concept of "transports" for Akka.Remote.
 
->  A"transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty") TCP transport, but you could write your own transport and use that instead of you wish.
+>  A"transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
 
 In this section we'll expand a bit more on what transports are and how Akka.Remote can support multiple transports simultaneously.
 
