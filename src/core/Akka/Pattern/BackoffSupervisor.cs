@@ -228,7 +228,7 @@ namespace Akka.Pattern
                 else
                 {
                     long maxAsLong = (long)max; 
-                    bool maxAsLongIsnegative = maxAsLong >= 0? true: false;
+                    bool maxAsLongIsnegative = maxAsLong < 0? true: false;
                     if (maxAsLongIsnegative) {throw new ArgumentOutOfRangeException($"{nameof(maxAsLong)} cannot be negative.");}
                     else return new TimeSpan(maxAsLong);
                 }
