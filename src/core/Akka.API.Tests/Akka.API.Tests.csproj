@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>$(TestDotNetVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
