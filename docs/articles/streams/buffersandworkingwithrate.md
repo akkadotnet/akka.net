@@ -1,12 +1,12 @@
 ---
-layout: docs.hbs
+uid: streams-buffers
 title: Buffers and working with rate
 ---
 
-#Buffers and working with rate
+# Buffers and working with rate
 When upstream and downstream rates differ, especially when the throughput has spikes, it can be useful to introduce buffers in a stream. In this chapter we cover how buffers are used in Akka Streams.
 
-##Buffers for asynchronous stages
+## Buffers for asynchronous stages
 In this section we will discuss internal buffers that are introduced as an optimization when using asynchronous stages.
 To run a stage asynchronously it has to be marked explicitly as such using the .async method. Being run asynchronously means that a stage, after handing out an element to its downstream consumer is able to immediately process the next message. To demonstrate what we mean by this, let's take a look at the following example:
 ```csharp
@@ -33,7 +33,7 @@ While pipelining in general increases throughput, in practice there is a cost of
 
 While this internal protocol is mostly invisible to the user (apart form its throughput increasing effects) there are situations when these details get exposed. In all of our previous examples we always assumed that the rate of the processing chain is strictly coordinated through the backpressure signal causing all stages to process no faster than the throughput of the connected chain. There are tools in Akka Streams however that enable the rates of different segments of a processing chain to be "detached" or to define the maximum throughput of the stream through external timing sources. These situations are exactly those where the internal batching buffering strategy suddenly becomes non-transparent.
 
-##Internal buffers and their effect
+## Internal buffers and their effect
 As we have explained, for performance reasons Akka Streams introduces a buffer for every asynchronous processing stage. The purpose of these buffers is solely optimization, in fact the size of 1 would be the most natural choice if there would be no need for throughput improvements. Therefore it is recommended to keep these buffer sizes small, and increase them only to a level suitable for the throughput requirements of the application. Default buffer sizes can be set through configuration:
 ```hocon
 akka.stream.materializer.max-input-buffer-size = 16
@@ -80,7 +80,7 @@ Running the above example one would expect the number 3 to be printed in every 3
 > [!NOTE]
 > In general, when time or rate driven processing stages exhibit strange behavior, one of the first solutions to try should be to decrease the input buffer of the affected elements to 1.
 
-##Buffers in Akka Streams
+## Buffers in Akka Streams
 In this section we will discuss explicit user defined buffers that are part of the domain logic of the stream processing pipeline of an application.
 
 The example below will ensure that 1000 jobs (but not more) are dequeued from an external (imaginary) system and stored locally in memory -- relieving the external system:
@@ -110,8 +110,8 @@ If our imaginary external job provider is a client using our API, we might want 
 ```csharp
 jobs.buffer(1000, OverflowStrategy.fail)
 ```
-##Rate transformation
-###Understanding conflate
+## Rate transformation
+### Understanding conflate
 When a fast producer can not be informed to slow down by backpressure or some other signal, conflate might be useful to combine elements from a producer until a demand signal comes from a consumer.
 
 Below is an example snippet that summarizes fast stream of elements to a standard deviation, mean and count of elements that have arrived while the stats have been calculated.
@@ -140,7 +140,7 @@ Another possible use of `conflate` is to not consider all elements for summary w
            return agg;
        }).Concat(identity);
 ```
-###Understanding expand
+### Understanding expand
 Expand helps to deal with slow producers which are unable to keep up with the demand coming from consumers. Expand allows to extrapolate a value to be sent as an element to a consumer.
 
 As a simple use of expand here is a flow that sends the same element to consumer when producer does not send any new elements.

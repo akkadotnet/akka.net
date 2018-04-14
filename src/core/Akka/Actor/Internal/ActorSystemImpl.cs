@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,11 +22,16 @@ using Akka.Util;
 
 namespace Akka.Actor.Internal
 {
+    internal interface ISupportSerializationConfigReload
+    {
+        void ReloadSerialization();
+    }
+
     /// <summary>
     /// TBD
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class ActorSystemImpl : ExtendedActorSystem
+    public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
@@ -226,37 +231,24 @@ namespace Akka.Actor.Internal
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
-                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer ). " +
+                            $"(for more info visit: http://getakka.net/articles/networking/serialization.html#how-to-setup-hyperion-as-default-serializer ). " +
                             $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.AttachChild(props, false, name);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
@@ -343,8 +335,7 @@ namespace Akka.Actor.Internal
         /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension(Type extensionType, out object extension)
         {
-            Lazy<object> lazyExtension;
-            var wasFound = _extensions.TryGetValue(extensionType, out lazyExtension);
+            var wasFound = _extensions.TryGetValue(extensionType, out var lazyExtension);
             extension = wasFound ? lazyExtension.Value : null;
             return wasFound;
         }
@@ -357,8 +348,7 @@ namespace Akka.Actor.Internal
         /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension<T>(out T extension)
         {
-            Lazy<object> lazyExtension;
-            var wasFound = _extensions.TryGetValue(typeof(T), out lazyExtension);
+            var wasFound = _extensions.TryGetValue(typeof(T), out var lazyExtension);
             extension = wasFound ? lazyExtension.Value as T : null;
             return wasFound;
         }
@@ -413,6 +403,11 @@ namespace Akka.Actor.Internal
         private void ConfigureSerialization()
         {
             _serialization = new Serialization.Serialization(this);
+        }
+
+        void ISupportSerializationConfigReload.ReloadSerialization() {
+            if(_serialization != null)
+                ConfigureSerialization();
         }
 
         private void ConfigureMailboxes()

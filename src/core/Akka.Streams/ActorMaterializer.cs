@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMaterializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
+using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Util;
 using Reactive.Streams;
@@ -29,7 +30,7 @@ namespace Akka.Streams
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
     /// </summary>
-    public abstract class ActorMaterializer : IMaterializer, IDisposable
+    public abstract class ActorMaterializer : IMaterializer, IMaterializerLoggingProvider, IDisposable
     {
         /// <summary>
         /// TBD
@@ -134,13 +135,11 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract IMaterializer WithNamePrefix(string namePrefix);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
+
+        /// <inheritdoc />
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
 
         /// <summary>
         /// TBD
@@ -182,8 +181,13 @@ namespace Akka.Streams
         public abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
         /// <summary>
-        /// TBD
+        /// Creates a new logging adapter.
         /// </summary>
+        /// <param name="logSource">The source that produces the log events.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        public abstract ILoggingAdapter MakeLogger(object logSource);
+
+        /// <inheritdoc/>
         public void Dispose() => Shutdown();
     }
 
@@ -268,6 +272,21 @@ namespace Akka.Streams
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 #endif
     }
+
+    /// <summary>
+    /// Signal that the stage was abruptly terminated, usually seen as a call to <see cref="GraphStageLogic.PostStop"/> without
+    /// any of the handler callbacks seeing completion or failure from upstream or cancellation from downstream. This can happen when
+    /// the actor running the graph is killed, which happens when the materializer or actor system is terminated.
+    /// </summary>
+    public sealed class AbruptStageTerminationException : Exception
+    {
+        public AbruptStageTerminationException(GraphStageLogic logic) 
+            : base($"GraphStage {logic} terminated abruptly, caused by for example materializer or actor system termination.")
+        {
+
+        }
+    }
+
 
     /// <summary>
     /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
@@ -523,11 +542,7 @@ namespace Akka.Streams
             Timeout = timeout;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -540,18 +555,11 @@ namespace Akka.Streams
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(StreamSubscriptionTimeoutSettings other)
             => Mode == other.Mode && Timeout.Equals(other.Timeout);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -560,10 +568,7 @@ namespace Akka.Streams
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"StreamSubscriptionTimeoutSettings<{Mode}, {Timeout}>";
     }
 

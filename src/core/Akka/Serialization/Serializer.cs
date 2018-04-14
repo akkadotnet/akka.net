@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Util;
 
 namespace Akka.Serialization
@@ -39,6 +40,8 @@ namespace Akka.Serialization
         /// </summary>
         protected readonly ExtendedActorSystem system;
 
+        private readonly FastLazy<int> _value;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Serializer" /> class.
         /// </summary>
@@ -46,13 +49,14 @@ namespace Akka.Serialization
         protected Serializer(ExtendedActorSystem system)
         {
             this.system = system;
+            _value = new FastLazy<int>(() => SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system));
         }
 
         /// <summary>
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// Values from 0 to 16 is reserved for Akka internal usage
         /// </summary>
-        public virtual int Identifier => SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
+        public virtual int Identifier => _value.Value;
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
@@ -146,12 +150,10 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API.
     /// </summary>
-    internal static class SerializerIdentifierHelper
+    [InternalApi]
+    public static class SerializerIdentifierHelper
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
+        internal const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
         /// <summary>
         /// TBD
@@ -168,15 +170,10 @@ namespace Akka.Serialization
             var identifiers = config.AsEnumerable()
                 .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
 
-            int value;
-            if (identifiers.TryGetValue(type, out value))
-            {
-                return value;
-            }
-            else
-            {
+            if (!identifiers.TryGetValue(type, out int value))
                 throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
-            }
+
+            return value;
         }
     }
 }

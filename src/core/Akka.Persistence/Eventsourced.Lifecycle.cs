@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,12 @@ namespace Akka.Persistence
             LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
         }
 
-        /// <inheritdoc/>
+        private void RequestRecoveryPermit()
+        {
+            Extension.RecoveryPermitter().Tell(Akka.Persistence.RequestRecoveryPermit.Instance, Self);
+            ChangeState(WaitingRecoveryPermit(Recovery));
+        }
+
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             _currentState.StateReceive(receive, message);
@@ -43,7 +48,7 @@ namespace Akka.Persistence
             // Fail fast on missing plugins.
             var j = Journal;
             var s = SnapshotStore;
-            StartRecovery(Recovery);
+            RequestRecoveryPermit();
             base.AroundPreStart();
         }
 
@@ -71,7 +76,7 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public override void AroundPostRestart(Exception reason, object message)
         {
-            StartRecovery(Recovery);
+            RequestRecoveryPermit();
             base.AroundPostRestart(reason, message);
         }
 

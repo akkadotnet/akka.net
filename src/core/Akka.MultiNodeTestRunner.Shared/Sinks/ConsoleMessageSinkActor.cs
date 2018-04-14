@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsoleMessageSinkActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,9 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+#if CORECLR
+using Akka.MultiNodeTestRunner.Shared.Extensions;
+#endif
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
@@ -63,7 +66,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         {
                             WriteSpecMessage(String.Format(" --> {0}", resultMessage.Message));
                         }
-                        if(node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
+                        if (node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
                             WriteSpecMessage("[received no messages - SILENT FAILURE].");
                         WriteSpecMessage(string.Format("<----------- END NODE {0}:{1} ----------->", node.Key, node.Value.NodeRole));
                     }
@@ -81,7 +84,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleTestRunEnd(EndTestRun endTestRun)
         {
             WriteSpecMessage("Test run complete.");
-            
+
             base.HandleTestRunEnd(endTestRun);
         }
 
@@ -119,7 +122,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleRunnerMessage(LogMessageForTestRunner node)
         {
             WriteRunnerMessage(node);
-            
+
             base.HandleRunnerMessage(node);
         }
 
@@ -213,4 +216,3 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
     }
 }
-

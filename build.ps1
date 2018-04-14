@@ -29,13 +29,15 @@ Param(
     [string[]]$ScriptArgs
 )
 
-$FakeVersion = "4.50.0"
-$NBenchVersion = "0.3.4"
+$FakeVersion = "4.63.0"
+$NBenchVersion = "1.0.1"
 $DotNetChannel = "preview";
-$DotNetVersion = "1.0.3";
-$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1";
-$NugetVersion = "4.1.0";
+$DotNetVersion = "2.0.0";
+$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVersion/scripts/obtain/dotnet-install.ps1";
+$NugetVersion = "4.3.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
+$ProtobufVersion = "3.4.0"
+$DocfxVersion = "2.21.1"
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -70,6 +72,8 @@ Function Remove-PathVariable([string]$VariableToRemove)
 $FoundDotNetCliVersion = $null;
 if (Get-Command dotnet -ErrorAction SilentlyContinue) {
     $FoundDotNetCliVersion = dotnet --version;
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+    $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
 }
 
 if($FoundDotNetCliVersion -ne $DotNetVersion) {
@@ -78,7 +82,7 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
         mkdir -Force $InstallPath | Out-Null;
     }
     (New-Object System.Net.WebClient).DownloadFile($DotNetInstallerUri, "$InstallPath\dotnet-install.ps1");
-    & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotNetVersion -InstallDir $InstallPath;
+    & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotNetVersion -InstallDir $InstallPath -Architecture x64;
 
     Remove-PathVariable "$InstallPath"
     $env:PATH = "$InstallPath;$env:PATH"
@@ -133,9 +137,23 @@ if (!(Test-Path $NBenchDllPath)) {
 $ProtobufExePath = Join-Path $ToolPath "Google.Protobuf.Tools/tools/windows_x64/protoc.exe"
 if (!(Test-Path $ProtobufExePath)) {
     Write-Host "Installing Google.Protobuf.Tools..."
-    Invoke-Expression "&`"$NugetPath`" install Google.Protobuf.Tools -ExcludeVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+    Invoke-Expression "&`"$NugetPath`" install Google.Protobuf.Tools -ExcludeVersion -Version $ProtobufVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring Google.Protobuf.Tools from NuGet."
+    }
+}
+
+###########################################################################
+# Docfx
+###########################################################################
+
+# Make sure Docfx has been installed.
+$DocfxExePath = Join-Path $ToolPath "docfx.console/tools/docfx.exe"
+if (!(Test-Path $DocfxExePath)) {
+    Write-Host "Installing Docfx..."
+    Invoke-Expression "&`"$NugetPath`" install docfx.console -ExcludeVersion -Version $DocfxVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+    if ($LASTEXITCODE -ne 0) {
+        Throw "An error occured while restoring docfx.console from NuGet."
     }
 }
 

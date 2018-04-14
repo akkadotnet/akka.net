@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashRouter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -166,7 +166,7 @@ namespace Akka.Routing
             if (message == null || routees == null || routees.Length == 0)
                 return Routee.NoRoutee;
 
-            Func<ConsistentHash<ConsistentRoutee>> updateConsistentHash = () =>
+            ConsistentHash<ConsistentRoutee> UpdateConsistentHash()
             {
                 // update consistentHash when routees are changed
                 // changes to routees are rare when no changes this is a quick operation
@@ -185,42 +185,43 @@ namespace Akka.Routing
                     return consistentHash;
                 }
                 return oldConsistentHash;
-            };
+            }
 
-            Func<object, Routee> target = hashData =>
+            Routee Target(object hashData)
             {
                 try
                 {
-                    var currentConsistentHash = updateConsistentHash();
+                    var currentConsistentHash = UpdateConsistentHash();
                     if (currentConsistentHash.IsEmpty) return Routee.NoRoutee;
                     else
                     {
-                        if (hashData is byte[])
-                            return currentConsistentHash.NodeFor(hashData as byte[]).Routee;
-                        if (hashData is string)
-                            return currentConsistentHash.NodeFor(hashData as string).Routee;
-                        return
-                            currentConsistentHash.NodeFor(
-                                _system.Serialization.FindSerializerFor(hashData).ToBinary(hashData)).Routee;
+                        switch (hashData)
+                        {
+                            case byte[] bytes:
+                                return currentConsistentHash.NodeFor(bytes).Routee;
+                            case string data:
+                                return currentConsistentHash.NodeFor(data).Routee;
+                            default:
+                                return currentConsistentHash.NodeFor(_system.Serialization.FindSerializerFor(hashData).ToBinary(hashData)).Routee;
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     //serialization failed
-                    _log.Value.Warning("Couldn't route message with consistent hash key [{0}] due to [{1}]", hashData,
-                        ex.Message);
+                    _log.Value.Warning("Couldn't route message with consistent hash key [{0}] due to [{1}]", hashData, ex.Message);
                     return Routee.NoRoutee;
                 }
-            };
-
-            if (_hashMapping(message) != null)
-            {
-                return target(ConsistentHash.ToBytesOrObject(_hashMapping(message)));
             }
-            else if (message is IConsistentHashable)
+
+            var hashMapping = _hashMapping(message);
+            if (hashMapping != null)
             {
-                var hashable = (IConsistentHashable) message;
-                return target(ConsistentHash.ToBytesOrObject(hashable.ConsistentHashKey));
+                return Target(ConsistentHash.ToBytesOrObject(hashMapping));
+            }
+            else if (message is IConsistentHashable hashable)
+            {
+                return Target(ConsistentHash.ToBytesOrObject(hashable.ConsistentHashKey));
             }
             else
             {
@@ -283,25 +284,18 @@ namespace Akka.Routing
         /// </summary>
         public Address SelfAddress { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            if (Routee is ActorRefRoutee)
+            switch (Routee)
             {
-                var actorRef = Routee as ActorRefRoutee;
-                return ToStringWithFullAddress(actorRef.Actor.Path);
-            }
-            else if (Routee is ActorSelectionRoutee)
-            {
-                var selection = Routee as ActorSelectionRoutee;
-                return ToStringWithFullAddress(selection.Selection.Anchor.Path) + selection.Selection.PathString;
-            }
-            else
-            {
-                return Routee.ToString();
+                case ActorRefRoutee actorRef:
+                    return ToStringWithFullAddress(actorRef.Actor.Path);
+                case ActorSelectionRoutee selection:
+                    return ToStringWithFullAddress(selection.Selection.Anchor.Path).TrimEnd('/') +
+                            selection.Selection.PathString;
+                default:
+                    return Routee.ToString();
             }
         }
 
@@ -511,9 +505,8 @@ namespace Akka.Routing
             {
                 return OverrideUnsetConfig(routerConfig);
             }
-            else if (routerConfig is ConsistentHashingPool)
+            else if (routerConfig is ConsistentHashingPool other)
             {
-                var other = routerConfig as ConsistentHashingPool;
                 return WithHashMapping(other._hashMapping).OverrideUnsetConfig(other);
             }
             else
@@ -524,38 +517,28 @@ namespace Akka.Routing
 
         private RouterConfig OverrideUnsetConfig(RouterConfig other)
         {
-            if (other is NoRouter)
+            if (other is Pool pool)
             {
-                return this;
-            }
-            else
-            {
-                var pool = other as Pool;
-                if (pool != null)
+                ConsistentHashingPool wssConf;
+
+                if (SupervisorStrategy != null
+                    && SupervisorStrategy.Equals(DefaultSupervisorStrategy)
+                    && !pool.SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 {
-                    ConsistentHashingPool wssConf;
-
-                    if (SupervisorStrategy != null
-                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
-                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
-                    {
-                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
-                    }
-                    else
-                    {
-                        wssConf = this;
-                    }
-
-                    if (wssConf.Resizer == null && pool.Resizer != null)
-                        return wssConf.WithResizer(pool.Resizer);
-
-                    return wssConf;
+                    wssConf = WithSupervisorStrategy(pool.SupervisorStrategy);
                 }
                 else
                 {
-                    return this;
+                    wssConf = this;
                 }
+
+                if (wssConf.Resizer == null && pool.Resizer != null)
+                    return wssConf.WithResizer(pool.Resizer);
+
+                return wssConf;
             }
+
+            return this;
         }
 
         /// <summary>
@@ -713,7 +696,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -739,7 +722,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public ConsistentHashingGroup WithDispatcher(string dispatcher)
         {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, _hashMapping, dispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, _hashMapping, dispatcher);
         }
 
         /// <summary>
@@ -753,7 +736,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
         public ConsistentHashingGroup WithVirtualNodesFactor(int vnodes)
         {
-            return new ConsistentHashingGroup(Paths, vnodes, _hashMapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, vnodes, _hashMapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -767,7 +750,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="mapping"/>.</returns>
         public ConsistentHashingGroup WithHashMapping(ConsistentHashMapping mapping)
         {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, mapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, mapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -784,9 +767,8 @@ namespace Akka.Routing
             {
                 return base.WithFallback(routerConfig);
             }
-            else if (routerConfig is ConsistentHashingGroup)
+            else if (routerConfig is ConsistentHashingGroup other)
             {
-                var other = routerConfig as ConsistentHashingGroup;
                 return WithHashMapping(other._hashMapping);
             }
             else
@@ -804,7 +786,7 @@ namespace Akka.Routing
         {
             return new ConsistentHashingGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }

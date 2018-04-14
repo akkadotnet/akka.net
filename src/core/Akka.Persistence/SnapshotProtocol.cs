@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,14 +37,7 @@ namespace Akka.Persistence
         /// </summary>
         internal class SnapshotMetadataComparer : IComparer<SnapshotMetadata>
         {
-            /// <summary>
-            /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
-            /// </summary>
-            /// <param name="x">The first object to compare.</param>
-            /// <param name="y">The second object to compare.</param>
-            /// <returns>
-            /// A signed integer that indicates the relative values of <paramref name="x" /> and <paramref name="y" />, as shown in the following table.Value Meaning Less than zero<paramref name="x" /> is less than <paramref name="y" />.Zero<paramref name="x" /> equals <paramref name="y" />.Greater than zero<paramref name="x" /> is greater than <paramref name="y" />.
-            /// </returns>
+            /// <inheritdoc/>
             public int Compare(SnapshotMetadata x, SnapshotMetadata y)
             {
                 var compare = string.Compare(x.PersistenceId, y.PersistenceId, StringComparison.Ordinal);
@@ -233,13 +226,7 @@ namespace Akka.Persistence
         /// </summary>
         public SnapshotSelectionCriteria Criteria { get; }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="DeleteSnapshotsSuccess" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="DeleteSnapshotsSuccess" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="DeleteSnapshotsSuccess" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotsSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -248,35 +235,19 @@ namespace Akka.Persistence
             return Equals(Criteria, other.Criteria);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotsSuccess);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Criteria != null ? Criteria.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"DeleteSnapshotsSuccess<{Criteria}>";
@@ -310,13 +281,7 @@ namespace Akka.Persistence
         /// </summary>
         public Exception Cause { get; }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="SaveSnapshotFailure" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="SaveSnapshotFailure" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="SaveSnapshotFailure" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -325,24 +290,13 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as SaveSnapshotFailure);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -351,12 +305,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"SaveSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
@@ -553,9 +502,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
         /// </summary>
-        /// <param name="maxSequenceNr">TBD</param>
+        /// <param name="maxSequenceNr">Upper bound for a selected snapshot's sequence number.</param>
         public SnapshotSelectionCriteria(long maxSequenceNr) : this(maxSequenceNr, DateTime.MaxValue)
         {
         }
@@ -837,7 +786,9 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="snapshot">Snapshot.</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
+        /// </exception>
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             if (metadata == null)
@@ -892,7 +843,9 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteSnapshot"/> class.
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
+        /// </exception>
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
             if (metadata == null)

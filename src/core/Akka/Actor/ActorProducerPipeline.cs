@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProducerPipeline.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ namespace Akka.Actor
     /// <summary>
     /// Plugin interface used to define
     /// </summary>
+    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public interface IActorProducerPlugin
     {
         /// <summary>
@@ -45,6 +46,7 @@ namespace Akka.Actor
     /// <summary>
     /// Base actor producer pipeline plugin class.
     /// </summary>
+    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase : IActorProducerPlugin
     {
         /// <summary>
@@ -75,6 +77,7 @@ namespace Akka.Actor
     /// <summary>
     /// Base generic actor producer pipeline plugin class.
     /// </summary>
+    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public abstract class ActorProducerPluginBase<TActor> : IActorProducerPlugin where TActor : ActorBase
     {
         /// <summary>
@@ -115,6 +118,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class used to resolving actor producer pipelines depending on actor type.
     /// </summary>
+    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipelineResolver
     {
         private readonly Lazy<ILoggingAdapter> _log;
@@ -230,6 +234,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
+    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
     {
         private Lazy<ILoggingAdapter> _log;

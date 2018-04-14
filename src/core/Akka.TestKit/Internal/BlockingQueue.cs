@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BlockingQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,6 +110,22 @@ namespace Akka.TestKit.Internal
             var p = _collection.Take(cancellationToken);
             return p.Value;
         }
+
+        /// <summary>
+        /// Copies the items from the <see cref="BlockingQueue{T}"/> instance into a new <see cref="List{T}"/>.
+        /// </summary>
+        /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
+        public List<T> ToList()
+        {
+            var positionArray = _collection.ToArray();
+            var items = new List<T>();
+            foreach (var positioned in positionArray)
+            {
+                items.Add(positioned.Value);
+            }
+            return items;
+        }
+
 
         private class Positioned
         {

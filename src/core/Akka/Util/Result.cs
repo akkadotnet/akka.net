@@ -1,9 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Result.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 
@@ -52,13 +53,7 @@ namespace Akka.Util
             Exception = exception;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="Result{T}" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="Result{T}" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="Result{T}" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(Result<T> other)
         {
             if (IsSuccess ^ other.IsSuccess) return false;
@@ -67,25 +62,14 @@ namespace Akka.Util
                 : Equals(Exception, other.Exception);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (obj is Result<T>) return Equals((Result<T>) obj);
             return false;
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return IsSuccess
@@ -114,6 +98,8 @@ namespace Akka.Util
         {
             return !(left == right);
         }
+
+        public override string ToString() => IsSuccess ? $"Success ({Value})" : $"Failure ({Exception})";
     }
 
     /// <summary>
@@ -172,6 +158,8 @@ namespace Akka.Util
                 return new Result<T>(e);
             }
         }
+        
+        
 
     }
 }

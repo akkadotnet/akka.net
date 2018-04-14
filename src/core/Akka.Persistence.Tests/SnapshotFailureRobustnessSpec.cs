@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotFailureRobustnessSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -161,11 +162,7 @@ namespace Akka.Persistence.Tests
                 {
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
                     var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
-                    var newTempFileName = GetSnapshotFileForWrite(metadata, ".tmp");
-                    if (tempFile != newTempFileName)
-                    {
-                        tempFile.MoveTo(newTempFileName.FullName);
-                    }
+					tempFile.MoveTo(GetSnapshotFileForWrite(metadata, "").FullName);
                 }
                 else base.Save(metadata, payload);
             }

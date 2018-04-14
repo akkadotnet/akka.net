@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SystemMessageListSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace Akka.Tests.Dispatch.SysMsg
         }
 
         [Fact]
-        public void SystemMessageList_value_class_must_be_able_to_properly_report_size_and_emptyness()
+        public void SystemMessageList_value_class_must_be_able_to_properly_report_size_and_emptiness()
         {
             var create0 = new Failed(null, null, 0);
             var create1 = new Failed(null, null, 1);

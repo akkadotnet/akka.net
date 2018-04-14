@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NewtonSoftJsonSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Serialization
         /// </summary>
         public static readonly NewtonSoftJsonSerializerSettings Default = new NewtonSoftJsonSerializerSettings(
             encodeTypeNames: true,
-            preverveObjectReferences: true,
+            preserveObjectReferences: true,
             converters: Enumerable.Empty<Type>());
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace Akka.Serialization
 
             return new NewtonSoftJsonSerializerSettings(
                 encodeTypeNames: config.GetBoolean("encode-type-names", true),
-                preverveObjectReferences: config.GetBoolean("preserve-object-references", true),
+                preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
                 converters: GetConverterTypes(config));
         }
 
@@ -94,15 +94,15 @@ namespace Akka.Serialization
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/>.
         /// </summary>
         /// <param name="encodeTypeNames">Determines if a special `$type` field should be emitted into serialized JSON. Must be true if corresponding serializer is used as default.</param>
-        /// <param name="preverveObjectReferences">Determines if object references should be tracked within serialized object graph. Must be true if corresponding serialize is used as default.</param>
+        /// <param name="preserveObjectReferences">Determines if object references should be tracked within serialized object graph. Must be true if corresponding serialize is used as default.</param>
         /// <param name="converters">A list of types implementing a <see cref="JsonConverter"/> to support custom types serialization.</param>
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, IEnumerable<Type> converters)
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, IEnumerable<Type> converters)
         {
             if (converters == null)
                 throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
 
             EncodeTypeNames = encodeTypeNames;
-            PreserveObjectReferences = preverveObjectReferences;
+            PreserveObjectReferences = preserveObjectReferences;
             Converters = converters;
         }
     }
@@ -320,10 +320,10 @@ namespace Akka.Serialization
                 return DeserializeFromReader(reader, serializer, objectType);
             }
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objecType)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objectType)
             {
                 var surrogate = serializer.Deserialize(reader);
-                return TranslateSurrogate(surrogate, _parent, objecType);
+                return TranslateSurrogate(surrogate, _parent, objectType);
             }
 
             /// <summary>

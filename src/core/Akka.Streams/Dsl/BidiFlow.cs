@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -345,12 +345,12 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="combine">TBD</param>
         /// <returns>TBD</returns>
-        public Flow<TIn1, TOut2, TMat> JoinMat<TMat2, TMat3>(Flow<TOut1, TIn2, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
+        public Flow<TIn1, TOut2, TMat3> JoinMat<TMat2, TMat3>(Flow<TOut1, TIn2, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             var copy = flow.Module.CarbonCopy();
             var inlet = copy.Shape.Inlets.First();
             var outlet = copy.Shape.Outlets.First();
-            return new Flow<TIn1, TOut2, TMat>(Module
+            return new Flow<TIn1, TOut2, TMat3>(Module
                 .Compose(copy, combine)
                 .Wire(Shape.Outlets.First(), inlet)
                 .Wire(outlet, Shape.Inlets.ElementAt(1))

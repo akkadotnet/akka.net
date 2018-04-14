@@ -6,10 +6,14 @@
     href: intro/what-are-actors.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
-  - name: Getting Started
-    href: intro/getting-started.md
-  - name: The Obligatory Hello World
-    href: intro/the-obligatory-hello-world.md
+  - name: Part 1. Top-level Architecture
+    href: intro/tutorial-1.md
+  - name: Part 2. The Device Actor
+    href: intro/tutorial-2.md
+  - name: Part 3. Device Groups and Manager
+    href: intro/tutorial-3.md
+  - name: Part 4. Querying a Group of Devices
+    href: intro/tutorial-4.md
   - name: Use-case and Deployment Scenarios
     href: intro/use-case-and-deployment-scenarios.md
   - name: Production Users and Use Cases for Akka.NET
@@ -82,7 +86,7 @@
   items: 
   - name: Introduction
     href: streams/introduction.md
-  - name: Quick Start Guide
+  - name: Streams Quickstart Guide
     href: streams/quickstart.md
   - name: Reactive Tweets
     href: streams/reactivetweets.md
@@ -96,11 +100,13 @@
     href: streams/modularitycomposition.md
   - name: Buffers and working with rate
     href: streams/buffersandworkingwithrate.md
+  - name: Dynamic stream handling
+    href: streams/stream-dynamic.md
   - name: Custom stream processing
-    href: streams/customstreamprocessing.md
+    href: streams/custom-stream-processing.md
   - name: Integration
     href: streams/integration.md
-  - name: Error Handling
+  - name: Error Handling in Streams
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
@@ -156,12 +162,16 @@
     href: clustering/cluster-sharding.md
   - name: Distributed Data
     href: clustering/distributed-data.md
+  - name: Split Brain Resolver
+    href: clustering/split-brain-resolver.md
 - name: Utilities
   items:
   - name: Event Bus
     href: utilities/event-bus.md
   - name: Logging
     href: utilities/logging.md
+  - name: Serilog
+    href: utilities/serilog.md
   - name: Scheduler
     href: utilities/scheduler.md
   - name: Circuit Breaker

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,8 +99,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            long metaSeqNr;
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out metaSeqNr) ? metaSeqNr : 0L));
+            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out long metaSeqNr) ? metaSeqNr : 0L));
         }
 
         /// <summary>
@@ -162,8 +161,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
-            LinkedList<IPersistentRepresentation> persistents;
-            if (Messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -175,7 +173,7 @@ namespace Akka.Persistence.Journal
                 }
             }
 
-            return _messages;
+            return Messages;
         }
 
         /// <summary>
@@ -186,8 +184,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public Messages Delete(string pid, long seqNr)
         {
-            LinkedList<IPersistentRepresentation> persistents;
-            if (Messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -212,8 +209,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
         {
-            LinkedList<IPersistentRepresentation> persistents;
-            if (Messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
             {
                 return persistents
                     .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
@@ -230,11 +226,10 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public long HighestSequenceNr(string pid)
         {
-            LinkedList<IPersistentRepresentation> persistents;
-            if (Messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
             {
                 var last = persistents.LastOrDefault();
-                return last != null ? last.SequenceNr : 0L;
+                return last?.SequenceNr ?? 0L;
             }
 
             return 0L;

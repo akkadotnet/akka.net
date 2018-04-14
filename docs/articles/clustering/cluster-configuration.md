@@ -18,9 +18,9 @@ You can see all of these options being used in the following HOCON:
 
 ```xml
 akka {
-   actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+   actor.provider = cluster
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081
             hostname = localhost
         }
@@ -43,9 +43,9 @@ If you want to specify a cluster-wide minimum size, then we need to set the `clu
 
 ```xml
 akka {
-   actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+   actor.provider = cluster
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081
             hostname = localhost
         }
@@ -64,9 +64,9 @@ If you want to delay nodes of a specific role from being marked as up until a ce
 
 ```xml
 akka {
-   actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+   actor.provider = cluster
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081
             hostname = localhost
         }

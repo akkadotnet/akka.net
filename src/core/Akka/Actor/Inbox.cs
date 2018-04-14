@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -122,16 +122,23 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="target">TBD</param>
-        public StartWatch(IActorRef target)
+        /// <param name="message">TBD</param>
+        public StartWatch(IActorRef target, object message)
             : this()
         {
             Target = target;
+            Message = message;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public IActorRef Target { get; private set; }
+
+        /// <summary>
+        /// The custom termination message or null
+        /// </summary>
+        public object Message { get; private set; }
     }
 
     /// <summary>
@@ -396,8 +403,7 @@ namespace Akka.Actor
     /// </summary>
     public class Inbox : IInboxable, IDisposable
     {
-        private static int inboxNr = 0;
-        private readonly ISet<IObserver<object>> _subscribers;
+        private static int _inboxNr = 0;
         private readonly ActorSystem _system;
         private readonly TimeSpan _defaultTimeout;
 
@@ -408,19 +414,17 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static Inbox Create(ActorSystem system)
         {
-            var config = system.Settings.Config.GetConfig("akka").GetConfig("actor").GetConfig("inbox");
+            var config = system.Settings.Config.GetConfig("akka.actor.inbox");
             var inboxSize = config.GetInt("inbox-size");
             var timeout = config.GetTimeSpan("default-timeout");
 
-            var receiver =((ActorSystemImpl) system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref inboxNr));
+            var receiver = ((ActorSystemImpl)system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref _inboxNr));
 
-            var inbox = new Inbox(timeout, receiver, system);
-            return inbox;
+            return new Inbox(timeout, receiver, system);
         }
 
         private Inbox(TimeSpan defaultTimeout, IActorRef receiver, ActorSystem system)
         {
-            _subscribers = new HashSet<IObserver<object>>();
             _defaultTimeout = defaultTimeout;
             _system = system;
             Receiver = receiver;
@@ -439,7 +443,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
-            Receiver.Tell(new StartWatch(subject));
+            Receiver.Tell(new StartWatch(subject, null));
+            return subject;
+        }
+
+        public IActorRef WatchWith(IActorRef subject, object message)
+        {
+            Receiver.Tell(new StartWatch(subject, message));
             return subject;
         }
 
@@ -458,10 +468,10 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="actorRef">TBD</param>
-        /// <param name="msg">TBD</param>
-        public void Send(IActorRef actorRef, object msg)
+        /// <param name="message">TBD</param>
+        public void Send(IActorRef actorRef, object message)
         {
-            actorRef.Tell(msg, Receiver);
+            actorRef.Tell(message, Receiver);
         }
 
         /// <summary>
@@ -562,19 +572,17 @@ namespace Akka.Actor
 
         private object AwaitResult(Task<object> task, TimeSpan timeout)
         {
-            if (task.Wait(timeout))
-            {
-                var received = task.Result as Status.Failure;
-                if (received != null && received.Cause is TimeoutException)
-                {
-                    throw new TimeoutException(
-                        $"Inbox {Receiver.Path} received a status failure response message: {received.Cause.Message}", received.Cause);
-                }
+            if (!task.Wait(timeout))
+                throw new TimeoutException(
+                    $"Inbox {Receiver.Path} didn't receive a response message in specified timeout {timeout}");
 
-                return task.Result;
+            if (task.Result is Status.Failure received && received.Cause is TimeoutException)
+            {
+                throw new TimeoutException(
+                    $"Inbox {Receiver.Path} received a status failure response message: {received.Cause.Message}", received.Cause);
             }
-            
-            throw new TimeoutException($"Inbox {Receiver.Path} didn't receive a response message in specified timeout {timeout}");
+
+            return task.Result;
         }
     }
 }

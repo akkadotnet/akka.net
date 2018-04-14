@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JepsenInspiredInsertSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         public IEnumerable<int> MyData => _data[Myself];
 
         public JepsenInspiredInsertSpec() : this(new JepsenInspiredInsertSpecConfig()) { }
-        protected JepsenInspiredInsertSpec(JepsenInspiredInsertSpecConfig config) : base(config)
+        protected JepsenInspiredInsertSpec(JepsenInspiredInsertSpecConfig config) : base(config, typeof(JepsenInspiredInsertSpec))
         {
             _cluster = Akka.Cluster.Cluster.Get(Sys);
             _replicator = DistributedData.Get(Sys).Replicator;

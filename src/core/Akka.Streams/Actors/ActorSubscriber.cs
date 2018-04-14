@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -274,7 +274,7 @@ namespace Akka.Streams.Actors
         /// No more elements will be delivered after cancel.
         /// </para>
         /// <para>
-        /// The <see cref="ActorSubscriber"/> will be stopped immediatly after signalling cancelation.
+        /// The <see cref="ActorSubscriber"/> will be stopped immediately after signaling cancellation.
         /// In case the upstream subscription has not yet arrived the Actor will stay alive
         /// until a subscription arrives, cancel it and then stop itself.
         /// </para>
@@ -431,8 +431,8 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Get(IActorRef actorRef)
         {
-            State state;
-            return _state.TryGetValue(actorRef, out state) ? state : null;
+            _state.TryGetValue(actorRef, out var state);
+            return state;
         }
 
         /// <summary>

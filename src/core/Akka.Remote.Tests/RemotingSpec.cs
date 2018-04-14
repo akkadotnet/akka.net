@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -167,6 +167,20 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public async Task Ask_does_not_deadlock()
+        {
+            // see https://github.com/akkadotnet/akka.net/issues/2546
+
+            // the configure await causes the continuation (== the second ask) to be scheduled on the HELIOS worker thread
+            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            Assert.Equal("pong", msg.Item1);
+
+            // the .Result here blocks the helios worker thread, deadlocking the whole system.
+            var msg2 = here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).Result;
+            Assert.Equal("pong", msg2.Item1);
+        }
+        
+        [Fact]
         public void Resolve_does_not_deadlock()
         {
             // here is really an ActorSelection
@@ -234,7 +248,7 @@ namespace Akka.Remote.Tests
             l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
             var child = ExpectMsg<IActorRef>();
 
-            // grandchild is condfigured to be deployed on RemotingSpec (Sys)
+            // grandchild is configured to be deployed on RemotingSpec (Sys)
             child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
             var grandchild = ExpectMsg<IActorRef>();
             grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
@@ -522,12 +536,12 @@ namespace Akka.Remote.Tests
 
         private void VerifySend(object msg, Action afterSend)
         {
-            var bigBounceId = string.Format("bigBounce-{0}", ThreadLocalRandom.Current.Next());
+            var bigBounceId = $"bigBounce-{ThreadLocalRandom.Current.Next()}";
             var bigBounceOther = remoteSystem.ActorOf(Props.Create<Bouncer>().WithDeploy(Actor.Deploy.Local),
                 bigBounceId);
 
             var bigBounceHere =
-                Sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
+                Sys.ActorSelection($"akka.test://remote-sys@localhost:12346/user/{bigBounceId}");
             var eventForwarder = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)).WithDeploy(Actor.Deploy.Local));
             Sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
             Sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
@@ -555,7 +569,7 @@ namespace Akka.Remote.Tests
 
         private Address Addr(ActorSystem system, string proto)
         {
-            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
+            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address($"akka.{proto}", "", "", 0));
         }
 
         private int Port(ActorSystem system, string proto)
@@ -601,7 +615,7 @@ namespace Akka.Remote.Tests
         class NestedDeployer : UntypedActor
         {
             private Props _reporterProps;
-            private IActorRef _repoterActorRef;
+            private IActorRef _reporterActorRef;
 
             public class GetNestedReporter { }
 
@@ -612,14 +626,14 @@ namespace Akka.Remote.Tests
 
             protected override void PreStart()
             {
-                _repoterActorRef = Context.ActorOf(_reporterProps);
+                _reporterActorRef = Context.ActorOf(_reporterProps);
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is GetNestedReporter)
                 {
-                    Sender.Tell(_repoterActorRef);
+                    Sender.Tell(_reporterActorRef);
                 }
                 else
                 {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatedDataSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
-        
+
         private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
         private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
         private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
@@ -72,6 +72,16 @@ namespace Akka.DistributedData.Tests.Serialization
             var s4 = ORSet.Create<object>(_address2, 17).Remove(_address3, 17).Add(_address1, "a");
 
             CheckSameContent(s3.Merge(s4), s4.Merge(s3));
+        }
+
+        [Fact]
+        public void ReplicatedDataSerializer_should_serialize_ORSet_delta()
+        {
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").ResetDelta().Remove(_address2, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Remove(_address2, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").ResetDelta().Clear(_address2).Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Clear(_address2).Delta);
         }
 
         [Fact]
@@ -132,6 +142,37 @@ namespace Akka.DistributedData.Tests.Serialization
         }
 
         [Fact]
+        public void ReplicatedDataSerializer_should_serialize_ORDictionary_delta()
+        {
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .SetItem(_address2, "b", GSet.Create("B"))
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .ResetDelta()
+                .Remove(_address2, "a")
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .Remove(_address2, "a")
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, ORSet<string>>.Empty
+                .SetItem(_address1, "a", ORSet.Create(_address1, "A"))
+                .SetItem(_address2, "b", ORSet.Create(_address2, "B"))
+                .AddOrUpdate(_address1, "a", ORSet<string>.Empty, old => old.Add(_address1, "C"))
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, ORSet<string>>.Empty
+                .ResetDelta()
+                .AddOrUpdate(_address1, "a", ORSet<string>.Empty, old => old.Add(_address1, "C"))
+                .Delta);
+        }
+
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_LWWDictionary()
         {
             CheckSerialization(LWWDictionary<string, string>.Empty);
@@ -153,15 +194,15 @@ namespace Akka.DistributedData.Tests.Serialization
         [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORMultiDictionary()
         {
-            CheckSerialization(ORMultiDictionary<string, string>.Empty);
-            CheckSerialization(ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A"));
-            CheckSerialization(ORMultiDictionary<string, string>.Empty
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty);
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty.AddItem(_address1, "a", "A"));
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_address1, "a", "A1")
                 .SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }))
                 .AddItem(_address2, "a", "A2"));
 
-            var m1 = ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A1").AddItem(_address2, "a", "A2");
-            var m2 = ORMultiDictionary<string, string>.Empty.SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
+            var m1 = ORMultiValueDictionary<string, string>.Empty.AddItem(_address1, "a", "A1").AddItem(_address2, "a", "A2");
+            var m2 = ORMultiValueDictionary<string, string>.Empty.SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
             CheckSameContent(m1.Merge(m2), m2.Merge(m1));
         }
 
@@ -185,10 +226,11 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private void CheckSerialization<T>(T expected)
         {
+            var g = expected as ORDictionary<string, GSet<string>>.DeltaGroup;
             var serializer = Sys.Serialization.FindSerializerFor(expected);
             var blob = serializer.ToBinary(expected);
             var actual = serializer.FromBinary(blob, expected.GetType());
-            
+
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
             // fails on structural equality

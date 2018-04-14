@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TailChoppingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,8 +127,8 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Tail_chopping_group_router_must_throw_exception_if_no_result_will_arrive_within_the_given_time()
         {
-            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500.Milliseconds())), "Actor3");
-            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500.Milliseconds())), "Actor4");
+            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor3");
+            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor4");
 
             var probe = CreateTestProbe();
             var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };

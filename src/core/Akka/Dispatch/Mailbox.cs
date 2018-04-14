@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
-        /// <param name="receiver">TBD</param>
+        /// <param name="receiver">The actor sending this message to the mailbox</param>
         /// <param name="envelope">The envelope.</param>
         internal void Enqueue(IActorRef receiver, Envelope envelope)
         {
@@ -375,8 +375,7 @@ namespace Akka.Dispatch
         {
             while (ShouldProcessMessage())
             {
-                Envelope next;
-                if (!TryDequeue(out next)) return;
+                if (!TryDequeue(out var next)) return;
 
                 DebugPrint("{0} processing message {1}", Actor.Self, next);
 
@@ -570,7 +569,7 @@ namespace Akka.Dispatch
     /// A factory to create <see cref="IMessageQueue"/>s for an optionally provided <see cref="IActorContext"/>.
     /// </summary>
     /// <remarks>
-    /// Possibily important notice.
+    /// Possibly important notice.
     /// 
     /// When implementing a custom MailboxType, be aware that there is special semantics attached to
     /// <see cref="ActorSystem.ActorOf"/> in that sending the returned <see cref="IActorRef"/> may, for a short
@@ -613,7 +612,7 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Compilment to <see cref="IRequiresMessageQueue{T}"/>
+    /// Compliment to <see cref="IRequiresMessageQueue{T}"/>
     /// </summary>
     /// <typeparam name="TQueue">The type of <see cref="IMessageQueue"/> produced by this class.</typeparam>
     public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue { }

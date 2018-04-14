@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -28,6 +29,7 @@ namespace Akka.Actor
     /// necessary to distinguish between local and non-local references, this is the only
     /// method provided on the scope. 
     /// </summary>
+    [InternalApi]
     public interface IActorRefScope
     {
         /// <summary>
@@ -55,7 +57,7 @@ namespace Akka.Actor
     public interface IRepointableRef : IActorRefScope
     {
         /// <summary>
-        /// Retruns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
+        /// Returns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
         /// </summary>
         bool IsStarted { get; }
     }
@@ -66,6 +68,7 @@ namespace Akka.Actor
     public class FutureActorRef : MinimalActorRef
     {
         private readonly TaskCompletionSource<object> _result;
+        private readonly bool _tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable;
         private readonly Action _unregister;
         private readonly ActorPath _path;
 
@@ -76,12 +79,24 @@ namespace Akka.Actor
         /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
         public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
+            : this(result, unregister, path, false)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="result">TBD</param>
+        /// <param name="unregister">TBD</param>
+        /// <param name="path">TBD</param>
+        public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path, bool tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable)
         {
             if (ActorCell.Current != null)
             {
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
+            _tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable = tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable;
             _unregister = unregister;
             _path = path;
             _result.Task.ContinueWith(_ => _unregister());
@@ -126,7 +141,10 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    _result.TrySetResult(message);
+                    if (_tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable)
+                        _result.TrySetResult(message);
+                    else
+                        Task.Run(() => _result.TrySetResult(message));
                 }
             }
         }
@@ -209,12 +227,12 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Utility class for working with built-in actor references
     /// </summary>
     public static class ActorRefs
     {
         /// <summary>
-        /// TBD
+        /// Use this value to represent a non-existent actor.
         /// </summary>
         public static readonly Nobody Nobody = Nobody.Instance;
         /// <summary>
@@ -225,7 +243,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Base implementation for <see cref="IActorRef"/> implementations.
     /// </summary>
     public abstract class ActorRefBase : IActorRef
     {
@@ -358,6 +376,7 @@ namespace Akka.Actor
     /// Used by built-in <see cref="IActorRef"/> implementations for handling
     /// internal operations that are not exposed directly to end-users.
     /// </summary>
+    [InternalApi]
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         /// <summary>
@@ -433,6 +452,7 @@ namespace Akka.Actor
     /// 
     /// Abstract implementation of <see cref="IInternalActorRef"/>.
     /// </summary>
+    [InternalApi]
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         /// <inheritdoc cref="IInternalActorRef"/>
@@ -481,6 +501,7 @@ namespace Akka.Actor
     /// 
     /// Barebones <see cref="IActorRef"/> with no backing actor or <see cref="ActorCell"/>.
     /// </summary>
+    [InternalApi]
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
         /// <inheritdoc cref="InternalActorRefBase"/>
@@ -597,25 +618,28 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Used to power actors that use an <see cref="ActorCell"/>, which is the majority of them.
     /// </summary>
+    [InternalApi]
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorCell"/>.
         /// </summary>
         public abstract ICell Underlying { get; }
 
         /// <summary>
-        /// TBD
+        /// An iterable collection of the actor's children. Empty if there are none.
         /// </summary>
         public abstract IEnumerable<IActorRef> Children { get; }
 
         /// <summary>
-        /// TBD
+        /// Fetches a reference to a single child actor.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the child we're trying to fetch.</param>
+        /// <returns>If the child exists, it returns the child actor. Otherwise, we return <see cref="ActorRefs.Nobody"/>.</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
     }
@@ -764,8 +788,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             var firstName = enumerator.Current;
             if (string.IsNullOrEmpty(firstName))
                 return this;
-            IInternalActorRef child;
-            if (_children.TryGetValue(firstName, out child))
+            if (_children.TryGetValue(firstName, out var child))
                 return child.GetChild(new Enumerable<string>(enumerator));
             return ActorRefs.Nobody;
         }

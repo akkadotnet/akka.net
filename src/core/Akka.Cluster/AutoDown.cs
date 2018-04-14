@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -192,55 +192,36 @@ namespace Akka.Cluster
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            var state = message as ClusterEvent.CurrentClusterState;
-            if (state != null)
+            switch (message)
             {
-                _leader = state.Leader != null && state.Leader.Equals(SelfAddress);
-                foreach (var m in state.Unreachable) UnreachableMember(m);
-                return;
-            }
-
-            var unreachableMember = message as ClusterEvent.UnreachableMember;
-            if (unreachableMember != null)
-            {
-                UnreachableMember(unreachableMember.Member);
-                return;
-            }
-
-            var reachableMember = message as ClusterEvent.ReachableMember;
-            if (reachableMember != null)
-            {
-                Remove(reachableMember.Member.UniqueAddress);
-                return;
-            }
-            var memberRemoved = message as ClusterEvent.MemberRemoved;
-            if (memberRemoved != null)
-            {
-                Remove(memberRemoved.Member.UniqueAddress);
-                return;
-            }
-
-            var leaderChanged = message as ClusterEvent.LeaderChanged;
-            if (leaderChanged != null)
-            {
-                _leader = leaderChanged.Leader != null && leaderChanged.Leader.Equals(SelfAddress);
-                if (_leader)
-                {
-                    foreach(var node in _pendingUnreachable) Down(node.Address);
-                    _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
-                }
-                return;
-            }
-
-            var unreachableTimeout = message as AutoDown.UnreachableTimeout;
-            if (unreachableTimeout != null)
-            {
-                if (_scheduledUnreachable.ContainsKey(unreachableTimeout.Node))
-                {
-                    _scheduledUnreachable = _scheduledUnreachable.Remove(unreachableTimeout.Node);
-                    DownOrAddPending(unreachableTimeout.Node);
-                }
-                return;
+                case ClusterEvent.CurrentClusterState state:
+                    _leader = state.Leader != null && state.Leader.Equals(SelfAddress);
+                    foreach (var m in state.Unreachable) UnreachableMember(m);
+                    return;
+                case ClusterEvent.UnreachableMember unreachableMember:
+                    UnreachableMember(unreachableMember.Member);
+                    return;
+                case ClusterEvent.ReachableMember reachableMember:
+                    Remove(reachableMember.Member.UniqueAddress);
+                    return;
+                case ClusterEvent.MemberRemoved memberRemoved:
+                    Remove(memberRemoved.Member.UniqueAddress);
+                    return;
+                case ClusterEvent.LeaderChanged leaderChanged:
+                    _leader = leaderChanged.Leader != null && leaderChanged.Leader.Equals(SelfAddress);
+                    if (_leader)
+                    {
+                        foreach(var node in _pendingUnreachable) Down(node.Address);
+                        _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+                    }
+                    return;
+                case AutoDown.UnreachableTimeout unreachableTimeout:
+                    if (_scheduledUnreachable.ContainsKey(unreachableTimeout.Node))
+                    {
+                        _scheduledUnreachable = _scheduledUnreachable.Remove(unreachableTimeout.Node);
+                        DownOrAddPending(unreachableTimeout.Node);
+                    }
+                    return;
             }
         }
 
@@ -279,8 +260,8 @@ namespace Akka.Cluster
 
         private void Remove(UniqueAddress node)
         {
-            ICancelable source;
-            if(_scheduledUnreachable.TryGetValue(node, out source)) source.Cancel();
+            if(_scheduledUnreachable.TryGetValue(node, out var source))
+                source.Cancel();
             _scheduledUnreachable = _scheduledUnreachable.Remove(node);
             _pendingUnreachable = _pendingUnreachable.Remove(node);
         }

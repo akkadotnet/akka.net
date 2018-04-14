@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageTimersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -245,7 +245,7 @@ namespace Akka.Streams.Tests.Dsl
                 }
 
                 public override void PreStart()
-                    => _stage._sideChanngel.AsyncCallback = GetAsyncCallback<object>(OnTestEvent);
+                    => _stage._sideChannel.AsyncCallback = GetAsyncCallback<object>(OnTestEvent);
 
                 private void OnTestEvent(object message)
                 {
@@ -279,13 +279,13 @@ namespace Akka.Streams.Tests.Dsl
             }
 
             private readonly IActorRef _probe;
-            private readonly SideChannel _sideChanngel;
+            private readonly SideChannel _sideChannel;
             private readonly TestKitBase _testKit;
 
-            public TestStage(IActorRef probe, SideChannel sideChanngel, TestKitBase testKit)
+            public TestStage(IActorRef probe, SideChannel sideChannel, TestKitBase testKit)
             {
                 _probe = probe;
-                _sideChanngel = sideChanngel;
+                _sideChannel = sideChannel;
                 _testKit = testKit;
             }
 

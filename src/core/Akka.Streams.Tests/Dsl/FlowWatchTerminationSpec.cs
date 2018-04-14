@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWatchTerminationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,6 +129,20 @@ namespace Akka.Streams.Tests.Dsl
                 //sourceProbe.SendComplete();
                 //sinkProbe.ExpectNextN(new[] {2, 3, 4, 5}).ExpectComplete();
             }, Materializer);
+        }
+
+        [Fact]
+        public void A_WatchTermination_must_fail_task_when_abruptly_terminated()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(materializer);
+            var task = t.Item2;
+
+            materializer.Shutdown();
+
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

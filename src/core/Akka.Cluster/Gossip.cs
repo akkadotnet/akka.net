@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Gossip.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,20 +68,20 @@ namespace Akka.Cluster
             return Empty.Copy(members: members);
         }
 
-        static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
+        private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
 
-        static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
+        private static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
 
         /// <summary>
-        /// TBD
+        /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
         /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> ConvergenceSkipUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
 
         /// <summary>
-        /// TBD
+        /// If there are unreachable members in the cluster with any of these statuses, they will be pruned from the local gossip
         /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
@@ -352,7 +352,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="mbrs">All members in the cluster.</param>
         /// <param name="selfUniqueAddress">The address of the current node.</param>
-        /// <returns><c>null</c> if <see cref="mbrs"/> is empty. The <see cref="UniqueAddress"/> of the leader otherwise.</returns>
+        /// <returns><c>null</c> if <paramref name="mbrs"/> is empty. The <see cref="UniqueAddress"/> of the leader otherwise.</returns>
         public UniqueAddress LeaderOf(ImmutableSortedSet<Member> mbrs, UniqueAddress selfUniqueAddress)
         {
             var reachableMembers = (_overview.Reachability.IsAllReachable

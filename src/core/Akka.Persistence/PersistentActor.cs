@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Tools.MatchHandler;
+using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
@@ -55,7 +56,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
         /// </summary>
-        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.Latest, 0);
+        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.None, 0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Recovery"/> class.
@@ -410,6 +411,15 @@ namespace Akka.Persistence
                 Unhandled(message);
         }
 
+        private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
+        {
+            return m =>
+            {
+                Func<Task> wrap = () => asyncHandler(m);
+                RunTask(wrap);
+            };
+        }
+
         #region Recover helper methods
 
         private void EnsureMayConfigureRecoverHandlers()
@@ -504,6 +514,88 @@ namespace Akka.Persistence
         {
             if (_matchCommandBuilders.Count <= 0)
                 throw new InvalidOperationException("You may only call Command-methods when constructing the actor and inside Become().");
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming command of the specified type <typeparamref name="T"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already.
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T> shouldHandle = null)
+        {
+            Command(WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming command of the specified type <typeparamref name="T"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already.
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        protected void CommandAsync<T>(Predicate<T> shouldHandle, Func<T, Task> handler)
+        {
+            Command(shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming command of the specified type <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already.
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="messageType">The type of the message</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        {
+            Command(messageType, WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming command of the specified type <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already.
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="messageType">The type of the message</param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
+        protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
+        {
+            Command(messageType, shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming command of any type.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" /> and
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already.
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="handler">The message handler that is invoked for incoming messages of any type</param>
+        protected void CommandAnyAsync(Func<object, Task> handler)
+        {
+            CommandAny(WrapAsyncHandler(handler));
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediatorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
         }
 
-        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config)
+        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config, typeof(DistributedPubSubMediatorSpec))
         {
             _first = config.First;
             _second = config.Second;
@@ -259,8 +259,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private IActorRef ChatUser(string name)
         {
-            IActorRef a;
-            return _chatUsers.TryGetValue(name, out a) ? a : ActorRefs.Nobody;
+            return _chatUsers.TryGetValue(name, out var a) ? a : ActorRefs.Nobody;
         }
 
         private void Join(RoleName from, RoleName to)
@@ -299,8 +298,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             DistributedPubSubMediator_must_remove_terminated_users();
             DistributedPubSubMediator_must_publish();
             DistributedPubSubMediator_must_publish_to_topic();
-            DistributedPubSubMediator_must_demonstrate_usageof_Publish();
-            DistributedPubSubMediator_must_demonstrate_usageof_Send();
+            DistributedPubSubMediator_must_demonstrate_usage_of_Publish();
+            DistributedPubSubMediator_must_demonstrate_usage_of_Send();
             DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
             DistributedPubSubMediator_must_send_one_message_to_each_group();
             DistributedPubSubMediator_must_transfer_delta_correctly();
@@ -524,7 +523,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usageof_Publish()
+        public void DistributedPubSubMediator_must_demonstrate_usage_of_Publish()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -550,7 +549,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usageof_Send()
+        public void DistributedPubSubMediator_must_demonstrate_usage_of_Send()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {

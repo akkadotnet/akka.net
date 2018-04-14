@@ -1,40 +1,80 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.Streams</AssemblyTitle>
     <Description>Reactive stream support for Akka.NET</Description>
-    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
-    <VersionPrefix>1.3.0</VersionPrefix>
-    <Authors>Akka.NET Team</Authors>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;reactive;stream</PackageTags>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
-    <PackageReference Include="Reactive.Streams" version="1.0.2" />
   </ItemGroup>
-
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
-    <PackageReference Include="System.Reflection.TypeExtensions" version="4.3.0" />
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="CodeGen\Dsl\GraphApply.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GraphApply.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\GraphApply.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>GraphApply.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\Dsl\UnzipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>UnzipWith.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\UnzipWith.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>UnzipWith.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\Dsl\ZipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ZipWith.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\ZipWith.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ZipWith.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\FanInShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanInShape.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\FanInShape.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FanInShape.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\FanOutShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanOutShape.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\FanOutShape.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FanOutShape.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+  </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-
 </Project>

@@ -1,16 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPath.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 using System.Linq;
-using Akka.Actor.Dsl;
 using Akka.Util;
 using Newtonsoft.Json;
 using static System.String;
@@ -105,10 +103,9 @@ namespace Akka.Actor
 
             #endregion
         }
-
-        /** INTERNAL API */
+        
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
@@ -128,8 +125,11 @@ namespace Akka.Actor
             return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
         }
 
-        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
-        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                                                   (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+
+        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
+                                                 (c >= '0' && c <= '9');
 
         private static bool Validate(IReadOnlyList<char> chars, int len)
         {
@@ -152,9 +152,6 @@ namespace Akka.Actor
             return true;
         }
 
-        private static readonly Func<ActorPath, IList<string>> FillElementsFunc =
-            actorPath => FillElements(actorPath);
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
@@ -164,7 +161,6 @@ namespace Akka.Actor
         {
             Name = name;
             Address = address;
-            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -178,7 +174,6 @@ namespace Akka.Actor
             Address = parentPath.Address;
             Uid = uid;
             Name = name;
-            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -186,73 +181,16 @@ namespace Akka.Actor
         /// </summary>
         /// <value> The uid. </value>
         public long Uid { get; }
-        
-        private readonly FastLazy<ActorPath, IList<string>> _elements;
 
-        private static readonly string[] _emptyElements = { };
-        private static readonly string[] _systemElements = { "system" };
-        private static readonly string[] _userElements = { "user" };
-
-        /// <summary>
-        /// This method pursuits optimization goals mostly in terms of allocations.
-        /// We're computing elements chain only once and storing it in <see cref="_elements" />.
-        /// Computed chain meant to be reused not only by calls to <see cref="Elements" /> 
-        /// but also during chain computation of children actors.
-        /// </summary>
-        private static IList<string> FillElements(ActorPath actorPath)
-        {
-            // fast path next three `if`
-            if(actorPath is RootActorPath)
-                return _emptyElements;
-            if (actorPath.Parent is RootActorPath)
-            {
-                if (actorPath.Name.Equals("system", StringComparison.Ordinal))
-                    return _systemElements;
-                if (actorPath.Name.Equals("user", StringComparison.Ordinal))
-                    return _userElements;
-                return new [] {actorPath.Name};
-            }
-            // if our direct parent has computed chain we can skip list (for intermediate results) creation and resizing
-            if (actorPath.Parent._elements.IsValueCreated)
-            {
-                var parentElems = actorPath.Parent._elements.Value;
-                var myElems = new string[parentElems.Count + 1];
-                parentElems.CopyTo(myElems, 0);
-                myElems[myElems.Length - 1] = actorPath.Name;
-                return myElems;
-            }
-
-            // walking from `this` instance upto root actor
-            var current = actorPath;
-            var elements = new List<string>();
-            while (!(current is RootActorPath))
-            {
-                // there may be already computed elements chain for some of our parents, so reuse it!
-                if (current._elements.IsValueCreated)
-                {
-                    var parentElems = current._elements.Value;
-                    var myElems = new string[parentElems.Count + elements.Count];
-                    parentElems.CopyTo(myElems, 0);
-                    // parent's chain already in order, we need to reverse values collected so far
-                    for (int i = elements.Count - 1; i >= 0; i--)
-                    {
-                        myElems[parentElems.Count + (elements.Count - 1 - i)] = elements[i];
-                    }
-                    return myElems;
-                }
-                elements.Add(current.Name);
-                current = current.Parent;
-            }
-            // none of our parents have computed chain (no calls to Elements issued)
-            elements.Reverse();
-            return elements;
-        }
+        internal static readonly string[] EmptyElements = { };
+        internal static readonly string[] SystemElements = { "system" };
+        internal static readonly string[] UserElements = { "user" };
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
-        public IReadOnlyList<string> Elements => new ReadOnlyCollection<string>(_elements.Value);
+        public abstract IReadOnlyList<string> Elements { get; }
 
         /// <summary>
         /// INTERNAL API.
@@ -266,12 +204,10 @@ namespace Akka.Actor
         {
             get
             {
-                if(this is RootActorPath) return new []{""};
-                var elements = _elements.Value;
-                var elementsWithUid = new string[elements.Count];
-                elements.CopyTo(elementsWithUid, 0);
-                elementsWithUid[elementsWithUid.Length - 1] = AppendUidFragment(Name);
-                return elementsWithUid;
+                if (this is RootActorPath) return EmptyElements;
+                var elements = (List<string>)Elements;
+                elements[elements.Count - 1] = AppendUidFragment(Name);
+                return elements;
             }
         }
 
@@ -289,11 +225,12 @@ namespace Akka.Actor
         public Address Address { get; }
 
         /// <summary>
-        /// TBD
+        /// The root actor path.
         /// </summary>
         public abstract ActorPath Root { get; }
+
         /// <summary>
-        /// TBD
+        /// The path of the parent to this actor.
         /// </summary>
         public abstract ActorPath Parent { get; }
 
@@ -499,7 +436,14 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return ToString().GetHashCode();
+            unchecked
+            {
+                var hash = 17;
+                hash = (hash * 23) ^ Address.GetHashCode();
+                foreach (var e in Elements)
+                    hash = (hash * 23) ^ e.GetHashCode();
+                return hash;
+            }
         }
 
         /// <inheritdoc/>
@@ -568,6 +512,7 @@ namespace Akka.Actor
 
             return String.Concat(withAddress, "#", Uid.ToString());
         }
+
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
         /// with the given one unless this path’s address includes host and port
@@ -605,7 +550,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class RootActorPath.
+    /// Actor paths for root guardians, such as "/user" and "/system"
     /// </summary>
     public class RootActorPath : ActorPath
     {
@@ -619,23 +564,16 @@ namespace Akka.Actor
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override ActorPath Parent => null;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        public override IReadOnlyList<string> Elements => EmptyElements;
+
+        /// <inheritdoc/>
         [JsonIgnore]
         public override ActorPath Root => this;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="uid">TBD</param>
-        /// <exception cref="NotSupportedException">This exception is thrown if the given <paramref name="uid"/> is not equal to 0.</exception>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorPath WithUid(long uid)
         {
             if (uid == 0)
@@ -643,11 +581,7 @@ namespace Akka.Actor
             throw new NotSupportedException("RootActorPath must have undefined Uid");
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int CompareTo(ActorPath other)
         {
             if (other is ChildActorPath) return 1;
@@ -656,7 +590,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class ChildActorPath.
+    /// Actor paths for child actors, which is to say any non-guardian actor.
     /// </summary>
     public class ChildActorPath : ActorPath
     {
@@ -676,14 +610,26 @@ namespace Akka.Actor
             _parent = parentPath;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override ActorPath Parent => _parent;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        public override IReadOnlyList<string> Elements
+        {
+            get
+            {
+                ActorPath p = this;
+                var acc = new Stack<string>();
+                while (true)
+                {
+                    if (p is RootActorPath)
+                        return acc.ToList();
+                    acc.Push(p.Name);
+                    p = p.Parent;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
         public override ActorPath Root
         {
             get

@@ -1,11 +1,9 @@
-﻿#region copyright
-// -----------------------------------------------------------------------
-//  <copyright file="DotNettyTransportSettings.cs" company="Akka.NET project">
-//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
-//  </copyright>
-// -----------------------------------------------------------------------
-#endregion
+﻿//-----------------------------------------------------------------------
+// <copyright file="DotNettyTransportSettings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -108,8 +106,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         /// <summary>
         /// If this value is set, this becomes the public address for the actor system on this
-	    /// transport, which might be different than the physical ip address (hostname)
-	    /// this is designed to make it easy to support private / public addressing schemes
+        /// transport, which might be different than the physical ip address (hostname)
+        /// this is designed to make it easy to support private / public addressing schemes
         /// </summary>
         public readonly string PublicHostname;
 

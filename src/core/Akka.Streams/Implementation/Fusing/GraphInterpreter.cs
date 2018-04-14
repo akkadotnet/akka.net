@@ -1,15 +1,17 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -94,6 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// edge of a balance is pulled, dissolving the original cycle).
     ///
     /// </summary>
+    [InternalApi]
     public sealed class GraphInterpreter
     {
         #region internal classes
@@ -189,6 +192,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Contains all the necessary information for the GraphInterpreter to be able to implement a connection
         /// between an output and input ports.
         /// </summary>
+        [InternalApi]
         public sealed class Connection
         {
             /// <summary>
@@ -270,7 +274,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly bool IsDebug = false;
+        public const bool IsDebug = false;
 
         /// <summary>
         /// TBD
@@ -566,7 +570,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// The passed-in materializer is intended to be a <see cref="SubFusingMaterializer"/>
         /// that avoids creating new Actors when stages materialize sub-flows.If no
         /// such materializer is available, passing in null will reuse the normal
-        /// materializer for the GraphInterpreter—fusing is only an optimization.
+        /// materializer for the GraphInterpreterâ€”fusing is only an optimization.
         /// </summary>
         /// <param name="subMaterializer">TBD</param>
         public void Init(IMaterializer subMaterializer)
@@ -863,17 +867,19 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessPush(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
+            //if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
             ActiveStage = connection.InOwner;
             connection.PortState ^= PushEndFlip;
             connection.InHandler.OnPush();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessPull(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({connection.OutHandler}) [{OutLogicName(connection)}]");
+            //if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({connection.OutHandler}) [{OutLogicName(connection)}]");
             ActiveStage = connection.OutOwner;
             connection.PortState ^= PullEndFlip;
             connection.OutHandler.OnPull();

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConsoleLogger.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -42,7 +49,7 @@ namespace Akka.Remote.TestKit
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            StandardOutWriter.WriteLine($"[{_name}][{logLevel}]{formatter(state, exception)}");
+            StandardOutWriter.WriteLine($"[{_name}][{logLevel}][{DateTime.UtcNow}]{formatter(state, exception)}");
         }
 
         sealed class NoDisposable : IDisposable

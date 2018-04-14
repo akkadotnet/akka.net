@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System.Net.Sockets;
 
 namespace Akka.IO
@@ -75,13 +75,9 @@ namespace Akka.IO
         /// </summary>
         public class DatagramChannelCreator : SocketOption
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
-            public virtual DatagramChannel Create()
+            public virtual Socket Create()
             {
-                return DatagramChannel.Open();
+                return new Socket(SocketType.Dgram, ProtocolType.Udp);
             }
         }
 
@@ -236,4 +232,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

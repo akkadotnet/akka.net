@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GenericTransportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Google.Protobuf;
@@ -47,7 +48,7 @@ namespace Akka.Remote.Tests.Transport
             if (withAkkaProtocol) {
                 var provider = (RemoteActorRefProvider)((ExtendedActorSystem)Sys).Provider;
 
-                return new AkkaProtocolTransport(transport, Sys, new AkkaProtocolSettings(provider.RemoteSettings.Config), new AkkaPduProtobuffCodec());
+                return new AkkaProtocolTransport(transport, Sys, new AkkaProtocolSettings(provider.RemoteSettings.Config), new AkkaPduProtobuffCodec(Sys));
             }
 
             return transport;
@@ -153,7 +154,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             var payload = ByteString.CopyFromUtf8("PDU");
-            var pdu = withAkkaProtocol ? new AkkaPduProtobuffCodec().ConstructPayload(payload) : payload;
+            var pdu = withAkkaProtocol ? new AkkaPduProtobuffCodec(Sys).ConstructPayload(payload) : payload;
             
             AwaitCondition(() => registry.ExistsAssociation(addressATest, addressBTest));
 

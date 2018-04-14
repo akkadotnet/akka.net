@@ -1,181 +1,131 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.IO
 {
-    // INTERNAL API	
+    using static Udp;
+    using ByteBuffer = ArraySegment<byte>;
+
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
+    [InternalApi]
     class UdpListener : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        private readonly UdpExt _udp;
-        private readonly IChannelRegistry _channelRegistry;
         private readonly IActorRef _bindCommander;
-        private readonly Udp.Bind _bind;
+        private readonly Bind _bind;
+        protected readonly ILoggingAdapter Log = Context.GetLogger();
 
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly DatagramChannel _channel;
-        
-        private IActorRef _selector;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="udp">TBD</param>
-        /// <param name="channelRegistry">TBD</param>
-        /// <param name="bindCommander">TBD</param>
-        /// <param name="bind">TBD</param>
-        public UdpListener(UdpExt udp, IChannelRegistry channelRegistry, IActorRef bindCommander, Udp.Bind bind)
+        public UdpListener(UdpExt udp, IActorRef bindCommander, Bind bind)
         {
-            _udp = udp;
-            _channelRegistry = channelRegistry;
+            Udp = udp;
             _bindCommander = bindCommander;
             _bind = bind;
 
-            _selector = Context.Parent;
-
             Context.Watch(bind.Handler);        // sign death pact
 
-            _channel = (bind.Options.OfType<Inet.DatagramChannelCreator>()
-                            .FirstOrDefault() ?? new Inet.DatagramChannelCreator()).Create();
-            _channel.ConfigureBlocking(false);
-
-            var localAddress = new Func<object>(() =>
+            Socket = (bind.Options.OfType<Inet.DatagramChannelCreator>().FirstOrDefault() ?? new Inet.DatagramChannelCreator()).Create();
+            Socket.Blocking = false;
+            
+            try
             {
-                try
+                foreach (var option in bind.Options)
                 {
-                    var socket = Channel.Socket;
-                    bind.Options.ForEach(x => x.BeforeDatagramBind(socket));
-                    socket.Bind(bind.LocalAddress);
-                    var ret = socket.LocalEndPoint;
-                    if (ret == null)
-                        throw new ArgumentException($"bound to unknown SocketAddress [{socket.LocalEndPoint}]");
-                    channelRegistry.Register(Channel, SocketAsyncOperation.Receive, Self);
-                    _log.Debug("Successfully bound to [{0}]", ret);
-                    bind.Options.OfType<Inet.SocketOptionV2>().ForEach(x => x.AfterBind(socket));
-                    return ret;
+                    option.BeforeDatagramBind(Socket);
                 }
-                catch (Exception e)
-                {
-                    bindCommander.Tell(new Udp.CommandFailed(bind));
-                    _log.Error(e, "Failed to bind UDP channel to endpoint [{0}]", bind.LocalAddress);
-                    Context.Stop(Self);
-                    return null;
-                }
-            })();
+
+                Socket.Bind(bind.LocalAddress);
+                var ret = Socket.LocalEndPoint;
+                if (ret == null)
+                    throw new ArgumentException($"bound to unknown SocketAddress [{Socket.LocalEndPoint}]");
+                
+                Log.Debug("Successfully bound to [{0}]", ret);
+                bind.Options.OfType<Inet.SocketOptionV2>().ForEach(x => x.AfterBind(Socket));
+
+                ReceiveAsync();
+            }
+            catch (Exception e)
+            {
+                bindCommander.Tell(new CommandFailed(bind));
+                Log.Error(e, "Failed to bind UDP channel to endpoint [{0}]", bind.LocalAddress);
+                Context.Stop(Self);
+            }
         }
 
+        protected sealed override Socket Socket { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        protected override DatagramChannel Channel
+        protected sealed override UdpExt Udp { get; }
+
+        protected override void PreStart()
         {
-            get { return _channel; }
-        }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override UdpExt Udp
-        {
-            get { return _udp; }
+            _bindCommander.Tell(new Bound(Socket.LocalEndPoint));
+            Context.Become(m => ReadHandlers(m) || SendHandlers(m));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var registration = message as ChannelRegistration;
-            if (registration != null)
-            {
-                _bindCommander.Tell(new Udp.Bound(Channel.Socket.LocalEndPoint));
-                Context.Become(m => ReadHandlers(registration)(m) || SendHandlers(registration)(m));
-                return true;
-            }
-            return false;
+            throw new NotSupportedException();
         }
 
-        private Receive ReadHandlers(ChannelRegistration registration)
+        private bool ReadHandlers(object message)
         {
-            return message =>
+            switch (message)
             {
-                if (message is Udp.SuspendReading)
-                {
-                    registration.DisableInterest(SocketAsyncOperation.Receive);
+                case SuspendReading _:
+                    // TODO: What should we do here - we cant cancel a pending ReceiveAsync
                     return true;
-                }
-                if (message is Udp.ResumeReading)
-                {
-                    registration.EnableInterest(SocketAsyncOperation.Receive);
+                case ResumeReading _:
+                    ReceiveAsync();
                     return true;
-                }
-                if (message is SelectionHandler.ChannelReadable)
-                {
-                    DoReceive(registration, _bind.Handler);
+                case SocketReceived _:
+                    var received = (SocketReceived) message;
+                    DoReceive(received.EventArgs, _bind.Handler);
                     return true;
-                }
-
-                if (message is Udp.Unbind)
-                {
-                    _log.Debug("Unbinding endpoint [{0}]", _bind.LocalAddress);
+                case Unbind _:
+                    Log.Debug("Unbinding endpoint [{0}]", _bind.LocalAddress);
                     try
                     {
-                        Channel.Close();
-                        Sender.Tell(IO.Udp.Unbound.Instance);
-                        _log.Debug("Unbound endpoint [{0}], stopping listener", _bind.LocalAddress);
+                        Socket.Dispose();
+                        Sender.Tell(Unbound.Instance);
+                        Log.Debug("Unbound endpoint [{0}], stopping listener", _bind.LocalAddress);
                     }
                     finally
                     {
                         Context.Stop(Self);
                     }
                     return true;
-                }
-                return false;
-            };
+            }
+
+            return false;
         }
 
-        private void DoReceive(ChannelRegistration registration, IActorRef handler)
+        private void DoReceive(SocketAsyncEventArgs e, IActorRef handler)
         {
-            Action<int, ByteBuffer> innerReceive = null;
-            innerReceive = (readsLeft, buffer) =>
-            {
-                buffer.Clear();
-                buffer.Limit(_udp.Setting.DirectBufferSize);
-
-                var sender = Channel.Receive(buffer);
-                if (sender != null)
-                {
-                    buffer.Flip();
-                    handler.Tell(new Udp.Received(ByteString.Create(buffer), sender));
-                    if (readsLeft > 0) innerReceive(readsLeft - 1, buffer);
-                }
-            };
-
-            var buffr = _udp.BufferPool.Acquire();
             try
             {
-                innerReceive(_udp.Setting.BatchReceiveLimit, buffr);
+                handler.Tell(new Received(ByteString.CopyFrom(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint));
+                ReceiveAsync();
             }
             finally
             {
-                _udp.BufferPool.Release(buffr);
-                registration.EnableInterest(SocketAsyncOperation.Receive);
+                var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
+                Udp.SocketEventArgsPool.Release(e);
+                Udp.BufferPool.Release(buffer);
             }
         }
 
@@ -184,19 +134,28 @@ namespace Akka.IO
         /// </summary>
         protected override void PostStop()
         {
-            if (Channel.IsOpen())
+            if (Socket.Connected)
             {
-                _log.Debug("Closing DatagramChannel after being stopped");
+                Log.Debug("Closing DatagramChannel after being stopped");
                 try
                 {
-                    Channel.Close();
+                    Socket.Dispose();
                 }
                 catch (Exception e)
                 {
-                    _log.Debug("Error closing DatagramChannel: {0}", e);
+                    Log.Debug("Error closing DatagramChannel: {0}", e);
                 }
             }
         }
+        
+        private void ReceiveAsync()
+        {
+            var e = Udp.SocketEventArgsPool.Acquire(Self);
+            var buffer = Udp.BufferPool.Rent();
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            e.RemoteEndPoint = Socket.LocalEndPoint;
+            if (!Socket.ReceiveFromAsync(e))
+                Self.Tell(new SocketReceived(e));
+        }
     }
 }
-#endif

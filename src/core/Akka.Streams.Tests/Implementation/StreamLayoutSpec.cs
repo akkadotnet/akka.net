@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -373,8 +373,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 foreach (var inPort in atomic.InPorts)
                 {
-                    TestSubscriber subscriber;
-                    if (inToSubscriber.TryGetValue(inPort, out subscriber))
+                    if (inToSubscriber.TryGetValue(inPort, out var subscriber))
                     {
                         subscriber.Owner.Should().Be(atomic);
                         subscriber.UpstreamPort.Should().Be(topLevel.Upstreams[inPort]);
@@ -384,8 +383,7 @@ namespace Akka.Streams.Tests.Implementation
 
                 foreach (var outPort in atomic.OutPorts)
                 {
-                    TestPublisher publisher;
-                    if (outToPublisher.TryGetValue(outPort, out publisher))
+                    if (outToPublisher.TryGetValue(outPort, out var publisher))
                     {
                         publisher.Owner.Should().Be(atomic);
                         publisher.DownstreamPort.Should().Be(topLevel.Downstreams[outPort]);
@@ -404,9 +402,10 @@ namespace Akka.Streams.Tests.Implementation
         {
             var group = module.SubModules.GroupBy(x => x.IsAtomic).ToDictionary(x => x.Key, x => x.ToImmutableHashSet());
 
-            ImmutableHashSet<IModule> atomics, composites;
-            if (!group.TryGetValue(true, out atomics)) atomics = ImmutableHashSet<IModule>.Empty;
-            if (!group.TryGetValue(false, out composites)) composites = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(true, out var atomics))
+                atomics = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(false, out var composites))
+                composites = ImmutableHashSet<IModule>.Empty;
 
             return atomics.Union(composites.SelectMany(GetAllAtomic));
         }

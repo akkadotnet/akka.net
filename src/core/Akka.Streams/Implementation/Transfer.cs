@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Transfer.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -447,13 +447,15 @@ namespace Akka.Streams.Implementation
     internal abstract class PumpBase : IPump
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PumpBase" /> class.
         /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the pump has not been initialized with a phase.
+        /// </exception>
         protected PumpBase()
         {
             TransferState = NotInitialized.Instance;
-            CurrentAction = () => { throw new IllegalStateException("Pump has not been initialized with a phase");  };
+            CurrentAction = () => { throw new IllegalStateException("Pump has not been initialized with a phase"); };
         }
 
         /// <summary>
@@ -522,7 +524,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="self">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the pump has not been initialized with a phase.
+        /// </exception>
         public static void Init(this IPump self)
         {
             self.TransferState = NotInitialized.Instance;
@@ -532,7 +536,9 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the action of the completed phase tried to execute.
+        /// </exception>
         public static readonly TransferPhase CompletedPhase = new TransferPhase(Completed.Instance, () =>
         {
             throw new IllegalStateException("The action of completed phase must never be executed");
@@ -544,8 +550,12 @@ namespace Akka.Streams.Implementation
         /// <param name="self">TBD</param>
         /// <param name="waitForUpstream">TBD</param>
         /// <param name="andThen">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="waitForUpstream"/> is less than one.
+        /// </exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the initial state is not <see cref="NotInitialized.Instance"/>.
+        /// </exception>
         public static void InitialPhase(this IPump self, int waitForUpstream, TransferPhase andThen)
         {
             if (waitForUpstream < 1)
@@ -562,7 +572,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="self">TBD</param>
         /// <param name="waitForUpstream">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="waitForUpstream"/> is less than one.
+        /// </exception>
         public static void WaitForUpstream(this IPump self, int waitForUpstream)
         {
             if(waitForUpstream < 1) 

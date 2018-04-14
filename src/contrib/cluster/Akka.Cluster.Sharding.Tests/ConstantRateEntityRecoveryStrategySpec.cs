@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConstantRateEntityRecoveryStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void ConstantRateEntityRecoveryStrategySpec_must_recover_entities()
+        public void ConstantRateEntityRecoveryStrategy_must_recover_entities()
         {
             var entities = ImmutableHashSet.Create<EntityId>("1", "2", "3", "4", "5");
             var startTime = DateTime.UtcNow;
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void ConstantRateEntityRecoveryStrategySpec_must_no_recover_when_no_entities_to_recover()
+        public void ConstantRateEntityRecoveryStrategy_must_no_recover_when_no_entities_to_recover()
         {
             var result = strategy.RecoverEntities(ImmutableHashSet<EntityId>.Empty);
             result.Should().BeEmpty();

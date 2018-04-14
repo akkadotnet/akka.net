@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldResourceAsyncSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -33,10 +34,10 @@ namespace Akka.Streams.Tests.Dsl
         private static string CreateLine(char c) => Enumerable.Repeat(c, 100).Aggregate("", (s, c1) => s + c1) + "\n";
 
         private static readonly string ManyLines =
-            new[] {'a', 'b', 'c', 'd', 'e', 'f'}.SelectMany(c => Enumerable.Repeat(CreateLine(c), 10))
+            new[] { 'a', 'b', 'c', 'd', 'e', 'f' }.SelectMany(c => Enumerable.Repeat(CreateLine(c), 10))
                 .Aggregate("", (s, s1) => s + s1);
 
-        private static readonly string[] ManyLinesArray = ManyLines.Split(new[] {"\n"}, StringSplitOptions.RemoveEmptyEntries);
+        private static readonly string[] ManyLinesArray = ManyLines.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
         private readonly FileInfo _manyLinesFile;
         private readonly Func<Task<StreamReader>> _open;
@@ -59,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = Sys.Materializer(settings);
 
             _manyLinesFile = new FileInfo(Path.Combine(Path.GetTempPath(), $"blocking-source-spec-{_counter++}.tmp"));
-            if(_manyLinesFile.Exists)
+            if (_manyLinesFile.Exists)
                 _manyLinesFile.Delete();
 
             using (var stream = _manyLinesFile.CreateText())
@@ -108,7 +109,7 @@ namespace Akka.Streams.Tests.Dsl
                 createPromiseCalled.Task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 createPromise.SetResult(resource);
-                
+
                 readPromiseCalled.Task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 readPromise.SetResult(resource.ReadLine());
@@ -167,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceAsyncSource_must_continue_when_strategy_is_resume_and_exception_happend()
+        public void A_UnfoldResourceAsyncSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -181,15 +182,15 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<string>();
-                
+
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
-                Enumerable.Range(0,50).ForEach(i =>
-                {
-                    sub.Request(1);
-                    c.ExpectNext().Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
-                });
+                Enumerable.Range(0, 50).ForEach(i =>
+                 {
+                     sub.Request(1);
+                     c.ExpectNext().Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
+                 });
                 sub.Request(1);
                 c.ExpectComplete();
             }, Materializer);
@@ -237,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     promise.SetResult(s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Take(s)
+                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
                         : Option<ByteString>.None);
                     return promise.Task;
 
@@ -252,7 +253,7 @@ namespace Akka.Streams.Tests.Dsl
                 var remaining = ManyLines;
                 Func<string> nextChunk = () =>
                 {
-                    if(remaining.Length <= chunkSize)
+                    if (remaining.Length <= chunkSize)
                         return remaining;
                     var chunk = remaining.Take(chunkSize).Aggregate("", (s, c1) => s + c1);
                     remaining = remaining.Substring(chunkSize);
@@ -265,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(0, 122).ForEach(i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().DecodeString().Should().Be(nextChunk());
+                    c.ExpectNext().ToString().Should().Be(nextChunk());
                 });
                 sub.Request(1);
                 c.ExpectComplete();
@@ -285,7 +286,7 @@ namespace Akka.Streams.Tests.Dsl
                     var p = Source.UnfoldResourceAsync(_open, Read, Close)
                         .RunWith(this.SinkProbe<string>(), materializer);
 
-                    ((ActorMaterializerImpl) materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
+                    ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
                         TestActor);
                     var refs = ExpectMsg<StreamSupervisor.Children>().Refs;
                     var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSourceAsync"));
@@ -346,10 +347,42 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact]
+        public void A_UnfoldResourceAsyncSource_must_close_resource_when_stream_is_abruptly_termianted()
+        {
+            var closeLatch = new TestLatch(1);
+            var materializer = ActorMaterializer.Create(Sys);
+            var p = Source.UnfoldResourceAsync(_open, Read, reader =>
+            {
+                closeLatch.CountDown();
+                return Task.FromResult(0);
+            }).RunWith(Sink.AsPublisher<string>(false), materializer);
+            var c = this.CreateManualSubscriberProbe<string>();
+            p.Subscribe(c);
+            materializer.Shutdown();
+            closeLatch.Ready(TimeSpan.FromSeconds(10));
+        }
+
         protected override void AfterAll()
         {
             base.AfterAll();
-            _manyLinesFile.Delete();
+
+            try
+            {
+                _manyLinesFile.Delete();
+            }
+            catch
+            {
+                Thread.Sleep(3000);
+                try
+                {
+                    _manyLinesFile.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeChurnSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeChurnSpec(NodeChurnConfig config) : base(config)
+        protected NodeChurnSpec(NodeChurnConfig config) : base(config, typeof(NodeChurnSpec))
         {
             _config = config;
         }
@@ -163,7 +163,7 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
 
-        private void AwaitRemoved(ImmutableList<ActorSystem> additionaSystems, int round)
+        private void AwaitRemoved(ImmutableList<ActorSystem> additionalSystems, int round)
         {
             AwaitMembersUp(Roles.Count, timeout: 40.Seconds());
             EnterBarrier("removed-" + round);
@@ -171,7 +171,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 AwaitAssert(() =>
                 {
-                    additionaSystems.ForEach(s =>
+                    additionalSystems.ForEach(s =>
                     {
                         Cluster.Get(s).IsTerminated.Should().BeTrue($"{Cluster.Get(s).SelfAddress}");
                     });

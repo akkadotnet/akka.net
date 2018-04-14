@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Actor
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
         /// <summary>
-        /// TBD
+        /// The child container collection, used to house information about all child actors.
         /// </summary>
         public IChildrenContainer ChildrenContainer
         {
@@ -34,11 +34,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Attaches a child to the current <see cref="ActorCell"/>.
+        /// 
+        /// This method is used in the process of starting actors.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="isSystemService">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="props">The <see cref="Props"/> this child actor will use.</param>
+        /// <param name="isSystemService">If <c>true</c>, then this actor is a system actor and activates a special initialization path.</param>
+        /// <param name="name">The name of the actor being started. Can be <c>null</c>, and if it is we will automatically 
+        /// generate a random name for this actor.</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>
@@ -48,7 +51,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A reference to the initialized child actor.</returns>
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Akka.MultiNodeTestRunner</id>
+    <version>@version@</version>
+    <title>Akka.MultiNodeTestRunner</title>
+    <authors>Akka.NET Team</authors>
+    <owners>Akka.NET Team</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
+    <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
+    <description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</description>
+    <copyright>Copyright � 2013-2017 Akka.NET Team</copyright>
+    <tags>akka actors actor model Akka concurrency</tags>
+  </metadata>
+  <files>
+    <file src="bin\Release\net452\win7-x64\publish\*.*" target="lib\net452\" />
+    <file src="bin\Release\netcoreapp1.1\win7-x64\publish\*.*" target="lib\netcoreapp1.1\" />
+  </files>
+</package>

@@ -1,10 +1,10 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -89,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
                         Cancel();
                     }
                 })
@@ -97,7 +97,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _log.Error(error.Cause,
                         $"Tearing down OutputStreamSink due to upstream error, wrote bytes: {_bytesWritten}");
-                    _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(error.Cause)));
+                    _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, error.Cause));
                     Context.Stop(Self);
                 })
                 .With<OnComplete>(() =>
@@ -119,12 +119,11 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
             }
 
-            _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Success(NotUsed.Instance)));
+            _completionPromise.TrySetResult(IOResult.Success(_bytesWritten));
             base.PostStop();
         }
     }
 }
-#endif

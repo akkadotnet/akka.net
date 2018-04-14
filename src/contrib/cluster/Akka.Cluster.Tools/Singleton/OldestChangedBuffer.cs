@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OldestChangedBuffer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         /// <summary>
         /// It's a delicate difference between <see cref="CoordinatedShutdown.PhaseClusterExiting"/> and <see cref="ClusterEvent.MemberExited"/>.
-        /// 
+        ///
         /// MemberExited event is published immediately (leader may have performed that transition on other node),
         /// and that will trigger run of <see cref="CoordinatedShutdown"/>, while PhaseClusterExiting will happen later.
         /// Using PhaseClusterExiting in the singleton because the graceful shutdown of sharding region
@@ -156,7 +156,12 @@ namespace Akka.Cluster.Tools.Singleton
         private void Add(Member member)
         {
             if (MatchingRole(member))
-                TrackChanges(() => _membersByAge = _membersByAge.Add(member));
+                TrackChanges(() =>
+                {
+                    // replace, it's possible that the upNumber is changed
+                    _membersByAge = _membersByAge.Remove(member);
+                    _membersByAge = _membersByAge.Add(member);
+                });
         }
 
         private void Remove(Member member)
@@ -190,7 +195,7 @@ namespace Akka.Cluster.Tools.Singleton
             if (message is ClusterEvent.CurrentClusterState) HandleInitial((ClusterEvent.CurrentClusterState)message);
             else if (message is ClusterEvent.MemberUp) Add(((ClusterEvent.MemberUp)message).Member);
             else if (message is ClusterEvent.MemberRemoved) Remove(((ClusterEvent.IMemberEvent)(message)).Member);
-            else if (message is ClusterEvent.MemberExited 
+            else if (message is ClusterEvent.MemberExited
                 && !message.AsInstanceOf<ClusterEvent.MemberExited>()
                 .Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress)) Remove(((ClusterEvent.IMemberEvent)(message)).Member);
             else if (message is SelfExiting)
@@ -230,7 +235,7 @@ namespace Akka.Cluster.Tools.Singleton
                 Remove(removed.Member);
                 DeliverChanges();
             }
-            else if (message is ClusterEvent.MemberExited && 
+            else if (message is ClusterEvent.MemberExited &&
                 message.AsInstanceOf<ClusterEvent.MemberExited>().Member.UniqueAddress != _cluster.SelfUniqueAddress)
             {
                 var memberEvent = (ClusterEvent.IMemberEvent)message;

@@ -1,16 +1,43 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LogEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Akka.Actor;
 
 namespace Akka.Event
 {
+    /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Avoids redundant parsing of log levels and other frequently-used log items
+    /// </summary>
+    internal static class LogFormats
+    {
+        public static readonly IReadOnlyDictionary<LogLevel, string> PrettyPrintedLogLevel;
+
+        static LogFormats()
+        {
+            var dict = new Dictionary<LogLevel, string>();
+            foreach(LogLevel i in Enum.GetValues(typeof(LogLevel)))
+            {
+                dict.Add(i, Enum.GetName(typeof(LogLevel), i).Replace("Level", "").ToUpperInvariant());
+            }
+            PrettyPrintedLogLevel = dict;
+        }
+
+        public static string PrettyNameFor(this LogLevel level)
+        {
+            return PrettyPrintedLogLevel[level];
+        }
+    }
+
     /// <summary>
     /// This class represents a logging event in the system.
     /// </summary>
@@ -62,7 +89,7 @@ namespace Akka.Event
         /// <returns>A <see cref="System.String" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            return string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message);
+            return string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().PrettyNameFor(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message);
         }
     }
 }

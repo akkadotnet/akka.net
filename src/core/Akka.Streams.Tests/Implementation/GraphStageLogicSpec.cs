@@ -1,19 +1,21 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageLogicSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Tests.Implementation.Fusing;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -225,9 +227,46 @@ namespace Akka.Streams.Tests.Implementation
                 => new ReadNEmitRestOnCompleteLogic(this);
         }
 
+        private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
+        {
+            #region internal classes
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(RandomLettersSource stage) : base(stage.Shape)
+                {
+                    SetHandler(stage.Out, onPull: () =>
+                    {
+                        var c = NextChar(); // ASCII lower case letters
+
+                        Log.Debug($"Randomly generated: {c}");
+
+                        Push(stage.Out, c.ToString());
+                    });
+                }
+
+                private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z' + 1);
+            }
+
+            #endregion
+
+            public RandomLettersSource()
+            {
+                Shape = new SourceShape<string>(Out);
+            }
+
+            private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        }
+
+        private static readonly Config Config = ConfigurationFactory.ParseString("akka.loglevel = DEBUG");
+
         private ActorMaterializer Materializer { get; }
 
-        public GraphStageLogicSpec(ITestOutputHelper output) : base(output)
+        public GraphStageLogicSpec(ITestOutputHelper output) : base(output, Config)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
@@ -302,7 +341,10 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(new Emit1234().Named("testStage"))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -319,7 +361,14 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
-                    .ExpectNext(1, 2, 3, 4, 5, 6, 7, 8)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
+                    .ExpectNext(5)
+                    //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
+                    .ExpectNextUnordered(6, 7)
+                    .ExpectNext(8)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -336,7 +385,14 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
-                    .ExpectNext(1, 2, 3, 4, 5, 6, 7, 8)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
+                    .ExpectNext(5)
+                    //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
+                    .ExpectNextUnordered(6, 7)
+                    .ExpectNext(8)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -355,7 +411,20 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_infoke_livecycle_hooks_in_the_right_order()
+        public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
+        {
+            const int n = 10;
+            EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+            {
+                Source.FromGraph(new RandomLettersSource())
+                    .Take(n)
+                    .RunWith(Sink.Ignore<string>(), Materializer)
+                    .Wait(TimeSpan.FromSeconds(3));
+            });
+        }
+
+        [Fact]
+        public void A_GraphStageLogic_must_invoke_livecycle_hooks_in_the_right_order()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -373,11 +442,11 @@ namespace Akka.Streams.Tests.Implementation
         {
             #region internal class
 
-            private class LivecycleLogic : GraphStageLogic
+            private class LifecycleLogic : GraphStageLogic
             {
                 private readonly IActorRef _testActor;
 
-                public LivecycleLogic(LifecycleStage stage, IActorRef testActor) : base(stage.Shape)
+                public LifecycleLogic(LifecycleStage stage, IActorRef testActor) : base(stage.Shape)
                 {
                     _testActor = testActor;
                     SetHandler(stage._in, EagerTerminateInput);
@@ -414,7 +483,7 @@ namespace Akka.Streams.Tests.Implementation
             public override FlowShape<int, int> Shape { get; }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-                => new LivecycleLogic(this, _testActor);
+                => new LifecycleLogic(this, _testActor);
         }
 
         [Fact]

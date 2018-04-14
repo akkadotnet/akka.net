@@ -1,6 +1,7 @@
-﻿// <copyright file="ClusterSingletonRestart2Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSingletonRestart2Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,7 +92,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             Cluster.Get(_sys1).Leave(Cluster.Get(_sys1).SelfAddress);
 
-            // at the same time, shutdown sys2, which would be the exepcted next singleton node
+            // at the same time, shutdown sys2, which would be the expected next singleton node
             Shutdown(_sys2);
             // it will be downed by the join attempts of the new incarnation
 

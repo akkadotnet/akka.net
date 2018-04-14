@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,11 +40,11 @@ namespace Akka.Remote.Tests.Performance
         {
             private readonly Counter _counter;
 
-            public BenchmarkActorRef(Counter counter, RemoteActorRefProvider provider)
+            public BenchmarkActorRef(Counter counter, IRemoteActorRefProvider provider)
             {
                 _counter = counter;
                 Provider = provider;
-                Path = new RootActorPath(Provider.DefaultAddress) / "user" / "tempRef";
+                Path = new RootActorPath(provider.DefaultAddress) / "user" / "tempRef";
             }
 
             protected override void TellInternal(object message, IActorRef sender)

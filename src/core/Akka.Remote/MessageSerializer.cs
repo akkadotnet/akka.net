@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 using Google.Protobuf;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
@@ -41,7 +42,8 @@ namespace Akka.Remote
         /// <returns>SerializedMessage.</returns>
         public static SerializedMessage Serialize(ActorSystem system, Address address, object message)
         {
-            Serializer serializer = system.Serialization.FindSerializerFor(message);
+            var objectType = message.GetType();
+            Serializer serializer = system.Serialization.FindSerializerForType(objectType);
 
             var serializedMsg = new SerializedMessage
             {
@@ -49,8 +51,7 @@ namespace Akka.Remote
                 SerializerId = serializer.Identifier
             };
 
-            var serializer2 = serializer as SerializerWithStringManifest;
-            if (serializer2 != null)
+            if (serializer is SerializerWithStringManifest serializer2)
             {
                 var manifest = serializer2.Manifest(message);
                 if (!string.IsNullOrEmpty(manifest))
@@ -61,7 +62,7 @@ namespace Akka.Remote
             else
             {
                 if (serializer.IncludeManifest)
-                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName);
+                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(objectType.TypeQualifiedName());
             }
 
             return serializedMsg;

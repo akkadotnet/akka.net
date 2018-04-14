@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicWriteSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ namespace Akka.Persistence.Tests
     public class AtomicWriteSpec
     {
         [Fact]
-        public void AtomicWrite_must_only_contain_messages_for_the_same_persitence_id()
+        public void AtomicWrite_must_only_contain_messages_for_the_same_persistence_id()
         {
             new AtomicWrite(ImmutableList.Create<IPersistentRepresentation>(
                     new Persistent("", 1, "p1"),

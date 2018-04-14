@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SystemMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ namespace Akka.Remote.Serialization
     public sealed class SystemMessageSerializer : Serializer
     {
         private readonly WrappedPayloadSupport _payloadSupport;
+        private ExceptionSupport _exceptionSupport;
 
         private static readonly byte[] EmptyBytes = {};
 
@@ -29,6 +30,7 @@ namespace Akka.Remote.Serialization
         public SystemMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _payloadSupport = new WrappedPayloadSupport(system);
+            _exceptionSupport = new ExceptionSupport(system);
         }
 
         /// <inheritdoc />
@@ -75,14 +77,14 @@ namespace Akka.Remote.Serialization
         private byte[] CreateToProto(Create create)
         {
             var message = new Proto.Msg.CreateData();
-            message.Cause = _payloadSupport.PayloadToProto(create.Failure);
+            message.Cause = _exceptionSupport.ExceptionToProto(create.Failure);
             return message.ToByteArray();
         }
 
         private Create CreateFromProto(byte[] bytes)
         {
             var proto = Proto.Msg.CreateData.Parser.ParseFrom(bytes);
-            var payload = _payloadSupport.PayloadFrom(proto.Cause).AsInstanceOf<ActorInitializationException>();
+            var payload = (ActorInitializationException)_exceptionSupport.ExceptionFromProto(proto.Cause);
             return new Create(payload);
         }
 
@@ -92,14 +94,14 @@ namespace Akka.Remote.Serialization
         private byte[] RecreateToProto(Recreate recreate)
         {
             var message = new Proto.Msg.RecreateData();
-            message.Cause = _payloadSupport.PayloadToProto(recreate.Cause);
+            message.Cause = _exceptionSupport.ExceptionToProto(recreate.Cause);
             return message.ToByteArray();
         }
 
         private Recreate RecreateFromProto(byte[] bytes)
         {
             var proto = Proto.Msg.RecreateData.Parser.ParseFrom(bytes);
-            var payload = _payloadSupport.PayloadFrom(proto.Cause).AsInstanceOf<Exception>();
+            var payload = (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause);
             return new Recreate(payload);
         }
 
@@ -109,14 +111,14 @@ namespace Akka.Remote.Serialization
         private byte[] ResumeToProto(Resume resume)
         {
             var message = new Proto.Msg.ResumeData();
-            message.Cause = _payloadSupport.PayloadToProto(resume.CausedByFailure);
+            message.Cause = _exceptionSupport.ExceptionToProto(resume.CausedByFailure);
             return message.ToByteArray();
         }
 
         private Resume ResumeFromProto(byte[] bytes)
         {
             var proto = Proto.Msg.ResumeData.Parser.ParseFrom(bytes);
-            var payload = _payloadSupport.PayloadFrom(proto.Cause).AsInstanceOf<Exception>();
+            var payload = (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause);
             return new Resume(payload);
         }
 
@@ -186,7 +188,7 @@ namespace Akka.Remote.Serialization
         private byte[] FailedToProto(Failed failed)
         {
             var message = new Proto.Msg.FailedData();
-            message.Cause = _payloadSupport.PayloadToProto(failed.Cause);
+            message.Cause = _exceptionSupport.ExceptionToProto(failed.Cause);
             message.Child = new Proto.Msg.ActorRefData();
             message.Child.Path = Akka.Serialization.Serialization.SerializedActorPath(failed.Child);
             message.Uid = (ulong)failed.Uid;
@@ -199,7 +201,7 @@ namespace Akka.Remote.Serialization
 
             return new Failed(
                 ResolveActorRef(proto.Child.Path),
-                _payloadSupport.PayloadFrom(proto.Cause).AsInstanceOf<Exception>(),
+                (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause),
                 (long)proto.Uid);
         }
 

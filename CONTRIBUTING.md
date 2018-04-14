@@ -17,7 +17,7 @@ If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ o
 
 After reviewing a Pull request, we might ask you to fix some commits. After you've done that you need to force push to update your branch in your local fork.
 
-####Title and Description for the Pull Request####
+#### Title and Description for the Pull Request  
 Give the PR a descriptive title and in the description field describe what you have done in general terms and why. This will help the reviewers greatly, and provide a history for the future.
 
 Especially if you modify something existing, be very clear! Have you changed any algorithms, or did you just intend to reorder the code? Justify why the changes are needed.
@@ -155,7 +155,7 @@ git push origin --delete my-new-branch-123
 
 ## Code guidelines
 
-See our [Contributor Guidelines](http://getakka.net/docs/Contributor%20guidelines) for more information on following the project's conventions.
+See our [Contributor Guidelines](http://getakka.net/community/contributor-guidelines.html) for more information on following the project's conventions.
 
 ---
 Props to [NancyFX](https://github.com/NancyFx/Nancy) from which we've "borrowed" some of this text.

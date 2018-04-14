@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Retreives the <see cref="CoordinatedShutdown"/> extension for the current <see cref="ActorSystem"/>
+        /// Retrieves the <see cref="CoordinatedShutdown"/> extension for the current <see cref="ActorSystem"/>
         /// </summary>
         /// <param name="sys">The current actor system.</param>
         /// <returns>A <see cref="CoordinatedShutdown"/> instance.</returns>
@@ -215,21 +215,15 @@ namespace Akka.Actor
                 throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
                     "All phases (along with their optional dependencies) must be defined in configuration.");
 
-            ImmutableList<Tuple<string, Func<Task<Done>>>> current;
-            if (!_tasks.TryGetValue(phase, out current))
+            if (!_tasks.TryGetValue(phase, out var current))
             {
-                if (!_tasks.TryAdd(phase,
-                    ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
-                {
+                if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
                     AddTask(phase, taskName, task); // CAS failed, retry
-                }
             }
             else
             {
                 if (!_tasks.TryUpdate(phase, current.Add(Tuple.Create(taskName, task)), current))
-                {
                     AddTask(phase, taskName, task); // CAS failed, retry
-                }
             }
         }
 
@@ -303,16 +297,15 @@ namespace Akka.Actor
             if (_runStarted.CompareAndSet(false, true))
             {
                 var debugEnabled = Log.IsDebugEnabled;
-                Func<List<string>, Task<Done>> loop = null;
-                loop = remainingPhases =>
+
+                Task<Done> Loop(List<string> remainingPhases)
                 {
                     var phase = remainingPhases.FirstOrDefault();
                     if (phase == null)
                         return TaskEx.Completed;
                     var remaining = remainingPhases.Skip(1).ToList();
                     Task<Done> phaseResult = null;
-                    ImmutableList<Tuple<string, Func<Task<Done>>>> phaseTasks;
-                    if (!_tasks.TryGetValue(phase, out phaseTasks))
+                    if (!_tasks.TryGetValue(phase, out var phaseTasks))
                     {
                         if (debugEnabled)
                             Log.Debug("Performing phase [{0}] with [0] tasks.", phase);
@@ -321,51 +314,49 @@ namespace Akka.Actor
                     else
                     {
                         if (debugEnabled)
-                            Log.Debug("Performing phase [{0}] with [{1}] tasks: [{2}]", phase,
-                                phaseTasks.Count, string.Join(",", phaseTasks.Select(x => x.Item1)));
+                            Log.Debug("Performing phase [{0}] with [{1}] tasks: [{2}]", phase, phaseTasks.Count, string.Join(",", phaseTasks.Select(x => x.Item1)));
 
                         // note that tasks within same phase are performed in parallel
                         var recoverEnabled = Phases[phase].Recover;
                         var result = Task.WhenAll<Done>(phaseTasks.Select(x =>
-                        {
-                            var taskName = x.Item1;
-                            var task = x.Item2;
-                            try
                             {
-                                // need to begin execution of task
-                                var r = task();
-
-                                if (recoverEnabled)
+                                var taskName = x.Item1;
+                                var task = x.Item2;
+                                try
                                 {
-                                    return r.ContinueWith(tr =>
+                                    // need to begin execution of task
+                                    var r = task();
+
+                                    if (recoverEnabled)
                                     {
-                                        if(tr.IsCanceled || tr.IsFaulted)
-                                            Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase,
-                                                tr.Exception?.Flatten().Message);
-                                        return Done.Instance;
-                                    });
+                                        return r.ContinueWith(tr =>
+                                        {
+                                            if (tr.IsCanceled || tr.IsFaulted)
+                                                Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase, tr.Exception?.Flatten().Message);
+                                            return Done.Instance;
+                                        });
+                                    }
+
+                                    return r;
                                 }
-
-
-                                return r;
-                            }
-                            catch (Exception ex)
-                            {
-                                // in case task.Start() throws
-                                if (recoverEnabled)
+                                catch (Exception ex)
                                 {
-                                    Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase, ex.Message);
-                                    return TaskEx.Completed;
-                                }
+                                    // in case task.Start() throws
+                                    if (recoverEnabled)
+                                    {
+                                        Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase, ex.Message);
+                                        return TaskEx.Completed;
+                                    }
 
-                                return TaskEx.FromException<Done>(ex);
-                            }
-                        })).ContinueWith(tr =>
-                        {
-                            // forces downstream error propagation if recover is disabled
-                            var force = tr.Result;
-                            return Done.Instance;
-                        });
+                                    return TaskEx.FromException<Done>(ex);
+                                }
+                            }))
+                            .ContinueWith(tr =>
+                            {
+                                // forces downstream error propagation if recover is disabled
+                                var force = tr.Result;
+                                return Done.Instance;
+                            });
                         var timeout = Phases[phase].Timeout;
                         var deadLine = MonotonicClock.Elapsed + timeout;
                         Task<Done> timeoutFunction = null;
@@ -373,27 +364,19 @@ namespace Akka.Actor
                         {
                             timeoutFunction = After(timeout, System.Scheduler, () =>
                             {
-                                if (phase == CoordinatedShutdown.PhaseActorSystemTerminate &&
-                                    MonotonicClock.ElapsedHighRes < deadLine)
-                                {
-                                    // too early, i.e. triggered by system termination
-                                    return result;
-                                } else if (result.IsCompleted)
-                                {
+                                if (phase == CoordinatedShutdown.PhaseActorSystemTerminate && MonotonicClock.ElapsedHighRes < deadLine)
+                                    return result; // too early, i.e. triggered by system termination
+
+                                if (result.IsCompleted)
                                     return TaskEx.Completed;
-                                }
-                                else if (recoverEnabled)
+
+                                if (recoverEnabled)
                                 {
                                     Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phase, timeout);
                                     return TaskEx.Completed;
                                 }
-                                else
-                                {
-                                    return
-                                    TaskEx.FromException<Done>(
-                                        new TimeoutException(
-                                            $"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
-                                }
+
+                                return TaskEx.FromException<Done>(new TimeoutException($"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
                             });
                         }
                         catch (SchedulerException)
@@ -413,19 +396,20 @@ namespace Akka.Actor
                     if (!remaining.Any())
                         return phaseResult;
                     return phaseResult.ContinueWith(tr =>
-                    {
-                        // force any exceptions to be rethrown so next phase stops
-                        // and so failure gets propagated back to caller
-                        var r = tr.Result; 
-                        return loop(remaining);
-                    }).Unwrap();
-                };
+                        {
+                            // force any exceptions to be rethrown so next phase stops
+                            // and so failure gets propagated back to caller
+                            var r = tr.Result;
+                            return Loop(remaining);
+                        })
+                        .Unwrap<Done>();
+                }
 
                 var runningPhases = (fromPhase == null
                     ? OrderedPhases // all
                     : OrderedPhases.From(fromPhase)).ToList();
 
-                var done = loop(runningPhases);
+                var done = Loop(runningPhases);
                 done.ContinueWith(tr =>
                 {
                     if(!tr.IsFaulted && !tr.IsCanceled)
@@ -444,15 +428,12 @@ namespace Akka.Actor
         /// The configured timeout for a given <see cref="Phase"/>.
         /// </summary>
         /// <param name="phase">The name of the phase.</param>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="phase"/> doesn't exist in the set of registered phases.</exception>
         /// <returns>Returns the timeout if ti exists.</returns>
-        /// <exception cref="ArgumentException">Thrown if <see cref="phase"/> doesn't exist in the set of registered phases.</exception>
         public TimeSpan Timeout(string phase)
         {
-            Phase p;
-            if (Phases.TryGetValue(phase, out p))
-            {
+            if (Phases.TryGetValue(phase, out var p))
                 return p.Timeout;
-            }
             throw new ArgumentException($"Unknown phase [{phase}]. All phases must be defined in configuration.");
         }
 
@@ -492,6 +473,10 @@ namespace Akka.Actor
         /// INTERNAL API: https://en.wikipedia.org/wiki/Topological_sorting
         /// </summary>
         /// <param name="phases">The set of phases to sort.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when a cycle is detected in the phase graph.
+        /// The graph must be a directed acyclic graph (DAG).
+        /// </exception>
         /// <returns>A topologically sorted list of phases.</returns>
         internal static List<string> TopologicalSort(Dictionary<string, Phase> phases)
         {
@@ -500,29 +485,24 @@ namespace Akka.Actor
             var unmarked = new HashSet<string>(phases.Keys.Concat(phases.Values.SelectMany(x => x.DependsOn)));
             var tempMark = new HashSet<string>(); // for detecting cycles
 
-            Action<string> depthFirstSearch = null;
-            depthFirstSearch = u =>
+            void DepthFirstSearch(string u)
             {
                 if (tempMark.Contains(u))
-                    throw new ArgumentException("Cycle detected in graph of phases. It must be a DAG. " +
-                                                $"phase [{u}] depepends transitively on itself. All dependencies: {phases}");
+                    throw new ArgumentException("Cycle detected in graph of phases. It must be a DAG. " + $"phase [{u}] depepends transitively on itself. All dependencies: {phases}");
                 if (unmarked.Contains(u))
                 {
                     tempMark.Add(u);
-                    Phase p;
-                    if (phases.TryGetValue(u, out p) && p.DependsOn.Any())
-                    {
-                        p.DependsOn.ForEach(depthFirstSearch);
-                    }
+                    if (phases.TryGetValue(u, out var p) && p.DependsOn.Any())
+                        p.DependsOn.ForEach(DepthFirstSearch);
                     unmarked.Remove(u); //permanent mark
                     tempMark.Remove(u);
                     result = new[] { u }.Concat(result).ToList();
                 }
-            };
+            }
 
             while (unmarked.Any())
             {
-                depthFirstSearch(unmarked.Head());
+                DepthFirstSearch(unmarked.Head());
             }
 
             result.Reverse();

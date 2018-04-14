@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,6 +61,7 @@ namespace Akka.Cluster.Tests
             settings.SchedulerTicksPerWheel.Should().Be(512);
 
             settings.VerboseHeartbeatLogging.Should().BeFalse();
+            settings.VerboseGossipReceivedLogging.Should().BeFalse();
             settings.RunCoordinatedShutdownWhenDown.Should().BeTrue();
         }
     }

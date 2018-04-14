@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FanOut.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Reactive.Streams;
@@ -395,6 +396,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public static class FanOut
     {
         /// <summary>
@@ -496,10 +498,7 @@ namespace Akka.Streams.Implementation
             /// </summary>
             public void Cancel() => _parent.Tell(new SubstreamCancel(_id));
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => "SubstreamSubscription" + GetHashCode();
         }
 
@@ -530,6 +529,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class FanOut<T> : ActorBase, IPump
     {
 
@@ -575,11 +575,11 @@ namespace Akka.Streams.Implementation
 
         #region Actor implementation
 
-        private ILoggingAdapter _log;
         /// <summary>
         /// TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD
@@ -594,7 +594,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown automatically since the actor cannot be restarted.
+        /// </exception>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);
@@ -722,7 +724,10 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="settings">TBD</param>
         /// <param name="outputCount">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>>
+        /// <exception cref="ArgumentException">TBD
+        /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
+        /// are of an unknown type.
+        /// </exception>>
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

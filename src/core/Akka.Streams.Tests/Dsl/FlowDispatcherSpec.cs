@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Need to rebase with dev first")]
-        public void Flow_with_dispatcher_setting_must_use_cutstom_dispatcher()
+        public void Flow_with_dispatcher_setting_must_use_custom_dispatcher()
         {
             var materializer = ActorMaterializer.Create(Sys, _defaultSettings.WithDispatcher("my-dispatcher"));
 

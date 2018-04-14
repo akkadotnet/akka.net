@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureDetectorPuppet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ namespace Akka.Cluster.Tests.MultiNode
             #region Conversion operators
 
             /// <summary>
-            /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <see cref="T"/>.
+            /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <typeparamref name="T"/>.
             /// </summary>
             /// <param name="atomicReference">The reference to convert</param>
             /// <returns>The result of the conversion</returns>
@@ -151,7 +151,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
 
             /// <summary>
-            /// Performs an implicit conversion from <see cref="T"/> to <see cref="AtomicReference{T}"/>.
+            /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="AtomicReference{T}"/>.
             /// </summary>
             /// <param name="value">The reference to convert</param>
             /// <returns>The result of the conversion</returns>

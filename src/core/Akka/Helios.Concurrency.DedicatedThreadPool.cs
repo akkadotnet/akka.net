@@ -589,6 +589,8 @@ namespace Helios.Concurrency
         {
             public const int MaxWorker = 0x7FFF;
 
+            private static readonly int ProcessorCount = Environment.ProcessorCount;
+
             // We track everything we care about in a single 64-bit struct to allow us to 
             // do CompareExchanges on this for atomic updates.
             [StructLayout(LayoutKind.Explicit)]
@@ -679,7 +681,7 @@ namespace Helios.Concurrency
                     }
                     else
                     {
-                        double spinnersPerProcessor = (double)currentCounts.Spinners / Environment.ProcessorCount;
+                        double spinnersPerProcessor = (double)currentCounts.Spinners / ProcessorCount;
                         int spinLimit = (int)((spinLimitPerProcessor / spinnersPerProcessor) + 0.5);
                         if (numSpins >= spinLimit)
                         {

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowTakeWhileSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                     .TakeWhile(i => i < 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1,2)
+                    .ExpectNext(1, 2)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -72,6 +72,20 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(4)
                     .ExpectNext(1, 2, 4)
                     .ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                Source.From(Enumerable.Range(1, 10))
+                .TakeWhile(i => i < 3, true)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .Request(4)
+                .ExpectNext(1, 2, 3)
+                .ExpectComplete();
             }, Materializer);
         }
     }

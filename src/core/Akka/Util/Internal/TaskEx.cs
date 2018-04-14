@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskEx.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,8 +13,8 @@ namespace Akka.Util.Internal
     /// <summary>
     /// INTERNAL API.
     /// 
-    /// Renamed from <see cref="Akka.Util.Internal.TaskExtensions"/> so it doesn't colide
-    /// with a helper class in the same namespace defined in System.Threadin.Tasks.
+    /// Renamed from <see cref="Akka.Util.Internal.TaskExtensions"/> so it doesn't collide
+    /// with a helper class in the same namespace defined in System.Threading.Tasks.
     /// </summary>
     internal static class TaskEx
     {

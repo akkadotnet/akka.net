@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Listeners.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,17 +127,21 @@ namespace Akka.Routing
             {
                 return message =>
                 {
-                    var match=PatternMatch.Match(message)
-                        .With<Listen>(m => Add(m.Listener))
-                        .With<Deafen>(d => Remove(d.Listener))
-                        .With<WithListeners>(f =>
-                        {
+                    switch (message)
+                    {
+                        case Listen listen:
+                            Add(listen.Listener);
+                            return true;
+                        case Deafen deafen:
+                            Remove(deafen.Listener);
+                            return true;
+                        case WithListeners listeners:
                             foreach (var listener in Listeners)
-                            {
-                                f.ListenerFunction(listener);
-                            }
-                        });
-                    return match.WasHandled;
+                                listeners.ListenerFunction(listener);
+                            return true;
+                        default:
+                            return false;
+                    }
                 };
             }
         }

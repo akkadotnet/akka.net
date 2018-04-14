@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TimeoutsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Implementation
 
 
         [Fact]
-        public void CompletionTimeout_must_pass_through_elemnts_unmodified()
+        public void CompletionTimeout_must_pass_through_elements_unmodified()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -204,7 +204,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void BackpressureTimeout_must_suceed_if_subscriber_demand_arrives()
+        public void BackpressureTimeout_must_succeed_if_subscriber_demand_arrives()
         {
             this.AssertAllStagesStopped(() =>
             {

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Sinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -43,6 +44,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
@@ -146,6 +148,7 @@ namespace Akka.Streams.Implementation
     /// a subscriber connects and creates demand for elements to be emitted.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     internal class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
         /// <summary>
@@ -255,62 +258,10 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// 
-    /// Attaches a subscriber to this stream which will just discard all received elements.
-    /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    public sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="attributes">TBD</param>
-        public SinkholeSink(SinkShape<TIn> shape, Attributes attributes) : base(shape)
-        {
-            Attributes = attributes;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override Attributes Attributes { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes)
-            => new SinkholeSink<TIn>(AmendShape(attributes), attributes);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
-        protected override SinkModule<TIn, Task> NewInstance(SinkShape<TIn> shape)
-            => new SinkholeSink<TIn>(shape, Attributes);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
-        public override object Create(MaterializationContext context, out Task materializer)
-        {
-            var p = new TaskCompletionSource<NotUsed>();
-            materializer = p.Task;
-            return new SinkholeSubscriber<TIn>(p);
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly ISubscriber<TIn> _subscriber;
@@ -367,6 +318,7 @@ namespace Akka.Streams.Implementation
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class CancelSink<T> : SinkModule<T, NotUsed>
     {
         /// <summary>
@@ -421,6 +373,7 @@ namespace Akka.Streams.Implementation
     /// which should be <see cref="Props"/> for an <see cref="ActorSubscriber"/>.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
         private readonly Props _props;
@@ -478,6 +431,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
+    [InternalApi]
     public sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly IActorRef _ref;
@@ -542,6 +496,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
@@ -621,6 +576,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
@@ -629,6 +585,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly TaskCompletionSource<T> _promise;
             private readonly FirstOrDefaultStage<T> _stage;
+            private bool _completionSignalled;
 
             public Logic(TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(stage.Shape)
             {
@@ -640,22 +597,30 @@ namespace Akka.Streams.Implementation
             public override void OnPush()
             {
                 _promise.TrySetResult(Grab(_stage.In));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(default(T));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
             }
 
-
+            public override void PostStop()
+            {
+                if(!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
+            }
+            
             public override void PreStart() => Pull(_stage.In);
         }
 
@@ -696,6 +661,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
     {
         #region stage logic
@@ -705,6 +671,7 @@ namespace Akka.Streams.Implementation
             private readonly SeqStage<T> _stage;
             private readonly TaskCompletionSource<IImmutableList<T>> _promise;
             private IImmutableList<T> _buf = ImmutableList<T>.Empty;
+            private bool _completionSignalled;
 
             public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
@@ -723,13 +690,21 @@ namespace Akka.Streams.Implementation
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(_buf);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -783,6 +758,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
     {
         #region stage logic
@@ -962,6 +938,8 @@ namespace Akka.Streams.Implementation
             private readonly TaskCompletionSource<TMat> _completion;
             private readonly Lazy<Decider> _decider;
 
+            private bool _completed;
+
             public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes,
                 TaskCompletionSource<TMat> completion) : base(stage.Shape)
             {
@@ -991,6 +969,11 @@ namespace Akka.Streams.Implementation
                     _stage._sinkFactory(element)
                         .ContinueWith(t => callback(Result.FromTask(t)),
                             TaskContinuationOptions.ExecuteSynchronously);
+                    SetHandler(_stage.In, new LambdaInHandler(
+                            onPush: () => { },
+                            onUpstreamFinish: GotCompletionEvent,
+                            onUpstreamFailure: Failure
+                        ));
                 }
                 catch (Exception ex)
                 {
@@ -1016,6 +999,12 @@ namespace Akka.Streams.Implementation
 
             public override void OnUpstreamFailure(Exception e) => Failure(e);
 
+            private void GotCompletionEvent()
+            {
+                SetKeepGoing(true);
+                _completed = true;
+            }
+
             public override void PreStart() => Pull(_stage.In);
 
             private void Failure(Exception ex)
@@ -1027,8 +1016,18 @@ namespace Akka.Streams.Implementation
             private void InitInternalSource(Sink<TIn, TMat> sink, TIn firstElement)
             {
                 var sourceOut = new SubSource(this, firstElement);
-                _completion.TrySetResult(Source.FromGraph(sourceOut.Source)
-                    .RunWith(sink, Interpreter.SubFusingMaterializer));
+
+                try {
+                    var matVal = Source.FromGraph(sourceOut.Source)
+                        .RunWith(sink, Interpreter.SubFusingMaterializer);
+                    _completion.TrySetResult(matVal);
+                }
+                catch (Exception ex)
+                {
+                    _completion.TrySetException(ex);
+                    FailStage(ex);
+                }
+                
             }
 
             #region SubSource
@@ -1037,7 +1036,6 @@ namespace Akka.Streams.Implementation
             {
                 private readonly Logic _logic;
                 private readonly LazySink<TIn, TMat> _stage;
-                private bool _completed;
 
                 public SubSource(Logic logic, TIn firstElement) : base(logic, "LazySink")
                 {
@@ -1047,7 +1045,7 @@ namespace Akka.Streams.Implementation
                     SetHandler(new LambdaOutHandler(onPull: () =>
                     {
                         Push(firstElement);
-                        if (_completed)
+                        if (_logic._completed)
                             SourceComplete();
                         else
                             SwitchToFinalHandler();
@@ -1055,11 +1053,7 @@ namespace Akka.Streams.Implementation
 
                     logic.SetHandler(_stage.In, new LambdaInHandler(
                         onPush: () => Push(logic.Grab(_stage.In)),
-                        onUpstreamFinish: () =>
-                        {
-                            logic.SetKeepGoing(true);
-                            _completed = true;
-                        },
+                        onUpstreamFinish: logic.GotCompletionEvent,
                         onUpstreamFailure: SourceFailure));
                 }
 

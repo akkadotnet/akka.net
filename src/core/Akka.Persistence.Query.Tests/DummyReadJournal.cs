@@ -1,7 +1,7 @@
-﻿﻿//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DummyReadJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,11 +15,11 @@ namespace Akka.Persistence.Query.Tests
     /// Use for tests only!
     /// Emits infinite stream of strings (representing queried for events).
     /// </summary>
-    public class DummyReadJournal : IAllPersistenceIdsQuery
+    public class DummyReadJournal : IPersistenceIdsQuery
     {
         public static readonly string Identifier = "akka.persistence.query.journal.dummy";
 
-        public Source<string, NotUsed> AllPersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
+        public Source<string, NotUsed> PersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
 
         private IEnumerable<int> Iterate(int start)
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using Akka.Actor;
@@ -90,8 +92,7 @@ namespace Akka.Remote.TestKit
 
         public void DeployOn(RoleName role, string deployment)
         {
-            ImmutableList<string> roleDeployments;
-            _deployments.TryGetValue(role, out roleDeployments);
+            _deployments.TryGetValue(role, out var roleDeployments);
             _deployments = _deployments.SetItem(role,
                 roleDeployments == null ? ImmutableList.Create(deployment) : roleDeployments.Add(deployment));
         }
@@ -150,8 +151,8 @@ namespace Akka.Remote.TestKit
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
-                Config nodeConfig;
-                if (_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
+                if (_nodeConf.TryGetValue(Myself, out var nodeConfig)) 
+                    builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
                 builder.Add(MultiNodeSpec.NodeConfig);
@@ -163,8 +164,7 @@ namespace Akka.Remote.TestKit
 
         internal ImmutableList<string> Deployments(RoleName node)
         {
-            ImmutableList<string> deployments;
-            _deployments.TryGetValue(node, out deployments);
+            _deployments.TryGetValue(node, out var deployments);
             return deployments == null ? _allDeploy : deployments.AddRange(_allDeploy);
         }
 
@@ -377,22 +377,6 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        private static string GetCallerName()
-        {
-            var @this = typeof(MultiNodeSpec).Name;
-            var trace = new StackTrace();
-            var frames = trace.GetFrames();
-            if (frames != null)
-            {
-                for (var i = 1; i < frames.Length; i++)
-                {
-                    var t = frames[i].GetMethod().DeclaringType;
-                    if (t != null && t.Name != @this) return t.Name;
-                }
-            }
-            throw new InvalidOperationException("Unable to find calling type");
-        }
-
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
         readonly ILoggingAdapter _log;
@@ -402,8 +386,8 @@ namespace Akka.Remote.TestKit
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         readonly Address _myAddress;
 
-        protected MultiNodeSpec(MultiNodeConfig config) :
-            this(config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
+        protected MultiNodeSpec(MultiNodeConfig config, Type type) :
+            this(config.Myself, ActorSystem.Create(type.Name, config.Config), config.Roles, config.Deployments)
         {
         }
 
@@ -418,7 +402,14 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
+
+#if CORECLR
+            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
+            dnsTask.Wait();
+            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
+#else
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
+#endif
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));

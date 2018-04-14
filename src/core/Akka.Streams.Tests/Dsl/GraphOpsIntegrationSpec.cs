@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphOpsIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphDSLs_must_be_possibe_to_use_as_lego_bricks()
+        public void GraphDSLs_must_be_possible_to_use_as_lego_bricks()
         {
             Func<int, Source<int, Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>> source =
                 i =>

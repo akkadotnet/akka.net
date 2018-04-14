@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
@@ -49,11 +50,11 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private ActorSystem system;
-        private RemoteActorRefProvider provider;
-        private ILoggingAdapter log;
-        private IInternalActorRef remoteDaemon;
-        private RemoteSettings settings;
+        private readonly ActorSystem _system;
+        private readonly IRemoteActorRefProvider _provider;
+        private readonly ILoggingAdapter _log;
+        private readonly IInternalActorRef _remoteDaemon;
+        private readonly RemoteSettings _settings;
 
         /// <summary>
         /// TBD
@@ -61,13 +62,13 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
-            this.system = system;
-            this.provider = provider;
-            this.log = log;
-            remoteDaemon = provider.RemoteDaemon;
-            settings = provider.RemoteSettings;
+            this._system = system;
+            this._provider = provider;
+            this._log = log;
+            _remoteDaemon = provider.RemoteDaemon;
+            _settings = provider.RemoteSettings;
         }
 
         /// <summary>
@@ -80,45 +81,45 @@ namespace Akka.Remote
         public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null)
         {
-            var payload = MessageSerializer.Deserialize(system, message);
+            var payload = MessageSerializer.Deserialize(_system, message);
             Type payloadClass = payload?.GetType();
-            var sender = senderOption ?? system.DeadLetters;
+            var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
-            if (recipient.Equals(remoteDaemon))
+            if (recipient.Equals(_remoteDaemon))
             {
-                if (settings.UntrustedMode) log.Debug("dropping daemon message in untrusted mode");
+                if (_settings.UntrustedMode) _log.Debug("dropping daemon message in untrusted mode");
                 else
                 {
-                    if (settings.LogReceive)
+                    if (_settings.LogReceive)
                     {
                         var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
-                        log.Debug("received daemon message [{0}]", msgLog);
+                        _log.Debug("received daemon message [{0}]", msgLog);
                     }
-                    remoteDaemon.Tell(payload);
+                    _remoteDaemon.Tell(payload);
                 }
             }
 
             //message is intended for a local recipient
             else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
-                if (settings.LogReceive)
+                if (_settings.LogReceive)
                 {
                     var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
-                    log.Debug("received local message [{0}]", msgLog);
+                    _log.Debug("received local message [{0}]", msgLog);
                 }
                 if (payload is ActorSelectionMessage)
                 {
                     var sel = (ActorSelectionMessage)payload;
 
                     var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
-                    if (settings.UntrustedMode
-                        && (!settings.TrustedSelectionPaths.Contains(actorPath)
+                    if (_settings.UntrustedMode
+                        && (!_settings.TrustedSelectionPaths.Contains(actorPath)
                             || sel.Message is IPossiblyHarmful
-                            || !recipient.Equals(provider.RootGuardian)))
+                            || !recipient.Equals(_provider.RootGuardian)))
                     {
-                        log.Debug(
+                        _log.Debug(
                             "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
                             "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
                             actorPath);
@@ -129,9 +130,9 @@ namespace Akka.Remote
                         ActorSelection.DeliverSelection(recipient, sender, sel);
                     }
                 }
-                else if (payload is IPossiblyHarmful && settings.UntrustedMode)
+                else if (payload is IPossiblyHarmful && _settings.UntrustedMode)
                 {
-                    log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
+                    _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
                         payload.GetType());
                 }
                 else if (payload is ISystemMessage)
@@ -146,30 +147,30 @@ namespace Akka.Remote
 
             // message is intended for a remote-deployed recipient
             else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal &&
-                     !settings.UntrustedMode)
+                     !_settings.UntrustedMode)
             {
-                if (settings.LogReceive)
+                if (_settings.LogReceive)
                 {
                     var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver, sender);
-                    log.Debug("received remote-destined message {0}", msgLog);
+                    _log.Debug("received remote-destined message {0}", msgLog);
                 }
-                if (provider.Transport.Addresses.Contains(recipientAddress))
+                if (_provider.Transport.Addresses.Contains(recipientAddress))
                 {
                     //if it was originally addressed to us but is in fact remote from our point of view (i.e. remote-deployed)
                     recipient.Tell(payload, sender);
                 }
                 else
                 {
-                    log.Error(
+                    _log.Error(
                         "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                        payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
+                        payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
                 }
             }
             else
             {
-                log.Error(
+                _log.Error(
                     "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                    payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
+                    payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
             }
         }
     }
@@ -882,7 +883,7 @@ namespace Akka.Remote
                 Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(_currentHandle, _localAddress, _remoteAddress, _refuseUid, _transport,
-                            _settings, new AkkaPduProtobuffCodec(), _receiveBuffers, Self)
+                            _settings, new AkkaPduProtobuffCodec(Context.System), _receiveBuffers, Self)
                             .WithDeploy(Deploy.Local)),
                     "endpointWriter");
             Context.Watch(writer);
@@ -1035,7 +1036,7 @@ namespace Akka.Remote
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ActorSystem _system;
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
 
@@ -1483,57 +1484,53 @@ namespace Akka.Remote
 
         private void SendBufferedMessages()
         {
-            var sendDelegate = new Func<object, bool>(msg =>
+            bool SendDelegate(object msg)
             {
-                if (msg is EndpointManager.Send)
+                switch (msg)
                 {
-                    return WriteSend(msg as EndpointManager.Send);
+                    case EndpointManager.Send s:
+                        return WriteSend(s);
+                    case FlushAndStop f:
+                        DoFlushAndStop();
+                        return false;
+                    case StopReading stop:
+                        _reader?.Tell(stop, stop.ReplyTo);
+                        return true;
+                    default:
+                        return true;
                 }
-                else if (msg is FlushAndStop)
-                {
-                    DoFlushAndStop();
-                    return false;
-                }
-                else if (msg is StopReading)
-                {
-                    var s = msg as StopReading;
-                    if (_reader != null) _reader.Tell(s, s.ReplyTo);
-                }
-                return true;
-            });
+            }
 
-            Func<int, bool> writeLoop = null;
-            writeLoop = new Func<int, bool>(count =>
+            bool WriteLoop(int count)
             {
                 if (count > 0 && _buffer.Any())
                 {
-                    if (sendDelegate(_buffer.First.Value))
+                    if (SendDelegate(_buffer.First.Value))
                     {
                         _buffer.RemoveFirst();
                         _writeCount += 1;
-                        return writeLoop(count - 1);
+                        return WriteLoop(count - 1);
                     }
                     return false;
                 }
 
                 return true;
-            });
+            }
 
-            Func<bool> writePrioLoop = null;
-            writePrioLoop = () =>
+            bool WritePrioLoop()
             {
                 if (!_prioBuffer.Any()) return true;
                 if (WriteSend(_prioBuffer.First.Value))
                 {
                     _prioBuffer.RemoveFirst();
-                    return writePrioLoop();
+                    return WritePrioLoop();
                 }
                 return false;
-            };
+            }
 
             var size = _buffer.Count;
 
-            var ok = writePrioLoop() && writeLoop(SendBufferBatchSize);
+            var ok = WritePrioLoop() && WriteLoop(SendBufferBatchSize);
             if (!_buffer.Any() && !_prioBuffer.Any())
             {
                 // FIXME remove this when testing/tuning is completed
@@ -1850,7 +1847,7 @@ namespace Akka.Remote
         private readonly int _uid;
         private readonly IInboundMessageDispatcher _msgDispatch;
 
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
 #region ActorBase overrides
@@ -1860,8 +1857,7 @@ namespace Akka.Remote
         /// </summary>
         protected override void PreStart()
         {
-            EndpointManager.ResendState resendState;
-            if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out resendState))
+            if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
                 _ackedReceiveBuffer = resendState.Buffer;
                 DeliverAndAck();
@@ -1942,8 +1938,7 @@ namespace Akka.Remote
         private void SaveState()
         {
             var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            EndpointManager.ResendState previousValue;
-            _receiveBuffers.TryGetValue(key, out previousValue);
+            _receiveBuffers.TryGetValue(key, out var previousValue);
             UpdateSavedState(key, previousValue);
         }
 
@@ -1970,15 +1965,11 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    var canReplace = _receiveBuffers.ContainsKey(key) && _receiveBuffers[key].Equals(expectedState);
-                    if (canReplace)
-                    {
+                    if (_receiveBuffers.TryGetValue(key, out var resendState) && resendState.Equals(expectedState))
                         _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState);
-                    }
                     else
                     {
-                        EndpointManager.ResendState previousValue;
-                        _receiveBuffers.TryGetValue(key, out previousValue);
+                        _receiveBuffers.TryGetValue(key, out var previousValue);
                         expectedState = previousValue;
                         continue;
                     }

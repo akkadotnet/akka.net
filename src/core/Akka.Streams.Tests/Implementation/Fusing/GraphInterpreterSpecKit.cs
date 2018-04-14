@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreterSpecKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
@@ -22,7 +23,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class GraphInterpreterSpecKit : AkkaSpec
     {
-        public GraphInterpreterSpecKit(ITestOutputHelper output = null) : base(output)
+        public GraphInterpreterSpecKit(ITestOutputHelper output = null, Config config = null) : base(output, config)
         {
         }
 
@@ -31,45 +32,26 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private GraphInterpreter _interpreter;
             private readonly ILoggingAdapter _logger;
 
-            protected BaseBuilder(ActorSystem system)
-            {
-                _logger = Logging.GetLogger(system, "InterpreterSpecKit");
-            }
+            protected BaseBuilder(ActorSystem system) => _logger = Logging.GetLogger(system, "InterpreterSpecKit");
 
             public GraphInterpreter Interpreter => _interpreter;
 
-            public void StepAll()
-            {
-                Interpreter.Execute(int.MaxValue);
-            }
+            public void StepAll() => Interpreter.Execute(int.MaxValue);
 
-            public virtual void Step()
-            {
-                Interpreter.Execute(1);
-            }
+            public virtual void Step() => Interpreter.Execute(1);
 
             public class Upstream : GraphInterpreter.UpstreamBoundaryStageLogic
             {
-                private readonly Outlet<int> _out;
+                public Upstream() => Out = new Outlet<int>("up") { Id = 0 };
 
-                public Upstream()
-                {
-                    _out = new Outlet<int>("up") { Id = 0 };
-                }
-
-                public override Outlet Out => _out;
+                public override Outlet Out { get; }
             }
 
             public class Downstream : GraphInterpreter.DownstreamBoundaryStageLogic
             {
-                private readonly Inlet<int> _in;
+                public Downstream() => In = new Inlet<int>("up") { Id = 0 };
 
-                public Downstream()
-                {
-                    _in = new Inlet<int>("up") { Id = 0 };
-                }
-
-                public override Inlet In => _in;
+                public override Inlet In { get; }
             }
 
             public class AssemblyBuilder
@@ -205,15 +187,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 public GraphStageLogic Source { get; }
 
-                public OnComplete(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public OnComplete(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(OnComplete other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(OnComplete other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -223,25 +199,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((OnComplete) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
 
             public class Cancel : ITestEvent
             {
                 public GraphStageLogic Source { get; }
 
-                public Cancel(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public Cancel(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(Cancel other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(Cancel other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -251,10 +218,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((Cancel) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
 
             public class OnError : ITestEvent
@@ -268,10 +232,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Cause = cause;
                 }
 
-                protected bool Equals(OnError other)
-                {
-                    return Equals(Source, other.Source) && Equals(Cause, other.Cause);
-                }
+                protected bool Equals(OnError other) => Equals(Source, other.Source) && Equals(Cause, other.Cause);
 
                 public override bool Equals(object obj)
                 {
@@ -301,10 +262,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Element = element;
                 }
 
-                protected bool Equals(OnNext other)
-                {
-                    return Equals(Source, other.Source) && Equals(Element, other.Element);
-                }
+                protected bool Equals(OnNext other) => Equals(Source, other.Source) && Equals(Element, other.Element);
 
                 public override bool Equals(object obj)
                 {
@@ -327,15 +285,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 public GraphStageLogic Source { get; }
 
-                public RequestOne(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public RequestOne(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(RequestOne other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(RequestOne other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -345,25 +297,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((RequestOne) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
 
             public class RequestAnother : ITestEvent
             {
                 public GraphStageLogic Source { get; }
 
-                public RequestAnother(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public RequestAnother(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(RequestAnother other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(RequestAnother other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -373,25 +316,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((RequestAnother) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
 
             public class PreStart : ITestEvent
             {
                 public GraphStageLogic Source { get; }
 
-                public PreStart(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public PreStart(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(PreStart other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(PreStart other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -401,25 +335,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((PreStart) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
 
             public class PostStop : ITestEvent
             {
                 public GraphStageLogic Source { get; }
 
-                public PostStop(GraphStageLogic source)
-                {
-                    Source = source;
-                }
+                public PostStop(GraphStageLogic source) => Source = source;
 
-                protected bool Equals(PostStop other)
-                {
-                    return Equals(Source, other.Source);
-                }
+                protected bool Equals(PostStop other) => Equals(Source, other.Source);
 
                 public override bool Equals(object obj)
                 {
@@ -429,10 +354,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((PostStop) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Source?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Source?.GetHashCode() ?? 0;
             }
             #endregion
 
@@ -449,20 +371,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return result;
             }
 
-            public void ClearEvents()
-            {
-                LastEvent = new HashSet<ITestEvent>();
-            }
+            public void ClearEvents() => LastEvent = new HashSet<ITestEvent>();
 
-            public UpstreamProbe<T> NewUpstreamProbe<T>(string name)
-            {
-                return new UpstreamProbe<T>(this, name);
-            }
+            public UpstreamProbe<T> NewUpstreamProbe<T>(string name) => new UpstreamProbe<T>(this, name);
 
-            public DownstreamProbe<T> NewDownstreamProbe<T>(string name)
-            {
-                return new DownstreamProbe<T>(this, name);
-            }
+            public DownstreamProbe<T> NewDownstreamProbe<T>(string name) => new DownstreamProbe<T>(this, name);
 
             public class UpstreamProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
             {
@@ -471,19 +384,21 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public UpstreamProbe(TestSetup setup, string name)
                 {
                     _name = name;
-                    Out = new Outlet<T>("out") {Id = 0};
+                    Outlet = new Outlet<T>("out") {Id = 0};
 
                     var probe = this;
-                    SetHandler(Out, () => setup.LastEvent.Add(new RequestOne(probe)), () => setup.LastEvent.Add(new Cancel(probe)));
+                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), () => setup.LastEvent.Add(new Cancel(probe)));
                 }
 
-                public sealed override Outlet Out { get; }
+                public sealed override Outlet Out => Outlet;
+
+                public Outlet<T> Outlet { get; }
 
                 public void OnNext(T element, int eventLimit = int.MaxValue)
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- NEXT: {this} {element}");
-                    Push(Out, element);
+                    Push(Outlet, element);
                     Interpreter.Execute(eventLimit);
                 }
 
@@ -491,7 +406,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- COMPLETE: {this}");
-                    Complete(Out);
+                    Complete(Outlet);
                     Interpreter.Execute(eventLimit);
                 }
 
@@ -499,14 +414,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- FAIL: {this}");
-                    Fail(Out, ex);
+                    Fail(Outlet, ex);
                     Interpreter.Execute(eventLimit);
                 }
 
-                public override string ToString()
-                {
-                    return _name;
-                }
+                public override string ToString() => _name;
             }
 
             public class DownstreamProbe<T> : GraphInterpreter.DownstreamBoundaryStageLogic
@@ -516,21 +428,23 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public DownstreamProbe(TestSetup setup, string name)
                 {
                     _name = name;
-                    In = new Inlet<T>("in") {Id = 0};
+                    Inlet = new Inlet<T>("in") {Id = 0};
 
                     var probe = this;
-                    SetHandler(In, () => setup.LastEvent.Add(new OnNext(probe, Grab<T>(In))),
+                    SetHandler(Inlet, () => setup.LastEvent.Add(new OnNext(probe, Grab(Inlet))),
                         () => setup.LastEvent.Add(new OnComplete(probe)),
                         ex => setup.LastEvent.Add(new OnError(probe, ex)));
                 }
 
-                public sealed override Inlet In { get; }
+                public sealed override Inlet In => Inlet;
+
+                public Inlet<T> Inlet { get; }
 
                 public void RequestOne(int eventLimit = int.MaxValue)
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- REQ: {this}");
-                    Pull(In);
+                    Pull(Inlet);
                     Interpreter.Execute(eventLimit);
                 }
 
@@ -538,14 +452,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- CANCEL: {this}");
-                    Cancel(In);
+                    Cancel(Inlet);
                     Interpreter.Execute(eventLimit);
                 }
 
-                public override string ToString()
-                {
-                    return _name;
-                }
+                public override string ToString() => _name;
             }
         }
 
@@ -555,14 +466,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public UpstreamPortProbe<int> Out { get; }
             public DownstreamPortProbe<int> In { get; }
 
-            private readonly GraphAssembly _assembly;
-
             public PortTestSetup(ActorSystem system, bool chasing = false) : base(system)
             {
                 _chasing = chasing;
                 var propagateStage = new EventPropagateStage();
 
-                _assembly = !chasing
+                var assembly = !chasing
                     ? new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[0], new Attributes[0],
                         new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1})
                     : new GraphAssembly(new[] {propagateStage}, new[] {Attributes.None},
@@ -572,7 +481,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Out = new UpstreamPortProbe<int>(this);
                 In = new DownstreamPortProbe<int>(this);
 
-                ManualInit(_assembly);
+                ManualInit(assembly);
                 Interpreter.AttachDownstreamBoundary(Interpreter.Connections[chasing ? 1 : 0], In);
                 Interpreter.AttachUpstreamBoundary(Interpreter.Connections[0], Out);
                 Interpreter.Init(null);
@@ -603,10 +512,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     public void OnDownstreamFinish() => Cancel(_stage.In);
                 }
 
-                public EventPropagateStage()
-                {
-                    Shape  = new FlowShape<int, int>(In, Out);
-                }
+                public EventPropagateStage() => Shape  = new FlowShape<int, int>(In, Out);
 
                 public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
 
@@ -626,15 +532,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                 }
 
-                public bool IsAvailable() => IsAvailable(Out);
+                public bool IsAvailable() => IsAvailable(Outlet);
 
-                public bool IsClosed() => IsClosed(Out);
+                public bool IsClosed() => IsClosed(Outlet);
 
-                public void Push(T element) => Push(Out, element);
+                public void Push(T element) => Push(Outlet, element);
 
-                public void Complete() => Complete(Out);
+                public void Complete() => Complete(Outlet);
 
-                public void Fail(Exception ex) => Fail(Out, ex);
+                public void Fail(Exception ex) => Fail(Outlet, ex);
             }
 
             public class DownstreamPortProbe<T> : DownstreamProbe<T>
@@ -642,33 +548,33 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public DownstreamPortProbe(TestSetup setup) : base(setup, "downstreamPort")
                 {
                     var probe = this;
-                    SetHandler(In, () =>
-                    {
-                        // Modified onPush that does not Grab() automatically the element. This access some internals.
-                        var internalEvent = PortToConn[In.Id].Slot;
+                    SetHandler(Inlet, () =>
+                        {
+                            // Modified onPush that does not Grab() automatically the element. This access some internals.
+                            var internalEvent = PortToConn[In.Id].Slot;
 
-                        if (internalEvent is GraphInterpreter.Failed)
-                            ((PortTestSetup) setup).LastEvent.Add(new OnNext(probe,
-                                ((GraphInterpreter.Failed) internalEvent).PreviousElement));
-                        else
-                            ((PortTestSetup) setup).LastEvent.Add(new OnNext(probe, internalEvent));
-                    },
-                        () => ((PortTestSetup) setup).LastEvent.Add(new OnComplete(probe)),
-                        ex => ((PortTestSetup) setup).LastEvent.Add(new OnError(probe, ex))
-                        );
+                            if (internalEvent is GraphInterpreter.Failed failed)
+                                ((PortTestSetup)setup).LastEvent.Add(new OnNext(probe,
+                                    failed.PreviousElement));
+                            else
+                                ((PortTestSetup)setup).LastEvent.Add(new OnNext(probe, internalEvent));
+                        },
+                        () => ((PortTestSetup)setup).LastEvent.Add(new OnComplete(probe)),
+                        ex => ((PortTestSetup)setup).LastEvent.Add(new OnError(probe, ex))
+                    );
                 }
 
-                public bool IsAvailable() => IsAvailable(In);
+                public bool IsAvailable() => IsAvailable(Inlet);
 
-                public bool HasBeenPulled() => HasBeenPulled(In);
+                public bool HasBeenPulled() => HasBeenPulled(Inlet);
 
-                public bool IsClosed() => IsClosed(In);
+                public bool IsClosed() => IsClosed(Inlet);
 
-                public void Pull() => Pull(In);
+                public void Pull() => Pull(Inlet);
 
-                public void Cancel() => Cancel(In);
+                public void Cancel() => Cancel(Inlet);
 
-                public T Grab() => Grab<T>(In);
+                public T Grab() => Grab(Inlet);
             }
         }
 
@@ -709,20 +615,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Init();
             }
 
-            public void FailOnNextEvent()
-            {
-                _failOnNextEvent = true;
-            }
+            public void FailOnNextEvent() => _failOnNextEvent = true;
 
-            public void FailOnPostStop()
-            {
-                _failOnPostStop = true;
-            }
+            public void FailOnPostStop() => _failOnPostStop = true;
 
-            public Exception TestException()
-            {
-                return new TestException("test");
-            }
+            public Exception TestException() => new TestException("test");
 
             public class FailingGraphStageLogic : GraphStageLogic
             {
@@ -753,10 +650,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     }
                 }
 
-                public override void PreStart()
-                {
-                    MayFail(() => _setup.LastEvent.Add(new PreStart(this)));
-                }
+                public override void PreStart() => MayFail(() => _setup.LastEvent.Add(new PreStart(this)));
 
                 public override void PostStop()
                 {
@@ -765,32 +659,20 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     else throw _setup.TestException();
                 }
 
-                public override string ToString()
-                {
-                    return "stage";
-                }
+                public override string ToString() => "stage";
             }
 
             public class SandwitchStage : GraphStage<FlowShape<int, int>>
             {
                 private readonly FailingStageSetup _setup;
 
-                public SandwitchStage(FailingStageSetup setup)
-                {
-                    _setup = setup;
-                }
+                public SandwitchStage(FailingStageSetup setup) => _setup = setup;
 
                 public override FlowShape<int, int> Shape => _setup._stageShape;
 
-                protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-                {
-                    return _setup.Stage.Value;
-                }
+                protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => _setup.Stage.Value;
 
-                public override string ToString()
-                {
-                    return "stage";
-                }
+                public override string ToString() => "stage";
             }
 
             public class UpstreamPortProbe<T> : UpstreamProbe<T>
@@ -799,20 +681,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                 }
 
-                public void Push(T element)
-                {
-                    Push(Out, element);
-                }
+                public void Push(T element) => Push(Outlet, element);
 
-                public void Complete()
-                {
-                    Complete(Out);
-                }
+                public void Complete() => Complete(Outlet);
 
-                public void Fail(Exception ex)
-                {
-                    Fail(Out, ex);
-                }
+                public void Fail(Exception ex) => Fail(Outlet, ex);
             }
 
             public class DownstreamPortProbe<T> : DownstreamProbe<T>
@@ -821,15 +694,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                 }
 
-                public void Pull()
-                {
-                    Pull(In);
-                }
+                public void Pull() => Pull(Inlet);
 
-                public void Cancel()
-                {
-                    Cancel(In);
-                }
+                public void Cancel() => Cancel(Inlet);
             }
         }
 
@@ -842,10 +709,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class OnComplete : ITestEvent
             {
-                protected bool Equals(OnComplete other)
-                {
-                    return true;
-                }
+                protected bool Equals(OnComplete other) => true;
 
                 public override bool Equals(object obj)
                 {
@@ -855,18 +719,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((OnComplete) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return 0;
-                }
+                public override int GetHashCode() => 0;
             }
 
             public class Cancel : ITestEvent
             {
-                protected bool Equals(Cancel other)
-                {
-                    return true;
-                }
+                protected bool Equals(Cancel other) => true;
 
                 public override bool Equals(object obj)
                 {
@@ -876,25 +734,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((Cancel) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return 0;
-                }
+                public override int GetHashCode() => 0;
             }
 
             public class OnError : ITestEvent
             {
                 public Exception Cause { get; }
 
-                public OnError(Exception cause)
-                {
-                    Cause = cause;
-                }
+                public OnError(Exception cause) => Cause = cause;
 
-                protected bool Equals(OnError other)
-                {
-                    return Equals(Cause, other.Cause);
-                }
+                protected bool Equals(OnError other) => Equals(Cause, other.Cause);
 
                 public override bool Equals(object obj)
                 {
@@ -904,25 +753,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((OnError) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Cause?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Cause?.GetHashCode() ?? 0;
             }
 
             public class OnNext : ITestEvent
             {
                 public object Element { get; }
 
-                public OnNext(object element)
-                {
-                    Element = element;
-                }
+                public OnNext(object element) => Element = element;
 
                 protected bool Equals(OnNext other)
                 {
-                    return Element is IEnumerable
-                        ? ((IEnumerable) Element).Cast<object>().SequenceEqual(((IEnumerable) other.Element).Cast<object>())
+                    return Element is IEnumerable enumerable
+                        ? enumerable.Cast<object>().SequenceEqual(((IEnumerable) other.Element).Cast<object>())
                         : Equals(Element, other.Element);
                 }
 
@@ -934,18 +777,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((OnNext) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return Element?.GetHashCode() ?? 0;
-                }
+                public override int GetHashCode() => Element?.GetHashCode() ?? 0;
             }
 
             public class RequestOne : ITestEvent
             {
-                protected bool Equals(RequestOne other)
-                {
-                    return true;
-                }
+                protected bool Equals(RequestOne other) => true;
 
                 public override bool Equals(object obj)
                 {
@@ -955,18 +792,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((RequestOne) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return 0;
-                }
+                public override int GetHashCode() => 0;
             }
 
             public class RequestAnother : ITestEvent
             {
-                protected bool Equals(RequestAnother other)
-                {
-                    return true;
-                }
+                protected bool Equals(RequestAnother other) => true;
 
                 public override bool Equals(object obj)
                 {
@@ -976,10 +807,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return Equals((RequestAnother) obj);
                 }
 
-                public override int GetHashCode()
-                {
-                    return 0;
-                }
+                public override int GetHashCode() => 0;
             }
             #endregion
 
@@ -1001,13 +829,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public class UpstreamOneBoundedProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
             {
                 private readonly OneBoundedSetup _setup;
+                private readonly Outlet<T> _outlet;
 
                 public UpstreamOneBoundedProbe(OneBoundedSetup setup)
                 {
                     _setup = setup;
-                    Out = new Outlet<T>("out") {Id = 0};
+                    _outlet = new Outlet<T>("out") {Id = 0};
 
-                    SetHandler(Out, () =>
+                    SetHandler(_outlet, () =>
                     {
                         if (setup.LastEvent.OfType<RequestOne>().Any())
                             setup.LastEvent.Add(new RequestAnother());
@@ -1016,30 +845,30 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     }, () => setup.LastEvent.Add(new Cancel()));
                 }
 
-                public override Outlet Out { get; }
+                public override Outlet Out => _outlet;
 
                 public void OnNext(T element)
                 {
-                    Push(Out, element);
+                    Push(_outlet, element);
                     _setup.Run();
                 }
 
                 public void OnComplete()
                 {
-                    Complete(Out);
+                    Complete(_outlet);
                     _setup.Run();
                 }
 
                 public void OnNextAndComplete(T element)
                 {
-                    Push(Out, element);
-                    Complete(Out);
+                    Push(_outlet, element);
+                    Complete(_outlet);
                     _setup.Run();
                 }
 
                 public void OnError(Exception ex)
                 {
-                    Fail(Out, ex);
+                    Fail(_outlet, ex);
                     _setup.Run();
                 }
             }
@@ -1047,31 +876,29 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public class DownstreamOneBoundedPortProbe<T> : GraphInterpreter.DownstreamBoundaryStageLogic
             {
                 private readonly OneBoundedSetup _setup;
+                private readonly Inlet<object> _inlet;
 
                 public DownstreamOneBoundedPortProbe(OneBoundedSetup setup)
                 {
                     _setup = setup;
-                    In = new Inlet<T>("in") {Id = 0};
+                    _inlet = new Inlet<object>("in") {Id = 0};
 
-                    SetHandler(In, () =>
-                    {
-                        setup.LastEvent.Add(new OnNext(Grab<object>(In)));
-                    },
+                    SetHandler(_inlet, () => setup.LastEvent.Add(new OnNext(Grab(_inlet))),
                     () => setup.LastEvent.Add(new OnComplete()),
                     ex => setup.LastEvent.Add(new OnError(ex)));
                 }
 
-                public override Inlet In { get; }
+                public override Inlet In => _inlet;
 
                 public void RequestOne()
                 {
-                    Pull(In);
+                    Pull(_inlet);
                     _setup.Run();
                 }
 
                 public void Cancel()
                 {
-                    Cancel(In);
+                    Cancel(_inlet);
                     _setup.Run();
                 }
             }
@@ -1093,10 +920,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public new UpstreamOneBoundedProbe<TIn> Upstream { get; }
             public new DownstreamOneBoundedPortProbe<TOut> Downstream { get; }
 
-            protected sealed override void Run()
-            {
-                Interpreter.Execute(int.MaxValue);
-            }
+            protected sealed override void Run() => Interpreter.Execute(int.MaxValue);
 
             private void Initialize()
             {

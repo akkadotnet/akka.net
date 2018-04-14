@@ -1,16 +1,18 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FramingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text; 
 using Akka.IO;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -24,6 +26,7 @@ namespace Akka.Streams.Tests.Dsl
     public class FramingSpec : AkkaSpec
     {
         private readonly ITestOutputHelper _helper;
+
         private ActorMaterializer Materializer { get; }
 
         public FramingSpec(ITestOutputHelper helper) : base(helper)
@@ -33,39 +36,71 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private sealed class Rechunker : PushPullStage<ByteString, ByteString>
+        private sealed class Rechunker : SimpleLinearGraphStage<ByteString>
         {
-            private ByteString _rechunkBuffer = ByteString.Empty;
+            #region Logic
 
-            public override ISyncDirective OnPush(ByteString element, IContext<ByteString> context)
+            private sealed class Logic : InAndOutGraphStageLogic
             {
-                _rechunkBuffer += element;
-                return Rechunk(context);
+                private readonly Rechunker _stage;
+                private ByteString _buffer;
+
+                public Logic(Rechunker stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _buffer = ByteString.Empty;
+
+                    SetHandler(stage.Inlet, stage.Outlet, this);
+                }
+
+                public override void OnPush()
+                {
+                    _buffer += Grab(_stage.Inlet);
+                    Rechunk();
+                }
+
+                public override void OnPull() => Rechunk();
+
+                public override void OnUpstreamFinish()
+                {
+                    if (_buffer.IsEmpty)
+                        CompleteStage();
+                    else if (IsAvailable(_stage.Outlet))
+                        OnPull();
+                }
+
+                private void Rechunk()
+                {
+                    if (!IsClosed(_stage.Inlet) && ThreadLocalRandom.Current.Next(1, 3) == 2)
+                        Pull(_stage.Inlet);
+                    else
+                    {
+                        var nextChunkSize = _buffer.IsEmpty
+                            ? 0
+                            : ThreadLocalRandom.Current.Next(0, _buffer.Count + 1);
+                        var newChunk = _buffer.Slice(0, nextChunkSize).Compact();
+                        _buffer = _buffer.Slice(nextChunkSize).Compact();
+
+                        Push(_stage.Outlet, newChunk);
+
+                        if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
+                            CompleteStage();
+                    }
+                }
             }
 
-            public override ISyncDirective OnPull(IContext<ByteString> context) => Rechunk(context);
+            #endregion
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<ByteString> context)
-                => _rechunkBuffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
-
-            private ISyncDirective Rechunk(IContext<ByteString> context)
+            public Rechunker() : base("Rechunker")
             {
-                if (!context.IsFinishing && ThreadLocalRandom.Current.Next(1, 3) == 2)
-                    return context.Pull();
 
-                var nextChunkSize = _rechunkBuffer.IsEmpty
-                    ? 0
-                    : ThreadLocalRandom.Current.Next(0, _rechunkBuffer.Count + 1);
-                var newChunk = _rechunkBuffer.Take(nextChunkSize).Compact();
-                _rechunkBuffer = _rechunkBuffer.Drop(nextChunkSize).Compact();
-                return context.IsFinishing && _rechunkBuffer.IsEmpty
-                    ? context.PushAndFinish(newChunk)
-                    : context.Push(newChunk);
             }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
         private Flow<ByteString, ByteString, NotUsed> Rechunk
-            => Flow.Create<ByteString>().Transform(() => new Rechunker()).Named("rechunker");
+            => Flow.Create<ByteString>().Via(new Rechunker()).Named("rechunker");
 
         private static readonly List<ByteString> DelimiterBytes =
             new List<string> {"\n", "\r\n", "FOO"}.Select(ByteString.FromString).ToList();
@@ -76,14 +111,14 @@ namespace Akka.Streams.Tests.Dsl
         private static Flow<ByteString, string, NotUsed> SimpleLines(string delimiter, int maximumBytes, bool allowTruncation = true)
         {
             return  Framing.Delimiter(ByteString.FromString(delimiter), maximumBytes, allowTruncation)
-                .Select(x => x.DecodeString(Encoding.UTF8)).Named("LineFraming");
+                .Select(x => x.ToString(Encoding.UTF8)).Named("LineFraming");
         }
 
         private static IEnumerable<ByteString> CompleteTestSequence(ByteString delimiter)
         {
             for (var i = 0; i < delimiter.Count; i++)
                 foreach (var sequence in BaseTestSequences)
-                    yield return delimiter.Take(i) + sequence;
+                    yield return delimiter.Slice(0, i) + sequence;
         }
 
         [Fact]
@@ -148,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Delimiter_bytes_based_framing_must_report_truncated_frames()
         {
             var task =
-                Source.Single(ByteString.FromString("I habe no end"))
+                Source.Single(ByteString.FromString("I have no end"))
                     .Via(SimpleLines("\n", 256, false))
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
@@ -207,10 +242,10 @@ namespace Akka.Streams.Tests.Dsl
 
         private static ByteString Encode(ByteString payload, int fieldOffset, int fieldLength, ByteOrder byteOrder)
         {
-            var h = new ByteStringBuilder().PutInt(payload.Count, byteOrder).Result();
-            var header = byteOrder == ByteOrder.LittleEndian ? h.Take(fieldLength) : h.Drop(4 - fieldLength);
+            var h = ByteString.FromBytes(new byte[4].PutInt(payload.Count, order: byteOrder));
+            var header = byteOrder == ByteOrder.LittleEndian ? h.Slice(0, fieldLength) : h.Slice(4 - fieldLength);
 
-            return ByteString.Create(new byte[fieldOffset]) + header + payload;
+            return ByteString.FromBytes(new byte[fieldOffset]) + header + payload;
         }
 
         [Fact]
@@ -225,7 +260,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
                           {
-                              var payload = ReferenceChunk.Take(length);
+                              var payload = ReferenceChunk.Slice(0, length);
                               return Encode(payload, fieldOffset, fieldLength, byteOrder);
                           }).ToList();
 
@@ -262,7 +297,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Length_field_based_framing_must_report_oversized_frames()
         {
-            var task1 = Source.Single(Encode(ReferenceChunk.Take(100), 0, 1, ByteOrder.BigEndian))
+            var task1 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 0, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 99, 0, ByteOrder.BigEndian))
                 .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
@@ -271,7 +306,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
             task1.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
 
-            var task2 = Source.Single(Encode(ReferenceChunk.Take(100), 49, 1, ByteOrder.BigEndian))
+            var task2 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 49, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 100, 0, ByteOrder.BigEndian))
                 .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
@@ -292,8 +327,8 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         foreach (var frameLength in FrameLengths.Where(f => f < 1 << (fieldLength * 8) && f != 0))
                         {
-                            var fullFrame = Encode(ReferenceChunk.Take(frameLength), fieldOffset, fieldLength, byteOrder);
-                            var partialFrame = fullFrame.DropRight(1);
+                            var fullFrame = Encode(ReferenceChunk.Slice(0, frameLength), fieldOffset, fieldLength, byteOrder);
+                            var partialFrame = fullFrame.Slice(0, fullFrame.Count - 1); // dropRight equivalent
 
                             Action action = () =>
                             {
@@ -302,7 +337,8 @@ namespace Akka.Streams.Tests.Dsl
                                         .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
                                         .Grouped(10000)
                                         .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer)
-                                        .Wait(TimeSpan.FromSeconds(5));
+                                        .Wait(TimeSpan.FromSeconds(5))
+                                        .ShouldBeTrue("Stream should complete withing 5 seconds");
                             };
                             action.ShouldThrow<Framing.FramingException>();
                         }
@@ -321,7 +357,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Join(Flow.Create<ByteString>()); // Loopback
 
             var random= new Random();
-            var testMessages = Enumerable.Range(1, 100).Select(_ => ReferenceChunk.Take(random.Next(1024))).ToList();
+            var testMessages = Enumerable.Range(1, 100).Select(_ => ReferenceChunk.Slice(0, random.Next(1024))).ToList();
 
             var task = Source.From(testMessages)
                 .Via(codecFlow)
@@ -330,6 +366,39 @@ namespace Akka.Streams.Tests.Dsl
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(testMessages);
+        }
+
+        [Fact]
+        public void Length_field_based_framing_must_fail_the_stage_on_negative_length_field_values()
+        {
+            // A 4-byte message containing only an Int specifying the length of the payload
+            // The issue shows itself if length in message is less than or equal
+            // to -4 (if expected length field is length 4)
+            var bytes = ByteString.FromBytes(BitConverter.GetBytes(-4).ToArray());
+
+            var result = Source.Single(bytes)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.Invoking(t => t.AwaitResult())
+                .ShouldThrow<Framing.FramingException>()
+                .WithMessage("Decoded frame header reported negative size -4");
+        }
+
+        [Fact]
+        public void Length_field_based_framing_must_let_zero_length_field_values_pass_through()
+        {
+            // Interleave empty frames with a frame with data
+            var b = ByteString.FromBytes(BitConverter.GetBytes(42).ToArray());
+            var encodedPayload = Encode(b, 0, 4, ByteOrder.LittleEndian);
+            var emptyFrame = Encode(ByteString.Empty, 0, 4, ByteOrder.LittleEndian);
+            var bytes = new[] { emptyFrame, encodedPayload, emptyFrame };
+
+            var result = Source.From(bytes)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.AwaitResult().Should().BeEquivalentTo(bytes.ToImmutableList());
         }
     }
 }

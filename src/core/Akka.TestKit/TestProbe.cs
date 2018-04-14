@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -173,11 +173,7 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
-        /// <summary>
-        /// Compares the underlying actor ref to the object.
-        /// </summary>
-        /// <param name="obj">The object to be compared to; ideally an <see cref="IActorRef"/>.</param>
-        /// <returns>An integer indicating if the actor sorts higher, lower, or equal to <paramref name="obj"/>.</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);

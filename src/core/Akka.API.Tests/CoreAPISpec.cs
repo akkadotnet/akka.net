@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoreAPISpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using ApiApprover;
 using ApprovalTests;
 using Mono.Cecil;
 using Xunit;
+using Akka.Persistence.Query;
 
 namespace Akka.API.Tests
 {
@@ -48,6 +49,16 @@ namespace Akka.API.Tests
         public void ApprovePersistence()
         {
             var assemblyPath = Path.GetFullPath(typeof(Persistent).Assembly.Location);
+            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
+            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            Approvals.Verify(publicApi);
+        }
+
+        [Fact]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void ApprovePersistenceQuery()
+        {
+            var assemblyPath = Path.GetFullPath(typeof(PersistenceQuery).Assembly.Location);
             var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
             var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
             Approvals.Verify(publicApi);

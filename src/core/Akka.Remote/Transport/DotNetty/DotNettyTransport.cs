@@ -1,11 +1,9 @@
-﻿#region copyright
-// -----------------------------------------------------------------------
-//  <copyright file="DotNettyTransport.cs" company="Akka.NET project">
-//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
-//  </copyright>
-// -----------------------------------------------------------------------
-#endregion
+﻿//-----------------------------------------------------------------------
+// <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -125,7 +123,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
         protected readonly ILoggingAdapter Log;
         protected volatile Address LocalAddress;
-        protected volatile IChannel ServerChannel;
+        protected internal volatile IChannel ServerChannel;
 
         private readonly IEventLoopGroup serverEventLoopGroup;
         private readonly IEventLoopGroup clientEventLoopGroup;

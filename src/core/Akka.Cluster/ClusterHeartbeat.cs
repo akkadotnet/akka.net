@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartbeat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -379,20 +379,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Check to see if a node with the given address exists inside the heartbeat sender state.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node to check</param>
+        /// <returns><c>true</c> if the heartbeat sender is already aware of this node. <c>false</c> otherwise.</returns>
         public bool Contains(UniqueAddress node)
         {
             return Ring.Nodes.Contains(node);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a new <see cref="UniqueAddress"/> to the heartbeat sender's state.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node to add.</param>
+        /// <returns>An updated copy of the state now including this member.</returns>
         public ClusterHeartbeatSenderState AddMember(UniqueAddress node)
         {
             return MembershipChange(Ring + node);

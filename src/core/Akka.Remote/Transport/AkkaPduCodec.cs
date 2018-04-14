@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaPduCodec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
+using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
@@ -89,7 +90,9 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// Represents a heartbeat on the wire.
     /// </summary>
     internal sealed class Heartbeat : IAkkaPdu { }
 
@@ -200,6 +203,15 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal abstract class AkkaPduCodec
     {
+        protected readonly ActorSystem System;
+        protected readonly AddressThreadLocalCache AddressCache;
+
+        protected AkkaPduCodec(ActorSystem system)
+        {
+            System = system;
+            AddressCache = AddressThreadLocalCache.For(system);
+        }
+
         /// <summary>
         /// Return an <see cref="IAkkaPdu"/> instance that represents a PDU contained in the raw
         /// <see cref="ByteString"/>.
@@ -216,14 +228,19 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public virtual ByteString EncodePdu(IAkkaPdu pdu)
         {
-            ByteString finalBytes = null;
-            pdu.Match()
-                .With<Associate>(a => finalBytes = ConstructAssociate(a.Info))
-                .With<Payload>(p => finalBytes = ConstructPayload(p.Bytes))
-                .With<Disassociate>(d => finalBytes = ConstructDisassociate(d.Reason))
-                .With<Heartbeat>(h => finalBytes = ConstructHeartbeat());
-
-            return finalBytes;
+            switch (pdu)
+            {
+                case Payload p:
+                    return ConstructPayload(p.Bytes);
+                case Heartbeat h:
+                    return ConstructHeartbeat();
+                case Associate a:
+                    return ConstructAssociate(a.Info);
+                case Disassociate d:
+                    return ConstructDisassociate(d.Reason);
+                default:
+                    return null; // unsupported message type
+            }
         }
 
         /// <summary>
@@ -260,7 +277,7 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public abstract AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
+        public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
 
         /// <summary>
         /// TBD
@@ -294,7 +311,7 @@ namespace Akka.Remote.Transport
         /// <param name="raw">TBD</param>
         /// <exception cref="PduCodecException">
         /// This exception is thrown when the Akka PDU in the specified byte string,
-        /// <paramref name="raw" />, mets one of the following conditions:
+        /// <paramref name="raw" />, meets one of the following conditions:
         /// <ul>
         /// <li>The PDU is neither a message or a control message.</li>
         /// <li>The PDU is a control message with an invalid format. </li>
@@ -364,13 +381,20 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /*
+         * Since there's never any ActorSystem-specific information coded directly
+         * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
+         * same heartbeat byte buffer and re-using it.
+         */
+        private static readonly ByteString HeartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
+
         /// <summary>
-        /// TBD
+        /// Creates a new Heartbeat message instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The Heartbeat message.</returns>
         public override ByteString ConstructHeartbeat()
         {
-            return ConstructControlMessagePdu(CommandType.Heartbeat);
+            return HeartbeatPdu;
         }
 
         /// <summary>
@@ -385,7 +409,7 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public override AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress)
+        public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
 
@@ -405,7 +429,15 @@ namespace Akka.Remote.Transport
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
                     Address recipientAddress;
-                    ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                    if (AddressCache != null)
+                    {
+                        recipientAddress = AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
+                    }
+                    else
+                    {
+                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                    }
+                    
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)
@@ -513,7 +545,7 @@ namespace Akka.Remote.Transport
             get { return ConstructControlMessagePdu(CommandType.DisassociateQuarantined); }
         }
 
-        private ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
+        private static ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
         {
             var controlMessage = new AkkaControlMessage() { CommandType = code };
             if (handshakeInfo != null)
@@ -524,12 +556,12 @@ namespace Akka.Remote.Transport
             return new AkkaProtocolMessage() { Instruction = controlMessage }.ToByteString();
         }
 
-        private Address DecodeAddress(AddressData origin)
+        private static Address DecodeAddress(AddressData origin)
         {
             return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
         }
 
-        private ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
+        private static ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
         {
             return new ActorRefData()
             {
@@ -539,7 +571,7 @@ namespace Akka.Remote.Transport
             };
         }
 
-        private AddressData SerializeAddress(Address address)
+        private static AddressData SerializeAddress(Address address)
         {
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
                 throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
@@ -553,5 +585,9 @@ namespace Akka.Remote.Transport
         }
 
 #endregion
+
+        public AkkaPduProtobuffCodec(ActorSystem system) : base(system)
+        {
+        }
     }
 }

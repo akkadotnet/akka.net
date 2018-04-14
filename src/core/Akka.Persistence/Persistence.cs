@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistence.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Launches the Akka.Persistence runtime
     /// </summary>
     public class PersistenceExtension : IExtension
     {
@@ -49,6 +49,7 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
+        private readonly Lazy<IActorRef> _recoveryPermitter;
 
         private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
 
@@ -56,12 +57,15 @@ namespace Akka.Persistence
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
 
         /// <summary>
-        /// TBD
+        /// Creates a new Akka.Persistence extension.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="NullReferenceException">TBD
+        /// <param name="system">The ActorSystem that will be using Akka.Persistence</param>
+        /// <exception cref="NullReferenceException">
         /// This exception is thrown when the default journal plugin, <c>journal.plugin</c> is not configured.
         /// </exception>
+        /// <remarks>
+        /// DO NOT CALL DIRECTLY. Will be instantiated automatically be Akka.Persistence actors.
+        /// </remarks>
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
@@ -83,7 +87,7 @@ namespace Akka.Persistence
                 if (string.IsNullOrEmpty(configPath))
                 {
                     if (_log.IsWarningEnabled)
-                        _log.Warning("No default snapshot store configured! " + 
+                        _log.Warning("No default snapshot store configured! " +
                             "To configure a default snapshot-store plugin set the `akka.persistence.snapshot-store.plugin` key. " +
                             "For details see 'persistence.conf'");
                     return NoSnapshotStorePluginId;
@@ -95,7 +99,7 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy");
                 var configuratorType = Type.GetType(configuratorTypeName);
-                return ((IStashOverflowStrategyConfigurator) Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
+                return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -107,11 +111,17 @@ namespace Akka.Persistence
                 JournalFor(id);
             });
 
-            _config.GetStringList("journal.auto-start-snapshot-stores").ForEach(id =>
+            _config.GetStringList("snapshot-store.auto-start-snapshot-stores").ForEach(id =>
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Auto-starting snapshot store `{0}`", id);
                 SnapshotStoreFor(id);
+            });
+
+            _recoveryPermitter = new Lazy<IActorRef>(() =>
+            {
+                var maxPermits = _config.GetInt("max-concurrent-recoveries");
+                return _system.SystemActorOf(Akka.Persistence.RecoveryPermitter.Props(maxPermits), "recoveryPermitter");
             });
         }
 
@@ -121,7 +131,7 @@ namespace Akka.Persistence
         public IStashOverflowStrategy DefaultInternalStashOverflowStrategy => _defaultInternalStashOverflowStrategy.Value;
 
         /// <summary>
-        /// TBD
+        /// The Akka.Persistence settings for the journal and snapshot store
         /// </summary>
         public PersistenceSettings Settings { get; }
 
@@ -133,6 +143,15 @@ namespace Akka.Persistence
         public string PersistenceId(IActorRef actor)
         {
             return actor.Path.ToStringWithoutAddress();
+        }
+
+        /// <summary>
+        /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
+        /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
+        /// </summary>
+        internal IActorRef RecoveryPermitter()
+        {
+            return _recoveryPermitter.Value;
         }
 
         /// <summary>
@@ -254,7 +273,7 @@ namespace Akka.Persistence
                 throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
-            object[] pluginActorArgs = pluginType.GetConstructor(new[] {typeof (Config)}) != null ? new object[] {pluginConfig} : null;
+            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             return system.SystemActorOf(pluginActorProps, pluginActorName);

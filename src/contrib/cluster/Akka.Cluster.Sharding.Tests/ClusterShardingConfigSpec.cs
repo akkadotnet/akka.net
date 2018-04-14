@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.NotNull(config);
             Assert.Equal("sharding", config.GetString("guardian-name"));
             Assert.Equal(string.Empty, config.GetString("role"));
-            Assert.Equal(false, config.GetBoolean("remember-entities"));
+            Assert.False(config.GetBoolean("remember-entities"));
             Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("coordinator-failure-backoff"));
             Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("retry-interval"));
             Assert.Equal(100000, config.GetInt("buffer-size"));

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -240,13 +240,7 @@ namespace Akka.Cluster
                 get { return _member; }
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberStatusChange;
@@ -254,10 +248,7 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -268,10 +259,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// Returns a <see cref="System.String" /> that represents this instance.
-            /// </summary>
-            /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -304,6 +292,22 @@ namespace Akka.Cluster
             /// <param name="member">The node that changed state.</param>
             public MemberUp(Member member)
                 : base(member, MemberStatus.Up) { }
+        }
+
+        /// <summary>
+        /// Member status changed to WeaklyUp.
+        /// A joining member can be moved to <see cref="MemberStatus.WeaklyUp"/> if convergence
+        /// cannot be reached, i.e. there are unreachable nodes.
+        /// It will be moved to <see cref="MemberStatus.Up"/> when convergence is reached.
+        /// </summary>
+        public sealed class MemberWeaklyUp : MemberStatusChange
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MemberWeaklyUp"/> class.
+            /// </summary>
+            /// <param name="member">The node that changed state.</param>
+            public MemberWeaklyUp(Member member)
+                : base(member, MemberStatus.WeaklyUp) { }
         }
 
         /// <summary>
@@ -379,13 +383,7 @@ namespace Akka.Cluster
                 _previousStatus = previousStatus;
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberRemoved;
@@ -393,12 +391,7 @@ namespace Akka.Cluster
                 return _member.Equals(other._member) && _previousStatus == other._previousStatus;
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -436,11 +429,7 @@ namespace Akka.Cluster
                 get { return _leader; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as LeaderChanged;
@@ -448,10 +437,7 @@ namespace Akka.Cluster
                 return (_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader));
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -462,10 +448,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"LeaderChanged(NewLeader={Leader})";
@@ -508,10 +491,7 @@ namespace Akka.Cluster
                 get { return _role; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -523,11 +503,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as RoleLeaderChanged;
@@ -536,10 +512,7 @@ namespace Akka.Cluster
                     && ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"RoleLeaderChanged(Leader={Leader}, Role={Role})";
@@ -560,7 +533,7 @@ namespace Akka.Cluster
             /// </summary>
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
 
-            /// <inheritdoc cref="object.ToString"/>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return "ClusterShuttingDown";
@@ -599,11 +572,7 @@ namespace Akka.Cluster
                 get { return _member; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityEvent;
@@ -611,10 +580,7 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -625,10 +591,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -702,11 +665,7 @@ namespace Akka.Cluster
                 get { return _seenBy; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as SeenChanged;
@@ -714,10 +673,7 @@ namespace Akka.Cluster
                 return _convergence.Equals(other._convergence) && _seenBy.SequenceEqual(other._seenBy);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -759,11 +715,7 @@ namespace Akka.Cluster
                 get { return _reachability; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityChanged;
@@ -771,10 +723,7 @@ namespace Akka.Cluster
                 return _reachability.Equals(other._reachability);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -821,10 +770,7 @@ namespace Akka.Cluster
                 get { return _vclockStats; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -836,11 +782,7 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as CurrentInternalStats;
@@ -926,10 +868,24 @@ namespace Akka.Cluster
         {
             foreach (var member in members)
             {
-                if (member.Status == MemberStatus.Joining) yield return new MemberJoined(member);
-                if (member.Status == MemberStatus.Up) yield return new MemberUp(member);
-                if (member.Status == MemberStatus.Leaving) yield return new MemberLeft(member);
-                if (member.Status == MemberStatus.Exiting) yield return new MemberExited(member);
+                switch (member.Status)
+                {
+                    case MemberStatus.Joining:
+                        yield return new MemberJoined(member);
+                        break;
+                    case MemberStatus.WeaklyUp:
+                        yield return new MemberWeaklyUp(member);
+                        break;
+                    case MemberStatus.Up:
+                        yield return new MemberUp(member);
+                        break;
+                    case MemberStatus.Leaving:
+                        yield return new MemberLeft(member);
+                        break;
+                    case MemberStatus.Exiting:
+                        yield return new MemberExited(member);
+                        break;
+                }
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -430,8 +430,8 @@ namespace Akka.Remote.Transport
     ///     currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior" /> which
     ///     can not be popped out.
     /// </summary>
-    /// <typeparam name="TIn"></typeparam>
-    /// <typeparam name="TOut"></typeparam">
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class SwitchableLoggedBehavior<TIn, TOut>
     {
         private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack =
@@ -725,11 +725,8 @@ namespace Akka.Remote.Transport
         /// <returns>The option that contains the listener if it exists.</returns>
         public IHandleEventListener GetRemoteReadHandlerFor(TestAssociationHandle localHandle)
         {
-            Tuple<IHandleEventListener, IHandleEventListener> listeners;
-            if (_listenersTable.TryGetValue(localHandle.Key, out listeners))
-            {
+            if (_listenersTable.TryGetValue(localHandle.Key, out var listeners))
                 return RemoteListenerRelativeTo(localHandle, listeners);
-            }
 
             return null;
         }
@@ -741,8 +738,7 @@ namespace Akka.Remote.Transport
         /// <returns>The transport, if it exists.</returns>
         public Tuple<TestTransport, Task<IAssociationEventListener>> TransportFor(Address address)
         {
-            Tuple<TestTransport, Task<IAssociationEventListener>> transport;
-            _transportTable.TryGetValue(address, out transport);
+            _transportTable.TryGetValue(address, out var transport);
             return transport;
         }
 

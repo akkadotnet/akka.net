@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistencePluginProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -93,10 +93,13 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PersistencePluginProxy"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="config">The configuration used to configure the proxy.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when configuration is undefined for the plugin
+        /// or an unknown plugin type is defined.
+        /// </exception>
         public PersistencePluginProxy(Config config)
         {
             _config = config;

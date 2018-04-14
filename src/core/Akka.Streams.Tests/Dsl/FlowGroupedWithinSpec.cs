@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedWithinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -171,7 +171,7 @@ namespace Akka.Streams.Tests.Dsl
             var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
-                .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
+                .GroupedWithin(1000, TimeSpan.FromMilliseconds(50))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
@@ -180,12 +180,10 @@ namespace Akka.Streams.Tests.Dsl
 
             cSub.Request(1);
             pSub.ExpectRequest();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
             pSub.SendComplete();
             c.ExpectComplete();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
-
+        
         [Fact]
         public void A_GroupedWithin_must_reset_time_window_when_max_elements_reached()
         {

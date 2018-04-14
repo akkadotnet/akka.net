@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TopicMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,11 +83,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             Content = content;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Bucket other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -98,20 +94,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                    && Content.SequenceEqual(other.Content);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Bucket);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -159,11 +148,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </summary>
         public Routee Routee { get { return _routee ?? (_routee = Ref != null ? new ActorRefRoutee(Ref) : null); } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(ValueHolder other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -172,20 +157,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                    Equals(Ref, other.Ref);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as ValueHolder);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -224,11 +202,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </summary>
         public bool IsReplyToStatus { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null)) return false;
@@ -242,10 +216,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 && IsReplyToStatus.Equals(other.IsReplyToStatus);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -283,11 +254,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             Buckets = buckets ?? new Bucket[0];
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Delta other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -296,20 +263,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return Buckets.SequenceEqual(other.Buckets);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Delta);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return Buckets != null ? Buckets.GetHashCode() : 0;

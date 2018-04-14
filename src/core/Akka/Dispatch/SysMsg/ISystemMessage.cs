@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Assert = System.Diagnostics.Debug;
 
@@ -87,9 +88,9 @@ namespace Akka.Dispatch.SysMsg
         public SystemMessage Head;
 
         /// <summary>
-        /// TBD
+        /// Creates a new message list.
         /// </summary>
-        /// <param name="head">TBD</param>
+        /// <param name="head">The current head item.</param>
         public LatestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
@@ -161,9 +162,9 @@ namespace Akka.Dispatch.SysMsg
         public SystemMessage Head;
 
         /// <summary>
-        /// TBD
+        /// Creates a new message list.
         /// </summary>
-        /// <param name="head">TBD</param>
+        /// <param name="head">The current head item.</param>
         public EarliestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
@@ -276,16 +277,17 @@ namespace Akka.Dispatch.SysMsg
     /// <see cref="ISystemMessage"/> is an interface and too basic to express
     /// all of the capabilities needed to express a full-fledged system message.
     /// </summary>
+    [InternalApi]
     public abstract class SystemMessage : ISystemMessage
     {
         /// <summary>
-        /// TBD
+        /// The next <see cref="ISystemMessage"/> in the linked list.
         /// </summary>
         [NonSerialized]
         internal SystemMessage Next;
 
         /// <summary>
-        /// TBD
+        /// Unlinks this message from the linked list.
         /// </summary>
         public void Unlink()
         {
@@ -293,7 +295,7 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if we are unlinked.
         /// </summary>
         public bool Unlinked { get { return Next == null; } }
     }
@@ -303,10 +305,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object"/>
         public override string ToString()
         {
             return "NoMessage";
@@ -349,10 +348,7 @@ namespace Akka.Dispatch.SysMsg
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
         public bool AddressTerminated { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object"/>
         public override string ToString()
         {
             return "<DeathWatchNotification>: " + Actor + ", ExistenceConfirmed=" + ExistenceConfirmed + ", AddressTerminated=" + AddressTerminated;
@@ -362,6 +358,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
         private readonly long _uid;

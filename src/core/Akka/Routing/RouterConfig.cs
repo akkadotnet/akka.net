@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -128,10 +127,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as RouterConfig);
-        }
+        public override bool Equals(object obj) => Equals(obj as RouterConfig);
     }
 
     /// <summary>
@@ -149,13 +145,20 @@ namespace Akka.Routing
         /// <param name="routerDispatcher">TBD</param>
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
-            Paths = paths;
+            // equivalent of turning the paths into an immutable sequence
+            InternalPaths = paths?.ToArray() ?? new string[0];
         }
 
         /// <summary>
-        /// TBD
+        /// Internal property for holding the supplied paths
         /// </summary>
-        public IEnumerable<string> Paths { get; }
+        protected readonly string[] InternalPaths;
+
+        /// <summary>
+        /// Retrieves the paths of all routees declared on this router.
+        /// </summary>
+        [Obsolete("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
+        public IEnumerable<string> Paths => null;
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
@@ -198,7 +201,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Paths.SequenceEqual(other.Paths);
+            return InternalPaths.SequenceEqual(other.InternalPaths);
         }
 
         /// <inheritdoc/>
@@ -211,10 +214,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return Paths?.GetHashCode() ?? 0;
-        }
+        public override int GetHashCode() => InternalPaths?.GetHashCode() ?? 0;
     }
 
     /// <summary>

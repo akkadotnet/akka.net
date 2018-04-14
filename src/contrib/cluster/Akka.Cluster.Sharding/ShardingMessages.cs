@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Sharding
 {
@@ -119,12 +120,12 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Address[] Regions;
+        public readonly IImmutableSet<Address> Regions;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="regions">TBD</param>
-        public CurrentRegions(Address[] regions)
+        public CurrentRegions(IImmutableSet<Address> regions)
         {
             Regions = regions;
         }
@@ -166,13 +167,13 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IDictionary<Address, ShardRegionStats> Regions;
+        public readonly IImmutableDictionary<Address, ShardRegionStats> Regions;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="regions">TBD</param>
-        public ClusterShardingStats(IDictionary<Address, ShardRegionStats> regions)
+        public ClusterShardingStats(IImmutableDictionary<Address, ShardRegionStats> regions)
         {
             Regions = regions;
         }
@@ -228,13 +229,13 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ISet<ShardState> Shards;
+        public readonly IImmutableSet<ShardState> Shards;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shards">TBD</param>
-        public CurrentShardRegionState(ISet<ShardState> shards)
+        public CurrentShardRegionState(IImmutableSet<ShardState> shards)
         {
             Shards = shards;
         }
@@ -249,13 +250,13 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IDictionary<string, int> Stats;
+        public readonly IImmutableDictionary<string, int> Stats;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="stats">TBD</param>
-        public ShardRegionStats(IDictionary<string, int> stats)
+        public ShardRegionStats(IImmutableDictionary<string, int> stats)
         {
             Stats = stats;
         }
@@ -274,14 +275,14 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string[] EntityIds;
+        public readonly IImmutableSet<string> EntityIds;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shardId">TBD</param>
         /// <param name="entityIds">TBD</param>
-        public ShardState(string shardId, string[] entityIds)
+        public ShardState(string shardId, IImmutableSet<string> entityIds)
         {
             ShardId = shardId;
             EntityIds = entityIds;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryEventAdaptersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests.Journal
 {
     public class MemoryEventAdaptersSpec: AkkaSpec
     {
-        private readonly ExtendedActorSystem _extendedActorySystem;
+        private readonly ExtendedActorSystem _extendedActorSystem;
         private readonly Config _memoryConfig;
         
         public MemoryEventAdaptersSpec()
@@ -54,21 +54,21 @@ akka.persistence.journal {
   }
 }").WithFallback(ConfigurationFactory.Load());
 
-            _extendedActorySystem = (ExtendedActorSystem) Sys;
+            _extendedActorSystem = (ExtendedActorSystem) Sys;
             _memoryConfig = config.GetConfig("akka.persistence.journal.inmem");
         }
 
         [Fact]
         public void EventAdapters_should_parse_configuration_and_resolve_adapter_definitions()
         {
-            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
             adapters.Get<IEventMarkerInterface>().GetType().Should().Be(typeof (MarkerInterfaceAdapter));
         }
 
         [Fact]
         public void EventAdapters_should_pick_the_most_specific_adapter_available()
         {
-            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
 
             // sanity check: precise case, matching non-user classes
             adapters.Get<string>().GetType().Should().Be(typeof (ExampleEventAdapter));
@@ -93,14 +93,14 @@ akka.persistence.journal.inmem {
 }");
             var combinedConfig = badConfig.GetConfig("akka.persistence.journal.inmem");
 
-            var ex = Assert.Throws<ArgumentException>(() => EventAdapters.Create(_extendedActorySystem, combinedConfig));
+            var ex = Assert.Throws<ArgumentException>(() => EventAdapters.Create(_extendedActorSystem, combinedConfig));
             ex.Message.Contains("System.Integer was bound to undefined event-adapter: undefined-adapter").Should().BeTrue();
         }
 
         [Fact]
         public void EventAdapters_should_allow_implementing_only_the_read_side_IReadEventAdapter()
         {
-            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
 
             // read-side only adapter
             var readAdapter = adapters.Get<ReadMeEvent>();
@@ -110,7 +110,7 @@ akka.persistence.journal.inmem {
         [Fact]
         public void EventAdapters_should_allow_implementing_only_the_write_side_IWriteEventAdapter()
         {
-            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
 
             // write-side only adapter
             var writeAdapter = adapters.Get<WriteMeEvent>();
@@ -120,7 +120,7 @@ akka.persistence.journal.inmem {
         [Fact]
         public void EventAdapters_should_allow_combining_only_the_readside_CombinedReadEventAdapter()
         {
-            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
 
             // combined-read-side only adapter
             var readAdapter = adapters.Get<ReadMeTwiceEvent>();

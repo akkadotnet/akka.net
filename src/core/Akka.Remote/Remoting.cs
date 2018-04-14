@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,14 +45,14 @@ namespace Akka.Remote
     internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
     {
         //this is why this extension is called "RARP"
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
 
         /// <summary>
         /// Used as part of the <see cref="ExtensionIdProvider{RARP}"/>
         /// </summary>
         public RARP() { }
 
-        private RARP(RemoteActorRefProvider provider)
+        private RARP(IRemoteActorRefProvider provider)
         {
             _provider = provider;
         }
@@ -74,13 +74,13 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
-            return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+            return new RARP((IRemoteActorRefProvider)system.Provider);
         }
 
         /// <summary>
-        /// TBD
+        /// The underlying remote actor reference provider.
         /// </summary>
-        public RemoteActorRefProvider Provider
+        public IRemoteActorRefProvider Provider
         {
             get { return _provider; }
         }
@@ -376,24 +376,20 @@ namespace Akka.Remote
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            HashSet<ProtocolTransportAddressPair> transports;
-
-            if (transportMapping.TryGetValue(remote.Protocol, out transports))
+            if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
                     transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
-                {
                     throw new RemoteTransportException(
                         "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol +
                         "] is available." +
                         " Make sure at least one transport is configured to be responsible for the address.",
                         null);
-                }
+
                 if (responsibleTransports.Length == 1)
-                {
                     return responsibleTransports.First().Address;
-                }
+
                 throw new RemoteTransportException(
                     "Multiple transports are available for [" + remote + ": " +
                     string.Join(",", responsibleTransports.Select(t => t.ToString())) + "] " +

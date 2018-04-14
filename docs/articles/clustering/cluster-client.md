@@ -11,6 +11,14 @@ An actor system that is not part of the cluster can communicate with actors some
 
 Also, note it's necessary to change akka.actor.provider from `Akka.Actor.LocalActorRefProvider` to `Akka.Remote.RemoteActorRefProvider` or `Akka.Cluster.ClusterActorRefProvider` when using the cluster client.
 
+```
+  akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+```
+  or this shorthand notation
+```
+  akka.actor.provider = cluster
+```
+
 The receptionist is supposed to be started on all nodes, or all nodes with specified role, in the cluster. The receptionist can be started with the `ClusterClientReceptionist` extension or as an ordinary actor.
 
 You can send messages via the `ClusterClient` to any actor in the cluster that is registered in the `DistributedPubSubMediator` used by the `ClusterReceptionist`. The `ClusterClientReceptionist` provides methods for registration of actors that should be reachable from the client. Messages are wrapped in `ClusterClient.Send`, `ClusterClient.SendToAll` or `ClusterClient.Publish`.
@@ -41,7 +49,7 @@ It's worth noting that messages can always be lost because of the distributed na
 On the cluster nodes first start the receptionist. Note, it is recommended to load the extension when the actor system is started by defining it in the akka.extensions configuration property:
 
 ```hocon
-akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionist"]
+akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider, Akka.Cluster.Tools"]
 ```
 
 Next, register the actors that should be available for the client.
@@ -93,109 +101,27 @@ Note that the `ClusterClientReceptionist` uses the `DistributedPubSub` extension
 It is recommended to load the extension when the actor system is started by defining it in the akka.extensions configuration property:
 
 ```hocon
-akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionist"]
+akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider, Akka.Cluster.Tools"]
 ```
 
 ## Events
 As mentioned earlier, both the `ClusterClient` and `ClusterClientReceptionist` emit events that can be subscribed to. The following code snippet declares an actor that will receive notifications on contact points (addresses to the available receptionists), as they become available. The code illustrates subscribing to the events and receiving the `ClusterClient` initial state.
 
-[!code-csharp[Main](../../examples/Networking/ClusterClient/ClientListener.cs?range=7-47)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/ClusterClient/ClientListener.cs?range=7-47)]
 
 Similarly we can have an actor that behaves in a similar fashion for learning what cluster clients contact a `ClusterClientReceptionist`:
 
-[!code-csharp[Main](../../examples/Networking/ClusterClient/ReceptionistListener.cs?range=7-47)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/ClusterClient/ReceptionistListener.cs?range=7-47)]
 
 ## Configuration
 The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can be configured with the following properties:
 
-```hocon
-# Settings for the ClusterClientReceptionist extension
-akka.cluster.client.receptionist {
-  # Actor name of the ClusterReceptionist actor, /system/receptionist
-  name = receptionist
- 
-  # Start the receptionist on members tagged with this role.
-  # All members are used if undefined or empty.
-  role = ""
- 
-  # The receptionist will send this number of contact points to the client
-  number-of-contacts = 3
- 
-  # The actor that tunnel response messages to the client will be stopped
-  # after this time of inactivity.
-  response-tunnel-receive-timeout = 30s
-  
-  # The id of the dispatcher to use for ClusterReceptionist actors. 
-  # If not specified default dispatcher is used.
-  # If specified you need to define the settings of the actual dispatcher.
-  use-dispatcher = ""
- 
-  # How often failure detection heartbeat messages should be received for
-  # each ClusterClient
-  heartbeat-interval = 2s
- 
-  # Number of potentially lost/delayed heartbeats that will be
-  # accepted before considering it to be an anomaly.
-  # The ClusterReceptionist is using the akka.remote.DeadlineFailureDetector, which
-  # will trigger if there are no heartbeats within the duration
-  # heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
-  # the default settings.
-  acceptable-heartbeat-pause = 13s
- 
-  # Failure detection checking interval for checking all ClusterClients
-  failure-detection-interval = 2s
-}
-```
+[!code-json[ConfigReference](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
 
-The following configuration properties are read by the `ClusterClientSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterClientSettings` or create it from another config section with the same layout as below. `ClusterClientSettings` is a parameter to the `ClusterClient.Props()` factory method, i.e. each client can be configured with different settings if needed.
 
-```hocon
-# Settings for the ClusterClient
-akka.cluster.client {
-  # Actor paths of the ClusterReceptionist actors on the servers (cluster nodes)
-  # that the client will try to contact initially. It is mandatory to specify
-  # at least one initial contact. 
-  # Comma separated full actor paths defined by a string on the form of
-  # "akka.tcp://system@hostname:port/system/receptionist"
-  initial-contacts = []
-  
-  # Interval at which the client retries to establish contact with one of 
-  # ClusterReceptionist on the servers (cluster nodes)
-  establishing-get-contacts-interval = 3s
-  
-  # Interval at which the client will ask the ClusterReceptionist for
-  # new contact points to be used for next reconnect.
-  refresh-contacts-interval = 60s
-  
-  # How often failure detection heartbeat messages should be sent
-  heartbeat-interval = 2s
-  
-  # Number of potentially lost/delayed heartbeats that will be
-  # accepted before considering it to be an anomaly.
-  # The ClusterClient is using the akka.remote.DeadlineFailureDetector, which
-  # will trigger if there are no heartbeats within the duration 
-  # heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
-  # the default settings.
-  acceptable-heartbeat-pause = 13s
-  
-  # If connection to the receptionist is not established the client will buffer
-  # this number of messages and deliver them the connection is established.
-  # When the buffer is full old messages will be dropped when new messages are sent
-  # via the client. Use 0 to disable buffering, i.e. messages will be dropped
-  # immediately if the location of the singleton is unknown.
-  # Maximum allowed buffer size is 10000.
-  buffer-size = 1000
- 
-  # If connection to the receiptionist is lost and the client has not been
-  # able to acquire a new connection for this long the client will stop itself.
-  # This duration makes it possible to watch the cluster client and react on a more permanent
-  # loss of connection with the cluster, for example by accessing some kind of
-  # service registry for an updated set of initial contacts to start a new cluster client with.
-  # If this is not wanted it can be set to "off" to disable the timeout and retry
-  # forever.
-  reconnect-timeout = off
-}
-```
+
+The 'akka.cluster.client' configuration properties are read by the `ClusterClientSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterClientSettings` or create it from another config section with the same layout in the reference config. `ClusterClientSettings` is a parameter to the `ClusterClient.Props()` factory method, i.e. each client can be configured with different settings if needed.
+
 
 ## Failure handling
 When the cluster client is started it must be provided with a list of initial contacts which are cluster nodes where receptionists are running. It will then repeatedly (with an interval configurable by `establishing-get-contacts-interval`) try to contact those until it gets in contact with one of them. While running, the list of contacts are continuously updated with data from the receptionists (again, with an interval configurable with `refresh-contacts-interval`), so that if there are more receptionists in the cluster than the initial contacts provided to the client the client will learn about them.

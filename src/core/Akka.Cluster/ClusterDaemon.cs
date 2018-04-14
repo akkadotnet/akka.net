@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -249,16 +249,16 @@ namespace Akka.Cluster
             readonly ImmutableList<Address> _seedNodes;
 
             /// <summary>
-            /// TBD
+            /// Creates a new instance of the command.
             /// </summary>
-            /// <param name="seedNodes">TBD</param>
+            /// <param name="seedNodes">The list of seeds we wish to join.</param>
             public JoinSeedNodes(ImmutableList<Address> seedNodes)
             {
                 _seedNodes = seedNodes;
             }
 
             /// <summary>
-            /// TBD
+            /// The list of seeds we wish to join.
             /// </summary>
             public ImmutableList<Address> SeedNodes
             {
@@ -598,7 +598,8 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Command to <see cref="Akka.Cluster.ClusterDaemon"/> to create a
-        /// <see cref="OnMemberStatusChangedListener"/>
+        /// <see cref="OnMemberStatusChangedListener"/> that will be invoked
+        /// when the current member is marked as up.
         /// </summary>
         public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
@@ -618,7 +619,8 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Command to the <see cref="ClusterDaemon"/> to create a 
+        /// Command to the <see cref="ClusterDaemon"/> to create a <see cref="OnMemberStatusChangedListener"/>
+        /// that will be invoked when the current member is removed.
         /// </summary>
         public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
         {
@@ -666,7 +668,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// The subcriber
+            /// The actor that is subscribed to cluster events.
             /// </summary>
             public IActorRef Subscriber
             {
@@ -981,7 +983,7 @@ namespace Akka.Cluster
 
         private readonly VectorClock.Node _vclockNode;
 
-        private string VclockName(UniqueAddress node)
+        internal static string VclockName(UniqueAddress node)
         {
             return node.Address + "-" + node.Uid;
         }
@@ -1015,7 +1017,7 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
-            _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
+            _vclockNode = VectorClock.Node.Create(VclockName(SelfUniqueAddress));
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
             _seedNodes = _cluster.Settings.SeedNodes;
@@ -1311,7 +1313,9 @@ namespace Akka.Cluster
             if (message is GossipEnvelope)
             {
                 var ge = message as GossipEnvelope;
-                ReceiveGossip(ge);
+                var receivedType = ReceiveGossip(ge);
+                if(_cluster.Settings.VerboseGossipReceivedLogging)
+                    _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
             else if (message is GossipStatus)
             {
@@ -1440,14 +1444,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Attempts to join this node or one or more seed nodes.
         /// </summary>
-        /// <param name="newSeedNodes">The list of seed nod we're attempting to join.</param>
+        /// <param name="newSeedNodes">The list of seed node we're attempting to join.</param>
         public void JoinSeedNodes(ImmutableList<Address> newSeedNodes)
         {
             if (!newSeedNodes.IsEmpty)
             {
                 StopSeedNodeProcess();
                 _seedNodes = newSeedNodes; // keep them for retry
-                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress)))
+                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress))) // self-join for a singleton cluster
                 {
                     Self.Tell(new ClusterUserAction.JoinTo(_cluster.SelfAddress));
                     _seedNodeProcess = null;
@@ -1654,7 +1658,7 @@ namespace Akka.Cluster
         /// The node will eventually be removed by the leader, after hand-off in EXITING, and only after
         /// removal a new node with same address can join the cluster through the normal joining procedure.
         /// </summary>
-        /// <param name="address">The address.</param>
+        /// <param name="address">The address of the node who is leaving the cluster.</param>
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
@@ -1787,23 +1791,23 @@ namespace Akka.Cluster
         public enum ReceiveGossipType
         {
             /// <summary>
-            /// TBD
+            /// Gossip is ignored because node was not part of cluster, unreachable, etc..
             /// </summary>
             Ignored,
             /// <summary>
-            /// TBD
+            /// Gossip received is older than what we currently have
             /// </summary>
             Older,
             /// <summary>
-            /// TBD
+            /// Gossip received is newer than what we currently have
             /// </summary>
             Newer,
             /// <summary>
-            /// TBD
+            /// Gossip received is same as what we currently have
             /// </summary>
             Same,
             /// <summary>
-            /// TBD
+            /// Gossip received is concurrent with what we haved, and then merged.
             /// </summary>
             Merge
         }
@@ -1857,8 +1861,8 @@ namespace Akka.Cluster
             {
                 case VectorClock.Ordering.Same:
                     //same version
-                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(SelfUniqueAddress);
+                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     gossipType = ReceiveGossipType.Same;
                     break;
                 case VectorClock.Ordering.Before:
@@ -2116,6 +2120,10 @@ namespace Akka.Cluster
                 else
                 {
                     _leaderActionCounter += 1;
+
+                    if (_cluster.Settings.AllowWeaklyUpMembers && _leaderActionCounter >= 3)
+                        MoveJoiningToWeaklyUp();
+
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
                         _log.Info(
@@ -2132,6 +2140,39 @@ namespace Akka.Cluster
 
             CleanupExitingConfirmed();
             ShutdownSelfWhenDown();
+        }
+
+        private void MoveJoiningToWeaklyUp()
+        {
+            var localGossip = _latestGossip;
+            var localMembers = localGossip.Members;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
+
+            bool IsJoiningToWeaklyUp(Member m) => m.Status == MemberStatus.Joining
+                                                  && enoughMembers
+                                                  && _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(m.UniqueAddress);
+
+            var changedMembers = localMembers
+                .Where(IsJoiningToWeaklyUp)
+                .Select(m => m.Copy(MemberStatus.WeaklyUp))
+                .ToImmutableSortedSet();
+
+            if (!changedMembers.IsEmpty)
+            {
+                // replace changed members
+                var newMembers = Member.PickNextTransition(localMembers, changedMembers);
+                var newGossip = localGossip.Copy(members: newMembers);
+                UpdateLatestGossip(newGossip);
+
+                // log status change
+                foreach (var m in changedMembers)
+                {
+                    _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+                }
+
+                Publish(newGossip);
+                if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero) PublishInternalStats();
+            }
         }
 
         private void ShutdownSelfWhenDown()
@@ -2193,7 +2234,7 @@ namespace Akka.Cluster
             var localSeen = localOverview.Seen;
 
             bool enoughMembers = IsMinNrOfMembersFulfilled();
-            Func<Member, bool> isJoiningUp = m => m.Status == MemberStatus.Joining && enoughMembers;
+            bool IsJoiningUp(Member m) => (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp) && enoughMembers;
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2204,11 +2245,10 @@ namespace Akka.Cluster
                 _exitingConfirmed.Where(x => localGossip.GetMember(x).Status == MemberStatus.Exiting)
                 .ToImmutableHashSet();
 
+            var upNumber = 0;
             var changedMembers = localMembers.Select(m =>
             {
-                var upNumber = 0;
-
-                if (isJoiningUp(m))
+                if (IsJoiningUp(m))
                 {
                     // Move JOINING => UP (once all nodes have seen that this node is JOINING, i.e. we have a convergence)
                     // and minimum number of nodes have joined the cluster
@@ -2241,8 +2281,7 @@ namespace Akka.Cluster
                 // handle changes
 
                 // replace changed members
-                var newMembers = changedMembers
-                    .Union(localMembers)
+                var newMembers = Member.PickNextTransition(changedMembers, localMembers)
                     .Except(removedUnreachable)
                     .Where(x => !removedExitingConfirmed.Contains(x.UniqueAddress))
                     .ToImmutableSortedSet();
@@ -2474,11 +2513,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Asserts that the gossip is valid and only contains information for current members of the cluster.
         /// </summary>
-        /// <exception cref="InvalidOperationException">
-        /// This exception is thrown when there are too many vector clock entries in the latest gossip.
-        /// </exception>
+        /// <exception cref="InvalidOperationException">Thrown if the VectorClock is corrupt and has not been pruned properly.</exception>
         public void AssertLatestGossip()
         {
             if (Cluster.IsAssertInvariantsEnabled && _latestGossip.Version.Versions.Count > _latestGossip.Members.Count)
@@ -2532,13 +2569,11 @@ namespace Akka.Cluster
     /// They will retry the join procedure.
     /// 
     /// Possible scenarios:
-    /// <ul>
-    /// <li>seed2 started, but doesn't get any ack from seed1 or seed3</li>
-    /// <li>seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)</li>
-    /// <li>seed1 is started and joins itself</li>
-    /// <li>seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1</li>
-    /// <li>seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2</li>
-    /// </ul>
+    ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
+    ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
+    ///  3. seed1 is started and joins itself
+    ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
+    ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
     /// </summary>
     internal sealed class JoinSeedNodeProcess : UntypedActor
     {
@@ -2546,6 +2581,7 @@ namespace Akka.Cluster
 
         private readonly ImmutableList<Address> _seeds;
         private readonly Address _selfAddress;
+        private int _attempts = 0;
 
         /// <summary>
         /// TBD
@@ -2586,6 +2622,7 @@ namespace Akka.Cluster
                 {
                     path.Tell(new InternalClusterAction.InitJoin());
                 }
+                _attempts++;
             }
             else if (message is InternalClusterAction.InitJoinAck)
             {
@@ -2597,6 +2634,10 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.InitJoinNack) { } //that seed was uninitialized
             else if (message is ReceiveTimeout)
             {
+                if (_attempts >= 2)
+                    _log.Warning(
+                      "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
+                      _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
                 //no InitJoinAck received - try again
                 Self.Tell(new InternalClusterAction.JoinSeenNode());
             }

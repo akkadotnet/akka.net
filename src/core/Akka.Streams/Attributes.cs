@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Attributes.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,37 +44,25 @@ namespace Akka.Streams
             /// TBD
             /// </summary>
             /// <param name="value">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <exception cref="ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="value"/> is undefined.
+            /// </exception>
             public Name(string value)
             {
                 if (string.IsNullOrEmpty(value)) throw new ArgumentNullException(nameof(value), "Name attribute cannot be empty");
                 Value = value;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(Name other) => !ReferenceEquals(other, null) && Equals(Value, other.Value);
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj) => obj is Name && Equals((Name)obj);
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode() => Value.GetHashCode();
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"Name({Value})";
         }
 
@@ -103,11 +91,7 @@ namespace Akka.Streams
                 Max = max;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(InputBuffer other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -115,17 +99,10 @@ namespace Akka.Streams
                 return Initial == other.Initial && Max == other.Max;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj) => obj is InputBuffer && Equals((InputBuffer) obj);
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -134,10 +111,7 @@ namespace Akka.Streams
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"InputBuffer(initial={Initial}, max={Max})";
         }
 
@@ -177,11 +151,7 @@ namespace Akka.Streams
                 OnFailure = onFailure;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(LogLevels other)
             {
                 if (ReferenceEquals(other, null))
@@ -192,17 +162,10 @@ namespace Akka.Streams
                 return OnElement == other.OnElement && OnFinish == other.OnFinish && OnFailure == other.OnFailure;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj) => obj is LogLevels && Equals((LogLevels) obj);
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -214,10 +177,7 @@ namespace Akka.Streams
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"LogLevel(element={OnElement}, finish={OnFinish}, failure={OnFailure})";
         }
 
@@ -232,24 +192,13 @@ namespace Akka.Streams
             public static readonly AsyncBoundary Instance = new AsyncBoundary();
             private AsyncBoundary() { }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(AsyncBoundary other) => true;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj) => obj is AsyncBoundary;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => "AsyncBoundary";
         }
 
@@ -432,10 +381,7 @@ namespace Akka.Streams
                 : module.Attributes.GetNameOrDefault(defaultIfNotFound);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"Attributes({string.Join(", ", _attributes as IEnumerable<IAttribute>)})";
     }
 
@@ -463,11 +409,7 @@ namespace Akka.Streams
                 Name = name;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(Dispatcher other)
             {
                 if (ReferenceEquals(other, null))
@@ -477,23 +419,13 @@ namespace Akka.Streams
                 return Equals(Name, other.Name);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj) => obj is Dispatcher && Equals((Dispatcher) obj);
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode() => Name?.GetHashCode() ?? 0;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"Dispatcher({Name})";
         }
 
@@ -508,7 +440,7 @@ namespace Akka.Streams
             public readonly Decider Decider;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="SupervisionStrategy"/> class.
             /// </summary>
             /// <param name="decider">TBD</param>
             public SupervisionStrategy(Decider decider)
@@ -516,10 +448,7 @@ namespace Akka.Streams
                 Decider = decider;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => "SupervisionStrategy";
         }
 
@@ -531,8 +460,11 @@ namespace Akka.Streams
         public static Attributes CreateDispatcher(string dispatcherName) => new Attributes(new Dispatcher(dispatcherName));
 
         /// <summary>
-        /// Specifies the SupervisionStrategy.
         /// Decides how exceptions from user are to be handled
+        /// <para>
+        /// Stages supporting supervision strategies explicitly document that they do so. If a stage does not document
+        /// support for these, it should be assumed it does not support supervision.
+        /// </para>
         /// </summary>
         /// <param name="strategy">TBD</param>
         /// <returns>TBD</returns>
