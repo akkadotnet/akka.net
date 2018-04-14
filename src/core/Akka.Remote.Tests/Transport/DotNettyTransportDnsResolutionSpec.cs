@@ -19,6 +19,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
 using Config = Akka.Configuration.Config;
+using FluentAssertions;
 // ReSharper disable EmptyGeneralCatchClause
 
 namespace Akka.Remote.Tests.Transport
@@ -305,12 +306,27 @@ namespace Akka.Remote.Tests.Transport
         /// <param name="endpoint"></param>
         /// <returns></returns>
         [Property]
-        public Property HeliosTransport_should_map_valid_IPEndpoints_to_Address_when_using_publicport(IPEndPoint endpoint)
+        public Property DotNettyTransport_should_map_valid_IPEndpoints_to_Address_when_using_publicport(IPEndPoint endpoint)
         {
             var addr = DotNettyTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo", publicPort: 1234);
             var parsedEp = (IPEndPoint)DotNettyTransport.AddressToSocketAddress(addr);
             var expectedEndpoint = new IPEndPoint(endpoint.Address, 1234);
             return expectedEndpoint.Equals(parsedEp).Label("Should be able to parse endpoint with publicport");
+        }
+
+        [Fact]
+        public void DotNettyTransport_should_parse_publicport()
+        {
+            var config = @"
+                public-hostname = localhost
+                hostname = 127.0.0.1
+                port = 8180
+                public-port = 10110
+            ";
+
+            var settings = DotNettyTransportSettings.Create(config);
+            settings.Port.Should().Be(8180);
+            settings.PublicPort.Should().Be(10110);
         }
 
         /// <summary>
