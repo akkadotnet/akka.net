@@ -664,7 +664,7 @@ namespace Akka.Cluster
             });
 
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShutdown, "wait-shutdown",
-                () => _clusterShutdown.Task);
+                (cancelationToken) => _clusterShutdown.Task);
         }
 
         protected override void PostStop()
@@ -673,7 +673,7 @@ namespace Akka.Cluster
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
                 // if it was stopped due to leaving CoordinatedShutdown was started earlier
-                _coordShutdown.Run(CoordinatedShutdown.PhaseClusterShutdown);
+                _coordShutdown.Run(CoordinatedShutdown.Reason.ClusterDowning);
             }
         }
 

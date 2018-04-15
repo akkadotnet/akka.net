@@ -129,17 +129,17 @@ namespace Akka.Actor
             /// The reason for the shutdown was unknown. Needed for backwards compatibility.
             /// </summary>
             Unknown = 1,
-            
+
             /// <summary>
             /// The shutdown was initiated by a CLR shutdown hook, e.g. triggered by SIGTERM.
             /// </summary>
             ClrExit = 2,
-            
+
             /// <summary>
             /// The shutdown was initiated by Cluster downing.
             /// </summary>
             ClusterDowning = 3,
-            
+
             /// <summary>
             /// The shutdown was initiated by Cluster leaving.
             /// </summary>
@@ -147,7 +147,7 @@ namespace Akka.Actor
         }
 
         #endregion
-        
+
         /// <summary>
         /// Initializes a new <see cref="CoordinatedShutdown"/> instance.
         /// </summary>
@@ -211,8 +211,8 @@ namespace Akka.Actor
         private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<CancellationToken, Task>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<CancellationToken, Task>>>>();
         private readonly AtomicCounter _runStarted = new AtomicCounter(0);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
-        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
         private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
 
         private volatile bool _runningClrHook = false;
 
@@ -232,10 +232,10 @@ namespace Akka.Actor
         {
             get
             {
-                var value =_runStarted.Current;
+                var value = _runStarted.Current;
                 return value == 0 ? default(Reason?) : (Reason)value;
             }
-        } 
+        }
 
         /// <summary>
         /// Add a task to a phase. It doesn't remove previously added tasks.
@@ -386,70 +386,68 @@ namespace Akka.Actor
         /// <remarks>
         /// It is safe to call this method multiple times. It will only run once.
         /// </remarks>
-        public async Task<Done> Run(Reason reason, string fromPhase)
+        public Task<Done> Run(Reason reason, string fromPhase)
         {
             if (_runStarted.CompareAndSet(0, (int)reason))
             {
-                var debugEnabled = Log.IsDebugEnabled;
+                var runningPhases = (fromPhase == null
+                    ? OrderedPhases // all
+                    : OrderedPhases.From(fromPhase)).ToArray();
 
-                var remainingPhases = string.IsNullOrEmpty(fromPhase)
-                    ? OrderedPhases.ToList()
-                    : OrderedPhases.SkipWhile(phase => phase != fromPhase).ToList();
-
-                foreach (var phaseName in remainingPhases)
-                {
-                    if (_tasks.TryGetValue(phaseName, out var tasks) && tasks != null && !tasks.IsEmpty)
-                    {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug("Performing phase [{0}] with [{1}] tasks: [{2}]", phaseName, tasks.Count, string.Join(", ", tasks.Select(x => x.Item1)));
-
-                        // note that tasks within same phase are performed in parallel
-                        var phase = this.Phases[phaseName];
-                        var timeout = phase.Timeout;
-                        var cancellation = new CancellationTokenSource(timeout);
-                        var result = Task.WhenAll(tasks.Select(async tuple =>
-                        {
-                            try
-                            {
-                                await tuple.Item2(cancellation.Token);
-                            }
-                            catch (Exception e) when (phase.Recover)
-                            {
-                                Log.Warning("Task [{0}] failed in phase [{1}]: {2}", tuple.Item1, phase, e);
-                            }
-                        })).WithCancellation(cancellation.Token);
-                        //TODO: add scheduler interrupt on ActorSystem shutdown
-
-                        try
-                        {
-                            await result;
-                        }
-                        catch (OperationCanceledException e)
-                        {
-                            if (phase.Recover)
-                                Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, timeout);
-                            else
-                                throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {timeout}", e);
-                        }
-                        catch (TimeoutException e)
-                        {
-                            if (phase.Recover)
-                                Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, timeout);
-                            else
-                                throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {timeout}", e);
-                        }
-                    }
-                    else
-                    {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug("Performing phase [{0}] with no active tasks", phaseName);
-                    }
-                }
-
-                _runPromise.TrySetResult(Done.Instance);
+                var result = RunPhasesAsync(runningPhases);
+                _runPromise.CompleteWith(result);
             }
-            
+
+            return _runPromise.Task;
+        }
+
+        private async Task<Done> RunPhasesAsync(string[] runningPhases)
+        {
+            var debug = Log.IsDebugEnabled;
+            foreach (var phaseName in runningPhases)
+            {
+                if (_tasks.TryGetValue(phaseName, out var phaseTasks) && phaseTasks != null && !phaseTasks.IsEmpty)
+                {
+                    var phase = Phases[phaseName];
+                    var cancellation = new CancellationTokenSource();
+                    if (phase.Timeout != TimeSpan.Zero) cancellation.CancelAfter(phase.Timeout);
+
+                    if (debug)
+                        Log.Debug("Performing phase [{0}] with [{1}] tasks: [{2}] (timeout: [{3}])", phaseName, phaseTasks.Count, string.Join(",", phaseTasks.Select(x => x.Item1)), phase.Timeout);
+
+                    var continuations = phase.Recover
+                        ? Task.WhenAll(phaseTasks.Select(tuple => RunSafe(phaseName, tuple.Item1, tuple.Item2, cancellation.Token)))
+                        : Task.WhenAll(phaseTasks.Select(tuple => tuple.Item2(cancellation.Token)));
+
+                    var timeoutTask = CreateTimeoutTask(phaseName, phase);
+                    await Task.WhenAny(continuations, timeoutTask);
+                }
+                else if (debug) Log.Debug("Performing phase [{0}] with [0] tasks.", phaseName);
+            }
+
             return Done.Instance;
+        }
+
+        private async Task CreateTimeoutTask(string phaseName, Phase phase)
+        {
+            await Task.Delay(phase.Timeout);
+
+            if (phase.Recover) 
+                Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, phase.Timeout);
+            else
+                throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {phase.Timeout}");
+        }
+
+        private async Task RunSafe(string phaseName, string taskName, Func<CancellationToken, Task> task, CancellationToken token)
+        {
+            try
+            {
+                await task(token);
+            }
+            catch (Exception e)
+            {
+                Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phaseName, e);
+            }
         }
 
         /// <summary>
@@ -462,7 +460,7 @@ namespace Akka.Actor
         {
             if (Phases.TryGetValue(phase, out var p))
                 return p.Timeout;
-            
+
             throw new ArgumentException($"Unknown phase [{phase}]. All phases must be defined in configuration.");
         }
 
@@ -572,7 +570,7 @@ namespace Akka.Actor
                         {
                             Environment.Exit(0);
                         }
-                    } 
+                    }
                     else if (exitClr)
                     {
                         Environment.Exit(0);

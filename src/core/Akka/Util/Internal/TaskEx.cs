@@ -96,5 +96,27 @@ namespace Akka.Util.Internal
             c.SetException(ex);
             return c.Task;
         }
+
+        /// <summary>
+        /// Links a givent task continuation as a completion source for a given <see cref="TaskCompletionSource{TResult}"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="self"></param>
+        /// <param name="task"></param>
+        public static void CompleteWith<T>(this TaskCompletionSource<T> self, Task<T> task)
+        {
+            var selfTask = self.Task;
+            if (selfTask.IsCompleted || selfTask.IsFaulted || selfTask.IsCanceled) return;
+
+            task.ContinueWith(t =>
+            {
+                if (t.IsCanceled) self.TrySetCanceled();
+                else if (t.IsFaulted) self.TrySetException(t.Exception);
+                else
+                {
+                    self.TrySetResult(t.Result);
+                }
+            });
+        }
     }
 }

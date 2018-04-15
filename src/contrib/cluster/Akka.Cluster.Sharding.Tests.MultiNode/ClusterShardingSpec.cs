@@ -698,7 +698,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 RunOn(() =>
                 {
-                    TestConductor.Exit(_config.Second, 0).Wait();
+                    TestConductor.Exit(_config.Second, 0).Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
                 }, _config.Controller);
                 EnterBarrier("crash-second");
 

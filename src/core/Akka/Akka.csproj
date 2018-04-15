@@ -37,10 +37,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Configuration\Pigeon.conf">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Pigeon.cs</LastGenOutput>
+    </None>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PartialHandlerArgumentsCapture.cs</LastGenOutput>
     </None>
+    <Compile Update="Configuration\Pigeon.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Pigeon.conf</DependentUpon>
+    </Compile>
     <Compile Update="Util\MatchHandler\PartialHandlerArgumentsCapture.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
