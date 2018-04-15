@@ -312,7 +312,7 @@ namespace Akka.Actor
         {
             private ICancelable _ref;
             private readonly IScheduler _scheduler;
-            
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -320,14 +320,16 @@ namespace Akka.Actor
             /// <param name="message">TBD</param>
             /// <param name="repeat">TBD</param>
             /// <param name="generation">TBD</param>
+            /// <param name="owner">TBD</param>
             /// <param name="context">TBD</param>
-            public Timer(string name, object message, bool repeat, int generation, IActorContext context)
+            public Timer(string name, object message, bool repeat, int generation, IActorRef owner, IActorContext context)
             {
                 Context = context;
                 Generation = generation;
                 Repeat = repeat;
                 Message = message;
                 Name = name;
+                Owner = owner;
 
                 _scheduler = context.System.Scheduler;
             }
@@ -355,6 +357,11 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
+            public IActorRef Owner { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorContext Context { get; }
 
             /// <summary>
@@ -364,8 +371,8 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
-                _ref = Repeat 
-                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, this, Context.Self) 
+                _ref = Repeat
+                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, this, Context.Self)
                     : _scheduler.ScheduleTellOnceCancelable(timeout, actor, this, Context.Self);
             }
 
@@ -847,7 +854,7 @@ namespace Akka.Actor
             if (_timers.TryGetValue(name, out var timer))
                 timer.Cancel();
 
-            timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
+            timer = new Timer(name, msg, repeat, _timerGen.Next(), Self, Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -1058,7 +1065,7 @@ namespace Akka.Actor
             get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
             set { _handleEvent = value; }
         }
-        
+
 
         /// <summary>
         /// Termination handling
@@ -1115,10 +1122,9 @@ namespace Akka.Actor
                 return true;
             }
 
-            var timer = message as Timer;
-            if (timer != null)
+            if (message is Timer timer)
             {
-                if (_timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
+                if (ReferenceEquals(timer.Owner, Self) && _timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
                 {
                     if (_timeoutFuture != null)
                     {
