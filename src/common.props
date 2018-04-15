@@ -11,7 +11,7 @@
   <PropertyGroup>
     <XunitVersion>2.3.0</XunitVersion>
     <TestSdkVersion>15.3.0</TestSdkVersion>
-    <TestNetCoreVersion>netcoreapp1.1</TestNetCoreVersion>
+    <TestNetCoreVersion>netcoreapp2.0</TestNetCoreVersion>
     <!-- The version of .NET Core used in our unit tests -->
     <TestDotNetVersion>net452</TestDotNetVersion>
     <!-- The version of .NET used in our unit tests -->
