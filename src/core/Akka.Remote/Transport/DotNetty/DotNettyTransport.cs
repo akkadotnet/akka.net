@@ -115,7 +115,7 @@ namespace Akka.Remote.Transport.DotNetty
         }
 #endif
     }
-    
+
     internal abstract class DotNettyTransport : Transport
     {
         internal readonly ConcurrentSet<IChannel> ConnectionGroup;
@@ -153,7 +153,7 @@ namespace Akka.Remote.Transport.DotNetty
         public sealed override string SchemeIdentifier { get; protected set; }
         public override long MaximumPayloadBytes => Settings.MaxFrameSize;
         private TransportMode InternalTransport => Settings.TransportMode;
-        
+
         public sealed override bool IsResponsibleFor(Address remote) => true;
 
         protected async Task<IChannel> NewServer(EndPoint listenAddress)
@@ -166,7 +166,7 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             }
-            
+
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
@@ -182,7 +182,7 @@ namespace Akka.Remote.Transport.DotNetty
             try
             {
                 var newServerChannel = await NewServer(listenAddress).ConfigureAwait(false);
-                
+
                 // Block reads until a handler actor is registered
                 // no incoming connections will be accepted until this value is reset
                 // it's possible that the first incoming association might come in though
@@ -191,10 +191,11 @@ namespace Akka.Remote.Transport.DotNetty
                 ServerChannel = newServerChannel;
 
                 var addr = MapSocketToAddress(
-                    socketAddress: (IPEndPoint)newServerChannel.LocalAddress, 
-                    schemeIdentifier: SchemeIdentifier, 
+                    socketAddress: (IPEndPoint)newServerChannel.LocalAddress,
+                    schemeIdentifier: SchemeIdentifier,
                     systemName: System.Name,
-                    hostName: Settings.PublicHostname);
+                    hostName: Settings.PublicHostname,
+                    publicPort: Settings.PublicPort);
 
                 if (addr == null) throw new ConfigurationException($"Unknown local address type {newServerChannel.LocalAddress}");
 
@@ -260,7 +261,7 @@ namespace Akka.Remote.Transport.DotNetty
 #pragma warning restore 4014
             }
         }
-        
+
         protected Bootstrap ClientFactory(Address remoteAddress)
         {
             if (InternalTransport != TransportMode.Tcp)
@@ -297,13 +298,13 @@ namespace Akka.Remote.Transport.DotNetty
             //}
             //else
             //{
-                var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-                endpoint = await ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
+            var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+            endpoint = await ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
             //}
             return endpoint;
         }
 
-#region private methods 
+        #region private methods 
 
         private void SetInitialChannelPipeline(IChannel channel)
         {
@@ -336,7 +337,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
                 var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host)) 
+                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host))
                     : TlsHandler.Client(host, certificate);
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
@@ -416,15 +417,15 @@ namespace Akka.Remote.Transport.DotNetty
             return new IPEndPoint(found, address.Port);
         }
 
-#endregion
+        #endregion
 
-#region static methods
+        #region static methods
 
-        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null)
+        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null, int? publicPort = null)
         {
             return socketAddress == null
                 ? null
-                : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), socketAddress.Port);
+                : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
         }
 
         private static string SafeMapHostName(string hostName)
@@ -468,7 +469,7 @@ namespace Akka.Remote.Transport.DotNetty
             return listenAddress;
         }
 
-#endregion
+        #endregion
     }
 
     internal class HeliosBackwardsCompatabilityLengthFramePrepender : LengthFieldPrepender
