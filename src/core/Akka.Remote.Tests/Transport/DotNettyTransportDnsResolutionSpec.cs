@@ -17,8 +17,9 @@ using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
 using Xunit.Abstractions;
-using Config = Akka.Configuration.Config;
 using static Akka.Util.RuntimeDetector;
+using Config = Akka.Configuration.Config;
+using FluentAssertions;
 // ReSharper disable EmptyGeneralCatchClause
 
 namespace Akka.Remote.Tests.Transport
@@ -213,7 +214,7 @@ namespace Akka.Remote.Tests.Transport
 
             return endpointsIpFamilyMismatch;
         }
-        
+
         [Property]
         public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname(IPEndPoint inbound, DnsEndPoint publicInbound,
             IPEndPoint outbound, DnsEndPoint publicOutbound, bool dnsUseIpv6, bool enforceIpFamily)
@@ -221,7 +222,7 @@ namespace Akka.Remote.Tests.Transport
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (IsMono)
                 enforceIpFamily = true;
-            if(IsMono && dnsUseIpv6) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
+            if (IsMono && dnsUseIpv6) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
             if (IsMono &&
                 (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
                 (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
@@ -297,6 +298,35 @@ namespace Akka.Remote.Tests.Transport
             var addr = DotNettyTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
             var parsedEp = (IPEndPoint)DotNettyTransport.AddressToSocketAddress(addr);
             return endpoint.Equals(parsedEp).Label("Should be able to parse endpoint to address and back");
+        }
+
+        /// <summary>
+        /// Testing public port
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <returns></returns>
+        [Property]
+        public Property DotNettyTransport_should_map_valid_IPEndpoints_to_Address_when_using_publicport(IPEndPoint endpoint)
+        {
+            var addr = DotNettyTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo", publicPort: 1234);
+            var parsedEp = (IPEndPoint)DotNettyTransport.AddressToSocketAddress(addr);
+            var expectedEndpoint = new IPEndPoint(endpoint.Address, 1234);
+            return expectedEndpoint.Equals(parsedEp).Label("Should be able to parse endpoint with publicport");
+        }
+
+        [Fact]
+        public void DotNettyTransport_should_parse_publicport()
+        {
+            var config = @"
+                public-hostname = localhost
+                hostname = 127.0.0.1
+                port = 8180
+                public-port = 10110
+            ";
+
+            var settings = DotNettyTransportSettings.Create(config);
+            settings.Port.Should().Be(8180);
+            settings.PublicPort.Should().Be(10110);
         }
 
         /// <summary>

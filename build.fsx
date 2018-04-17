@@ -300,10 +300,10 @@ let overrideVersionSuffix (project:string) =
     | _ -> versionSuffix
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/*.csproj"
-                   -- "src/**/*.Tests*.csproj"
-                   -- "src/benchmark/**/*.csproj"
-                   -- "src/examples/**/*.csproj"
+    let projects = !! "src/**/*.*sproj"
+                   -- "src/**/*.Tests*.*sproj"
+                   -- "src/benchmark/**/*.*sproj"
+                   -- "src/examples/**/*.*sproj"
                    -- "src/**/*.MultiNodeTestRunner.csproj"
                    -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
                    -- "src/**/*.NodeTestRunner.csproj"

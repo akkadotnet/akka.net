@@ -15,6 +15,7 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Pattern;
+using Akka.Util;
 
 namespace Akka.Cluster.Sharding
 {
@@ -94,7 +95,8 @@ namespace Akka.Cluster.Sharding
                 id = se.EntityId;
             else
                 id = EntityId(message);
-            return (Math.Abs(id.GetHashCode()) % MaxNumberOfShards).ToString();
+
+            return (Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards).ToString();
         }
     }
 

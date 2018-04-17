@@ -50,7 +50,8 @@ namespace Akka.Streams.TestKit.Tests
                     .ToStrict(TimeSpan.FromMilliseconds(300));
             });
 
-            error.InnerException.Message.Should().Contain("Boom!");
+            var aggregateException = error.InnerException;
+            aggregateException.InnerException.Message.Should().Contain("Boom!");
             error.Message.Should().Contain("1, 2");
         }
 

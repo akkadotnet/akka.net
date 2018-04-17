@@ -17,6 +17,11 @@ using DotNetty.Buffers;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Defines the settings for the <see cref="DotNettyTransport"/>.
+    /// </summary>
     internal sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
@@ -32,6 +37,7 @@ namespace Akka.Remote.Transport.DotNetty
             var host = config.GetString("hostname");
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
             var publicHost = config.GetString("public-hostname", null);
+            var publicPort = config.GetInt("public-port", 0);
 
             var order = ByteOrder.LittleEndian;
             var byteOrderString = config.GetString("byte-order", "little-endian").ToLowerInvariant();
@@ -41,7 +47,7 @@ namespace Akka.Remote.Transport.DotNetty
                 case "big-endian": order = ByteOrder.BigEndian; break;
                 default: throw new ArgumentException($"Unknown byte-order option [{byteOrderString}]. Supported options are: big-endian, little-endian.");
             }
-            
+
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
                 enableSsl: config.GetBoolean("enable-ssl", false),
@@ -49,6 +55,7 @@ namespace Akka.Remote.Transport.DotNetty
                 hostname: host,
                 publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : host,
                 port: config.GetInt("port", 2552),
+                publicPort: publicPort > 0 ? publicPort : (int?)null,
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size")) ?? 128000,
@@ -65,7 +72,8 @@ namespace Akka.Remote.Transport.DotNetty
                 writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
                 logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
-                byteOrder: order);
+                byteOrder: order,
+                enableBufferPooling: config.GetBoolean("enable-pooling", true));
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
@@ -117,6 +125,14 @@ namespace Akka.Remote.Transport.DotNetty
         /// This port needs to be unique for each actor system on the same machine.
         /// </summary>
         public readonly int Port;
+
+        /// <summary>
+        /// If this value is set, this becomes the public port for the actor system on this
+        /// transport, which might be different than the physical port
+        /// this is designed to make it easy to support private / public addressing schemes
+        /// </summary>
+        public readonly int? PublicPort;
+
         public readonly int ServerSocketWorkerPoolSize;
         public readonly int ClientSocketWorkerPoolSize;
         public readonly int MaxFrameSize;
@@ -185,10 +201,18 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly ByteOrder ByteOrder;
 
-        public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname,  string publicHostname,
-            int port, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
+        /// <summary>
+        /// Used mostly as a work-around for https://github.com/akkadotnet/akka.net/issues/3370
+        /// on .NET Core on Linux. Should always be left to <c>true</c> unless running DotNetty v0.4.6
+        /// on Linux, which can accidentally release buffers early and corrupt frames. Turn this setting
+        /// to <c>false</c> to disable pooling and work-around this issue at the cost of some performance.
+        /// </summary>
+        public readonly bool EnableBufferPooling;
+
+        public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
+            int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, bool enableBufferPooling)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -198,6 +222,7 @@ namespace Akka.Remote.Transport.DotNetty
             Hostname = hostname;
             PublicHostname = publicHostname;
             Port = port;
+            PublicPort = publicPort;
             ServerSocketWorkerPoolSize = serverSocketWorkerPoolSize;
             ClientSocketWorkerPoolSize = clientSocketWorkerPoolSize;
             MaxFrameSize = maxFrameSize;
@@ -215,6 +240,7 @@ namespace Akka.Remote.Transport.DotNetty
             BackwardsCompatibilityModeEnabled = backwardsCompatibilityModeEnabled;
             LogTransport = logTransport;
             ByteOrder = byteOrder;
+            EnableBufferPooling = enableBufferPooling;
         }
     }
     internal enum TransportMode

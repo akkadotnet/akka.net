@@ -222,7 +222,6 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
-                    var replicator = Replicator(settings);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -233,7 +232,7 @@ namespace Akka.Cluster.Sharding
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
                             extractShardId: startProxy.ExtractShardId,
-                            replicator: replicator,
+                            replicator: Context.System.DeadLetters,
                             majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 

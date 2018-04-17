@@ -1,0 +1,12 @@
+- name: Akka
+  href: akka.md
+- name: Akka.Remote
+  href: akka.remote.md
+- name: Akka.Cluster
+  href: akka.cluster.md
+- name: Akka.Persistence
+  href: akka.persistence.md
+- name: Akka.Streams
+  href: akka.streams.md
+- name: Akka.TestKit
+  href: akka.testkit.md
