@@ -43,5 +43,6 @@ let ``System.create should support extensions`` () =
             akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider, Akka.Cluster.Tools"]
         """
         |> Configuration.parse
-    let system = System.create "my-system" extensionConfig
-    system |> (isNull >> not)
+    System.create "my-system" extensionConfig
+    |> notEquals null
+    
