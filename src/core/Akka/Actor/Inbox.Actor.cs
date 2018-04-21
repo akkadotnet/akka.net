@@ -45,7 +45,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="query">TBD</param>
-        public void EnqueueQuery(IQuery query)
+        private void EnqueueQuery(IQuery query)
         {
             var q = query.WithClient(Sender);
             _clients.Enqueue(q);
@@ -56,7 +56,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
-        public void EnqueueMessage(object message)
+        private void EnqueueMessage(object message)
         {
             if (_messages.Count < _size)
             {
@@ -77,7 +77,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="query">TBD</param>
         /// <returns>TBD</returns>
-        public bool ClientPredicate(IQuery query)
+        private bool ClientPredicate(IQuery query)
         {
             if(query is Select select)
                 return select.Predicate(_currentMessage);
@@ -90,7 +90,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        public bool MessagePredicate(object message)
+        private bool MessagePredicate(object message)
         {
             if (_currentSelect.HasValue)
                 return _currentSelect.Value.Predicate(message);
@@ -105,30 +105,37 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            switch (message)
-            {
-                case Get get:
+            /*var getMessage = message is Get;
+            var selectMessage = message is Select;
+            var startWatch = message is StartWatch;
+            var stopWatch = message is StopWatch;
+            var kick = message is Kick;*/
+            //var 
+            //Console.WriteLine("Entered the switch");
+            if(message != null){
+                if(message is Get){
                     if (_messages.Count == 0)
                     {
-                        EnqueueQuery(get);
+                        EnqueueQuery((Get)message);
                     }
                     else
                     {
                         Sender.Tell(_messages.Dequeue());
                     }
-                    break;
-                case Select select:
+                }
+                else if(message is Select){
+                    var selectMessage = (Select)message;
                     if (_messages.Count == 0)
                     {
-                        EnqueueQuery(select);
+                        EnqueueQuery(selectMessage);
                     }
                     else
                     {
-                        _currentSelect = select;
+                        _currentSelect = selectMessage;
                         var firstMatch = _messages.DequeueFirstOrDefault(MessagePredicate);
                         if (firstMatch == null)
                         {
-                            EnqueueQuery(select);
+                            EnqueueQuery(selectMessage);
                         }
                         else
                         {
@@ -136,18 +143,19 @@ namespace Akka.Actor
                         }
                         _currentSelect = null;
                     }
-
-                    break;
-                case StartWatch startWatch:
-                    if (startWatch.Message == null)
-                        Context.Watch(startWatch.Target);
+                }
+                else if(message is StartWatch){
+                    var strtWatch = (StartWatch)message;
+                    if (strtWatch.Message == null)
+                        Context.Watch(strtWatch.Target);
                     else
-                        Context.WatchWith(startWatch.Target, startWatch.Message);
-                    break;
-                case StopWatch stopWatch:
-                    Context.Unwatch(stopWatch.Target);
-                    break;
-                case Kick _:
+                        Context.WatchWith(strtWatch.Target, strtWatch.Message);
+                }
+                else if(message is StopWatch){
+                    var stpWatch = (StopWatch)message;
+                    Context.Unwatch(stpWatch.Target);
+                }
+                else if(message is Kick){
                     var now = Context.System.Scheduler.MonotonicClock;
                     var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
 
@@ -159,8 +167,8 @@ namespace Akka.Actor
 
                     var afterDeadline = _clientsByTimeout.Where(q => q.Deadline >= now);
                     _clientsByTimeout.IntersectWith(afterDeadline);
-                    break;
-                default:
+                }
+                else{
                     if (_clients.Count == 0)
                     {
                         EnqueueMessage(message);
@@ -180,7 +188,7 @@ namespace Akka.Actor
                         }
                         _currentMessage = null;
                     }
-                    break;
+                }
             }
 
             if (_clients.Count == 0)
