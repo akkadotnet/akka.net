@@ -670,11 +670,14 @@ namespace Akka.Cluster
         protected override void PostStop()
         {
             _clusterShutdown.TrySetResult(Done.Instance);
+
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
                 // if it was stopped due to leaving CoordinatedShutdown was started earlier
                 _coordShutdown.Run(CoordinatedShutdown.Reason.ClusterDowning);
             }
+
+            base.PostStop();
         }
 
         private void CreateChildren()
@@ -933,6 +936,7 @@ namespace Akka.Cluster
             _leaderActionsTaskCancellable.Cancel();
             _publishStatsTaskTaskCancellable?.Cancel();
             _selfExiting.TrySetResult(Done.Instance);
+            base.PostStop();
         }
 
         private bool Uninitialized(object message)

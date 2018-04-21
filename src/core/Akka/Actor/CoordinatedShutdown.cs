@@ -225,7 +225,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// The <see cref="Reason"/> for the shutdown as passed to the
-        /// <see cref="Run(Akka.Actor.CoordinatedShutdown.Reason)n"/> method.
+        /// <see cref="Run(Akka.Actor.CoordinatedShutdown.Reason)"/> method.
         /// Null if the shutdown has not been started.
         /// </summary>
         public Reason? ShutdownReason
@@ -419,23 +419,20 @@ namespace Akka.Actor
                         ? Task.WhenAll(phaseTasks.Select(tuple => RunSafe(phaseName, tuple.Item1, tuple.Item2, cancellation.Token)))
                         : Task.WhenAll(phaseTasks.Select(tuple => tuple.Item2(cancellation.Token)));
 
-                    var timeoutTask = CreateTimeoutTask(phaseName, phase);
-                    await Task.WhenAny(continuations, timeoutTask);
+                    var winner = await Task.WhenAny(continuations, Task.Delay(phase.Timeout));
+                    if (winner != continuations)
+                    {
+                        // delay has won, we hit the timeout
+                        if (phase.Recover) 
+                            Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, phase.Timeout);
+                        else
+                            throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {phase.Timeout}");
+                    }
                 }
                 else if (debug) Log.Debug("Performing phase [{0}] with [0] tasks.", phaseName);
             }
 
             return Done.Instance;
-        }
-
-        private async Task CreateTimeoutTask(string phaseName, Phase phase)
-        {
-            await Task.Delay(phase.Timeout);
-
-            if (phase.Recover) 
-                Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, phase.Timeout);
-            else
-                throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {phase.Timeout}");
         }
 
         private async Task RunSafe(string phaseName, string taskName, Func<CancellationToken, Task> task, CancellationToken token)
