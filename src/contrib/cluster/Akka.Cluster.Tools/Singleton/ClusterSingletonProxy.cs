@@ -83,6 +83,7 @@ namespace Akka.Cluster.Tools.Singleton
         private ICancelable _identityTimer = null;
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ILoggingAdapter _log;
+        private string _targetDcRole;
 
         /// <summary>
         /// TBD
@@ -94,6 +95,9 @@ namespace Akka.Cluster.Tools.Singleton
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
+            _targetDcRole = string.IsNullOrEmpty(settings.DataCenter)
+                ? ClusterSettings.DcRolePrefix + _cluster.Settings.SelfDataCenter
+                : ClusterSettings.DcRolePrefix + settings.DataCenter;
 
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
             Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
@@ -184,9 +188,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         private bool MatchingRole(Member member)
         {
-            if (string.IsNullOrEmpty(_settings.Role)) return true;
-
-            return member.HasRole(_settings.Role);
+            return member.HasRole(_targetDcRole) && (string.IsNullOrEmpty(_settings.Role) || member.HasRole(_settings.Role));
         }
 
         private void HandleInitial(ClusterEvent.CurrentClusterState state)

@@ -19,6 +19,8 @@ using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    #region messages
+    
     /// <summary>
     /// Control messages used for the cluster singleton
     /// </summary>
@@ -409,6 +411,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         End
     }
+
+    #endregion
 
     /// <summary>
     /// Thrown when a consistent state can't be determined within the defined retry limits.

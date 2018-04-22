@@ -42,9 +42,13 @@ namespace Akka.Cluster.Tools.Singleton
             var role = config.GetString("role");
             if (role == string.Empty) role = null;
 
+            var dc = config.GetString("data-center");
+            if (dc == string.Empty) dc = null;
+
             return new ClusterSingletonProxySettings(
                 singletonName: config.GetString("singleton-name"),
                 role: role,
+                dataCenter: dc,
                 singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
                 bufferSize: config.GetInt("buffer-size"));
         }
@@ -58,6 +62,11 @@ namespace Akka.Cluster.Tools.Singleton
         /// The role of the cluster nodes where the singleton can be deployed.
         /// </summary>
         public string Role { get; }
+
+        /// <summary>
+        /// The data center of the cluster nodes where the singleton is running. If null then the same data center as current node.
+        /// </summary>
+        public string DataCenter { get; }
 
         /// <summary>
         /// Interval at which the proxy will try to resolve the singleton instance.
@@ -74,6 +83,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonName">The actor name of the singleton actor that is started by the <see cref="ClusterSingletonManager"/>.</param>
         /// <param name="role">The role of the cluster nodes where the singleton can be deployed. If None, then any node will do.</param>
+        /// <param name="dataCenter">The data center of the cluster nodes where the singleton is running. If null then the same data center as current node.</param>
         /// <param name="singletonIdentificationInterval">Interval at which the proxy will try to resolve the singleton instance.</param>
         /// <param name="bufferSize">
         /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them
@@ -86,7 +96,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// or <paramref name="bufferSize"/> is less than or equal to zero.
         /// </exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public ClusterSingletonProxySettings(string singletonName, string role, TimeSpan singletonIdentificationInterval, int bufferSize)
+        public ClusterSingletonProxySettings(string singletonName, string role, string dataCenter, TimeSpan singletonIdentificationInterval, int bufferSize)
         {
             if (string.IsNullOrEmpty(singletonName))
                 throw new ArgumentNullException(nameof(singletonName));
@@ -97,6 +107,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             SingletonName = singletonName;
             Role = role;
+            DataCenter = dataCenter;
             SingletonIdentificationInterval = singletonIdentificationInterval;
             BufferSize = bufferSize;
         }
@@ -129,6 +140,27 @@ namespace Akka.Cluster.Tools.Singleton
             return new ClusterSingletonProxySettings(
                 singletonName: SingletonName,
                 role: role,
+                dataCenter: DataCenter,
+                singletonIdentificationInterval: SingletonIdentificationInterval,
+                bufferSize: BufferSize);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="role"/>
+        /// from the <c>akka.cluster.role</c> in the configuration used. The <paramref name="role"/> specifies the nodes
+        /// on which the targeted singleton can run.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
+        /// </summary>
+        /// <param name="dataCenter">The data center of the cluster nodes where the singleton is running. If null then the same data center as current node.</param>
+        /// <returns>A new setting with the provided <paramref name="dataCenter" />.</returns>
+        public ClusterSingletonProxySettings WithDataCenter(string dataCenter)
+        {
+            return new ClusterSingletonProxySettings(
+                singletonName: SingletonName,
+                role: Role,
+                dataCenter: dataCenter,
                 singletonIdentificationInterval: SingletonIdentificationInterval,
                 bufferSize: BufferSize);
         }
@@ -159,12 +191,13 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(bufferSize: bufferSize);
         }
 
-        private ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
+        private ClusterSingletonProxySettings Copy(string singletonName = null, string role = null, string dataCenter = null,
             TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
         {
             return new ClusterSingletonProxySettings(
                 singletonName: singletonName ?? SingletonName,
                 role: role ?? Role,
+                dataCenter: dataCenter ?? DataCenter,
                 singletonIdentificationInterval: singletonIdentificationInterval ?? SingletonIdentificationInterval,
                 bufferSize: bufferSize ?? BufferSize);
         }

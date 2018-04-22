@@ -92,6 +92,14 @@ namespace Akka.Cluster.Tools.Singleton
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
 
+        private readonly string _role;
+        private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
+        private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
+
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
+        private readonly string _selfDc;
+
+
         /// <summary>
         /// Creates a new instance of the <see cref="OldestChangedBuffer"/>.
         /// </summary>
@@ -99,6 +107,8 @@ namespace Akka.Cluster.Tools.Singleton
         public OldestChangedBuffer(string role)
         {
             _role = role;
+            _selfDc = ClusterSettings.DcRolePrefix + _cluster.Settings.SelfDataCenter;
+
             SetupCoordinatedShutdown();
         }
 
@@ -119,13 +129,6 @@ namespace Akka.Cluster.Tools.Singleton
                 return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
             });
         }
-
-        private readonly string _role;
-        private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
-        private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
-
-        private readonly Cluster _cluster = Cluster.Get(Context.System);
-
         private void TrackChanges(Action block)
         {
             var before = _membersByAge.FirstOrDefault();
@@ -139,7 +142,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         private bool MatchingRole(Member member)
         {
-            return string.IsNullOrEmpty(_role) || member.HasRole(_role);
+            return member.HasRole(_selfDc) && (string.IsNullOrEmpty(_role) || member.HasRole(_role));
         }
 
         private void HandleInitial(ClusterEvent.CurrentClusterState state)
