@@ -105,37 +105,32 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            /*var getMessage = message is Get;
-            var selectMessage = message is Select;
-            var startWatch = message is StartWatch;
-            var stopWatch = message is StopWatch;
-            var kick = message is Kick;*/
-            //var 
-            //Console.WriteLine("Entered the switch");
-            if(message != null){
-                if(message is Get){
+            if(message != null)
+            {
+                if(message is Get get)
+                {
                     if (_messages.Count == 0)
                     {
-                        EnqueueQuery((Get)message);
+                        EnqueueQuery(get);
                     }
                     else
                     {
                         Sender.Tell(_messages.Dequeue());
                     }
                 }
-                else if(message is Select){
-                    var selectMessage = (Select)message;
+                else if(message is Select select)
+                {
                     if (_messages.Count == 0)
                     {
-                        EnqueueQuery(selectMessage);
+                        EnqueueQuery(select);
                     }
                     else
                     {
-                        _currentSelect = selectMessage;
+                        _currentSelect = select;
                         var firstMatch = _messages.DequeueFirstOrDefault(MessagePredicate);
                         if (firstMatch == null)
                         {
-                            EnqueueQuery(selectMessage);
+                            EnqueueQuery(select);
                         }
                         else
                         {
@@ -144,18 +139,19 @@ namespace Akka.Actor
                         _currentSelect = null;
                     }
                 }
-                else if(message is StartWatch){
-                    var strtWatch = (StartWatch)message;
-                    if (strtWatch.Message == null)
-                        Context.Watch(strtWatch.Target);
+                else if(message is StartWatch startwatch)
+                {
+                    if (startwatch.Message == null)
+                        Context.Watch(startwatch.Target);
                     else
-                        Context.WatchWith(strtWatch.Target, strtWatch.Message);
+                        Context.WatchWith(startwatch.Target, startwatch.Message);
                 }
-                else if(message is StopWatch){
-                    var stpWatch = (StopWatch)message;
-                    Context.Unwatch(stpWatch.Target);
+                else if(message is StopWatch stopwatch)
+                {
+                    Context.Unwatch(stopwatch.Target);
                 }
-                else if(message is Kick){
+                else if(message is Kick)
+                {
                     var now = Context.System.Scheduler.MonotonicClock;
                     var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
 

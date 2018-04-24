@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
-
 namespace Akka.Util
 {
     /// <summary>
@@ -26,7 +25,15 @@ namespace Akka.Util
         {
             pattern = pattern.Replace(".", @"\.");
             pattern = pattern.Replace("?", ".");
-            pattern = pattern.Replace("*", ".*?");
+            if(pattern[0] == '*' && pattern[pattern.Length-1]!='*'){
+                pattern = pattern.Replace("*", "(.*?)");
+                pattern = pattern + "(?!.)";
+            }else if(pattern[0]!='*' && pattern[pattern.Length-1]=='*'){
+                pattern = pattern.Replace("*", "(.*?)");
+                pattern = "^"+pattern;
+            }else{
+                pattern = pattern.Replace("*", "(.*?)");
+            }
             pattern = pattern.Replace(@"\", @"\\");
             pattern = pattern.Replace(" ", @"\s");
             return new Regex(pattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase).IsMatch(text);
