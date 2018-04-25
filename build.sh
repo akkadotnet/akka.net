@@ -51,6 +51,7 @@ if [ ! -f "$DOTNET_EXE" ]; then
     fi
     curl -Lsfo "$SCRIPT_DIR/.dotnet/dotnet-install.sh" $DOTNET_INSTALLER_URL
     bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version $DOTNET_VERSION --install-dir .dotnet --no-path
+    bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version 1.0.4 --install-dir .dotnet --no-path
 fi
 
 export PATH="$SCRIPT_DIR/.dotnet":$PATH
