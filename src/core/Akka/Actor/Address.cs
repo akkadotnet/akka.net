@@ -243,10 +243,7 @@ namespace Akka.Actor
         /// <param name="left">The first address used for comparison</param>
         /// <param name="right">The second address used for comparison</param>
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(Address left, Address right)
-        {
-            return Equals(left, right);
-        }
+        public static bool operator ==(Address left, Address right) => left?.Equals(right) ?? ReferenceEquals(right, null);
 
         /// <summary>
         /// Compares two specified addresses for inequality.
@@ -254,10 +251,7 @@ namespace Akka.Actor
         /// <param name="left">The first address used for comparison</param>
         /// <param name="right">The second address used for comparison</param>
         /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(Address left, Address right)
-        {
-            return !Equals(left, right);
-        }
+        public static bool operator !=(Address left, Address right) => !(left == right);
 
         /// <summary>
         /// TBD

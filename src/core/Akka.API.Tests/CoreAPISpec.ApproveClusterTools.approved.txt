@@ -327,7 +327,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 }
 namespace Akka.Cluster.Tools.Singleton
 {
-    public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
+    public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>, Akka.Actor.ILoggingFSM
     {
         public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
         public static Akka.Configuration.Config DefaultConfig() { }
@@ -365,14 +365,16 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public sealed class ClusterSingletonProxySettings : Akka.Actor.INoSerializationVerificationNeeded
     {
-        public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize) { }
+        public ClusterSingletonProxySettings(string singletonName, string role, string dataCenter, System.TimeSpan singletonIdentificationInterval, int bufferSize) { }
         public int BufferSize { get; }
+        public string DataCenter { get; }
         public string Role { get; }
         public System.TimeSpan SingletonIdentificationInterval { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithDataCenter(string dataCenter) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }

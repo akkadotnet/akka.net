@@ -513,7 +513,7 @@ namespace Akka.Actor
         public System.Threading.Tasks.Task Run(Akka.Actor.CoordinatedShutdown.Reason reason) { }
         [System.ObsoleteAttribute("Use `Run(Reason)` instead")]
         public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
-        public async System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase) { }
         public System.TimeSpan Timeout(string phase) { }
         public enum Reason
         {

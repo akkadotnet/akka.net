@@ -28,6 +28,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.actor.debug.fsm = true
                     akka.actor {
                         serializers {
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
@@ -36,7 +37,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
-
+                    akka.loglevel = DEBUG
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
 

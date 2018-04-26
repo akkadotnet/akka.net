@@ -561,7 +561,7 @@ namespace Akka.Cluster
         /// <param name="left">The first unique address used for comparison</param>
         /// <param name="right">The second unique address used for comparison</param>
         /// <returns><c>true</c> if both unique addresses are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(UniqueAddress left, UniqueAddress right) => Equals(left, right);
+        public static bool operator ==(UniqueAddress left, UniqueAddress right) => left?.Equals(right) ?? ReferenceEquals(right, null);
 
         /// <summary>
         /// Compares two specified unique addresses for inequality.
@@ -569,7 +569,7 @@ namespace Akka.Cluster
         /// <param name="left">The first unique address used for comparison</param>
         /// <param name="right">The second unique address used for comparison</param>
         /// <returns><c>true</c> if both unique addresses are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(UniqueAddress left, UniqueAddress right) => !Equals(left, right);
+        public static bool operator !=(UniqueAddress left, UniqueAddress right) => !(left == right);
 
         #endregion
     }

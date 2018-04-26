@@ -470,7 +470,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// Use one of the factory methods <see cref="ClusterSingletonManager.Props(Actor.Props, ClusterSingletonManagerSettings)">ClusterSingletonManager.Props</see> to create the <see cref="Actor.Props"/> for the actor.
     /// </para>
     /// </summary>
-    public sealed class ClusterSingletonManager : FSM<ClusterSingletonState, IClusterSingletonData>
+    public sealed class ClusterSingletonManager : FSM<ClusterSingletonState, IClusterSingletonData>, ILoggingFSM
     {
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
@@ -583,7 +583,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
         }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
@@ -692,10 +692,10 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is OldestChangedBuffer.InitialOldestState initialOldestState)
                 {
                     _oldestChangedReceived = true;
-                    if (initialOldestState.Oldest.Equals(_selfUniqueAddress) && initialOldestState.SafeToBeOldest)
+                    if (initialOldestState.Oldest == _selfUniqueAddress && initialOldestState.SafeToBeOldest)
                         // oldest immediately
                         return GoToOldest();
-                    else if (initialOldestState.Oldest.Equals(_selfUniqueAddress))
+                    else if (initialOldestState.Oldest == _selfUniqueAddress)
                         return GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(null));
                     else
                         return GoTo(ClusterSingletonState.Younger).Using(new YoungerData(initialOldestState.Oldest));
@@ -710,7 +710,7 @@ namespace Akka.Cluster.Tools.Singleton
                     && e.StateData is YoungerData youngerData)
                 {
                     _oldestChangedReceived = true;
-                    if (oldestChanged.Oldest.Equals(_selfUniqueAddress))
+                    if (oldestChanged.Oldest == _selfUniqueAddress)
                     {
                         Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest?.Address);
 
@@ -734,7 +734,7 @@ namespace Akka.Cluster.Tools.Singleton
                 }
                 else if (e.FsmEvent is MemberRemoved memberRemoved)
                 {
-                    if (memberRemoved.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                    if (memberRemoved.Member.UniqueAddress == _cluster.SelfUniqueAddress)
                     {
                         Log.Info("Self removed, stopping ClusterSingletonManager");
                         return Stop();
@@ -778,7 +778,7 @@ namespace Akka.Cluster.Tools.Singleton
                         && e.StateData is BecomingOldestData b
                         && b.PreviousOldest != null)
                 {
-                    if (Sender.Path.Address.Equals(b.PreviousOldest.Address))
+                    if (Sender.Path.Address == b.PreviousOldest.Address)
                     {
                         return GoToOldest();
                     }
@@ -791,7 +791,7 @@ namespace Akka.Cluster.Tools.Singleton
                 }
                 else if (e.FsmEvent is MemberRemoved memberRemoved)
                 {
-                    if (memberRemoved.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                    if (memberRemoved.Member.UniqueAddress == _cluster.SelfUniqueAddress)
                     {
                         Log.Info("Self removed, stopping ClusterSingletonManager");
                         return Stop();
@@ -805,7 +805,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is DelayedMemberRemoved delayed
                         && e.StateData is BecomingOldestData becoming
                         && becoming.PreviousOldest != null
-                        && delayed.Member.UniqueAddress.Equals(becoming.PreviousOldest))
+                        && delayed.Member.UniqueAddress == becoming.PreviousOldest)
                 {
                     Log.Info("Previous oldest [{0}] removed", becoming.PreviousOldest);
                     AddRemoved(delayed.Member.UniqueAddress);
@@ -817,7 +817,7 @@ namespace Akka.Cluster.Tools.Singleton
                     // it would have been better to include the UniqueAddress in the TakeOverFromMe message,
                     // but can't change due to backwards compatibility
                     var senderUniqueAddress = _cluster.State.Members
-                        .Where(m => m.Address.Equals(senderAddress))
+                        .Where(m => m.Address == senderAddress)
                         .Select(m => m.UniqueAddress)
                         .FirstOrDefault();
 
@@ -831,7 +831,7 @@ namespace Akka.Cluster.Tools.Singleton
                             switch (becomingOldestData.PreviousOldest)
                             {
                                 case UniqueAddress previousOldest:
-                                    if (previousOldest.Equals(senderUniqueAddress))
+                                    if (previousOldest == senderUniqueAddress)
                                         Sender.Tell(HandOverToMe.Instance);
                                     else
                                         Log.Info("Ignoring TakeOver request in BecomingOldest from [{0}]. Expected previous oldest [{1}]", Sender.Path.Address, previousOldest.Address);
@@ -882,7 +882,7 @@ namespace Akka.Cluster.Tools.Singleton
                     Log.Info("Oldest observed OldestChanged: [{0} -> {1}]", _cluster.SelfAddress, oldestChanged.Oldest?.Address);
                     switch (oldestChanged.Oldest)
                     {
-                        case UniqueAddress a when a.Equals(_cluster.SelfUniqueAddress):
+                        case UniqueAddress a when a == _cluster.SelfUniqueAddress:
                             // already oldest
                             return Stay();
                         case UniqueAddress a when !_selfExited && _removed.ContainsKey(a):
@@ -952,7 +952,7 @@ namespace Akka.Cluster.Tools.Singleton
                 }
                 else if (e.FsmEvent is MemberRemoved removed)
                 {
-                    if (removed.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress) && !_selfExited)
+                    if (removed.Member.UniqueAddress == _cluster.SelfUniqueAddress && !_selfExited)
                     {
                         Log.Info("Self removed, stopping ClusterSingletonManager");
                         return Stop();
@@ -960,7 +960,7 @@ namespace Akka.Cluster.Tools.Singleton
                     else if (e.StateData is WasOldestData data
                             && data.NewOldest != null
                             && !_selfExited
-                            && removed.Member.UniqueAddress.Equals(data.NewOldest))
+                            && removed.Member.UniqueAddress == data.NewOldest)
                     {
                         AddRemoved(removed.Member.UniqueAddress);
                         return GoToHandingOver(data.Singleton, data.SingletonTerminated, null);
@@ -1025,7 +1025,7 @@ namespace Akka.Cluster.Tools.Singleton
             When(ClusterSingletonState.End, e =>
             {
                 if (e.FsmEvent is MemberRemoved removed
-                    && removed.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                    && removed.Member.UniqueAddress == _cluster.SelfUniqueAddress)
                 {
                     Log.Info("Self removed, stopping ClusterSingletonManager");
                     return Stop();
@@ -1046,7 +1046,7 @@ namespace Akka.Cluster.Tools.Singleton
                 }
                 if (e.FsmEvent is MemberRemoved removed)
                 {
-                    if (removed.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress) && !_selfExited)
+                    if (removed.Member.UniqueAddress == _cluster.SelfUniqueAddress && !_selfExited)
                     {
                         Log.Info("Self removed, stopping ClusterSingletonManager");
                         return Stop();

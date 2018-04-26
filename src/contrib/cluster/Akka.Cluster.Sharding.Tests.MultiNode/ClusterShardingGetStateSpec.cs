@@ -30,6 +30,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.actor.debug.fsm = true
                     akka.actor {
                         serializers {
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
@@ -38,7 +39,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
-                    akka.loglevel = INFO
+                    akka.loglevel = DEBUG
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
