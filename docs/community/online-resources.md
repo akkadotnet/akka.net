@@ -6,9 +6,9 @@ title: Resources
 # Resources
 
 ## Akka.NET Bootcamp
-[Akka.NET Bootcamp]({{site.bootcamp_url}}) is a free, self-directed learning course brought to you by the folks at [Petabridge](https://petabridge.com). Over the three units of this bootcamp you will learn how to create fully-functional, real-world programs using Akka.NET actors and many other parts of the core Akka.NET framework.
+[Akka.NET Bootcamp](http://learnakka.net/) is a free, self-directed learning course brought to you by the folks at [Petabridge](https://petabridge.com). Over the three units of this bootcamp you will learn how to create fully-functional, real-world programs using Akka.NET actors and many other parts of the core Akka.NET framework.
 
-[**Start Bootcamp here.**]({{site.bootcamp_url}})
+[**Start Bootcamp here.**](http://learnakka.net/)
 
 ## Blog posts
 **Petabridge**
@@ -71,6 +71,7 @@ title: Resources
 - [Easy Eventual Consistency with Actor Models + Amazon Web Services](https://www.youtube.com/watch?v=PJT9D_4uUEg) (Philip Laureano on July 5th, 2017)
 - [Composing high performance process workflows with Akka Streams](https://www.youtube.com/watch?v=kWU_LxYXMjE) (Vagif Abilov on July 5th, 2017)
 - [Getting real(time) with Akka.NET, React and Redux](https://www.youtube.com/watch?v=irvm5EdHQc0) (Francis Paulin on July 5th, 2017)
+- [Channel 9: Building distributed applications with Akka.NET](https://channel9.msdn.com/Shows/On-NET/Building-distributed-applications-with-AkkaNET) (Aaron Stannard on April 3, 2018)
 
 ## Courses
 - [Building Concurrent Applications with the Actor Model in Akka.NET (Pluralsight)](https://www.pluralsight.com/courses/akka-dotnet-actor-model-building-concurrent-applications) (Jason Roberts on 5 August 2015)

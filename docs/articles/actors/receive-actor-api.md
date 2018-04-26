@@ -66,41 +66,35 @@ public class DemoActor : ReceiveActor
 system.ActorOf(DemoActor.Props(42), "demo");
 ```
 
-Another good practice is to declare what messages an `Actor` can receive in the companion object of the `Actor`, which makes easier to know what it can receive:
+Another good practice is to declare local messages (messages that are sent in process) within the Actor, which makes it easier to know what messages are generally being sent over the wire vs in process.:
 ```csharp
-public class DemoMessagesActor : ReceiveActor
+public class DemoActor : UntypedActor
 {
-    public class Greeting
+    protected override void OnReceive(object message)
     {
-        public Greeting(string from)
+        switch (message)
         {
-            From = from;
+            case DemoActorLocalMessages.DemoActorLocalMessage1 msg1:
+                // Handle message here...
+                break;
+            case DemoActorLocalMessages.DemoActorLocalMessage2 msg2:
+                // Handle message here...
+                break;
+            default:
+                break;
+                }
+            }
+
+    class DemoActorLocalMessages
+        {
+            public class DemoActorLocalMessage1
+            {
+            }
+
+            public class DemoActorLocalMessage2
+            {
+            }
         }
-
-        public string From { get; }
-    }
-
-    public class Goodbye
-    {
-        public static Goodbye Instance = new Goodbye();
-
-        private Goodbye() {}
-    }
-
-    private ILoggingAdapter log = Context.GetLogger();
-
-    public DemoMessagesActor()
-    {
-        Receive<Greeting>(greeting =>
-        {
-            Sender.Tell($"I was greeted by {greeting.From}", Self);
-        });
-
-        Receive<Goodbye>(_ =>
-        {
-            log.Info("Someone said goodbye to me.");
-        });
-    }
 }
 ```
 
