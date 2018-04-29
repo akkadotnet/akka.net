@@ -164,7 +164,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_run_ordered_phases()
+        public async Task CoordinatedShutdown_must_run_ordered_phases()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -174,38 +174,34 @@ namespace Akka.Tests.Actor
             };
 
             var co = new CoordinatedShutdown(ExtSys, phases);
-            co.AddTask("a", "a1", () =>
+            co.AddTask("a", "a1", async _ =>
             {
                 TestActor.Tell("A");
-                return TaskEx.Completed;
             });
 
-            co.AddTask("b", "b1", () =>
+            co.AddTask("b", "b1", async _ =>
             {
                 TestActor.Tell("B");
-                return TaskEx.Completed;
             });
 
-            co.AddTask("b", "b2", () =>
+            co.AddTask("b", "b2", async _ =>
             {
                 // to verify that c is not performed before b
-                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
                 TestActor.Tell("B");
-                return TaskEx.Completed;
             });
 
-            co.AddTask("c", "c1", () =>
+            co.AddTask("c", "c1", async _ =>
             {
                 TestActor.Tell("C");
-                return TaskEx.Completed;
             });
 
-            co.Run().Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown);
             ReceiveN(4).Should().Equal(new object[] { "A", "B", "B", "C" });
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_run_from_given_phase()
+        public async Task CoordinatedShutdown_must_run_from_given_phase()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -215,30 +211,27 @@ namespace Akka.Tests.Actor
             };
 
             var co = new CoordinatedShutdown(ExtSys, phases);
-            co.AddTask("a", "a1", () =>
+            co.AddTask("a", "a1", async _ =>
             {
                 TestActor.Tell("A");
-                return TaskEx.Completed;
             });
 
-            co.AddTask("b", "b1", () =>
+            co.AddTask("b", "b1", async _ =>
             {
                 TestActor.Tell("B");
-                return TaskEx.Completed;
             });
 
-            co.AddTask("c", "c1", () =>
+            co.AddTask("c", "c1", async _ =>
             {
                 TestActor.Tell("C");
-                return TaskEx.Completed;
             });
 
-            co.Run("b").Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown, "b");
             ReceiveN(2).Should().Equal(new object[] { "B", "C" });
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_only_run_once()
+        public async Task CoordinatedShutdown_must_only_run_once()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -246,21 +239,20 @@ namespace Akka.Tests.Actor
             };
 
             var co = new CoordinatedShutdown(ExtSys, phases);
-            co.AddTask("a", "a1", () =>
+            co.AddTask("a", "a1", async _ =>
             {
                 TestActor.Tell("A");
-                return TaskEx.Completed;
             });
 
-            co.Run().Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown);
             ExpectMsg("A");
-            co.Run().Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown);
             TestActor.Tell("done");
             ExpectMsg("done"); // no additional A
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_continue_after_timeout_or_failure()
+        public async Task CoordinatedShutdown_must_continue_after_timeout_or_failure()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -270,17 +262,16 @@ namespace Akka.Tests.Actor
             };
 
             var co = new CoordinatedShutdown(ExtSys, phases);
-            co.AddTask("a", "a1", () =>
+            co.AddTask("a", "a1", async _ =>
             {
                 TestActor.Tell("A");
-                return TaskEx.FromException<Done>(new Exception("boom"));
+                throw new Exception("boom");
             });
 
-            co.AddTask("a", "a2", () =>
+            co.AddTask("a", "a2", async cancel =>
             {
-                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancel);
                 TestActor.Tell("A");
-                return TaskEx.Completed;
             });
 
             co.AddTask("b", "b1", () =>
@@ -289,13 +280,12 @@ namespace Akka.Tests.Actor
                 return new TaskCompletionSource<Done>().Task; // never completed
             });
 
-            co.AddTask("c", "c1", () =>
+            co.AddTask("c", "c1", async _ =>
             {
                 TestActor.Tell("C");
-                return TaskEx.Completed;
             });
 
-            co.Run().Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown);
             ExpectMsg("A");
             ExpectMsg("A");
             ExpectMsg("B");
@@ -303,7 +293,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_abort_if_recover_is_off()
+        public async Task CoordinatedShutdown_must_abort_if_recover_is_off()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -318,31 +308,28 @@ namespace Akka.Tests.Actor
                 return new TaskCompletionSource<Done>().Task; // never completed
             });
 
-            co.AddTask("c", "c1", () =>
+            co.AddTask("c", "c1", async token =>
             {
                 TestActor.Tell("C");
-                return TaskEx.Completed;
             });
 
             var result = co.Run();
             ExpectMsg("B");
-            Intercept<AggregateException>(() =>
-            {
-                if (result.Wait(RemainingOrDefault))
-                {
-                    result.Exception?.Flatten().InnerException.Should().BeOfType<TimeoutException>();
-                }
-                else
-                {
-                    throw new Exception("CoordinatedShutdown task did not complete");
-                }
-            });
 
+            try
+            {
+                await result;
+            }
+            catch (AggregateException ex)
+            {
+                ex.InnerException.Should().BeOfType<TimeoutException>();
+            }
+            
             ExpectNoMsg(TimeSpan.FromMilliseconds(200)); // C not run
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_be_possible_to_add_tasks_in_later_phase_from_earlier_phase()
+        public async Task CoordinatedShutdown_must_be_possible_to_add_tasks_in_later_phase_from_earlier_phase()
         {
             var phases = new Dictionary<string, Phase>()
             {
@@ -351,18 +338,16 @@ namespace Akka.Tests.Actor
             };
 
             var co = new CoordinatedShutdown(ExtSys, phases);
-            co.AddTask("a", "a1", () =>
+            co.AddTask("a", "a1", async token1 =>
             {
                 TestActor.Tell("A");
-                co.AddTask("b", "b1", () =>
+                co.AddTask("b", "b1", async token2 =>
                 {
                     TestActor.Tell("B");
-                    return TaskEx.Completed;
                 });
-                return TaskEx.Completed;
             });
 
-            co.Run().Wait(RemainingOrDefault);
+            await co.Run(Reason.Unknown);
             ExpectMsg("A");
             ExpectMsg("B");
         }
@@ -392,10 +377,29 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CoordinatedShutdown_must_terminate_ActorSystem()
+        public async Task CoordinatedShutdown_must_work_with_cancelation_tokens()
         {
-            var shutdownSystem = CoordinatedShutdown.Get(Sys).Run();
-            shutdownSystem.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            var phases = new Dictionary<string, Phase>()
+            {
+                {"a", new Phase(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(1), true) }
+            };
+
+            var flag = false;
+            var co = new CoordinatedShutdown(ExtSys, phases);
+            co.AddTask("a", "test-task", async token =>
+            {
+                token.Register(() => flag = true);
+                await Task.Delay(5000, token);
+            });
+            await co.Run(Reason.Unknown);
+
+            flag.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task CoordinatedShutdown_must_terminate_ActorSystem()
+        {
+            await CoordinatedShutdown.Get(Sys).Run(Reason.Unknown);
 
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
         }

@@ -54,10 +54,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
         /// <returns>TBD</returns>
-        public static Config DefaultConfig()
-        {
-            return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
-        }
+        public static Config DefaultConfig() => 
+            ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
 
         /// <summary>
         /// Factory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
@@ -68,19 +66,17 @@ namespace Akka.Cluster.Tools.Singleton
         /// </param>
         /// <param name="settings">Cluster singleton proxy settings.</param>
         /// <returns>TBD</returns>
-        public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
-        {
-            return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
-        }
+        public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings) => 
+            Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
 
         private readonly ClusterSingletonProxySettings _settings;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new Queue<KeyValuePair<object, IActorRef>>(); // queue seems to fit better
         private readonly string[] _singletonPath;
         private int _identityCounter = 0;
-        private string _identityId;
+        private string _identifyId;
         private IActorRef _singleton = null;
-        private ICancelable _identityTimer = null;
+        private ICancelable _identifyTimer = null;
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ILoggingAdapter _log;
         private string _targetDcRole;
@@ -94,7 +90,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
-            _identityId = CreateIdentifyId(_identityCounter);
+            _identifyId = CreateIdentifyId(_identityCounter);
             _targetDcRole = string.IsNullOrEmpty(settings.DataCenter)
                 ? ClusterSettings.DcRolePrefix + _cluster.Settings.SelfDataCenter
                 : ClusterSettings.DcRolePrefix + settings.DataCenter;
@@ -104,7 +100,7 @@ namespace Akka.Cluster.Tools.Singleton
             Receive<ClusterEvent.MemberExited>(m => Remove(m.Member));
             Receive<ClusterEvent.MemberRemoved>(m =>
             {
-                if (m.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                if (m.Member.UniqueAddress == _cluster.SelfUniqueAddress)
                     Context.Stop(Self);
                 else
                     Remove(m.Member);
@@ -115,7 +111,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
             Receive<ActorIdentity>(identity =>
                 {
-                    if (identity.Subject != null)
+                    if (identity.Subject != null && identity.MessageId is string id && id == _identifyId)
                     {
                         // if the new singleton is defined, deliver all buffered messages
                         var subject = identity.Subject;
@@ -129,11 +125,11 @@ namespace Akka.Cluster.Tools.Singleton
             Receive<TryToIdentifySingleton>(_ =>
                  {
                      var oldest = _membersByAge.FirstOrDefault();
-                     if (oldest != null && _identityTimer != null)
+                     if (oldest != null && _identifyTimer != null)
                      {
                          var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
                          Log.Debug("Trying to identify singleton at [{0}]", singletonAddress);
-                         Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
+                         Context.ActorSelection(singletonAddress).Tell(new Identify(_identifyId));
                      }
                  });
             Receive<Terminated>(terminated =>
@@ -159,18 +155,14 @@ namespace Akka.Cluster.Tools.Singleton
 
         private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase"/>
         protected override void PreStart()
         {
             CancelTimer();
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase"/>
         protected override void PostStop()
         {
             CancelTimer();
@@ -179,17 +171,15 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void CancelTimer()
         {
-            if (_identityTimer != null)
+            if (_identifyTimer != null)
             {
-                _identityTimer.Cancel();
-                _identityTimer = null;
+                _identifyTimer.Cancel();
+                _identifyTimer = null;
             }
         }
 
-        private bool MatchingRole(Member member)
-        {
-            return member.HasRole(_targetDcRole) && (string.IsNullOrEmpty(_settings.Role) || member.HasRole(_settings.Role));
-        }
+        private bool MatchingRole(Member member) => 
+            member.HasRole(_targetDcRole) && (string.IsNullOrEmpty(_settings.Role) || member.HasRole(_settings.Role));
 
         private void HandleInitial(ClusterEvent.CurrentClusterState state)
         {
@@ -204,10 +194,10 @@ namespace Akka.Cluster.Tools.Singleton
         {
             Log.Debug("Creating singleton identification timer...");
             _identityCounter++;
-            _identityId = CreateIdentifyId(_identityCounter);
+            _identifyId = CreateIdentifyId(_identityCounter);
             _singleton = null;
             CancelTimer();
-            _identityTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+            _identifyTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 initialDelay: TimeSpan.Zero,
                 interval: _settings.SingletonIdentificationInterval,
                 receiver: Self,
@@ -230,21 +220,25 @@ namespace Akka.Cluster.Tools.Singleton
             if (MatchingRole(member))
                 TrackChanges(() =>
                 {
-                    _membersByAge = _membersByAge.Remove(member); //replace
-                    _membersByAge = _membersByAge.Add(member);
+                    // replace, it's possible that the upNumber is changed
+                    var removed = _membersByAge.Where(m => m.UniqueAddress != member.UniqueAddress);
+                    _membersByAge = removed.ToImmutableSortedSet(MemberAgeOrdering.Descending).Add(member);
                 });
         }
 
         private void Remove(Member member)
         {
             if (MatchingRole(member))
-                TrackChanges(() => _membersByAge = _membersByAge.Remove(member));
+                TrackChanges(() =>
+                {
+                    // filter, it's possible that the upNumber is changed
+                    _membersByAge = _membersByAge
+                        .Where(m => m.UniqueAddress != member.UniqueAddress)
+                        .ToImmutableSortedSet(MemberAgeOrdering.Descending);
+                });
         }
 
-        private string CreateIdentifyId(int i)
-        {
-            return "identify-singleton-" + string.Join("/", _singletonPath) + i;
-        }
+        private string CreateIdentifyId(int i) => "identify-singleton-" + string.Join("/", _singletonPath) + i;
 
         private void Buffer(object message)
         {

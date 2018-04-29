@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
@@ -24,8 +25,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly ActorSystem _sys2;
         private ActorSystem _sys3 = null;
 
-        public ClusterSingletonRestartSpec() : base(@"
-              akka.loglevel = INFO
+        public ClusterSingletonRestartSpec(ITestOutputHelper output) : base(@"
+              akka.actor.debug.fsm = true
+              akka.loglevel = DEBUG
               akka.actor.provider = ""cluster""
               akka.cluster.auto-down-unreachable-after = 2s
               akka.remote {
@@ -33,10 +35,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                   hostname = ""127.0.0.1""
                   port = 0
                 }
-              }")
+              }", output: output)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+
+            InitializeLogger(_sys1);
+            InitializeLogger(_sys2);
         }
 
         public void Join(ActorSystem from, ActorSystem to)

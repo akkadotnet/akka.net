@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util.Internal;
 
@@ -108,27 +109,36 @@ namespace Akka.Cluster.Tools.Singleton
         {
             _role = role;
             _selfDc = ClusterSettings.DcRolePrefix + _cluster.Settings.SelfDataCenter;
-
-            SetupCoordinatedShutdown();
         }
-
-        /// <summary>
-        /// It's a delicate difference between <see cref="CoordinatedShutdown.PhaseClusterExiting"/> and <see cref="ClusterEvent.MemberExited"/>.
-        ///
-        /// MemberExited event is published immediately (leader may have performed that transition on other node),
-        /// and that will trigger run of <see cref="CoordinatedShutdown"/>, while PhaseClusterExiting will happen later.
-        /// Using PhaseClusterExiting in the singleton because the graceful shutdown of sharding region
-        /// should preferably complete before stopping the singleton sharding coordinator on same node.
-        /// </summary>
-        private void SetupCoordinatedShutdown()
+        
+        /// <inheritdoc cref="ActorBase.PreStart"/>
+        protected override void PreStart()
         {
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+
+            // It's a delicate difference between CoordinatedShutdown.PhaseClusterExiting and MemberExited.
+            // MemberExited event is published immediately (leader may have performed that transition on other node),
+            // and that will trigger run of CoordinatedShutdown, while PhaseClusterExiting will happen later.
+            // Using PhaseClusterExiting in the singleton because the graceful shutdown of sharding region
+            // should preferably complete before stopping the singleton sharding coordinator on same node.
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-1", () =>
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-1", (cancel) =>
             {
-                var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                    return Task.FromResult(Done.Instance);
+                else
+                    return self.Ask(SelfExiting.Instance, cancellationToken: cancel);
             });
         }
+
+        /// <inheritdoc cref="ActorBase.PostStop"/>
+        protected override void PostStop()
+        {
+            _cluster.Unsubscribe(Self);
+        }
+
+        private bool MatchingRole(Member member) => member.HasRole(_selfDc) && (string.IsNullOrEmpty(_role) || member.HasRole(_role));
+
         private void TrackChanges(Action block)
         {
             var before = _membersByAge.FirstOrDefault();
@@ -138,11 +148,6 @@ namespace Akka.Cluster.Tools.Singleton
             // todo: fix neq comparison
             if (!Equals(before, after))
                 _changes = _changes.Enqueue(new OldestChanged(after?.UniqueAddress));
-        }
-
-        private bool MatchingRole(Member member)
-        {
-            return member.HasRole(_selfDc) && (string.IsNullOrEmpty(_role) || member.HasRole(_role));
         }
 
         private void HandleInitial(ClusterEvent.CurrentClusterState state)
@@ -175,42 +180,40 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void SendFirstChange()
         {
-            object change;
-            _changes = _changes.Dequeue(out change);
-            Context.Parent.Tell(change);
-        }
-
-        /// <inheritdoc cref="ActorBase.PreStart"/>
-        protected override void PreStart()
-        {
-            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
-        }
-
-        /// <inheritdoc cref="ActorBase.PostStop"/>
-        protected override void PostStop()
-        {
-            _cluster.Unsubscribe(Self);
+            // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
+            if (!_cluster.IsTerminated)
+            {
+                _changes = _changes.Dequeue(out var change);
+                Context.Parent.Tell(change);
+            }
         }
 
         /// <inheritdoc cref="UntypedActor.OnReceive"/>
         protected override void OnReceive(object message)
         {
-            if (message is ClusterEvent.CurrentClusterState) HandleInitial((ClusterEvent.CurrentClusterState)message);
-            else if (message is ClusterEvent.MemberUp) Add(((ClusterEvent.MemberUp)message).Member);
-            else if (message is ClusterEvent.MemberRemoved) Remove(((ClusterEvent.IMemberEvent)(message)).Member);
-            else if (message is ClusterEvent.MemberExited
-                && !message.AsInstanceOf<ClusterEvent.MemberExited>()
-                .Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress)) Remove(((ClusterEvent.IMemberEvent)(message)).Member);
-            else if (message is SelfExiting)
+            switch (message)
             {
-                Remove(_cluster.ReadView.Self);
-                Sender.Tell(Done.Instance);
-            }
-            else if (message is GetNext && _changes.IsEmpty) Context.BecomeStacked(OnDeliverNext);
-            else if (message is GetNext) SendFirstChange();
-            else
-            {
-                Unhandled(message);
+                case ClusterEvent.CurrentClusterState _:
+                    HandleInitial((ClusterEvent.CurrentClusterState)message); break;
+                case ClusterEvent.MemberUp _:
+                    Add(((ClusterEvent.MemberUp)message).Member); break;
+                case ClusterEvent.MemberRemoved _:
+                    Remove(((ClusterEvent.MemberRemoved)message).Member); break;
+                case ClusterEvent.MemberExited m when m.Member.UniqueAddress != _cluster.SelfUniqueAddress: 
+                    Remove(m.Member); break;
+                case SelfExiting _:
+                    Remove(_cluster.ReadView.Self);
+                    Sender.Tell(Done.Instance);
+                    break;
+                case GetNext _ when _changes.IsEmpty:
+                    Context.BecomeStacked(OnDeliverNext);
+                    break;
+                case GetNext _:
+                    SendFirstChange();
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
 
@@ -220,40 +223,33 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="message">The message to handle.</param>
         private void OnDeliverNext(object message)
         {
-            if (message is ClusterEvent.CurrentClusterState)
+            switch (message)
             {
-                HandleInitial((ClusterEvent.CurrentClusterState)message);
-                SendFirstChange();
-                Context.UnbecomeStacked();
-            }
-            else if (message is ClusterEvent.MemberUp)
-            {
-                var memberUp = (ClusterEvent.MemberUp)message;
-                Add(memberUp.Member);
-                DeliverChanges();
-            }
-            else if (message is ClusterEvent.MemberRemoved)
-            {
-                var removed = (ClusterEvent.MemberRemoved) message;
-                Remove(removed.Member);
-                DeliverChanges();
-            }
-            else if (message is ClusterEvent.MemberExited &&
-                message.AsInstanceOf<ClusterEvent.MemberExited>().Member.UniqueAddress != _cluster.SelfUniqueAddress)
-            {
-                var memberEvent = (ClusterEvent.IMemberEvent)message;
-                Remove(memberEvent.Member);
-                DeliverChanges();
-            }
-            else if (message is SelfExiting)
-            {
-                Remove(_cluster.ReadView.Self);
-                DeliverChanges();
-                Sender.Tell(Done.Instance); // reply to ask
-            }
-            else
-            {
-                Unhandled(message);
+                case ClusterEvent.CurrentClusterState _:
+                    HandleInitial((ClusterEvent.CurrentClusterState)message);
+                    SendFirstChange();
+                    Context.UnbecomeStacked();
+                    break;
+                case ClusterEvent.MemberUp _:
+                    Add(((ClusterEvent.MemberUp)message).Member);
+                    DeliverChanges();
+                    break;
+                case ClusterEvent.MemberRemoved _:
+                    Remove(((ClusterEvent.MemberRemoved)message).Member);
+                    DeliverChanges();
+                    break;
+                case ClusterEvent.MemberExited m when m.Member.UniqueAddress != _cluster.SelfUniqueAddress:
+                    Remove(m.Member);
+                    DeliverChanges();
+                    break;
+                case SelfExiting _:
+                    Remove(_cluster.ReadView.Self);
+                    DeliverChanges();
+                    Sender.Tell(Done.Instance); // reply to ask
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
 
@@ -269,14 +265,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <inheritdoc cref="ActorBase.Unhandled"/>
         protected override void Unhandled(object message)
         {
-            if (message is ClusterEvent.IMemberEvent)
-            {
-                // ok, silence
-            }
-            else
-            {
-                base.Unhandled(message);
-            }
+            if (!(message is ClusterEvent.IMemberEvent)) base.Unhandled(message);
         }
     }
 }

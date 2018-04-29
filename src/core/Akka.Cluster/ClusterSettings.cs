@@ -58,7 +58,14 @@ namespace Akka.Cluster
 
             AutoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
-            Roles = cc.GetStringList("roles").ToImmutableHashSet();
+            SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
+
+            var configuredRoles = cc.GetStringList("roles").ToImmutableHashSet();
+            if (configuredRoles.Count != 0  && Roles.Any(role => role.StartsWith(DcRolePrefix)))
+                throw new ConfigurationException($"Roles must not start with '{DcRolePrefix}' as that is reserved for the cluster self-data-center setting");
+
+            Roles = configuredRoles.Add(DcRolePrefix + SelfDataCenter);
+
             MinNrOfMembers = cc.GetInt("min-nr-of-members");
             //TODO:
             //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
@@ -86,7 +93,6 @@ namespace Akka.Cluster
             RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
             AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
 
-            SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
             MultiDataCenter = new MultiDataCenterSettings(cc.GetConfig("multi-data-center"));
             PruneGossipTombstonesAfter = cc.GetTimeSpan("prune-gossip-tombstones-after");
             
