@@ -326,34 +326,23 @@ namespace Akka.Actor
         /// Safe to call multiple times, but hooks will only be run once.
         /// </summary>
         /// <returns>Returns a <see cref="Task"/> that will be completed once the process exits.</returns>
-        private Task<Done> RunClrHooks()
+        private async Task RunClrHooks()
         {
             if (_clrHooksStarted.CompareAndSet(false, true))
             {
-                Task.WhenAll(_clrShutdownTasks.Select(hook =>
+                await Task.WhenAll(_clrShutdownTasks.Select(async hook =>
                 {
                     try
                     {
-                        var t = hook();
-                        return t;
+                        await hook();
                     }
                     catch (Exception ex)
                     {
                         Log.Error(ex, "Error occurred while executing CLR shutdown hook");
-                        return TaskEx.FromException<Done>(ex);
+                        throw;
                     }
-                })).ContinueWith(tr =>
-                {
-                    if (tr.IsFaulted || tr.IsCanceled)
-                        _hooksRunPromise.SetException(tr.Exception.Flatten());
-                    else
-                    {
-                        _hooksRunPromise.SetResult(Done.Instance);
-                    }
-                });
+                }));
             }
-
-            return ClrShutdownTask;
         }
 
         /// <summary>
@@ -419,17 +408,32 @@ namespace Akka.Actor
                         ? Task.WhenAll(phaseTasks.Select(tuple => RunSafe(phaseName, tuple.Item1, tuple.Item2, cancellation.Token)))
                         : Task.WhenAll(phaseTasks.Select(tuple => tuple.Item2(cancellation.Token)));
 
-                    var winner = await Task.WhenAny(continuations, Task.Delay(phase.Timeout));
-                    if (winner != continuations)
+                    if (phaseName != PhaseActorSystemTerminate)
                     {
-                        // delay has won, we hit the timeout
-                        if (phase.Recover) 
-                            Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, phase.Timeout);
-                        else
-                            throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {phase.Timeout}");
+                        var winner = await Task.WhenAny(continuations, Task.Delay(phase.Timeout));
+                        if (winner != continuations)
+                        {
+                            // delay has won, we hit the timeout
+                            if (phase.Recover)
+                                Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phaseName, phase.Timeout);
+                            else
+                                throw new TimeoutException($"Coordinated shutdown phase [{phaseName}] timed out after {phase.Timeout}");
+                        }
+                        else if (debug)
+                        {
+                            Log.Debug("Coordinated shutdown phase [{0}] finished.", phaseName);
+                        }
                     }
+                    else
+                    {
+                        await continuations;
+
+                        if (debug)
+                            Log.Debug("Coordinated shutdown phase [{0}] finished.", phaseName);
+                    }
+
                 }
-                else if (debug) Log.Debug("Performing phase [{0}] with [0] tasks.", phaseName);
+                else if (debug) Log.Debug("Performing phase [{0}] with no tasks.", phaseName);
             }
 
             return Done.Instance;
@@ -615,7 +619,6 @@ namespace Akka.Actor
                                 coord.Log.Warning("CoordinatedShutdown from CLR shutdown failed: {0}", ex.Message);
                             }
                         }
-                        return Done.Instance;
                     });
                 });
             }

@@ -25,332 +25,188 @@ namespace Akka.Cluster.Tools.Singleton
     /// Control messages used for the cluster singleton
     /// </summary>
     public interface IClusterSingletonMessage { }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class HandOverToMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverToMe Instance { get; } = new HandOverToMe();
         private HandOverToMe() { }
+        public override string ToString() => "HandOverToMe";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class HandOverInProgress : IClusterSingletonMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverInProgress Instance { get; } = new HandOverInProgress();
         private HandOverInProgress() { }
+        public override string ToString() => "HandOverInProgress";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class HandOverDone : IClusterSingletonMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverDone Instance { get; } = new HandOverDone();
         private HandOverDone() { }
+        public override string ToString() => "HandOverDone";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class TakeOverFromMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static TakeOverFromMe Instance { get; } = new TakeOverFromMe();
         private TakeOverFromMe() { }
+        public override string ToString() => "TakeOverFromMe";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class Cleanup
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static Cleanup Instance { get; } = new Cleanup();
         private Cleanup() { }
+        public override string ToString() => "Cleanup";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class StartOldestChangedBuffer
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static StartOldestChangedBuffer Instance { get; } = new StartOldestChangedBuffer();
         private StartOldestChangedBuffer() { }
+        public override string ToString() => "StartOldestChangedBuffer";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class HandOverRetry
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public int Count { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="count">TBD</param>
+        
         public HandOverRetry(int count)
         {
             Count = count;
         }
+        public override string ToString() => $"HandOverRetry(count:{Count})";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class TakeOverRetry
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public int Count { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="count">TBD</param>
+        
         public TakeOverRetry(int count)
         {
             Count = count;
         }
+        public override string ToString() => $"TakeOverRetry(count:{Count})";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public interface IClusterSingletonData { }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class Uninitialized : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static Uninitialized Instance { get; } = new Uninitialized();
         private Uninitialized() { }
+        public override string ToString() => $"Uninitialized";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class YoungerData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public UniqueAddress Oldest { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldest">TBD</param>
+        
         public YoungerData(UniqueAddress oldest)
         {
             Oldest = oldest;
         }
-    }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+        public override string ToString() => $"YoungerData(oldest:{Oldest})";
+    }
+    
     [Serializable]
     internal sealed class BecomingOldestData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public UniqueAddress PreviousOldest { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="previousOldest">TBD</param>
+        
         public BecomingOldestData(UniqueAddress previousOldest)
         {
             PreviousOldest = previousOldest;
         }
+        public override string ToString() => $"BecomingOldestData(previousOldest:{PreviousOldest})";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class OldestData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public IActorRef Singleton { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public bool SingletonTerminated { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singleton">TBD</param>
-        /// <param name="singletonTerminated">TBD</param>
+        
         public OldestData(IActorRef singleton, bool singletonTerminated)
         {
             Singleton = singleton;
             SingletonTerminated = singletonTerminated;
         }
+        public override string ToString() => $"OldestData(singleton:{Singleton}, singletonTerminated:{SingletonTerminated})";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class WasOldestData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public IActorRef Singleton { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public bool SingletonTerminated { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public UniqueAddress NewOldest { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singleton">TBD</param>
-        /// <param name="singletonTerminated">TBD</param>
-        /// <param name="newOldest">TBD</param>
+        
         public WasOldestData(IActorRef singleton, bool singletonTerminated, UniqueAddress newOldest)
         {
             Singleton = singleton;
             SingletonTerminated = singletonTerminated;
             NewOldest = newOldest;
         }
+        public override string ToString() => $"WasOldestData(singleton:{Singleton}, singletonTerminated:{SingletonTerminated}, newOldest:{NewOldest})";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class HandingOverData : IClusterSingletonData
     {
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public IActorRef Singleton { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public IActorRef HandOverTo { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singleton">TBD</param>
-        /// <param name="handOverTo">TBD</param>
+        
         public HandingOverData(IActorRef singleton, IActorRef handOverTo)
         {
             Singleton = singleton;
             HandOverTo = handOverTo;
         }
+        public override string ToString() => $"HandingOverData(singleton:{Singleton}, handOverTo:{HandOverTo})";
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     [Serializable]
     internal sealed class StoppingData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public IActorRef Singleton { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singleton">TBD</param>
+        
         public StoppingData(IActorRef singleton)
         {
             Singleton = singleton;
         }
+        public override string ToString() => $"StoppingData(singleton:{Singleton})";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class EndData : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static EndData Instance { get; } = new EndData();
         private EndData() { }
+        public override string ToString() => $"EndData";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class DelayedMemberRemoved
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public Member Member { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="member">TBD</param>
+        
         public DelayedMemberRemoved(Member member)
         {
             Member = member;
         }
+        public override string ToString() => $"DelayedMemberRemoved(member:{Member})";
     }
 
     /// <summary>
@@ -366,6 +222,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// Singleton instance
         /// </summary>
         public static SelfExiting Instance { get; } = new SelfExiting();
+        public override string ToString() => $"SelfExiting";
     }
 
     /// <summary>

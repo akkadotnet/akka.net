@@ -38,6 +38,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// </summary>
             public static GetNext Instance { get; } = new GetNext();
             private GetNext() { }
+            public override string ToString() => "GetNext";
         }
 
         /// <summary>
@@ -66,6 +67,8 @@ namespace Akka.Cluster.Tools.Singleton
                 Oldest = oldest;
                 SafeToBeOldest = safeToBeOldest;
             }
+
+            public override string ToString() => $"InitialOldestState(oldest:{Oldest}, safeToBeOldest:{SafeToBeOldest})";
         }
 
         /// <summary>
@@ -87,6 +90,8 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 Oldest = oldest;
             }
+
+            public override string ToString() => $"OldestChanged(oldest:{Oldest})";
         }
 
         #endregion

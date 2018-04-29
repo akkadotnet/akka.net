@@ -202,7 +202,7 @@ namespace Akka.Persistence.Fsm
         {
             if (_debugEvent)
             {
-                _log.Debug($"Cancelling timer {name}");
+                _log.Debug($"Cancelling timer '{name}'");
             }
 
             if (_timers.ContainsKey(name))

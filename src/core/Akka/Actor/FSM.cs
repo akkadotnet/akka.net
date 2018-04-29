@@ -866,7 +866,7 @@ namespace Akka.Actor
         public void CancelTimer(string name)
         {
             if (DebugEvent)
-                _log.Debug($"Cancelling timer {name}");
+                _log.Debug($"Cancelling timer '{name}'");
 
             if (_timers.TryGetValue(name, out var timer))
             {

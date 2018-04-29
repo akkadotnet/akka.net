@@ -821,7 +821,14 @@ namespace Akka.Cluster
         internal static LeaderChanged DiffLeader(MembershipState oldState, MembershipState newState)
         {
             var newLeader = newState.Leader;
-            return newLeader != oldState.Leader ? new LeaderChanged(newLeader.Address) : null;
+            if (newLeader != oldState.Leader)
+            {
+                return new LeaderChanged(newLeader?.Address);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         internal static IEnumerable<RoleLeaderChanged> DiffRolesLeader(MembershipState oldState, MembershipState newState)
