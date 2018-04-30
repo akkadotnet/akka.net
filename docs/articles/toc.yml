@@ -176,3 +176,5 @@
     href: utilities/scheduler.md
   - name: Circuit Breaker
     href: utilities/circuit-breaker.md
+- name: Configurations
+  href: configuration/toc.yml

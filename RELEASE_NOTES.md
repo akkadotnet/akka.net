@@ -1,5 +1,47 @@
-#### 1.3.6 February 26 2018 ####
+#### 1.3.7 April 17 2018 ####
 Placeholder for nightlies
+
+#### 1.3.6 April 17 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.6 is a minor patch consisting mostly of bug fixes.
+
+**Akka.FSharp on .NET Standard**
+The biggest change in this release is [the availability of Akka.FSharp on .NET Standard and .NET Core](https://github.com/akkadotnet/akka.net/issues/2826)!
+
+Akka.FSharp runs on .NET Standard 2.0 as of 1.3.6 (it doesn't support .NET Standard 1.6 like the rest of Akka.NET due to FSharp-specific, downstream dependencies.)
+
+**Updates and Additions**
+1. [Akka.Streams: Port 4 "streams contrib" stages - AccumulateWhileUnchanged, LastElement, PartitionWith, Sample](https://github.com/akkadotnet/akka.net/pull/3375)
+2. [Akka.Remote: Add `public-port` setting to allow for port aliasing inside environments like Docker, PCF](https://github.com/akkadotnet/akka.net/issues/3357)
+
+**Bugfixes**
+1. [Akka.Cluster.Sharding: Removing string.GetHashCode usage from distributed classes](https://github.com/akkadotnet/akka.net/pull/3363)
+2. [Akka.Cluster.Sharding: HashCodeMessageExtractor can create inconsistent ShardId's](https://github.com/akkadotnet/akka.net/issues/3361)
+3. [Akka.Remote: 
+Error while decoding incoming Akka PDU Exception when communicating between Remote Actors with a large number of messages on Linux](https://github.com/akkadotnet/akka.net/issues/3370)
+4. [Akka.Cluster.Sharding: DData: Cannot create a shard proxy on a cluster node that is not in the same role as the proxied shard entity](https://github.com/akkadotnet/akka.net/issues/3352)
+5. [Akka.Streams: Fix GroupedWithin allocation of new buffer after emit.](https://github.com/akkadotnet/akka.net/pull/3382)
+6. [Akka.Persistence: Add missing ReturnRecoveryPermit](https://github.com/akkadotnet/akka.net/pull/3372)
+
+You can see [the full set of changes for Akka.NET v1.3.6 here](hhttps://github.com/akkadotnet/akka.net/milestone/24).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 7 | 261 | 38 | Aaron Stannard |
+| 6 | 28 | 28 | cimryan |
+| 5 | 53 | 20 | Tomasz Jaskula |
+| 2 | 7 | 4 | Ondrej Pialek |
+| 2 | 20 | 10 | Ismael Hamed |
+| 1 | 739 | 0 | Oleksandr Bogomaz |
+| 1 | 64 | 6 | Robert |
+| 1 | 23 | 29 | nathvi |
+| 1 | 2 | 1 | Sebastien Bacquet |
+| 1 | 1 | 2 | OndÅej PiÃ¡lek |
+| 1 | 1 | 1 | Steffen Skov |
+| 1 | 1 | 1 | Sean Gilliam |
+| 1 | 1 | 1 | Matthew Herman |
+| 1 | 1 | 1 | Jan Pluskal |
 
 #### 1.3.5 February 21 2018 ####
 **Maintenance Release for Akka.NET 1.3**

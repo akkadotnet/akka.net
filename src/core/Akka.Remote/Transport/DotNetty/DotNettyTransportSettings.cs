@@ -17,6 +17,11 @@ using DotNetty.Buffers;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Defines the settings for the <see cref="DotNettyTransport"/>.
+    /// </summary>
     internal sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
@@ -67,7 +72,8 @@ namespace Akka.Remote.Transport.DotNetty
                 writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
                 logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
-                byteOrder: order);
+                byteOrder: order,
+                enableBufferPooling: config.GetBoolean("enable-pooling", true));
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
@@ -195,10 +201,18 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly ByteOrder ByteOrder;
 
+        /// <summary>
+        /// Used mostly as a work-around for https://github.com/akkadotnet/akka.net/issues/3370
+        /// on .NET Core on Linux. Should always be left to <c>true</c> unless running DotNetty v0.4.6
+        /// on Linux, which can accidentally release buffers early and corrupt frames. Turn this setting
+        /// to <c>false</c> to disable pooling and work-around this issue at the cost of some performance.
+        /// </summary>
+        public readonly bool EnableBufferPooling;
+
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, bool enableBufferPooling)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -226,6 +240,7 @@ namespace Akka.Remote.Transport.DotNetty
             BackwardsCompatibilityModeEnabled = backwardsCompatibilityModeEnabled;
             LogTransport = logTransport;
             ByteOrder = byteOrder;
+            EnableBufferPooling = enableBufferPooling;
         }
     }
     internal enum TransportMode

@@ -42,6 +42,7 @@ module IncrementalTests =
 
     let getUnitTestProjects runtime =
         let allTestProjects = !! "./**/core/**/*.Tests.csproj"
+                              ++ "./**/core/**/*.Tests.fsproj"
                               ++ "./**/contrib/**/*.Tests.csproj"
                               -- "./**/serializers/**/*Wire*.csproj"
         allTestProjects 

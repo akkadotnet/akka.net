@@ -11,6 +11,7 @@ using Akka.Actor;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Util.Internal;
 using Nito.AsyncEx;
 
 namespace Akka.Tests.Actor
@@ -69,6 +70,23 @@ namespace Akka.Tests.Actor
                     Sender.Tell("bar");
                 }
             }
+        }
+
+        public class ReplyToActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                var requester = message.AsInstanceOf<IActorRef>();
+                requester.Tell("i_hear_ya");
+            }
+        }
+
+        [Fact]
+        public async Task Can_Ask_Response_actor()
+        {
+            var actor = Sys.ActorOf<ReplyToActor>();
+            var res = await actor.Ask<string>( sender => sender, null, CancellationToken.None);
+            res.ShouldBe("i_hear_ya");
         }
 
         [Fact]
