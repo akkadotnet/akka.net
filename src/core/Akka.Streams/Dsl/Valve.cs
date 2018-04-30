@@ -41,10 +41,10 @@ namespace Akka.Streams.Dsl
 
     class ValveSwitch : IValveSwitch
     {
-        private readonly Action<(SwitchMode, TaskCompletionSource<bool>)> _flipCallback;
+        private readonly Action<Tuple<SwitchMode, TaskCompletionSource<bool>>> _flipCallback;
         private readonly Action<TaskCompletionSource<SwitchMode>> _getModeCallback;
 
-        public ValveSwitch(Action<(SwitchMode, TaskCompletionSource<bool>)> flipCallback, Action<TaskCompletionSource<SwitchMode>> getModeCallback)
+        public ValveSwitch(Action<Tuple<SwitchMode, TaskCompletionSource<bool>>> flipCallback, Action<TaskCompletionSource<SwitchMode>> getModeCallback)
         {
             _flipCallback = flipCallback;
             _getModeCallback = getModeCallback;
@@ -53,7 +53,7 @@ namespace Akka.Streams.Dsl
         public Task<bool> Flip(SwitchMode flipToMode)
         {
             var promise = new TaskCompletionSource<bool>();
-            _flipCallback((flipToMode, promise));
+            _flipCallback(Tuple.Create(flipToMode, promise));
             return promise.Task;
         }
 
@@ -90,7 +90,7 @@ namespace Akka.Streams.Dsl
                 _completion = completion;
                 _mode = valve._mode;
 
-                var flipCallback = GetAsyncCallback<(SwitchMode, TaskCompletionSource<bool>)>(FlipHandler);
+                var flipCallback = GetAsyncCallback<Tuple<SwitchMode, TaskCompletionSource<bool>>>(FlipHandler);
                 var getModeCallback = GetAsyncCallback<TaskCompletionSource<SwitchMode>>(t => t.SetResult(_mode));
 
                 _switch = new ValveSwitch(flipCallback, getModeCallback);
@@ -113,11 +113,14 @@ namespace Akka.Streams.Dsl
                 _completion.SetResult(_switch);
             }
 
-            void FlipHandler((SwitchMode flipToMode, TaskCompletionSource<bool> completion) t)
+            void FlipHandler(Tuple<SwitchMode, TaskCompletionSource<bool>> t)
             {
+                var flipToMode = t.Item1;
+                var completion = t.Item2;
+
                 var succeed = false;
 
-                if (t.flipToMode != _mode)
+                if (flipToMode != _mode)
                 {
                     if (_mode == SwitchMode.Close)
                     {
@@ -134,7 +137,7 @@ namespace Akka.Streams.Dsl
                     succeed = true;
                 }
 
-                t.completion.SetResult(succeed);
+                completion.SetResult(succeed);
             }
         }
 

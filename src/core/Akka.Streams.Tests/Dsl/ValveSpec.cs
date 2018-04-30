@@ -74,10 +74,10 @@ namespace Akka.Streams.Tests.Dsl
                 .Run(Sys.Materializer());
 
             var sourceProbe = t.Item1.Item1;
-            var switchFut = t.Item1.Item2;
+            var switchTask = t.Item1.Item2;
             var sinkProbe = t.Item2;
 
-            var valveSwitch = switchFut.AwaitResult();
+            var valveSwitch = switchTask.AwaitResult();
 
             sinkProbe.Request(1);
             var flip = valveSwitch.Flip(SwitchMode.Open);
@@ -156,10 +156,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Closed_Valve_should_not_pull_elements_again_when_opened_and_closed_and_re_opened()
         {
-            var (probe, switchTask, resultTask) = this.SourceProbe<int>()
+            var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
+
+            var probe = t.Item1;
+            var switchTask = t.Item2;
+            var resultTask = t.Item3;
 
             var valveSwitch = switchTask.AwaitResult();
 
@@ -299,10 +303,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Open_Valve_should_not_pull_elements_again_when_closed_and_re_opened()
         {
-            var (probe, switchTask, resultTask) = this.SourceProbe<int>()
+            var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
+
+            var probe = t.Item1;
+            var switchTask = t.Item2;
+            var resultTask = t.Item3;
 
             var valveSwitch = switchTask.AwaitResult();
 
