@@ -27,7 +27,7 @@ namespace Akka.Persistence
     public interface ISnapshotResponse : ISnapshotMessage { }
 
     /// <summary>
-    /// TBD
+    /// Metadata for all persisted snapshot records.
     /// </summary>
     [Serializable]
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
