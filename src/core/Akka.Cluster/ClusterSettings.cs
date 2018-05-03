@@ -61,7 +61,7 @@ namespace Akka.Cluster
             SelfDataCenter = cc.GetString("multi-data-center.self-data-center");
 
             var configuredRoles = cc.GetStringList("roles").ToImmutableHashSet();
-            if (configuredRoles.Count != 0  && Roles.Any(role => role.StartsWith(DcRolePrefix)))
+            if (configuredRoles.Count != 0  && configuredRoles.Any(role => role.StartsWith(DcRolePrefix)))
                 throw new ConfigurationException($"Roles must not start with '{DcRolePrefix}' as that is reserved for the cluster self-data-center setting");
 
             Roles = configuredRoles.Add(DcRolePrefix + SelfDataCenter);

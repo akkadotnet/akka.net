@@ -563,10 +563,10 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     var r = _region.Value;
-                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(1, Counter.Decrement.Instance));
+                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance)); // counter state: {1:1}
+                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance)); // counter state: {1:2}
+                    r.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance)); // counter state: {1:3}
+                    r.Tell(new Counter.EntityEnvelope(1, Counter.Decrement.Instance)); // counter state: {1:2}
                     r.Tell(new Counter.Get(1));
 
                     ExpectMsg(2);
@@ -587,16 +587,16 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     var r = _region.Value;
-                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(2, Counter.Decrement.Instance));
+                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance)); // counter state {1:2, 2:1}
+                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance)); // counter state {1:2, 2:2}
+                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance)); // counter state {1:2, 2:3}
+                    r.Tell(new Counter.EntityEnvelope(2, Counter.Decrement.Instance)); // counter state {1:2, 2:2}
                     r.Tell(new Counter.Get(2));
 
                     ExpectMsg(2);
 
-                    r.Tell(new Counter.EntityEnvelope(11, Counter.Increment.Instance));
-                    r.Tell(new Counter.EntityEnvelope(12, Counter.Increment.Instance));
+                    r.Tell(new Counter.EntityEnvelope(11, Counter.Increment.Instance)); // counter state {1:2, 2:2, 11:1}
+                    r.Tell(new Counter.EntityEnvelope(12, Counter.Increment.Instance)); // counter state {1:2, 2:2, 11:1, 12:1}
                     r.Tell(new Counter.Get(11));
                     ExpectMsg(1);
                     r.Tell(new Counter.Get(12));
@@ -607,7 +607,7 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     var r = _region.Value;
-                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                    r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance)); // counter state {1:2, 2:3, 11:1, 12:1}
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
                     LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "2" / "2");
@@ -650,7 +650,7 @@ namespace Akka.Cluster.Sharding.Tests
                 r.Tell(new Counter.EntityEnvelope(2, ReceiveTimeout.Instance));
                 // let the Passivate-Stop roundtrip begin to trigger buffering of subsequent messages
                 Thread.Sleep(200);
-                r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance)); // counter state {1:2, 2:4, 11:1, 12:1}
                 r.Tell(new Counter.Get(2));
                 ExpectMsg(4);
             }, _config.Second);
@@ -743,7 +743,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     var r = _region.Value;
                     for (int i = 0; i < 10; i++)
-                        r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
+                        r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:10, 11:1, 12:1}
 
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(10);
@@ -757,7 +757,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     var r = _region.Value;
                     for (int i = 0; i < 20; i++)
-                        r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
+                        r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:10, 4:20, 11:1, 12:1}
 
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(20);
@@ -768,12 +768,12 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     var r = _region.Value;
-                    r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
+                    r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:11, 4:20, 11:1, 12:1}
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
                     LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
 
-                    r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
+                    r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:11, 4:21, 11:1, 12:1}
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
                     LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
