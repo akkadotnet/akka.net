@@ -186,7 +186,6 @@ namespace Akka.Persistence.Snapshot
             {
                 Serialize(stream, new Serialization.Snapshot(snapshot));
             });
-
 		    var newName = GetSnapshotFileForWrite(metadata);
 			if (File.Exists(newName.FullName))
 			{
@@ -218,11 +217,11 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// Creates a new temporary file to store the current snapshot.
+        /// TBD
         /// </summary>
-        /// <param name="metadata">The snapshot metadata.</param>
-        /// <param name="p">Delegate that will process the contents of the snapshot file.</param>
-        /// <returns>The populated snapshot file.</returns>
+        /// <param name="metadata">TBD</param>
+        /// <param name="p">TBD</param>
+        /// <returns>TBD</returns>
         protected FileInfo WithOutputStream(SnapshotMetadata metadata, Action<Stream> p)
         {
             var tmpFile = GetSnapshotFileForWrite(metadata, ".tmp");
