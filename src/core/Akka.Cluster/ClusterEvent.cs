@@ -678,6 +678,8 @@ namespace Akka.Cluster
                     return hash;
                 }
             }
+
+            public override string ToString() => $"ReachabilityChanged({Reachability})";
         }
 
         /// <summary>
@@ -709,6 +711,8 @@ namespace Akka.Cluster
             /// <inheritdoc/>
             public override bool Equals(object obj) => obj is CurrentInternalStats other &&
                                                        (GossipStats.Equals(other.GossipStats) && SeenBy.Equals(other.SeenBy));
+
+            public override string ToString() => $"CurrentInternalStats(gossipStats: {GossipStats}, seenBy: {SeenBy})";
         }
 
         #endregion
@@ -844,10 +848,10 @@ namespace Akka.Cluster
         internal static SeenChanged DiffSeen(MembershipState oldState, MembershipState newState)
         {
             if (ReferenceEquals(oldState, newState)) return null;
-
+            
             var newConvergence = newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty);
             var newSeenBy = newState.LatestGossip.SeenBy;
-
+            
             if (newConvergence != oldState.Convergence(ImmutableHashSet<UniqueAddress>.Empty) ||
                 !newSeenBy.SetEquals(oldState.LatestGossip.SeenBy))
             {
