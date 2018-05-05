@@ -75,6 +75,8 @@ namespace Akka.Cluster
                     return hashCode;
                 }
             }
+
+            public override string ToString() => $"Record(observer: {Observer}, subject: {Subject}, status: {Status}, version: {Version})";
         }
 
         public enum ReachabilityStatus
@@ -169,6 +171,7 @@ namespace Akka.Cluster
 
         private Reachability Change(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status)
         {
+            Console.WriteLine($"---REACHABILITY CHANGE: {observer} -[{status}]-> {subject}");
             var v = NextVersion(observer);
             var newVersions = Versions.SetItem(observer, v);
             var newRecord = new Record(observer, subject, status, v);
@@ -180,7 +183,7 @@ namespace Akka.Cluster
             {
                 if (status == ReachabilityStatus.Reachable &&
                     oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable))
-                    return new Reachability(Records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
+                    return new Reachability(Records.FindAll(r => r.Observer != observer), newVersions);
                 return new Reachability(Records.Add(newRecord), newVersions);
             }
 
@@ -414,17 +417,7 @@ namespace Akka.Cluster
         public override string ToString()
         {
             var builder = new StringBuilder("Reachability(");
-
-            foreach (var observer in Versions.Keys)
-            {
-                var rows = ObserverRows(observer);
-                if (rows == null) continue;
-
-                builder.AppendJoin(", ", rows, (b, row, index) =>
-                    b.AppendFormat("[{0} -> {1}: {2} [{3}] ({4})]",
-                        observer.Address, row.Key, row.Value.Status, Status(row.Key), row.Value.Version));
-            }
-
+            builder.AppendJoin(", ", Records);
             return builder.Append(')').ToString();
         }
     }
