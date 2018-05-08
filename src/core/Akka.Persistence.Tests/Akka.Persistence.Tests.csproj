@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp2.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +29,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZABLE</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 
