@@ -4,9 +4,10 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.TestKit</AssemblyTitle>
     <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
-    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net452;netstandard2.0</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NetStandardImplicitPackageVersion>2.0.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,9 +19,8 @@
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
-    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
