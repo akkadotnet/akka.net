@@ -1370,7 +1370,7 @@ namespace Akka.Cluster
                         Sender.Tell(new InternalClusterAction.Welcome(SelfUniqueAddress, LatestGossip));
                     }
 
-                    PublishMembershipState();
+                    PublishMembershipState(); // joining
                 }
             }
         }
@@ -1393,7 +1393,7 @@ namespace Akka.Cluster
 
                 _cluster.LogInfo("Welcome from [{0}]", from.Address);
                 AssertLatestGossip();
-                PublishMembershipState();
+                PublishMembershipState(); // welcome
                 if (!from.Equals(SelfUniqueAddress))
                     GossipTo(from, Sender);
                 BecomeInitialized();
@@ -1422,7 +1422,7 @@ namespace Akka.Cluster
                 UpdateLatestGossip(newGossip);
 
                 _cluster.LogInfo("Marked address [{0}] as [{1}]", address, MemberStatus.Leaving);
-                PublishMembershipState();
+                PublishMembershipState(); // leaving
                 // immediate gossip to speed up the leaving process
                 SendGossip();
             }
@@ -1436,7 +1436,7 @@ namespace Akka.Cluster
             // mark as seen
             _membershipState = _membershipState.Seen();
             AssertLatestGossip();
-            PublishMembershipState();
+            PublishMembershipState(); // exiting completed
 
             // Let others know (best effort) before shutdown. Otherwise they will not see
             // convergence of the Exiting state until they have detected this node as
@@ -1515,7 +1515,7 @@ namespace Akka.Cluster
 
                 var newGossip = localGossip.MarkAsDown(member);
                 UpdateLatestGossip(newGossip);
-                PublishMembershipState();
+                PublishMembershipState(); // downing
             }
             else if (member != null)
             {
@@ -1540,7 +1540,7 @@ namespace Akka.Cluster
                 _log.Warning(
                     "Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine. Node roles [{2}]",
                     Self, node.Address, string.Join(",", _cluster.SelfRoles));
-                PublishMembershipState();
+                PublishMembershipState(); // quarantined
                 Downing(node.Address);
             }
         }
@@ -1753,7 +1753,7 @@ namespace Akka.Cluster
                 }
             }
 
-            PublishMembershipState();
+            PublishMembershipState(); // receive gossip
 
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
             if (selfStatus == MemberStatus.Exiting && !_exitingTasksInProgress)
@@ -2061,7 +2061,7 @@ namespace Akka.Cluster
             if (!ReferenceEquals(latestGossip, pruned))
             {
                 UpdateLatestGossip(pruned);
-                PublishMembershipState();
+                PublishMembershipState(); // leader actions on convergence
             }
         }
 
@@ -2095,7 +2095,7 @@ namespace Akka.Cluster
                     _cluster.LogInfo("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
                 }
 
-                PublishMembershipState();
+                PublishMembershipState(); // joining -> weakly up
             }
         }
 
@@ -2172,7 +2172,7 @@ namespace Akka.Cluster
                                 newlyDetectedReachableMembers.Select(m => m.ToString())
                                     .Aggregate((a, b) => a + ", " + b), string.Join(",", _cluster.SelfRoles));
 
-                        PublishMembershipState();
+                        PublishMembershipState(); // reap unreachable
                     }
                 }
             }

@@ -244,7 +244,7 @@ namespace Akka.Cluster
                 crossDataCenterConnections: crossDataCenterConnections ?? CrossDataCenterConnections);
         }
 
-        public override string ToString() => $"MembershipState(selfDC: {SelfDataCenter}, selfAddress: {SelfUniqueAddress}, selfMember: {SelfMember}, latestGossip: {LatestGossip})";
+        public override string ToString() => $"MembershipState(selfDC: {SelfDataCenter}, selfAddress: {SelfUniqueAddress}, selfMember: {SelfMember}, latestGossip: {LatestGossip}, reachability: {DcReachability})";
     }
 
     internal class GossipTargetSelector

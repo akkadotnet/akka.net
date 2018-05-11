@@ -171,7 +171,6 @@ namespace Akka.Cluster
 
         private Reachability Change(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status)
         {
-            Console.WriteLine($"---REACHABILITY CHANGE: {observer} -[{status}]-> {subject}");
             var v = NextVersion(observer);
             var newVersions = Versions.SetItem(observer, v);
             var newRecord = new Record(observer, subject, status, v);
