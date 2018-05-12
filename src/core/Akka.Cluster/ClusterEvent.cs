@@ -28,13 +28,13 @@ namespace Akka.Cluster
     public static class ClusterEvent
     {
         #region messages
-        
+
         /// <summary>
         /// The mode for getting the current state of the cluster upon first subscribing.
         /// </summary>
         public enum SubscriptionInitialStateMode
         {
-           /// <summary>
+            /// <summary>
             /// When using this subscription mode a snapshot of
             /// <see cref="CurrentClusterState"/> will be sent to the
             /// subscriber as the first message.
@@ -81,7 +81,7 @@ namespace Akka.Cluster
                 null,
                 ImmutableDictionary<string, Address>.Empty,
                 ImmutableHashSet<string>.Empty)
-            {}
+            { }
 
             /// <summary>
             /// Creates a new instance of the current cluster state.
@@ -356,7 +356,7 @@ namespace Akka.Cluster
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash *  + base.GetHashCode();
+                    hash = hash * +base.GetHashCode();
                     hash = hash * 23 + PreviousStatus.GetHashCode();
                     return hash;
                 }
@@ -716,11 +716,11 @@ namespace Akka.Cluster
         }
 
         #endregion
-        
+
         internal static IEnumerable<UnreachableMember> DiffUnreachable(MembershipState oldState, MembershipState newState)
         {
             if (ReferenceEquals(oldState, newState)) yield break;
-            
+
             var newGossip = newState.LatestGossip;
             var oldUnreachableNodes = oldState.DcReachabilityNoOutsideNodes.AllUnreachableOrTerminated;
             foreach (var node in newState.DcReachabilityNoOutsideNodes.AllUnreachableOrTerminated)
@@ -750,7 +750,7 @@ namespace Akka.Cluster
                 {
                     if (member.DataCenter != otherDc && member.DataCenter != s.SelfDataCenter)
                         yield return member.UniqueAddress;
-                } 
+                }
             }
 
             var unrelatedDcNodes = UnrelatedDcNodes(state);
@@ -773,7 +773,7 @@ namespace Akka.Cluster
         internal static IEnumerable<ReachableDataCenter> DiffReachableDataCenters(MembershipState oldState, MembershipState newState)
         {
             if (ReferenceEquals(oldState, newState)) yield break;
-            
+
             var otherDcs = oldState.LatestGossip.AllDataCenters.Union(newState.LatestGossip.AllDataCenters).Remove(newState.SelfDataCenter);
             foreach (var dc in otherDcs)
             {
@@ -795,19 +795,28 @@ namespace Akka.Cluster
                 {
                     // check if member has changed
                     if (newMember.Status != oldMember.Status || newMember.UpNumber != oldMember.UpNumber)
-                        yield return MemberToEvent(newMember);
+                    {
+                        var e = MemberToEvent(newMember);
+                        if (e != null)
+                            yield return e;
+                    }
                 }
-                else yield return MemberToEvent(newMember); // if member didn't exists
+                else
+                {
+                    var e = MemberToEvent(newMember);
+                    if (e != null)
+                        yield return e; // if member didn't exists
+                }
             }
-            
+
             var oldMembers = oldState.LatestGossip.Members;
             foreach (var oldMember in oldMembers)
             {
-                if (!newMembers.Contains(oldMember)) 
+                if (!newMembers.Contains(oldMember))
                     yield return new MemberRemoved(oldMember.Copy(status: MemberStatus.Removed), oldMember.Status);
             }
         }
-        
+
         private static IMemberEvent MemberToEvent(Member member)
         {
             switch (member.Status)
@@ -848,10 +857,10 @@ namespace Akka.Cluster
         internal static SeenChanged DiffSeen(MembershipState oldState, MembershipState newState)
         {
             if (ReferenceEquals(oldState, newState)) return null;
-            
+
             var newConvergence = newState.Convergence(ImmutableHashSet<UniqueAddress>.Empty);
             var newSeenBy = newState.LatestGossip.SeenBy;
-            
+
             if (newConvergence != oldState.Convergence(ImmutableHashSet<UniqueAddress>.Empty) ||
                 !newSeenBy.SetEquals(oldState.LatestGossip.SeenBy))
             {
@@ -860,9 +869,9 @@ namespace Akka.Cluster
             else return null;
         }
 
-        internal static ReachabilityChanged DiffReachability(MembershipState oldState, MembershipState newState) => 
-            ReferenceEquals(newState.Overview.Reachability, oldState.Overview.Reachability) 
-                ? null 
+        internal static ReachabilityChanged DiffReachability(MembershipState oldState, MembershipState newState) =>
+            ReferenceEquals(newState.Overview.Reachability, oldState.Overview.Reachability)
+                ? null
                 : new ReachabilityChanged(newState.Overview.Reachability);
     }
 
@@ -874,7 +883,7 @@ namespace Akka.Cluster
         private MembershipState _membershipState;
 
         public string SelfDataCenter => _cluster.Settings.SelfDataCenter;
-        
+
         /// <summary>
         /// Default constructor for ClusterDomainEventPublisher.
         /// </summary>
@@ -886,7 +895,7 @@ namespace Akka.Cluster
                 selfDataCenter: _cluster.SelfDataCenter,
                 crossDataCenterConnections: _cluster.Settings.MultiDataCenter.CrossDcConnections);
             _membershipState = _emptyMembershipState;
-            
+
             _eventStream = Context.System.EventStream;
         }
 
@@ -935,7 +944,7 @@ namespace Akka.Cluster
             var unreachableDataCenters = !latestGossip.IsMultiDc
                 ? ImmutableHashSet<string>.Empty
                 : latestGossip.AllDataCenters.Where(dc => ClusterEvent.IsReachable(_membershipState, ImmutableHashSet<UniqueAddress>.Empty, dc)).ToImmutableHashSet();
-            
+
             var state = new ClusterEvent.CurrentClusterState(
                 members: latestGossip.Members,
                 unreachable: unreachable,
@@ -963,7 +972,7 @@ namespace Akka.Cluster
                     }
                     PublishDiff(_emptyMembershipState, _membershipState, Pub);
                     break;
-                
+
                 case ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot:
                     SendCurrentClusterState(subscriber);
                     break;
@@ -993,14 +1002,14 @@ namespace Akka.Cluster
             foreach (var e in ClusterEvent.DiffReachable(oldState, newState)) pub(e);
             foreach (var e in ClusterEvent.DiffUnreachableDataCenters(oldState, newState)) pub(e);
             foreach (var e in ClusterEvent.DiffReachableDataCenters(oldState, newState)) pub(e);
-            
+
             var leader = ClusterEvent.DiffLeader(oldState, newState); if (leader != null) pub(leader);
-            
+
             foreach (var e in ClusterEvent.DiffRolesLeader(oldState, newState)) pub(e);
-            
+
             // publish internal SeenState for testing purposes
             var seen = ClusterEvent.DiffSeen(oldState, newState); if (seen != null) pub(seen);
-            
+
             var reachability = ClusterEvent.DiffReachability(oldState, newState); if (reachability != null) pub(reachability);
         }
 
