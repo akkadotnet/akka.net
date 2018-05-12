@@ -50,7 +50,7 @@ namespace Akka.Cluster
     /// followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </para>
     /// </summary>
-    public class Cluster : IExtension
+    public sealed class Cluster : IExtension
     {
         /// <summary>
         /// Retrieves the extension from the specified actor system.

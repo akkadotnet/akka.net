@@ -354,7 +354,7 @@ namespace Akka.Cluster
         public ImmutableHashSet<UniqueAddress> AllUnreachableFrom(UniqueAddress observer)
         {
             var observerRows = ObserverRows(observer);
-            if (observerRows == null) return ImmutableHashSet.Create<UniqueAddress>();
+            if (observerRows == null) return ImmutableHashSet<UniqueAddress>.Empty;
             return
                 ImmutableHashSet.CreateRange(
                     observerRows.Where(p => p.Value.Status == ReachabilityStatus.Unreachable).Select(p => p.Key));

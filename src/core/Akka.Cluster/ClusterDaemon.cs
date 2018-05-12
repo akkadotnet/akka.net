@@ -827,6 +827,7 @@ namespace Akka.Cluster
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
 
+            _selfDataCenter = _cluster.SelfDataCenter;
             _publisher = publisher;
             _vclockNode = VectorClock.Node.Create(Gossip.VectorClockName(SelfUniqueAddress));
             _gossipTargetSelector = new GossipTargetSelector(
@@ -2116,19 +2117,16 @@ namespace Akka.Cluster
                     member.DataCenter == _selfDataCenter
                         ? _cluster.FailureDetector.IsAvailable(member.Address)
                         : _cluster.CrossDcFailureDetector.IsAvailable(member.Address);
-
+                
                 var newlyDetectedUnreachableMembers =
                     localMembers.Where(member => !(
-                            member.UniqueAddress.Equals(SelfUniqueAddress) ||
-                            localOverview.Reachability.Status(SelfUniqueAddress, member.UniqueAddress) ==
-                            Reachability.ReachabilityStatus.Unreachable ||
-                            localOverview.Reachability.Status(SelfUniqueAddress, member.UniqueAddress) ==
-                            Reachability.ReachabilityStatus.Terminated ||
+                            member.UniqueAddress == SelfUniqueAddress ||
+                            localOverview.Reachability.Status(SelfUniqueAddress, member.UniqueAddress) != Reachability.ReachabilityStatus.Reachable ||
                             IsAvailable(member)))
                         .ToImmutableSortedSet();
 
                 var newlyDetectedReachableMembers = localOverview.Reachability.AllUnreachableFrom(SelfUniqueAddress)
-                    .Where(node => !node.Equals(SelfUniqueAddress) && IsAvailable(localGossip.GetMember(node)))
+                    .Where(node => node != SelfUniqueAddress && IsAvailable(localGossip.GetMember(node)))
                     .Select(localGossip.GetMember)
                     .ToImmutableHashSet();
 

@@ -123,8 +123,13 @@ namespace Akka.Cluster
 
             ReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
             {
-                var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
-                return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
+                var builder = ImmutableHashSet<UniqueAddress>.Empty.ToBuilder();
+                foreach (var member in Members)
+                {
+                    if (member.Status == MemberStatus.Down)
+                        builder.Add(member.UniqueAddress);
+                }
+                return Overview.Reachability.RemoveObservers(builder.ToImmutable());
             });
 
             if (Cluster.IsAssertInvariantsEnabled) AssertInvariants();
