@@ -7,6 +7,7 @@
     <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn></NoWarn>    
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,8 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Quotations.Evaluator" Version="1.1.0" />
+    <PackageReference Include="FSharp.Quotations.Evaluator" Version="1.1.2" />
     <PackageReference Include="FsPickler" Version="5.2.0" />
+    <PackageReference Include="FSharp.Core" Version="4.2.3" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

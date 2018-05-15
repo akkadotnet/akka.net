@@ -43,7 +43,8 @@ namespace Akka.Persistence.Sqlite.Journal
                 orderingColumnName: "ordering",
                 serializerIdColumnName: "serializer_id",
                 timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer")), 
+                defaultSerializer: config.GetString("serializer"),
+                useSequentialAccess: config.GetBoolean("use-sequential-access")), 
                     Context.System.Serialization, 
                     GetTimestampProvider(config.GetString("timestamp-provider")));
         }

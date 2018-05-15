@@ -125,8 +125,8 @@ namespace Akka.Remote.Transport.DotNetty
         protected volatile Address LocalAddress;
         protected internal volatile IChannel ServerChannel;
 
-        private readonly IEventLoopGroup serverEventLoopGroup;
-        private readonly IEventLoopGroup clientEventLoopGroup;
+        private readonly IEventLoopGroup _serverEventLoopGroup;
+        private readonly IEventLoopGroup _clientEventLoopGroup;
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -141,8 +141,8 @@ namespace Akka.Remote.Transport.DotNetty
 
             Settings = DotNettyTransportSettings.Create(config);
             Log = Logging.GetLogger(System, GetType());
-            serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
-            clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
+            _serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
+            _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
@@ -161,8 +161,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (InternalTransport != TransportMode.Tcp)
                 throw new NotImplementedException("Haven't implemented UDP transport at this time");
 
-            var dns = listenAddress as DnsEndPoint;
-            if (dns != null)
+            if (listenAddress is DnsEndPoint dns)
             {
                 listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             }
@@ -256,8 +255,8 @@ namespace Akka.Remote.Transport.DotNetty
                 // free all of the connection objects we were holding onto
                 ConnectionGroup.Clear();
 #pragma warning disable 4014 // shutting down the worker groups can take up to 10 seconds each. Let that happen asnychronously.
-                clientEventLoopGroup.ShutdownGracefullyAsync();
-                serverEventLoopGroup.ShutdownGracefullyAsync();
+                _clientEventLoopGroup.ShutdownGracefullyAsync();
+                _serverEventLoopGroup.ShutdownGracefullyAsync();
 #pragma warning restore 4014
             }
         }
@@ -270,13 +269,13 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var client = new Bootstrap()
-                .Group(clientEventLoopGroup)
+                .Group(_clientEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                 .Option(ChannelOption.AutoRead, false)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)new PooledByteBufferAllocator() : new UnpooledByteBufferAllocator())
+                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpSocketChannel(addressFamily)
                     : new TcpSocketChannel())
@@ -379,13 +378,13 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var server = new ServerBootstrap()
-                .Group(serverEventLoopGroup)
+                .Group(_serverEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.AutoRead, false)
                 .Option(ChannelOption.SoBacklog, Settings.Backlog)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)new PooledByteBufferAllocator() : new UnpooledByteBufferAllocator())
+                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpServerSocketChannel(addressFamily)
                     : new TcpServerSocketChannel())
