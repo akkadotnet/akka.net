@@ -38,8 +38,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided 
-        /// <paramref name="persistenceId"/>, within boundaries of <paramref name="fromSequenceNr"/> 
+        /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided
+        /// <paramref name="persistenceId"/>, within boundaries of <paramref name="fromSequenceNr"/>
         /// and <paramref name="toSequenceNr"/> up to <paramref name="max"/> number of events.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -53,8 +53,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task SelectByPersistenceIdAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> callback);
 
         /// <summary>
-        /// Asynchronously replays <paramref name="callback"/> on all selected events, which have been tagged using 
-        /// provided <paramref name="tag"/>, within boundaries of <paramref name="fromOffset"/> and 
+        /// Asynchronously replays <paramref name="callback"/> on all selected events, which have been tagged using
+        /// provided <paramref name="tag"/>, within boundaries of <paramref name="fromOffset"/> and
         /// <paramref name="toOffset"/>, up to <paramref name="max"/> number of elements.
         /// Returns highest sequence number from selected events.
         /// </summary>
@@ -172,6 +172,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public string DefaultSerializer { get; }
 
         /// <summary>
+        /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
+        /// </summary>
+        public bool UseSequentialAccess { get; }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -188,6 +193,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -202,7 +208,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             string orderingColumnName,
             string serializerIdColumnName,
             TimeSpan timeout,
-            string defaultSerializer)
+            string defaultSerializer,
+            bool useSequentialAccess)
         {
             SchemaName = schemaName;
             JournalEventsTableName = journalEventsTableName;
@@ -218,6 +225,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             OrderingColumnName = orderingColumnName;
             DefaultSerializer = defaultSerializer;
             SerializerIdColumnName = serializerIdColumnName;
+            UseSequentialAccess = useSequentialAccess;
         }
 
         /// <summary>
@@ -235,7 +243,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public abstract class AbstractQueryExecutor : IJournalQueryExecutor
     {
-        // indexes of particular fields returned from all events queries 
+        // indexes of particular fields returned from all events queries
         // they must match `allEventColumnNames` order
         /// <summary>
         /// TBD
@@ -461,7 +469,18 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, fromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
+                {
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
                     var i = 0L;
                     while ((i++) < max && await reader.ReadAsync(cancellationToken))
@@ -494,7 +513,18 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
+                {
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
                     var maxSequenceNr = 0L;
                     while (await reader.ReadAsync(cancellationToken))

@@ -282,9 +282,17 @@ Target "NBench" <| fun _ ->
             info.FileName <- nbenchTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
-    
-    nbenchTestAssemblies |> Seq.iter runNBench
+        if result <> 0 then failwithf "%s %s \nexited with code %i" nbenchTestPath args result
+        
+    let failedRuns =
+        nbenchTestAssemblies
+        |> Seq.map (fun asm -> try runNBench asm; None with e -> Some(e.ToString()))
+        |> Seq.filter Option.isSome
+        |> Seq.map Option.get
+        |> Seq.mapi (fun i s -> sprintf "%i: \"%s\"" (i + 1) s)
+        |> Seq.toArray
+    if failedRuns.Length > 0 then
+        failwithf "NBench.Runner failed for %i run(s):\n%s\n\n" failedRuns.Length (String.concat "\n\n" failedRuns)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
