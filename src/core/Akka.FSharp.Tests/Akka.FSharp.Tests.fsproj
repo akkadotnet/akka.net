@@ -5,6 +5,7 @@
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
     <TargetFrameworks>net452;netstandard2.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <NoWarn></NoWarn> 
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.Core" Version="4.2.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />

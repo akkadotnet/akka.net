@@ -16,7 +16,7 @@ using Akka.Util;
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
-    /// Flattened and serialized snapshot object used as intermediate representation 
+    /// Flattened and serialized snapshot object used as intermediate representation
     /// before saving snapshot with metadata inside SQL Server database.
     /// </summary>
     public class SnapshotEntry
@@ -113,6 +113,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public readonly string DefaultSerializer;
 
         /// <summary>
+        /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
+        /// </summary>
+        public bool UseSequentialAccess { get; }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -125,6 +130,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
         public QueryConfiguration(
             string schemaName,
             string snapshotTableName,
@@ -134,8 +140,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             string manifestColumnName,
             string timestampColumnName,
             string serializerIdColumnName,
-            TimeSpan timeout, 
-            string defaultSerializer)
+            TimeSpan timeout,
+            string defaultSerializer,
+            bool useSequentialAccess)
         {
             SchemaName = schemaName;
             SnapshotTableName = snapshotTableName;
@@ -147,6 +154,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             SerializerIdColumnName = serializerIdColumnName;
             Timeout = timeout;
             DefaultSerializer = defaultSerializer;
+            UseSequentialAccess = useSequentialAccess;
         }
 
         /// <summary>
@@ -166,7 +174,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         QueryConfiguration Configuration { get; }
 
         /// <summary>
-        /// Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId"/>, 
+        /// Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId"/>,
         /// <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -178,7 +186,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr, DateTime? timestamp);
 
         /// <summary>
-        /// Deletes all snapshot matching persistent actor's <paramref name="persistenceId"/> as well as 
+        /// Deletes all snapshot matching persistent actor's <paramref name="persistenceId"/> as well as
         /// upper (inclusive) bounds of the both <paramref name="maxSequenceNr"/> and <paramref name="maxTimestamp"/>.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -466,7 +474,19 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
+                {
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
                     if (await reader.ReadAsync(cancellationToken))
                     {
