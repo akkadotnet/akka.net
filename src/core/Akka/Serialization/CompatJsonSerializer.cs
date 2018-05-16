@@ -30,6 +30,8 @@ namespace Akka.Serialization
     {
         private static readonly string CoreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
 
+        private static readonly bool s_runOnClr;
+
         private readonly JsonSerializer _serializer;
 
         /// <summary>
@@ -41,6 +43,11 @@ namespace Akka.Serialization
         /// TBD
         /// </summary>
         public object Serializer => _serializer;
+
+        static CompatJsonSerializer()
+        {
+            s_runOnClr = !string.IsNullOrEmpty(EnvironmentHelper.RuntimeNetCoreVersion);
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
@@ -136,11 +143,11 @@ namespace Akka.Serialization
         public override byte[] ToBinary(object obj)
         {
             string data = JsonConvert.SerializeObject(obj, Formatting.None, Settings);
-#if CORECLR
-            data = data.Replace("System.Private.CoreLib", "%CORE%");
-#else
-            data = data.Replace("mscorlib", "%CORE%");
-#endif
+            if (s_runOnClr)
+                data = data.Replace("System.Private.CoreLib", "%CORE%");
+            else
+                data = data.Replace("mscorlib", "%CORE%");
+
             byte[] bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
