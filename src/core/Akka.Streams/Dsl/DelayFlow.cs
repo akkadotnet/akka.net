@@ -20,11 +20,11 @@ namespace Akka.Streams.Dsl
     public interface IDelayStrategy<T>
     {
         /// <summary>
-        /// Returns delay for ongoing <paramref name="elem"/>, <code>TimeSpan.Zero</code> means passing without delay
+        /// Returns delay for ongoing <paramref name="element"/>, <code>TimeSpan.Zero</code> means passing without delay
         /// </summary>
-        /// <param name="elem">element</param>
+        /// <param name="element">element</param>
         /// <returns></returns>
-        TimeSpan NextDelay(T elem);
+        TimeSpan NextDelay(T element);
     }
 
     /// <summary>
@@ -36,12 +36,10 @@ namespace Akka.Streams.Dsl
         private readonly TimeSpan _delay;
 
         /// <param name="delay">value of the delay</param>
-        public FixedDelay(TimeSpan delay)
-        {
-            _delay = delay;
-        }
+        public FixedDelay(TimeSpan delay) => _delay = delay;
 
-        public TimeSpan NextDelay(T elem) => _delay;
+        /// <inheritdoc/>
+        public TimeSpan NextDelay(T element) => _delay;
     }
 
     /// <summary>
@@ -73,7 +71,7 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException("Increase step must be positive", nameof(increaseStep));
 
             if (maxDelay <= initialDelay)
-                throw new ArgumentException("Max delay must be bigger than initial delay");
+                throw new Exception($"{nameof(maxDelay)} must be bigger than {nameof(initialDelay)}");
 
             _increaseStep = increaseStep;
             _needsIncrease = needsIncrease;
@@ -83,9 +81,10 @@ namespace Akka.Streams.Dsl
             _delay = _initialDelay;
         }
 
-        public TimeSpan NextDelay(T elem)
+        /// <inheritdoc/>
+        public TimeSpan NextDelay(T element)
         {
-            if (_needsIncrease(elem))
+            if (_needsIncrease(element))
             {
                 var next = _delay + _increaseStep;
                 if (next < _maxDelay)
@@ -112,7 +111,7 @@ namespace Akka.Streams.Dsl
         {
             private readonly DelayFlow<T> _delayFlow;
             private readonly object _delayTimerKey = new object();
-            private T _delayedElem;
+            private T _delayedElement;
 
             public Logic(DelayFlow<T> delayFlow) : base(delayFlow.Shape)
             {
@@ -121,13 +120,13 @@ namespace Akka.Streams.Dsl
 
                 SetHandler(delayFlow.Inlet, onPush: () =>
                 {
-                    var elem = Grab(delayFlow.Inlet);
-                    var delay = strategy.NextDelay(elem);
+                    var element = Grab(delayFlow.Inlet);
+                    var delay = strategy.NextDelay(element);
                     if (delay == TimeSpan.Zero)
-                        Push(delayFlow.Outlet, elem);
+                        Push(delayFlow.Outlet, element);
                     else
                     {
-                        _delayedElem = elem;
+                        _delayedElement = element;
                         ScheduleOnce(_delayTimerKey, delay);
                     }
                 }, onUpstreamFinish: () =>
@@ -144,7 +143,7 @@ namespace Akka.Streams.Dsl
 
             protected internal override void OnTimer(object timerKey)
             {
-                Push(_delayFlow.Outlet, _delayedElem);
+                Push(_delayFlow.Outlet, _delayedElement);
                 if (IsClosed(_delayFlow.Inlet))
                     CompleteStage();
             }
@@ -152,10 +151,10 @@ namespace Akka.Streams.Dsl
 
         #endregion
 
-        private Func<IDelayStrategy<T>> _strategySupplier;
+        private readonly Func<IDelayStrategy<T>> _strategySupplier;
 
         /// <summary>
-        /// Flow stage that determines delay for each ongoing element invoking <code>TimeSpan DelayStrategy.NextDelay(T elem)</code>.
+        /// Flow stage that determines delay for each ongoing element invoking <code>TimeSpan DelayStrategy.NextDelay(T element)</code>.
         /// Implementing <see cref="IDelayStrategy{T}"/> with your own gives you flexible ability to manage delay value depending on coming elements.
         /// It is important notice that <see cref="IDelayStrategy{T}"/> can be stateful.
         /// There are also some predefined strategies: <see cref="FixedDelay{T}"/> and <see cref="LinearIncreasingDelay{T}"/>

@@ -54,13 +54,10 @@ namespace Akka.Streams.Tests.Dsl
             var flip = valveSwitch.Flip(SwitchMode.Open);
             flip.AwaitResult().Should().BeTrue();
 
-            probe.ExpectNext().Should().Be(1);
-            probe.ExpectNext().Should().Be(2);
+            probe.ExpectNext(1, 2);
 
             probe.Request(3);
-            probe.ExpectNext().Should().Be(3);
-            probe.ExpectNext().Should().Be(4);
-            probe.ExpectNext().Should().Be(5);
+            probe.ExpectNext(3, 4, 5);
 
             probe.ExpectComplete();
         }
@@ -103,8 +100,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext().Should().Be(2);
-            sinkProbe.ExpectNext().Should().Be(3);
+            sinkProbe.ExpectNext(2, 3);
 
             sinkProbe.ExpectComplete();
         }
@@ -237,8 +233,7 @@ namespace Akka.Streams.Tests.Dsl
             sourceProbe.SendNext(3);
             sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext().Should().Be(2);
-            sinkProbe.ExpectNext().Should().Be(3);
+            sinkProbe.ExpectNext(2, 3);
 
             sinkProbe.ExpectComplete();
         }
@@ -338,7 +333,7 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
 
             var valveSwitch = switchTask.AwaitResult();
-            var mode = valveSwitch.GetMode().AwaitResult().Should().Be(SwitchMode.Open);
+            valveSwitch.GetMode().AwaitResult().Should().Be(SwitchMode.Open);
         }
     }
 }

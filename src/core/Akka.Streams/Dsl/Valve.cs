@@ -52,9 +52,9 @@ namespace Akka.Streams.Dsl
 
         public Task<bool> Flip(SwitchMode flipToMode)
         {
-            var promise = new TaskCompletionSource<bool>();
-            _flipCallback(Tuple.Create(flipToMode, promise));
-            return promise.Task;
+            var completion = new TaskCompletionSource<bool>();
+            _flipCallback(Tuple.Create(flipToMode, completion));
+            return completion.Task;
         }
 
         public Task<SwitchMode> GetMode()
