@@ -75,7 +75,7 @@ namespace Akka.Streams.Dsl
     {
         #region Logic
 
-        private sealed class ValveGraphStageLogic : GraphStageLogic
+        private sealed class ValveGraphStageLogic : GraphStageLogic, IInHandler, IOutHandler
         {
             private readonly Valve<T> _valve;
             private readonly TaskCompletionSource<IValveSwitch> _completion;
@@ -95,17 +95,8 @@ namespace Akka.Streams.Dsl
 
                 _switch = new ValveSwitch(flipCallback, getModeCallback);
 
-                SetHandler(_valve.In, onPush: () =>
-                {
-                    if (IsOpen)
-                        Push(_valve.Out, Grab(_valve.In));
-                });
-
-                SetHandler(_valve.Out, onPull: () =>
-                {
-                    if (IsOpen)
-                        Pull(_valve.In);
-                });
+                SetHandler(_valve.In, this);
+                SetHandler(_valve.Out, this);
             }
 
             public override void PreStart()
@@ -139,6 +130,24 @@ namespace Akka.Streams.Dsl
 
                 completion.SetResult(succeed);
             }
+
+            public void OnPush()
+            {
+                if (IsOpen)
+                    Push(_valve.Out, Grab(_valve.In));
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (IsOpen)
+                    Pull(_valve.In);
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
         }
 
         #endregion

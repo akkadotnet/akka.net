@@ -107,39 +107,49 @@ namespace Akka.Streams.Dsl
     {
         #region Logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly DelayFlow<T> _delayFlow;
             private readonly object _delayTimerKey = new object();
+            private readonly IDelayStrategy<T> _strategy;
             private T _delayedElement;
 
             public Logic(DelayFlow<T> delayFlow) : base(delayFlow.Shape)
             {
                 _delayFlow = delayFlow;
-                var strategy = delayFlow._strategySupplier();
+                _strategy = delayFlow._strategySupplier();
 
-                SetHandler(delayFlow.Inlet, onPush: () =>
-                {
-                    var element = Grab(delayFlow.Inlet);
-                    var delay = strategy.NextDelay(element);
-                    if (delay == TimeSpan.Zero)
-                        Push(delayFlow.Outlet, element);
-                    else
-                    {
-                        _delayedElement = element;
-                        ScheduleOnce(_delayTimerKey, delay);
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    if (!IsTimerActive(_delayTimerKey))
-                        CompleteStage();
-                });
-
-                SetHandler(delayFlow.Outlet, onPull: () =>
-                {
-                    Pull(delayFlow.Inlet);
-                });
+                SetHandler(delayFlow.Inlet, this);
+                SetHandler(delayFlow.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                var element = Grab(_delayFlow.Inlet);
+                var delay = _strategy.NextDelay(element);
+                if (delay == TimeSpan.Zero)
+                    Push(_delayFlow.Outlet, element);
+                else
+                {
+                    _delayedElement = element;
+                    ScheduleOnce(_delayTimerKey, delay);
+                }
+            }
+
+            public void OnUpstreamFinish()
+            {
+                if (!IsTimerActive(_delayTimerKey))
+                    CompleteStage();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                Pull(_delayFlow.Inlet);
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {

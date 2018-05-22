@@ -25,7 +25,7 @@ namespace Akka.Streams.Dsl
 
         #region Logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly Pulse<T> _pulse;
             private bool _pulsing;
@@ -34,21 +34,30 @@ namespace Akka.Streams.Dsl
             {
                 _pulse = pulse;
 
-                SetHandler(_pulse.Inlet, onPush: () =>
-                {
-                    if (IsAvailable(_pulse.Outlet))
-                        Push(_pulse.Outlet, Grab(_pulse.Inlet));
-                });
-
-                SetHandler(pulse.Outlet, onPull: () =>
-                {
-                    if (!_pulsing)
-                    {
-                        Pull(_pulse.Inlet);
-                        StartPulsing();
-                    }
-                });
+                SetHandler(_pulse.Inlet, this);
+                SetHandler(pulse.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                if (IsAvailable(_pulse.Outlet))
+                    Push(_pulse.Outlet, Grab(_pulse.Inlet));
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (!_pulsing)
+                {
+                    Pull(_pulse.Inlet);
+                    StartPulsing();
+                }
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
