@@ -109,10 +109,8 @@ namespace Akka.Remote
                     var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     _log.Debug("received local message [{0}]", msgLog);
                 }
-                if (payload is ActorSelectionMessage)
+                if (payload is ActorSelectionMessage sel)
                 {
-                    var sel = (ActorSelectionMessage)payload;
-
                     var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                     if (_settings.UntrustedMode
                         && (!_settings.TrustedSelectionPaths.Contains(actorPath)
