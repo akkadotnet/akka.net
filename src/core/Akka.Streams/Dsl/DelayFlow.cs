@@ -179,8 +179,10 @@ namespace Akka.Streams.Dsl
         /// Flow stage with fixed delay for each element.
         /// </summary>
         /// <param name="fixedDelay">value of the delay</param>
-        public DelayFlow(TimeSpan fixedDelay) : this(() => new FixedDelay<T>(fixedDelay))
+        public DelayFlow(TimeSpan fixedDelay)
         {
+            var delayStrategy = new FixedDelay<T>(fixedDelay);
+            _strategySupplier = () => delayStrategy;
         }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
