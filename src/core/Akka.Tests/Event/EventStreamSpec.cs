@@ -117,6 +117,28 @@ namespace Akka.Tests.Event
             }
         }
 
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/3267
+        /// </summary>
+        [Fact]
+        public void Bugfix3267_able_to_log_unhandled_messages_with_nosender()
+        {
+            using (var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig()))
+            {
+                system.EventStream.Subscribe(TestActor, typeof(Debug));
+
+                // sender is NoSender
+                var msg = new UnhandledMessage(42, ActorRefs.NoSender, system.DeadLetters);
+
+                system.EventStream.Publish(msg);
+
+                var debugMsg = ExpectMsg<Debug>();
+
+                debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
+                debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
+            }
+        }
+
         [Fact]
         public void Manage_sub_channels_using_classes()
         {
