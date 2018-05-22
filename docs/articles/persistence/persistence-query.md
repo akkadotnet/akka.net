@@ -253,7 +253,7 @@ public class ExampleStore
 {
     public Task<object> Save(object evt)
     {
-        return Task.FromResult(default(object));
+        return Task.FromResult(evt);
     }
 }
 ```
