@@ -1082,7 +1082,7 @@ namespace Akka.Streams.Dsl
     public class FixedDelay<T> : Akka.Streams.Dsl.IDelayStrategy<T>
     {
         public FixedDelay(System.TimeSpan delay) { }
-        public System.TimeSpan NextDelay(T elem) { }
+        public System.TimeSpan NextDelay(T element) { }
     }
     public class static Flow
     {
@@ -1306,7 +1306,7 @@ namespace Akka.Streams.Dsl
     }
     public interface IDelayStrategy<T>
     {
-        System.TimeSpan NextDelay(T elem);
+        System.TimeSpan NextDelay(T element);
     }
     public interface IFlow<TOut, out TMat>
     {
@@ -1369,7 +1369,7 @@ namespace Akka.Streams.Dsl
     {
         [Akka.Annotations.ApiMayChangeAttribute()]
         public LinearIncreasingDelay(System.TimeSpan increaseStep, System.Func<T, bool> needsIncrease, System.TimeSpan initialDelay, System.TimeSpan maxDelay) { }
-        public System.TimeSpan NextDelay(T elem) { }
+        public System.TimeSpan NextDelay(T element) { }
     }
     public sealed class Merge<T> : Akka.Streams.Dsl.Merge<T, T>
     {
