@@ -364,14 +364,14 @@ namespace Akka.Remote.Tests
             Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild").Tell(new Identify("idReq9"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq9")).Subject.ShouldBe(grandgrandchild);
             //TODO see #1544
-            Sys.ActorSelection(child.Path / "grandchild/grandgrandchild").Tell(new Identify("idReq10"));
+            Sys.ActorSelection(child.Path / "grandchild" / "grandgrandchild").Tell(new Identify("idReq10"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq10")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq11")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq12")).Subject.ShouldBe(grandgrandchild);
             //TODO see #1544
-            Sys.ActorSelection(child.Path / "*/grandgrandchild").Tell(new Identify("idReq13"));
+            Sys.ActorSelection(child.Path / "*" / "grandgrandchild").Tell(new Identify("idReq13"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq13")).Subject.ShouldBe(grandgrandchild);
 
             //ActorSelection doesn't support ToSerializationFormat directly
@@ -390,7 +390,7 @@ namespace Akka.Remote.Tests
             child2.Tell(new Identify("idReq15"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq15")).Subject.ShouldBe(child2);
             //TODO see #1544
-            Sys.ActorSelection(child.Path).Tell("idReq16");
+            Sys.ActorSelection(child.Path).Tell(new Identify("idReq16"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq16")).Subject.ShouldBe(child2);
             child.Tell(new Identify("idReq17"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq17")).Subject.ShouldBe(null);
