@@ -316,6 +316,7 @@ namespace Akka.Actor
         public Akka.Actor.SelectionPathElement[] Elements { get; }
         public object Message { get; }
         public bool WildCardFanOut { get; }
+        public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
