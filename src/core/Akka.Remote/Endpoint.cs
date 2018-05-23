@@ -64,9 +64,9 @@ namespace Akka.Remote
         /// <param name="log">TBD</param>
         public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
-            this._system = system;
-            this._provider = provider;
-            this._log = log;
+            _system = system;
+            _provider = provider;
+            _log = log;
             _remoteDaemon = provider.RemoteDaemon;
             _settings = provider.RemoteSettings;
         }
