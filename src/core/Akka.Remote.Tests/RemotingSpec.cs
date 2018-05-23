@@ -365,7 +365,7 @@ namespace Akka.Remote.Tests
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq9")).Subject.ShouldBe(grandgrandchild);
             //TODO see #1544
             Sys.ActorSelection(child.Path / "grandchild/grandgrandchild").Tell(new Identify("idReq10"));
-            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq10"), TimeSpan.FromMinutes(4)).Subject.ShouldBe(grandgrandchild);
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq10")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq11")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
