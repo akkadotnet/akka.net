@@ -284,23 +284,6 @@ namespace Akka.Remote.Tests
             ExpectMsg(47);
         }
 
-        //[Fact]
-        //public void Remoting_must_allow_ActorSelection_of_RemoteRoutees()
-        //{
-            
-        //    Within(TimeSpan.FromMinutes(4), () =>
-        //    {
-        //        var l = Sys.ActorOf(Props.Create<Echo1>().WithDeploy(new Deploy(new RemoteScope(RARP.For(_remoteSystem).Provider.DefaultAddress))), "deployed");
-
-        //        l.Tell(new Identify("idReq1"));
-        //        ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq1")).Subject.ShouldBe(l);
-
-        //        Sys.ActorSelection(l.Path).Tell(new Identify("idReq2"));
-        //        ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq2")).Subject.ShouldBe(l);
-        //    });
-            
-        //}
-
         [Fact]
         public void Remoting_must_select_actors_across_node_boundaries()
         {
@@ -342,7 +325,7 @@ namespace Akka.Remote.Tests
 
             Sys.ActorSelection("/user/looker/child").Tell(new Identify("idReq1"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq1")).Subject.ShouldBe(child);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq2"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq2")).Subject.ShouldBe(child);
             Sys.ActorSelection("/user/looker/*").Tell(new Identify("idReq3"));
@@ -350,27 +333,27 @@ namespace Akka.Remote.Tests
 
             Sys.ActorSelection("/user/looker/child/grandchild").Tell(new Identify("idReq4"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq4")).Subject.ShouldBe(grandchild);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path / "grandchild").Tell(new Identify("idReq5"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq5")).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/*/grandchild").Tell(new Identify("idReq6"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq6")).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/child/*").Tell(new Identify("idReq7"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq7")).Subject.ShouldBe(grandchild);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path / "*").Tell(new Identify("idReq8"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq8")).Subject.ShouldBe(grandchild);
 
             Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild").Tell(new Identify("idReq9"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq9")).Subject.ShouldBe(grandgrandchild);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path / "grandchild" / "grandgrandchild").Tell(new Identify("idReq10"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq10")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq11")).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq12")).Subject.ShouldBe(grandgrandchild);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path / "*" / "grandgrandchild").Tell(new Identify("idReq13"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq13")).Subject.ShouldBe(grandgrandchild);
 
@@ -389,7 +372,7 @@ namespace Akka.Remote.Tests
             var child2 = ExpectMsg<IActorRef>();
             child2.Tell(new Identify("idReq15"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq15")).Subject.ShouldBe(child2);
-            //TODO see #1544
+            
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq16"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq16")).Subject.ShouldBe(child2);
             child.Tell(new Identify("idReq17"));
