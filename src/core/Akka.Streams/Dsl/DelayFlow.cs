@@ -71,7 +71,7 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException("Increase step must be positive", nameof(increaseStep));
 
             if (maxDelay <= initialDelay)
-                throw new Exception($"{nameof(maxDelay)} must be bigger than {nameof(initialDelay)}");
+                throw new ArgumentException("Max delay must be bigger than initial delay", nameof(maxDelay));
 
             _increaseStep = increaseStep;
             _needsIncrease = needsIncrease;
