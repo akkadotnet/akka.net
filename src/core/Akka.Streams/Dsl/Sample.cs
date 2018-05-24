@@ -98,7 +98,7 @@ namespace Akka.Streams.Dsl
 
         public override FlowShape<T, T> Shape { get; }
 
-        public Inlet<T> In = new Inlet<T>("Sample-in");
-        public Outlet<T> Out = new Outlet<T>("Sample-out");
+        public Inlet<T> In { get; }
+        public Outlet<T> Out { get; }
     }
 }
