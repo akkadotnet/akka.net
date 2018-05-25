@@ -18,7 +18,7 @@ The Akka Streams API is completely decoupled from the Reactive Streams interface
 The relationship between these two is that the Akka Streams API is geared towards end-users while the Akka Streams implementation uses the Reactive Streams interfaces internally to pass data between the different processing stages. For this reason you will not find any resemblance between the Reactive Streams interfaces and the Akka Streams API. This is in line with the expectations of the Reactive Streams project, whose primary purpose is to define interfaces such that different streaming implementation can interoperate; it is not the purpose of Reactive Streams to describe an end-user API.
 
 ## How to read these docs
-Stream processing is a different paradigm to the Actor Model or to Task composition, therefore it may take some careful study of this subject until you feel familiair with the tools and techniques. The documentation is here to help and for best results we recommend the following approach:
+Stream processing is a different paradigm to the Actor Model or to Task composition, therefore it may take some careful study of this subject until you feel familiar with the tools and techniques. The documentation is here to help and for best results we recommend the following approach:
 
 * Read the [Quick Start Guide](xref:streams-quickstart) to get a feel for how streams look like and what they can do.
 * The top-down learners may want to peruse the [Design Principles behind Akka Streams](xref:streams-design-principles) at this point.
