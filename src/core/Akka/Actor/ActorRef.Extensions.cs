@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Akka.Actor
 {
     /// <summary>
@@ -22,6 +24,17 @@ namespace Akka.Actor
         public static bool IsNobody(this IActorRef actorRef)
         {
             return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef;
+        }
+
+        /// <summary>
+        /// Returns the <paramref name="actorRef"/>'s value if it's not <see langword="null"/>, <see cref="Nobody"/>, 
+        /// or <see cref="DeadLetterActorRef"/>. Otherwise return the result of evaluating `elseValue`.
+        /// </summary>
+        /// <param name="actorRef">The actor that is being tested.</param>
+        /// <param name="elseValue">TBD</param>
+        public static IActorRef GetOrElse(this IActorRef actorRef, Func<IActorRef> elseValue)
+        {
+            return actorRef.IsNobody() ? elseValue() : actorRef;
         }
     }
 }
