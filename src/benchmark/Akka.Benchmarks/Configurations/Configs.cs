@@ -11,6 +11,9 @@ using BenchmarkDotNet.Exporters;
 
 namespace Akka.Benchmarks.Configurations
 {
+    /// <summary>
+    /// Basic BenchmarkDotNet configuration used for microbenchmarks.
+    /// </summary>
     public class MicroBenchmarkConfig : ManualConfig
     {
         public MicroBenchmarkConfig()
@@ -19,6 +22,10 @@ namespace Akka.Benchmarks.Configurations
             this.Add(MarkdownExporter.GitHub);
         }
     }
+
+    /// <summary>
+    /// BenchmarkDotNet configuration used for monitored jobs (not for microbenchmarks).
+    /// </summary>
     public class MonitoringConfig : ManualConfig
     {
         public MonitoringConfig()
