@@ -21,8 +21,4 @@
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Hocon\" />
-  </ItemGroup>
-
 </Project>
