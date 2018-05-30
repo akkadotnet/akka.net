@@ -442,5 +442,54 @@ namespace Akka.Streams.Tests.Dsl
                 .AwaitResult()
                 .ShouldAllBeEquivalentTo(new[] {111, 222, 333});
         }
+
+        [Fact]
+        public void Source_prematerialization_must_materialize_the_source_and_connect_it_to_a_publisher()
+        {
+            var matValPoweredSource = Source.Maybe<int>();
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe = src.RunWith(this.SinkProbe<int>(), Sys.Materializer());
+            probe.Request(1);
+            mat.TrySetResult(42).Should().BeTrue();
+            probe.ExpectNext(42);
+            probe.ExpectComplete();
+        }
+
+        [Fact]
+        public async Task Source_prematerialization_must_allow_for_multiple_downstream_materialized_sources()
+        {
+            var matValPoweredSource = Source.Queue<string>(Int32.MaxValue, OverflowStrategy.Fail);
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe1 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            var probe2 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+
+            probe1.Request(1);
+            probe2.Request(2);
+            await mat.OfferAsync("One");
+            probe1.ExpectNext("One");
+            probe2.ExpectNext("One");
+        }
+
+        [Fact]
+        public async Task Source_prematerialization_must_survive_cancellation_of_downstream_materialized_sources()
+        {
+            var matValPoweredSource = Source.Queue<string>(Int32.MaxValue, OverflowStrategy.Fail);
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe1 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            src.RunWith(Sink.Cancelled<string>(), Sys.Materializer());
+
+            probe1.Request(1);
+            await mat.OfferAsync("One");
+            probe1.ExpectNext("One");
+        }
     }
 }
