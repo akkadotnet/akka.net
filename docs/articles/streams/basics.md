@@ -393,12 +393,7 @@ There are situations in which you require a `Source` materialized value **before
 
 By using the `PreMaterialize` operator on a `Source`, you can obtain its materialized value and another `Source`. The latter can be used to consume messages from the original `Source`. Note that this can be materialized multiple times.
 
-```csharp
-var source = Source.Maybe<int>;
-Tuple<TaskCompletionSource<int>, Source<int>> materialized = matValPoweredSource.PreMaterialize(Sys.Materializer());
-var tcs = materialized.Item1;
-var nextSource = materialized.Item2;
-```
+[!code-csharp[FlowDocTests.cs](../../examples/DocsExamples/Streams/FlowDocTests.cs?name=source-prematerialization)]
 
 ## Stream ordering
 In Akka Streams almost all computation stages *preserve input order* of elements. This means that if inputs ``{IA1,IA2,...,IAn}``
