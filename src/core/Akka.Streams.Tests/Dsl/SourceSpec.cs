@@ -461,7 +461,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Source_prematerialization_must_allow_for_multiple_downstream_materialized_sources()
         {
-            var matValPoweredSource = Source.Queue<string>(Int32.MaxValue, OverflowStrategy.Fail);
+            var matValPoweredSource = Source.Queue<string>(int.MaxValue, OverflowStrategy.Fail);
             var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
             var mat = matted.Item1;
             var src = matted.Item2;
