@@ -235,6 +235,18 @@ namespace Akka.Streams.Dsl
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public Tuple<TMat, Source<TOut, NotUsed>> PreMaterialize(IMaterializer materializer)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
+            return Tuple.Create(tup.Item1, Source.FromPublisher(tup.Item2));
+        }
+
+        /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
         /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
