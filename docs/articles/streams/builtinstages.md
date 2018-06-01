@@ -148,6 +148,12 @@ elements or failing the stream, the strategy is chosen by the user.
 
 **completes** when the actorref is sent ``Akka.Actor.Status.Success`` or ``PoisonPill``
 
+#### PreMaterialize
+
+Materializes this Source, immediately returning (1) its materialized value, and (2) a new Source that can consume elements 'into' the pre-materialized one.
+
+Useful for when you need a materialized value of a Source when handing it out to someone to materialize it for you.
+
 #### Combine
 
 Combine several sources, using a given strategy such as merge or concat, into one source.
@@ -359,7 +365,13 @@ to provide back pressure onto the sink.
 
 **cancels** when the actor terminates
 
-**backpressures** when the actor acknowledgement has not arrived
+**backpressures** when the actor acknowledgement has not arrived.
+
+#### PreMaterialize
+
+Materializes this Sink, immediately returning (1) its materialized value, and (2) a new Sink that can consume elements 'into' the pre-materialized one.
+
+Useful for when you need a materialized value of a Sink when handing it out to someone to materialize it for you.
 
 
 #### ActorSubscriber
