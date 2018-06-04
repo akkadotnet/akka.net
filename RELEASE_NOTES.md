@@ -1,7 +1,7 @@
 #### 1.3.8 June 04 2018 ####
 **Maintenance Release for Akka.NET 1.3**
 
-Akka.NET v1.3.7 is a minor patch consisting mostly of bug fixes as well as an upgrade to DotNetty v0.4.8.
+Akka.NET v1.3.8 is a minor patch consisting mostly of bug fixes as well as an upgrade to DotNetty v0.4.8.
 
 **DotNetty v0.4.8 Upgrade**
 You can [read the release notes for DotNetty v0.4.8 here](https://github.com/Azure/DotNetty/blob/5eee925b7597c6b07689f25f328966e330ff58f9/RELEASE_NOTES.md) - but here are the major improvements as they pertain to Akka.NET:
