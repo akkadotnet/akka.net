@@ -1,5 +1,41 @@
-#### 1.3.8 May 15 2018 ####
-*Placeholder*
+#### 1.3.8 June 04 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.7 is a minor patch consisting mostly of bug fixes as well as an upgrade to DotNetty v0.4.8.
+
+**DotNetty v0.4.8 Upgrade**
+You can [read the release notes for DotNetty v0.4.8 here](https://github.com/Azure/DotNetty/blob/5eee925b7597c6b07689f25f328966e330ff58f9/RELEASE_NOTES.md) - but here are the major improvements as they pertain to Akka.NET:
+
+1. DotNetty length-frame decoding is now fully-supported on .NET Core on Linux and
+2. Socket shutdown code has been improved, which fixes a potential "port exhaustion" issue reported by Akka.Remote users.
+
+If you've been affected by either of these issues, we strongly encourage that you upgrade your applications to Akka.NET v1.3.8 as soon as possible.
+
+**Updates and Additions**
+1. [Akka.Streams: add PreMaterialize support for Sources](https://github.com/akkadotnet/akka.net/pull/3476)
+2. [Akka.Streams: add PreMaterialize support for Sinks](https://github.com/akkadotnet/akka.net/pull/3477)
+3. [Akka.Streams: 
+Port Pulse, DelayFlow and Valve streams-contrib stages](https://github.com/akkadotnet/akka.net/pull/3421)
+4. [Akka.FSharp: Unit test Akka.FSharp.System.create with extensions](https://github.com/akkadotnet/akka.net/pull/3407)
+
+Relevant documentation for Akka.Streams pre-materialization, for those who are interested: http://getakka.net/articles/streams/basics.html#source-pre-materialization
+
+**Bugfixes**
+1. [Akka.Remote: ActorSelection fails for ActorPath from remotely deployed actors](https://github.com/akkadotnet/akka.net/issues/1544)
+2. [Akka.Remote: WilcardCard ActorSelections that fail to match any actors don't deliver messages into DeadLetters](https://github.com/akkadotnet/akka.net/issues/3420)
+3. [Akka.Cluster: SplitBrainResolver logs "network partition detected" after change in cluster membership, even when no unreachable nodes](https://github.com/akkadotnet/akka.net/issues/3450)
+4. [Akka: SynchronizationLockException in user-defined mailboxes](https://github.com/akkadotnet/akka.net/issues/3459)
+5. [Akka: UnhandledMessageForwarder crashes and restarted every time the app is starting](https://github.com/akkadotnet/akka.net/issues/3267)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 498 | 171 | Aaron Stannard |
+| 4 | 1054 | 23 | Bartosz Sypytkowski |
+| 2 | 2 | 2 | Fábio Beirão |
+| 2 | 16 | 2 | Aaron Palmer |
+| 1 | 1063 | 4 | Oleksandr Bogomaz |
+| 1 | 1 | 1 | Ismael Hamed |
+| 1 | 1 | 1 | Gauthier Segay |
 
 #### 1.3.7 May 15 2018 ####
 **Maintenance Release for Akka.NET 1.3**
