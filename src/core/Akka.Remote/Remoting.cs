@@ -252,18 +252,19 @@ namespace Akka.Remote
             else
             {
                 var timeout = Provider.RemoteSettings.ShutdownTimeout;
-                Action finalize = () =>
+
+                void Action()
                 {
                     _eventPublisher.NotifyListeners(new RemotingShutdownEvent());
                     _endpointManager = null;
-                };
+                }
 
                 return _endpointManager.Ask<bool>(new EndpointManager.ShutdownAndFlush(), timeout).ContinueWith(result =>
                 {
                     if (result.IsFaulted || result.IsCanceled) //Shutdown was not successful
                     {
                         NotifyError("Failure during shutdown of remoting", result.Exception);
-                        finalize();
+                        Action();
                     }
                     else
                     {
@@ -272,7 +273,7 @@ namespace Akka.Remote
                             _log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
-                        finalize();
+                        Action();
                     }
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }

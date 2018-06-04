@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("123b83e9-21f8-49a8-888a-3b1212ff21dc")]
@@ -1068,10 +1069,21 @@ namespace Akka.Streams.Dsl
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public Akka.Streams.Inlet<TIn> In(int id) { }
     }
+    public class DelayFlow<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    {
+        public DelayFlow(System.Func<Akka.Streams.Dsl.IDelayStrategy<T>> strategySupplier) { }
+        public DelayFlow(System.TimeSpan fixedDelay) { }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public class static FileIO
     {
         public static Akka.Streams.Dsl.Source<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromFile(System.IO.FileInfo f, int chunkSize = 8192, long startPosition = 0) { }
         public static Akka.Streams.Dsl.Sink<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> ToFile(System.IO.FileInfo f, System.Nullable<System.IO.FileMode> fileMode = null, long startPosition = 0) { }
+    }
+    public class FixedDelay<T> : Akka.Streams.Dsl.IDelayStrategy<T>
+    {
+        public FixedDelay(System.TimeSpan delay) { }
+        public System.TimeSpan NextDelay(T element) { }
     }
     public class static Flow
     {
@@ -1293,6 +1305,10 @@ namespace Akka.Streams.Dsl
             public Akka.Streams.Inlet<TIn> In { get; }
         }
     }
+    public interface IDelayStrategy<T>
+    {
+        System.TimeSpan NextDelay(T element);
+    }
     public interface IFlow<TOut, out TMat>
     {
         Akka.Streams.Dsl.IFlow<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc);
@@ -1324,6 +1340,11 @@ namespace Akka.Streams.Dsl
     {
         T Create(System.Func<TIn, TOut> unzipper);
     }
+    public interface IValveSwitch
+    {
+        System.Threading.Tasks.Task<bool> Flip(Akka.Streams.Dsl.SwitchMode mode);
+        System.Threading.Tasks.Task<Akka.Streams.Dsl.SwitchMode> GetMode();
+    }
     public class static JsonFraming
     {
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> ObjectScanner(int maximumObjectLength) { }
@@ -1344,6 +1365,12 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Outlet<T> Out { get; }
         public override Akka.Streams.FlowShape<T, T> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    public class LinearIncreasingDelay<T> : Akka.Streams.Dsl.IDelayStrategy<T>
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public LinearIncreasingDelay(System.TimeSpan increaseStep, System.Func<T, bool> needsIncrease, System.TimeSpan initialDelay, System.TimeSpan maxDelay) { }
+        public System.TimeSpan NextDelay(T element) { }
     }
     public sealed class Merge<T> : Akka.Streams.Dsl.Merge<T, T>
     {
@@ -1469,6 +1496,11 @@ namespace Akka.Streams.Dsl
         public override Akka.Streams.FanOutShape<TIn, TOut0, TOut1> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
+    public class Pulse<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    {
+        public Pulse(System.TimeSpan interval, bool initiallyOpen = False) { }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public class static RestartFlow
     {
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
@@ -1529,10 +1561,10 @@ namespace Akka.Streams.Dsl
     }
     public class Sample<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
     {
-        public Akka.Streams.Inlet<T> In;
-        public Akka.Streams.Outlet<T> Out;
         public Sample(int nth) { }
         public Sample(System.Func<int> next) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
         public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public static Akka.Streams.Dsl.Sample<T> Random(int maxStep = 1000) { }
@@ -1577,6 +1609,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Sink<TIn2, TMat> ContraMap<TIn2>(System.Func<TIn2, TIn> function) { }
         public Akka.Streams.Dsl.Sink<TIn, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> fn) { }
         public Akka.Streams.Dsl.Sink<TIn, TMat> Named(string name) { }
+        public System.Tuple<TMat, Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SourceShape<TIn>, TMat2> source, Akka.Streams.IMaterializer materializer) { }
         public override string ToString() { }
         public Akka.Streams.Dsl.Sink<TIn, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
@@ -1623,6 +1656,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializedFunction) { }
         public Akka.Streams.Dsl.Source<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Named(string name) { }
+        public System.Tuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Streams.IMaterializer materializer) { }
@@ -1821,6 +1855,11 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<T3, TMat, TClosed> ZipWith<T1, T2, T3, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<T1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<T2>, TMat> other, System.Func<T1, T2, T3> combine) { }
         public static Akka.Streams.Dsl.SubFlow<System.Tuple<TOut1, long>, TMat, TClosed> ZipWithIndex<TOut1, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow) { }
     }
+    public enum SwitchMode
+    {
+        Open = 0,
+        Close = 1,
+    }
     public class Tcp : Akka.Actor.ExtensionIdProvider<Akka.Streams.Dsl.TcpExt>
     {
         public Tcp() { }
@@ -1988,6 +2027,15 @@ namespace Akka.Streams.Dsl
     {
         protected UnzipWithCreator() { }
         public virtual Akka.Streams.Dsl.UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Create(System.Func<TIn, System.Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>> unzipper) { }
+    }
+    public class Valve<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<T, T>, System.Threading.Tasks.Task<Akka.Streams.Dsl.IValveSwitch>>
+    {
+        public Valve() { }
+        public Valve(Akka.Streams.Dsl.SwitchMode mode) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<Akka.Streams.Dsl.IValveSwitch>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public sealed class Zip<T1, T2> : Akka.Streams.Dsl.ZipWith<T1, T2, System.Tuple<T1, T2>>
     {

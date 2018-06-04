@@ -82,6 +82,20 @@ namespace Akka.Streams.Dsl
             => new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
 
         /// <summary>
+        /// Materializes this Sink immediately.
+        /// 
+        /// Useful for when you need a materialized value of a Sink when handing it out to someone to materialize it for you.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Sink"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Sink"/>.</returns>
+        public Tuple<TMat, Sink<TIn, NotUsed>> PreMaterialize(IMaterializer materializer)
+        {
+            var sub = Source.AsSubscriber<TIn>().ToMaterialized(this, Keep.Both).Run(materializer);
+            return Tuple.Create(sub.Item2, Sink.FromSubscriber(sub.Item1));
+        }
+
+        /// <summary>
         /// Change the attributes of this <see cref="IGraph{TShape}"/> to the given ones
         /// and seal the list of attributes. This means that further calls will not be able
         /// to remove these attributes, but instead add new ones. Note that this
@@ -178,7 +192,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, TMat> Wrap<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
             => graph is Sink<TIn, TMat>
-                ? (Sink<TIn, TMat>) graph
+                ? (Sink<TIn, TMat>)graph
                 : new Sink<TIn, TMat>(graph.Module);
 
         /// <summary>
@@ -205,7 +219,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (!e.IsFaulted && e.IsCompleted && e.Result == null)
                         throw new InvalidOperationException("Sink.First materialized on an empty stream");
-                    
+
                     return e;
                 });
 
@@ -226,7 +240,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task<TIn>> Last<TIn>() 
+        public static Sink<TIn, Task<TIn>> Last<TIn>()
             => FromGraph(new LastOrDefault<TIn>(throwOnDefault: true)).WithAttributes(DefaultAttributes.LastOrDefaultSink);
 
 
@@ -541,7 +555,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
             => graph is Sink<TIn, TMat>
-                ? (Sink<TIn, TMat>) graph
+                ? (Sink<TIn, TMat>)graph
                 : new Sink<TIn, TMat>(graph.Module);
 
         /// <summary>
