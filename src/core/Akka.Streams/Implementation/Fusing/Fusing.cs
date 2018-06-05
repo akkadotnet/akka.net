@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Fusing.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -465,7 +465,7 @@ namespace Akka.Streams.Implementation.Fusing
                         Log(indent,
                             $"subMat\n  {string.Empty.PadLeft(indent*2)}{string.Join("\n  " + string.Empty.PadLeft(indent*2), subMat.Select(p => $"{p.Key.GetType().Name}[{p.Key.GetHashCode()}] -> {p.Value}"))}");
 
-                    // we need to remove all wirings that this module copied from nested modules so that we don’t do wirings twice
+                    // we need to remove all wirings that this module copied from nested modules so that we donâ€™t do wirings twice
                     var oldDownstreams =
                         (module as FusedModule)?.Info.Downstreams.ToImmutableHashSet()
                         ?? module.Downstreams.ToImmutableHashSet();

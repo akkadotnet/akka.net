@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Futures.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -100,7 +100,24 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            return Ask<T>(self, _ => message, timeout, cancellationToken);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="messageFactory">Factory method that creates a message that can encapsulate the 'Sender' IActorRef</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the system can't resolve the target provider.
+        /// </exception>
+        /// <returns>TBD</returns>
+        public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef,object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             await SynchronizationContextManager.RemoveContext;
 
@@ -108,7 +125,7 @@ namespace Akka.Actor
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return (T) await Ask(self, message, provider, timeout, cancellationToken);
+            return (T)await Ask(self, messageFactory, provider, timeout, cancellationToken);
         }
 
         /// <summary>
@@ -134,7 +151,7 @@ namespace Akka.Actor
         private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
 
 
-        private static async Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
+        private static async Task<object> Ask(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider,
             TimeSpan? timeout, CancellationToken cancellationToken)
         {
             TaskCompletionSource<object> result;
@@ -174,6 +191,7 @@ namespace Akka.Actor
             var future = new FutureActorRef(result, () => { }, path, isRunContinuationsAsynchronouslyAvailable);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
+            var message = messageFactory(future);
             self.Tell(message, future);
 
             try

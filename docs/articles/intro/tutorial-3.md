@@ -64,7 +64,7 @@ The following guidelines help to arrive at the right granularity:
    states. We will see a very good example for this in the next chapter.
  * Prefer finer granularity if there is too much state to keep around in one place compared to dividing into smaller
    actors.
- * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and restored
+ * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and be restored
    individually.
 
 
@@ -98,7 +98,7 @@ We start implementing the protocol from the bottom first. In practice, both a to
 work, but in our case, we benefit from the bottom-up approach as it allows us to immediately write tests for the
 new features without mocking out parts.
 
-At the bottom of our hierarchy are the `Device` actors. Their job in this registration process is rather simple, just reply to the
+At the bottom of our hierarchy are the `Device` actors. Their job in this registration process is rather simple: just reply to the
 registration request with an acknowledgment to the sender. *We will assume that the sender of the registration
 message is preserved in the upper layers.* We will show you in the next section how this can be achieved.
 

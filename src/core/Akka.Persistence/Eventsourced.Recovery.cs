@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,6 +110,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else if (message is RecoveryTick tick && tick.Snapshot)
                     {
@@ -123,6 +124,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else
                     {
@@ -210,6 +212,7 @@ namespace Akka.Persistence
                         {
                             Context.Stop(Self);
                         }
+                        ReturnRecoveryPermit();
                     }
                     else if (message is RecoveryTick tick && !tick.Snapshot)
                     {
@@ -226,6 +229,7 @@ namespace Akka.Persistence
                             {
                                 Context.Stop(Self);
                             }
+                            ReturnRecoveryPermit();
                         }
                         else
                         {

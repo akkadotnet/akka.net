@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
@@ -317,6 +318,7 @@ namespace Akka.Actor
         public Akka.Actor.SelectionPathElement[] Elements { get; }
         public object Message { get; }
         public bool WildCardFanOut { get; }
+        public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
@@ -884,7 +886,8 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
-        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, System.Func<Akka.Actor.IActorRef, object> messageFactory, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {

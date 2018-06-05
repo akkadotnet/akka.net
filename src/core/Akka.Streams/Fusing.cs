@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Fusing.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ namespace Akka.Streams
     /// of fusing the same graph many times.
     ///
     /// Fusing together all operations which allow this treatment will reduce the
-    /// parallelism that is available in the stream graph’s execution—in the worst case
+    /// parallelism that is available in the stream graphâ€™s executionâ€”in the worst case
     /// it will become single-threaded and not benefit from multiple CPU cores at all.
     /// Where parallelism is required, the <see cref="Attributes.AsyncBoundary"/>
     /// attribute can be used to declare subgraph boundaries across which the graph

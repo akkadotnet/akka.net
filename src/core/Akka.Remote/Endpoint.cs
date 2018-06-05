@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,9 +64,9 @@ namespace Akka.Remote
         /// <param name="log">TBD</param>
         public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
-            this._system = system;
-            this._provider = provider;
-            this._log = log;
+            _system = system;
+            _provider = provider;
+            _log = log;
             _remoteDaemon = provider.RemoteDaemon;
             _settings = provider.RemoteSettings;
         }
@@ -109,20 +109,17 @@ namespace Akka.Remote
                     var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     _log.Debug("received local message [{0}]", msgLog);
                 }
-                if (payload is ActorSelectionMessage)
+                if (payload is ActorSelectionMessage sel)
                 {
-                    var sel = (ActorSelectionMessage)payload;
-
-                    var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                     if (_settings.UntrustedMode
-                        && (!_settings.TrustedSelectionPaths.Contains(actorPath)
+                        && (!_settings.TrustedSelectionPaths.Contains(FormatActorPath(sel))
                             || sel.Message is IPossiblyHarmful
                             || !recipient.Equals(_provider.RootGuardian)))
                     {
                         _log.Debug(
                             "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
                             "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
-                            actorPath);
+                            FormatActorPath(sel));
                     }
                     else
                     {
@@ -172,6 +169,11 @@ namespace Akka.Remote
                     "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
                     payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
             }
+        }
+
+        private static string FormatActorPath(ActorSelectionMessage sel)
+        {
+            return "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
         }
     }
 

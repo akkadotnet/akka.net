@@ -13,7 +13,7 @@
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="DotNetty.Handlers" Version="0.4.6" />
+    <PackageReference Include="DotNetty.Handlers" Version="0.4.8" />
     <PackageReference Include="Google.Protobuf" Version="3.3.0" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">

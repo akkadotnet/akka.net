@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -317,7 +317,7 @@ namespace Akka.Cluster
 
         private void HandleStabilityReached()
         {
-            if (Log.IsInfoEnabled)
+            if (Log.IsInfoEnabled && _unreachable.Any())
             {
                 Log.Info("A network partition detected - unreachable nodes: [{0}], remaining: [{1}]", string.Join(", ", _unreachable.Select(m => m.Address)), string.Join(", ", _reachable.Select(m => m.Address)));
             }

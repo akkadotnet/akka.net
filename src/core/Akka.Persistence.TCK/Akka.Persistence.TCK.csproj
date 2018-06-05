@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.TCK</AssemblyTitle>
     <Description>Testkit for Persistence actor support for Akka.NET</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;tck</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

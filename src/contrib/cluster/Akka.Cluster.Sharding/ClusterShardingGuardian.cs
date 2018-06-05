@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGuardian.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -222,7 +222,6 @@ namespace Akka.Cluster.Sharding
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
                     var shardRegion = Context.Child(encName);
-                    var replicator = Replicator(settings);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -233,7 +232,7 @@ namespace Akka.Cluster.Sharding
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
                             extractShardId: startProxy.ExtractShardId,
-                            replicator: replicator,
+                            replicator: Context.System.DeadLetters,
                             majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 

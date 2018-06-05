@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -233,6 +233,18 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+
+        /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public Tuple<TMat, Source<TOut, NotUsed>> PreMaterialize(IMaterializer materializer)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
+            return Tuple.Create(tup.Item1, Source.FromPublisher(tup.Item2));
+        }
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value

@@ -386,7 +386,14 @@ RunnableGraph<Tuple<TaskCompletionSource<int>, ICancelable, Task<int>>> r12 =
 > [!NOTE]
 > In Graphs it is possible to access the materialized value from inside the stream processing graph.
 > For details see [Accessing the materialized value inside the Graph](xref:streams-working-with-graphs#accessing-the-materialized-value-inside-the-graph).
-   
+
+### Source pre-materialization
+There are situations in which you require a `Source` materialized value **before** the `Source` gets hooked up to the rest of the graph.
+This is particularly useful in the case of "materialized value powered" `Source`s, like `Source.Queue`, `Source.ActorRef` or `Source.Maybe`.
+
+By using the `PreMaterialize` operator on a `Source`, you can obtain its materialized value and another `Source`. The latter can be used to consume messages from the original `Source`. Note that this can be materialized multiple times.
+
+[!code-csharp[FlowDocTests.cs](../../examples/DocsExamples/Streams/FlowDocTests.cs?name=source-prematerialization)]
 
 ## Stream ordering
 In Akka Streams almost all computation stages *preserve input order* of elements. This means that if inputs ``{IA1,IA2,...,IAn}``
