@@ -13,7 +13,6 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
-using Akka.Streams.Util;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -42,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.Ignore<int>())
                     .Run(Materializer);
             channel.StopPromise = stopPromise;
-            AwaitCondition(() => channel.IsReady);
+            AwaitCondition(()=>channel.IsReady);
             return channel;
         }
 
@@ -218,7 +217,7 @@ namespace Akka.Streams.Tests.Dsl
         private sealed class SideChannel
         {
             public volatile Action<object> AsyncCallback;
-            public volatile TaskCompletionSource<Option<int>> StopPromise;
+            public volatile TaskCompletionSource<int> StopPromise;
 
             public bool IsReady => AsyncCallback != null;
             public void Tell(object message) => AsyncCallback(message);
@@ -292,7 +291,7 @@ namespace Akka.Streams.Tests.Dsl
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
-
+        
         private sealed class TestStage2 : SimpleLinearGraphStage<int>
         {
             private sealed class Logic : TimerGraphStageLogic
@@ -305,7 +304,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Inlet, onPush: DoNothing,
+                    SetHandler(stage.Inlet, onPush: DoNothing, 
                         onUpstreamFinish: CompleteStage,
                         onUpstreamFailure: FailStage);
 
@@ -318,9 +317,9 @@ namespace Akka.Streams.Tests.Dsl
                 protected internal override void OnTimer(object timerKey)
                 {
                     _tickCount++;
-                    if (IsAvailable(_stage.Outlet))
+                    if(IsAvailable(_stage.Outlet))
                         Push(_stage.Outlet, _tickCount);
-                    if (_tickCount == 3)
+                    if(_tickCount == 3)
                         CancelTimer(TimerKey);
                 }
             }

@@ -53,7 +53,7 @@ namespace Akka.Streams.Implementation.IO
             public void OnPull()
             {
                 // Ignore if still binding
-                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
             }
 
             public void OnDownstreamFinish() => TryUnbind();
@@ -85,13 +85,13 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _unbindStarted = true;
                     SetKeepGoing(true);
-                    _listener.Tell(Tcp.Unbind.Instance, StageActor.Ref);
+                    _listener.Tell(Tcp.Unbind.Instance, StageActorRef);
                 }
             }
 
             private void UnbindCompleted()
             {
-                StageActor.Unwatch(_listener);
+                StageActorRef.Unwatch(_listener);
                 if (_connectionFlowsAwaitingInitialization.Current == 0)
                     CompleteStage();
                 else
@@ -106,8 +106,8 @@ namespace Akka.Streams.Implementation.IO
 
             public override void PreStart()
             {
-                GetStageActor(Receive);
-                _stage._tcpManager.Tell(new Tcp.Bind(StageActor.Ref, _stage._endpoint, _stage._backlog, _stage._options, pullMode: true), StageActor.Ref);
+                GetStageActorRef(Receive);
+                _stage._tcpManager.Tell(new Tcp.Bind(StageActorRef, _stage._endpoint, _stage._backlog, _stage._options, pullMode: true), StageActorRef);
             }
 
             private void Receive(Tuple<IActorRef, object> args)
@@ -118,12 +118,12 @@ namespace Akka.Streams.Implementation.IO
                 {
                     var bound = (Tcp.Bound)msg;
                     _listener = sender;
-                    StageActor.Watch(_listener);
+                    StageActorRef.Watch(_listener);
 
                     if (IsAvailable(_stage._out))
-                        _listener.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                        _listener.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
 
-                    var thisStage = StageActor.Ref;
+                    var thisStage = StageActorRef;
                     _bindingPromise.TrySetResult(new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                     {
                         // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
@@ -404,14 +404,14 @@ namespace Akka.Streams.Implementation.IO
                 _bytesOut = shape.Outlet;
 
                 _readHandler = new LambdaOutHandler(
-                    onPull: () => _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref),
+                    onPull: () => _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef),
                     onDownstreamFinish: () =>
                     {
                         if (!IsClosed(_bytesIn))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef);
                         else
                         {
-                            _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.Abort.Instance, StageActorRef);
                             CompleteStage();
                         }
                     });
@@ -423,17 +423,17 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var elem = Grab(_bytesIn);
                         ReactiveStreamsCompliance.RequireNonNullElement(elem);
-                        _connection.Tell(Tcp.Write.Create(elem, WriteAck.Instance), StageActor.Ref);
+                        _connection.Tell(Tcp.Write.Create(elem, WriteAck.Instance), StageActorRef);
                     },
                     onUpstreamFinish: () =>
                     {
                         // Reading has stopped before, either because of cancel, or PeerClosed, so just Close now
                         // (or half-close is turned off)
                         if (IsClosed(_bytesOut) || !_role.HalfClose)
-                            _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.Close.Instance, StageActorRef);
                         // We still read, so we only close the write side
                         else if (_connection != null)
-                            _connection.Tell(Tcp.ConfirmedClose.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.ConfirmedClose.Instance, StageActorRef);
                         else
                             CompleteStage();
                     },
@@ -444,7 +444,7 @@ namespace Akka.Streams.Implementation.IO
                             if (Interpreter.Log.IsDebugEnabled)
                                 Interpreter.Log.Debug(
                                     $"Aborting tcp connection to {_remoteAddress} because of upstream failure: {ex.Message}\n{ex.StackTrace}");
-                            _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.Abort.Instance, StageActorRef);
                         }
                         else
                             FailStage(ex);
@@ -463,15 +463,15 @@ namespace Akka.Streams.Implementation.IO
                     var inbound = (Inbound)_role;
                     SetHandler(_bytesOut, _readHandler);
                     _connection = inbound.Connection;
-                    GetStageActor(Connected).Watch(_connection);
-                    _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                    GetStageActorRef(Connected).Watch(_connection);
+                    _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
                     Pull(_bytesIn);
                 }
                 else
                 {
                     var outbound = (Outbound)_role;
-                    GetStageActor(Connecting(outbound)).Watch(outbound.Manager);
-                    outbound.Manager.Tell(outbound.ConnectCmd, StageActor.Ref);
+                    GetStageActorRef(Connecting(outbound)).Watch(outbound.Manager);
+                    outbound.Manager.Tell(outbound.ConnectCmd, StageActorRef);
                 }
             }
 
@@ -506,13 +506,13 @@ namespace Akka.Streams.Implementation.IO
                         ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
                         _connection = sender;
                         SetHandler(_bytesOut, _readHandler);
-                        StageActor.Unwatch(outbound.Manager);
-                        StageActor.Become(Connected);
-                        StageActor.Watch(_connection);
-                        _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                        StageActorRef.Unwatch(outbound.Manager);
+                        StageActorRef.Become(Connected);
+                        StageActorRef.Watch(_connection);
+                        _connection.Tell(new Tcp.Register(StageActorRef, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActorRef);
 
                         if (IsAvailable(_bytesOut))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                            _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef);
 
                         Pull(_bytesIn);
                     }
@@ -535,7 +535,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     var received = (Tcp.Received)msg;
                     // Keep on reading even when closed. There is no "close-read-side" in TCP
-                    if (IsClosed(_bytesOut)) _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                    if (IsClosed(_bytesOut)) _connection.Tell(Tcp.ResumeReading.Instance, StageActorRef);
                     else Push(_bytesOut, received.Data);
                 }
                 else if (msg is WriteAck)

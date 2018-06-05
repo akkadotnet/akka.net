@@ -14,7 +14,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
-using Akka.Streams.Util;
 using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
@@ -50,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
                 p.Subscribe(_probe);
                 _subscription = _probe.ExpectSubscription();
             }
-
+            
             public void Request(int demand) => _subscription.Request(demand);
 
             public void ExpectNext(int element) => _probe.ExpectNext(element);
@@ -145,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 WithSubstreamsSupport(1, 3, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
                     var s1 = new StreamPuppet(getSubFlow().RunWith(Sink.AsPublisher<int>(false), Materializer), this);
-
+                   
                     s1.Request(5);
                     s1.ExpectNext(1);
                     s1.ExpectNext(2);
@@ -366,7 +365,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var testSource =
                     Source.Single(1)
-                        .MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null)
+                        .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
                         .Concat(Source.Maybe<int>())
                         .SplitWhen(_ => true);
                 Action action = () =>
@@ -374,7 +373,7 @@ namespace Akka.Streams.Tests.Dsl
                     var task =
                         testSource.Lift()
                             .Delay(TimeSpan.FromSeconds(1))
-                            .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null))
+                            .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
                             .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 };
