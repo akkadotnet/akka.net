@@ -1,3 +1,6 @@
+#### 1.3.9 June 04 2018 ####
+Placeholder for nightlies.
+
 #### 1.3.8 June 04 2018 ####
 **Maintenance Release for Akka.NET 1.3**
 
