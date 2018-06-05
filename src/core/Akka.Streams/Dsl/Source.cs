@@ -596,9 +596,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, TaskCompletionSource<T>> Maybe<T>()
+        public static Source<T, TaskCompletionSource<Option<T>>> Maybe<T>()
         {
-            return new Source<T, TaskCompletionSource<T>>(
+            return new Source<T, TaskCompletionSource<Option<T>>>(
                 new MaybeSource<T>(DefaultAttributes.MaybeSource,
                     new SourceShape<T>(new Outlet<T>("MaybeSource"))));
         }

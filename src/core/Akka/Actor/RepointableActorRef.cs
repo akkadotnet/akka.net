@@ -293,8 +293,7 @@ namespace Akka.Actor
                     return ActorRefs.Nobody;
                 default:
                     var nameAndUid = ActorCell.SplitNameAndUid(next);
-                    IChildStats stats;
-                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
+                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out var stats))
                     {
                         var crs = stats as ChildRestartStats;
                         var uid = nameAndUid.Uid;
@@ -305,6 +304,10 @@ namespace Akka.Actor
                             else
                                 return crs.Child;
                         }
+                    }
+                    else if (Lookup is ActorCell cell && cell.TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                    {
+                        return functionRef;
                     }
                     return ActorRefs.Nobody;
             }

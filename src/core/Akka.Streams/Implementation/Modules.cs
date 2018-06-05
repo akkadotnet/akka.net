@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Streams.Actors;
+using Akka.Streams.Util;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
@@ -252,7 +253,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
-    public sealed class MaybeSource<TOut> : SourceModule<TOut, TaskCompletionSource<TOut>>
+    public sealed class MaybeSource<TOut> : SourceModule<TOut, TaskCompletionSource<Option<TOut>>>
     {
         /// <summary>
         /// TBD
@@ -282,7 +283,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SourceModule<TOut, TaskCompletionSource<TOut>> NewInstance(SourceShape<TOut> shape)
+        protected override SourceModule<TOut, TaskCompletionSource<Option<TOut>>> NewInstance(SourceShape<TOut> shape)
             => new MaybeSource<TOut>(Attributes, shape);
 
         /// <summary>
@@ -291,9 +292,9 @@ namespace Akka.Streams.Implementation
         /// <param name="context">TBD</param>
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
-        public override IPublisher<TOut> Create(MaterializationContext context, out TaskCompletionSource<TOut> materializer)
+        public override IPublisher<TOut> Create(MaterializationContext context, out TaskCompletionSource<Option<TOut>> materializer)
         {
-            materializer = new TaskCompletionSource<TOut>();
+            materializer = new TaskCompletionSource<Option<TOut>>();
             return new MaybePublisher<TOut>(materializer, Attributes.GetNameOrDefault("MaybeSource"));
         }
     }
@@ -396,7 +397,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes) 
+        public override IModule WithAttributes(Attributes attributes)
             => new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes));
 
         /// <summary>
@@ -404,7 +405,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape) 
+        protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape)
             => new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, Attributes, shape);
 
         /// <summary>

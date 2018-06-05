@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -21,7 +22,7 @@ namespace Akka.Actor
     /// Terminated message can't be forwarded to another actor, since that actor might not be watching the subject.
     /// Instead, if you need to forward Terminated to another actor you should send the information in your own message.
     /// </summary>
-    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded, IEquatable<Terminated>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Terminated" /> class.
@@ -59,7 +60,27 @@ namespace Akka.Actor
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return $"<Terminated>: {ActorRef} - ExistenceConfirmed={ExistenceConfirmed}";
+            return $"Terminated(ref: {ActorRef}, existenceConfirmed: {ExistenceConfirmed}, addressTerminated: {AddressTerminated})";
+        }
+
+        public bool Equals(Terminated other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(ActorRef, other.ActorRef) && AddressTerminated == other.AddressTerminated && ExistenceConfirmed == other.ExistenceConfirmed;
+        }
+
+        public override bool Equals(object obj) => obj is Terminated terminated && Equals(terminated);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (ActorRef != null ? ActorRef.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ AddressTerminated.GetHashCode();
+                hashCode = (hashCode * 397) ^ ExistenceConfirmed.GetHashCode();
+                return hashCode;
+            }
         }
     }
 

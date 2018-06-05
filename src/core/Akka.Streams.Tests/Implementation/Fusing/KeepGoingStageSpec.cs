@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Util;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -126,7 +127,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     _pingable = pingable;
 
-                    SetHandler(_pingable.Shape.Inlet, 
+                    SetHandler(_pingable.Shape.Inlet,
                         () => Pull(_pingable.Shape.Inlet),
                         //Ignore finish
                         () => { _listener.Tell(UpstreamCompleted.Instance); });
@@ -213,7 +214,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 pinger.Ping();
                 ExpectMsg<Pong>();
 
-                maybePromise.TrySetResult(0);
+                maybePromise.TrySetResult(Option<int>.None);
                 ExpectMsg<UpstreamCompleted>();
 
                 ExpectNoMsg(200);
@@ -248,7 +249,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 pinger.Ping();
                 ExpectMsg<Pong>();
 
-                maybePromise.TrySetResult(0);
+                maybePromise.TrySetResult(Option<int>.None);
                 ExpectMsg<UpstreamCompleted>();
 
                 ExpectNoMsg(200);
@@ -287,7 +288,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 pinger.Ping();
                 ExpectMsg<Pong>();
 
-                maybePromise.TrySetResult(0);
+                maybePromise.TrySetResult(Option<int>.None);
                 ExpectMsg<UpstreamCompleted>();
 
                 ExpectNoMsg(200);
@@ -300,7 +301,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // We need to catch the exception otherwise the test fails
                 // ReSharper disable once EmptyGeneralCatchClause
-                try { pinger.ThrowEx();} catch { }
+                try { pinger.ThrowEx(); } catch { }
                 // PostStop should not be concurrent with the event handler. This event here tests this.
                 ExpectMsg<EndOfEventHandler>();
                 ExpectMsg<PostStop>();
@@ -328,7 +329,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 pinger.Ping();
                 ExpectMsg<Pong>();
 
-                maybePromise.TrySetResult(0);
+                maybePromise.TrySetResult(Option<int>.None);
                 ExpectMsg<UpstreamCompleted>();
                 ExpectMsg<PostStop>();
             }, Materializer);

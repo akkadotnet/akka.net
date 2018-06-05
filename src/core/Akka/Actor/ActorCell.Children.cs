@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Text;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -19,18 +21,53 @@ namespace Akka.Actor
     {
         private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
+        private ImmutableDictionary<string, FunctionRef> _functionRefsDoNotCallMeDirectly = ImmutableDictionary<string, FunctionRef>.Empty;
 
         /// <summary>
         /// The child container collection, used to house information about all child actors.
         /// </summary>
-        public IChildrenContainer ChildrenContainer
+        public IChildrenContainer ChildrenContainer => _childrenContainerDoNotCallMeDirectly;
+
+        private IReadOnlyCollection<IActorRef> Children => ChildrenContainer.Children;
+        
+        private ImmutableDictionary<string, FunctionRef> FunctionRefs => Volatile.Read(ref _functionRefsDoNotCallMeDirectly);
+
+        internal bool TryGetFunctionRef(string name, out FunctionRef functionRef) => 
+            FunctionRefs.TryGetValue(name, out functionRef);
+
+        internal bool TryGetFunctionRef(string name, int uid, out FunctionRef functionRef) => 
+            FunctionRefs.TryGetValue(name, out functionRef) && (uid == ActorCell.UndefinedUid || uid == functionRef.Path.Uid);
+
+        internal FunctionRef AddFunctionRef(Action<IActorRef, object> tell, string suffix = "")
         {
-            get { return _childrenContainerDoNotCallMeDirectly; } 
+            var r = GetRandomActorName("$$");
+            var n = string.IsNullOrEmpty(suffix) ? r : r + "-" + suffix;
+            var childPath = new ChildActorPath(Self.Path, n, NewUid());
+            var functionRef = new FunctionRef(childPath, SystemImpl.Provider, SystemImpl.EventStream, tell);
+
+            return ImmutableInterlocked.GetOrAdd(ref _functionRefsDoNotCallMeDirectly, childPath.Name, functionRef);
         }
 
-        private IReadOnlyCollection<IActorRef> Children
+        internal bool RemoveFunctionRef(FunctionRef functionRef)
         {
-            get { return ChildrenContainer.Children; }
+            if (functionRef.Path.Parent != Self.Path) throw new InvalidOperationException($"Trying to remove FunctionRef {functionRef.Path} from wrong ActorCell");
+
+            var name = functionRef.Path.Name;
+            if (ImmutableInterlocked.TryRemove(ref _functionRefsDoNotCallMeDirectly, name, out var fref))
+            {
+                fref.Stop();
+                return true;
+            }
+            else return false;
+        }
+
+        protected void StopFunctionRefs()
+        {
+            var refs = Interlocked.Exchange(ref _functionRefsDoNotCallMeDirectly, ImmutableDictionary<string, FunctionRef>.Empty);
+            foreach (var pair in refs)
+            {
+                pair.Value.Stop();
+            }
         }
 
         /// <summary>
@@ -87,10 +124,11 @@ namespace Akka.Actor
             return MakeChild(props, name, isAsync, isSystemService);
         }
         
-        private string GetRandomActorName()
+        private string GetRandomActorName(string prefix = "$")
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
-            return "$" + id.Base64Encode();
+            var sb = new StringBuilder(prefix);
+            return id.Base64Encode(sb).ToString();
         }
 
         /// <summary>
@@ -331,8 +369,7 @@ namespace Akka.Actor
         [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         /// <summary>
@@ -346,18 +383,21 @@ namespace Akka.Actor
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(name, out stats))
+                if (TryGetChildRestartStatsByName(name, out var stats))
                 {
                     child = stats.Child;
+                    return true;
+                }
+                else if (TryGetFunctionRef(name, out var functionRef))
+                {
+                    child = functionRef;
                     return true;
                 }
             }
             else
             {
                 var nameAndUid = SplitNameAndUid(name);
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
+                if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
                 {
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
@@ -365,6 +405,11 @@ namespace Akka.Actor
                         child = stats.Child;
                         return true;
                     }
+                }
+                else if (TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                {
+                    child = functionRef;
+                    return true;
                 }
             }
             child = ActorRefs.Nobody;
@@ -378,8 +423,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
         {
-            var terminating = ChildrenContainer as TerminatingChildrenContainer;
-            if (terminating != null)
+            if (ChildrenContainer is TerminatingChildrenContainer terminating)
             {
                 var newContainer = UpdateChildrenRefs(c => c.Remove(child));
                 if (newContainer is TerminatingChildrenContainer) return null;

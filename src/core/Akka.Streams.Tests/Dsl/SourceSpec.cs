@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 subs.Cancel();
-                f.Task.AwaitResult().Should().Be(null);
+                f.Task.AwaitResult().Should().Be(Util.Option<object>.None);
             }, Materializer);
         }
 
