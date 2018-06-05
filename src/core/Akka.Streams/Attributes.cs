@@ -471,32 +471,4 @@ namespace Akka.Streams
         public static Attributes CreateSupervisionStrategy(Decider strategy)
             => new Attributes(new SupervisionStrategy(strategy));
     }
-    
-    /// <summary>
-    /// Attributes for stream refs (<see cref="ISourceRef{TOut}"/> and <see cref="ISinkRef{TIn}"/>).
-    /// Note that more attributes defined in <see cref="Attributes"/> and <see cref="ActorAttributes"/>.
-    /// </summary>
-    public static class StreamRefAttributes
-    {
-        /// <summary>
-        /// Attributes specific to stream refs.
-        /// </summary>
-        public interface IStreamRefAttribute : Attributes.IAttribute { }
-
-        public sealed class SubscriptionTimeout : IStreamRefAttribute
-        {
-            public TimeSpan Timeout { get; }
-
-            public SubscriptionTimeout(TimeSpan timeout)
-            {
-                Timeout = timeout;
-            }
-        }
-        
-        /// <summary>
-        /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
-        /// </summary>
-        public static Attributes CreateSubscriptionTimeout(TimeSpan timeout) =>
-            new Attributes(new SubscriptionTimeout(timeout));
-    }
 }

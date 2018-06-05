@@ -194,8 +194,6 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public bool NonEmpty => Used != 0;
 
-        public long RemainingCapacity => Capacity - Used;
-
         // for the maintenance parameter see dropHead
         /// <summary>
         /// TBD
