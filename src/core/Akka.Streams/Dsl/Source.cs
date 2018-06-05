@@ -339,6 +339,30 @@ namespace Akka.Streams.Dsl
             }));
 
         /// <summary>
+        /// Combines two sources with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="first">TBD</param>
+        /// <param name="second">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
+        public Source<TOut2, TMat3> CombineMaterialized<T, TOut2, TMat1, TMat2, TMat3>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMat3> combine)
+        {
+            var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
+            {
+                var c = b.Add(strategy(2));
+                b.From(secondShape).To(c.In(1));
+                return new FlowShape<T, TOut2>(c.In(0), c.Out);
+            });
+            return first.ViaMaterialized(secondPartiallyCombined, combine);
+        }
+
+        /// <summary>
         /// Combine the elements of multiple streams into a stream of lists.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -725,6 +749,29 @@ namespace Akka.Streams.Dsl
                 return new SourceShape<TOut2>(c.Out);
             }));
 
+        /// <summary>
+        /// Combines two sources with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="first">TBD</param>
+        /// <param name="second">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMat3> CombineMaterialized<T, TOut2, TMat1, TMat2, TMat3>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMat3> combine)
+        {
+            var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
+            {
+                var c = b.Add(strategy(2));
+                b.From(secondShape).To(c.In(1));
+                return new FlowShape<T, TOut2>(c.In(0), c.Out);
+            });
+            return first.ViaMaterialized(secondPartiallyCombined, combine);
+        }
 
         /// <summary>
         /// Combines the elements of multiple streams into a stream of lists.

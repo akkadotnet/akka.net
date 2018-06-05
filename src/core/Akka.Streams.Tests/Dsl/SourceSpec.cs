@@ -269,6 +269,41 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task Composite_Source_must_combine_from_two_inputs_with_CombineMaterialized_and_take_a_materialized_value()
+        {
+            var queueSource = Source.Queue<int>(1, OverflowStrategy.DropBuffer);
+            var intSequenceSource = Source.From(new[] { 1, 2, 3 });
+
+            var combined1 = Source.CombineMaterialized(queueSource, intSequenceSource,
+                i => new Concat<int, int>(i), Keep.Left); // Keep.left (i.e. preserve queueSource's materialized value)
+            var materialized1 = combined1.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Materializer);
+            var queue1 = materialized1.Item1;
+            var sinkProbe1 = materialized1.Item2;
+
+            sinkProbe1.Request(6);
+            await queue1.OfferAsync(10);
+            await queue1.OfferAsync(20);
+            await queue1.OfferAsync(30);
+            queue1.Complete(); // complete queueSource so that combined1 with `Concat` then pulls elements from intSequenceSource
+            sinkProbe1.ExpectNextN(new[] { 10, 20, 30, 1, 2, 3 });
+
+            // queueSource to be the second of combined source
+            var combined2 = Source.CombineMaterialized(intSequenceSource, queueSource,
+                i => new Concat<int, int>(i), Keep.Right); // Keep.right (i.e. preserve queueSource's materialized value)
+            var materialized2 = combined2.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Materializer);
+            var queue2 = materialized2.Item1;
+            var sinkProbe2 = materialized2.Item2;
+
+            sinkProbe2.Request(6);
+            await queue2.OfferAsync(10);
+            await queue2.OfferAsync(20);
+            await queue2.OfferAsync(30);
+            queue2.Complete();
+            sinkProbe2.ExpectNextN(new[] { 1, 2, 3 }); //as intSequenceSource is the first in combined source, elements from intSequenceSource come first
+            sinkProbe2.ExpectNextN(new[] { 10, 20, 30 }); // after intSequenceSource run out elements, queueSource elements come
+        }
+
+        [Fact]
         public void Repeat_Source_must_repeat_as_long_as_it_takes()
         {
             var f = Source.Repeat(42).Grouped(1000).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
