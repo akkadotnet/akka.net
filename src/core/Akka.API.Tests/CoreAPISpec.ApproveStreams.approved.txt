@@ -1654,7 +1654,6 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Async() { }
         public Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> Combine<T, TOut2>(Akka.Streams.Dsl.Source<T, Akka.NotUsed> first, Akka.Streams.Dsl.Source<T, Akka.NotUsed> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, params Akka.Streams.Dsl.Source<, >[] rest) { }
-        public Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Akka.Streams.Dsl.Source<T, TMat1> first, Akka.Streams.Dsl.Source<T, TMat2> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public Akka.Streams.Dsl.Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializedFunction) { }
         public Akka.Streams.Dsl.Source<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Named(string name) { }
@@ -1684,6 +1683,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> BatchWeighted<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Buffer<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Akka.Streams.Dsl.Source<T, TMat1> flow, Akka.Streams.Dsl.Source<T, TMat2> other, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> CompletionTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Concat<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> ConcatMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
