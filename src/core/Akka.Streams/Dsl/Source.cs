@@ -345,13 +345,13 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut2">TBD</typeparam>
         /// <typeparam name="TMat1">TBD</typeparam>
         /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
         /// <param name="first">TBD</param>
         /// <param name="second">TBD</param>
         /// <param name="strategy">TBD</param>
-        /// <param name="combine">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
         /// <returns>TBD</returns>
-        public Source<TOut2, TMat3> CombineMaterialized<T, TOut2, TMat1, TMat2, TMat3>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMat3> combine)
+        public Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
         {
             var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
             {
@@ -359,7 +359,7 @@ namespace Akka.Streams.Dsl
                 b.From(secondShape).To(c.In(1));
                 return new FlowShape<T, TOut2>(c.In(0), c.Out);
             });
-            return first.ViaMaterialized(secondPartiallyCombined, combine);
+            return first.ViaMaterialized(secondPartiallyCombined, combineMaterializers);
         }
 
         /// <summary>
@@ -756,13 +756,13 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut2">TBD</typeparam>
         /// <typeparam name="TMat1">TBD</typeparam>
         /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
         /// <param name="first">TBD</param>
         /// <param name="second">TBD</param>
         /// <param name="strategy">TBD</param>
-        /// <param name="combine">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TOut2, TMat3> CombineMaterialized<T, TOut2, TMat1, TMat2, TMat3>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMat3> combine)
+        public static Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
         {
             var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
             {
@@ -770,7 +770,7 @@ namespace Akka.Streams.Dsl
                 b.From(secondShape).To(c.In(1));
                 return new FlowShape<T, TOut2>(c.In(0), c.Out);
             });
-            return first.ViaMaterialized(secondPartiallyCombined, combine);
+            return first.ViaMaterialized(secondPartiallyCombined, combineMaterializers);
         }
 
         /// <summary>
