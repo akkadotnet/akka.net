@@ -4,10 +4,10 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.TestKit.Xunit2</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard2.0' ">2.0.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
