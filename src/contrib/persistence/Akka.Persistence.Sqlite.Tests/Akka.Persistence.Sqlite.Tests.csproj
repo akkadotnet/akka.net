@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Persistence.Sqlite.Tests</AssemblyTitle>
     <TargetFrameworks>net452;netcoreapp2.0</TargetFrameworks>
     <RuntimeIdentifier Condition=" '$(TargetFramework)' == 'net452' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
+    <!--<PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>-->
   </PropertyGroup>
  
   <ItemGroup>
