@@ -168,7 +168,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
 
                     var batch = new WriteJournalBatch(eventToTags);
-                    await QueryExecutor.InsertBatchAsync(connection, _pendingRequestsCancellation.Token, batch);
+                    using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                        await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch);
                 }
             }).ToArray();
 
@@ -206,13 +207,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                return await QueryExecutor
-                    .SelectByTagAsync(connection, _pendingRequestsCancellation.Token, replay.Tag, replay.FromOffset, replay.ToOffset, replay.Max, replayedTagged => {
-                        foreach(var adapted in AdaptFromJournal(replayedTagged.Persistent))
-                        { 
-                            replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
-                        }
-                    });
+                using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    return await QueryExecutor
+                        .SelectByTagAsync(connection, cancellationToken.Token, replay.Tag, replay.FromOffset, replay.ToOffset, replay.Max, replayedTagged => {
+                            foreach(var adapted in AdaptFromJournal(replayedTagged.Persistent))
+                            { 
+                                replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
+                            }
+                        });
+                 }
             }
         }
 
@@ -233,7 +237,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                await QueryExecutor.SelectByPersistenceIdAsync(connection, _pendingRequestsCancellation.Token, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
+                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    await QueryExecutor.SelectByPersistenceIdAsync(connection, cancellationToken.Token, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
+                }
             }
         }
 
@@ -286,14 +293,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                 using (var connection = CreateDbConnection())
                 {
                     await connection.OpenAsync();
-
-                    if (_settings.AutoInitialize)
+                    using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                     {
-                        await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
-                    }
+                        if (_settings.AutoInitialize)
+                        {
+                            await QueryExecutor.CreateTablesAsync(connection, cancellationToken.Token);
+                        }
 
-                    var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
-                    return new AllPersistenceIds(ids);
+                        var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, cancellationToken.Token);
+                        return new AllPersistenceIds(ids);
+                    }
                 }
             }
             catch (Exception e)
@@ -459,7 +468,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                await QueryExecutor.DeleteBatchAsync(connection, _pendingRequestsCancellation.Token, persistenceId, toSequenceNr);
+                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    await QueryExecutor.DeleteBatchAsync(connection, cancellationToken.Token, persistenceId, toSequenceNr);
+                }
             }
         }
 
@@ -475,7 +487,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                return await QueryExecutor.SelectHighestSequenceNrAsync(connection, _pendingRequestsCancellation.Token, persistenceId);
+                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token, persistenceId);
+                }
             }
         }
 
