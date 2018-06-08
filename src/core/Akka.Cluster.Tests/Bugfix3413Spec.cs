@@ -41,7 +41,7 @@ namespace Akka.Cluster.Tests
         public async Task CoordinatedShutdown_should_stop_ClusterDaemon()
         {
             // join cluster
-            await _cluster.JoinAsync(_cluster.SelfAddress, new CancellationTokenSource(TimeSpan.FromSeconds(3)).Token);
+            await _cluster.JoinAsync(_cluster.SelfAddress, new CancellationTokenSource(RemainingOrDefault).Token);
 
             // death watch the ClusterDaemon
             var clusterDaemon = await Sys.ActorSelection("/system/cluster").ResolveOne(RemainingOrDefault).ConfigureAwait(false);
@@ -57,10 +57,10 @@ namespace Akka.Cluster.Tests
                 return tcs.Task;
             });
 
-            await CoordinatedShutdown.Get(Sys).Run().ConfigureAwait(false);
+            await _cluster.LeaveAsync(new CancellationTokenSource(RemainingOrDefault).Token);
 
-            tcs.Task.IsCompleted.Should().BeTrue();
             ExpectTerminated(clusterDaemon);
+            AwaitAssert(() => tcs.Task.IsCompleted.Should().BeTrue()); // coordinated shutdown should have run successfully
         }
     }
 }
