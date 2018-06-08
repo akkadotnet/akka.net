@@ -351,12 +351,12 @@ namespace Akka.Actor
                                     return TaskEx.FromException<Done>(ex);
                                 }
                             }))
-                            .ContinueWith(tr =>
+                            .ContinueWith(async tr =>
                             {
                                 // forces downstream error propagation if recover is disabled
-                                var force = tr.Result;
+                                await tr;
                                 return Done.Instance;
-                            });
+                            }).Unwrap();
                         var timeout = Phases[phase].Timeout;
                         var deadLine = MonotonicClock.Elapsed + timeout;
                         Task<Done> timeoutFunction = null;
