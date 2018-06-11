@@ -138,12 +138,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         var members = ClusterView.Members; // to snapshot the object
-                        Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                        Assert.Single(ClusterView.UnreachableMembers);
                     });
                     AwaitSeenSameState(allButVictim.Select(GetAddress).ToArray());
 
                     // still once unreachable
-                    Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                    Assert.Single(ClusterView.UnreachableMembers);
                     Assert.Equal(Node(_victim.Value).Address, ClusterView.UnreachableMembers.First().Address);
                     Assert.Equal(MemberStatus.Up, ClusterView.UnreachableMembers.First().Status);
                 });
