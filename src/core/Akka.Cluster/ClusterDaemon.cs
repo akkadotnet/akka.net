@@ -819,7 +819,7 @@ namespace Akka.Cluster
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _clusterPromise = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _clusterPromise = TaskEx.NonBlockingTaskCompletionSource<Done>();
 
         /// <summary>
         /// Creates a new instance of the ClusterDaemon
@@ -895,7 +895,7 @@ namespace Akka.Cluster
 
         protected override void PostStop()
         {
-            _clusterPromise.TrySetResult(Done.Instance);
+            _clusterPromise.NonBlockingTrySetResult(Done.Instance);
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
                 // run the last phases if the node was downed (not leaving)
