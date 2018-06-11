@@ -84,10 +84,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         Cluster.SendCurrentClusterState(TestActor);
-                        Assert.True(
-                            ExpectMsg<ClusterEvent.CurrentClusterState>()
-                                .Members.Select(m => m.Address)
-                                .Contains(secondAddress));
+                        Assert.Contains(secondAddress, ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Select(m => m.Address));
                     }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(50))
                     , _config.First);
 
@@ -97,10 +94,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         Cluster.SendCurrentClusterState(TestActor);
-                        Assert.True(
-                            ExpectMsg<ClusterEvent.CurrentClusterState>()
-                                .Members.Select(m => m.Address)
-                                .Contains(firstAddress));
+                        Assert.Contains(firstAddress, ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Select(m => m.Address));
                     }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(50));
                 }, _config.Second);
 

@@ -219,7 +219,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     Cluster.Get(freshSystem).Join(masterAddress);
                     Within(TimeSpan.FromSeconds(15), () =>
                     {
-                        AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address).Contains(victimAddress)));
+                        AwaitAssert(() => Assert.Contains(victimAddress, Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address)));
                         AwaitAssert(() => Assert.Equal(expectedNumberOfMembers,Cluster.Get(freshSystem).ReadView.Members.Count));
                         AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.All(y => y.Status == MemberStatus.Up)));
                     });

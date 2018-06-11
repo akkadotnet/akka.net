@@ -120,11 +120,11 @@ namespace Akka.Cluster.Tests.MultiNode
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
                     EnterBarrier("second-terminated");
                     MarkNodeAsUnavailable(GetAddress(_config.Third));
-                    AwaitAssert(() => Assert.True(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Third))));
+                    AwaitAssert(() => Assert.Contains(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     Cluster.Down(GetAddress(_config.Third));
                     //removed
-                    AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.Third))));
-                    AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Third))));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     ExpectMsg(path3);
                     EnterBarrier("third-terminated");
                 }, _config.First);
@@ -137,11 +137,11 @@ namespace Akka.Cluster.Tests.MultiNode
                     RunOn(() =>
                     {
                         MarkNodeAsUnavailable(GetAddress(_config.Second));
-                        AwaitAssert(() => Assert.True(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Second))));
+                        AwaitAssert(() => Assert.Contains(GetAddress(_config.Second), ClusterView.UnreachableMembers.Select(x => x.Address)));
                         Cluster.Down(GetAddress(_config.Second));
                         //removed
-                        AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.Second))));
-                        AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Second))));
+                        AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Second), ClusterView.Members.Select(x => x.Address)));
+                        AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Second), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     }, _config.Third);
                     EnterBarrier("second-terminated");
                     EnterBarrier("third-terminated");
@@ -227,8 +227,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Fifth)).ShouldBeTrue());
                     Cluster.Down(GetAddress(_config.Fifth));
                     // removed
-                    AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Fifth))));
-                    AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.Fifth))));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Fifth), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Fifth), ClusterView.Members.Select(x => x.Address)));
                 }, _config.Fourth);
 
                 EnterBarrier("fifth-terminated");
@@ -266,8 +266,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.First)).ShouldBeTrue());
                     Cluster.Down(GetAddress(_config.First));
                     // removed
-                    AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.First))));
-                    AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.First))));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.First), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.First), ClusterView.Members.Select(x => x.Address)));
 
                     ExpectTerminated(hello);
                     EnterBarrier("first-unavailable");
