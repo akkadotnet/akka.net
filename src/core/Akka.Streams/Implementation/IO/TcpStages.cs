@@ -124,17 +124,19 @@ namespace Akka.Streams.Implementation.IO
                         _listener.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
 
                     var thisStage = StageActorRef;
-                    _bindingPromise.TrySetResult(new StreamTcp.ServerBinding(bound.LocalAddress, () =>
+                    var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                     {
                         // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
                         thisStage.Tell(Tcp.Unbind.Instance, thisStage);
                         return _unbindPromise.Task;
-                    }));
+                    });
+
+                    _bindingPromise.NonBlockingTrySetResult(binding);
                 }
                 else if (msg is Tcp.CommandFailed)
                 {
                     var ex = BindFailedException.Instance;
-                    _bindingPromise.TrySetException(ex);
+                    _bindingPromise.NonBlockingTrySetException(ex);
                     _unbindPromise.TrySetResult(NotUsed.Instance);
                     FailStage(ex);
                 }
@@ -162,7 +164,7 @@ namespace Akka.Streams.Implementation.IO
             public override void PostStop()
             {
                 _unbindPromise.TrySetResult(NotUsed.Instance);
-                _bindingPromise.TrySetException(
+                _bindingPromise.NonBlockingTrySetException(
                     new NoSuchElementException("Binding was unbound before it was completely finished"));
             }
         }
@@ -220,7 +222,7 @@ namespace Akka.Streams.Implementation.IO
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<StreamTcp.ServerBinding>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var bindingPromise = new TaskCompletionSource<StreamTcp.ServerBinding>();
+            var bindingPromise = TaskEx.NonBlockingTaskCompletionSource<StreamTcp.ServerBinding>();
             var logic = new ConnectionSourceStageLogic(Shape, this, bindingPromise);
             return new LogicAndMaterializedValue<Task<StreamTcp.ServerBinding>>(logic, bindingPromise.Task);
         }
