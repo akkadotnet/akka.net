@@ -75,9 +75,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.Equal(addressA, result.Item1);
             Assert.NotNull(result.Item2);
 
-            Assert.True(
-                registry.LogSnapshot().OfType<ListenAttempt>().Any(x => x.BoundAddress == addressATest)
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<ListenAttempt>(), x => x.BoundAddress == addressATest);
         }
 
         [Fact]
@@ -104,9 +102,7 @@ namespace Akka.Remote.Tests.Transport
                 return null;
             });
 
-            Assert.True(
-                registry.LogSnapshot().OfType<AssociateAttempt>().Any(x => x.LocalAddress == addressATest && x.RemoteAddress == addressBTest)
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<AssociateAttempt>(), x => x.LocalAddress == addressATest && x.RemoteAddress == addressBTest);
             AwaitCondition(() => registry.ExistsAssociation(addressATest, addressBTest));
         }
 
@@ -169,9 +165,7 @@ namespace Akka.Remote.Tests.Transport
                 return null;
             });
 
-            Assert.True(
-                registry.LogSnapshot().OfType<WriteAttempt>().Any(x => x.Sender == addressATest && x.Recipient == addressBTest && x.Payload.Equals(pdu))
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<WriteAttempt>(), x => x.Sender == addressATest && x.Recipient == addressBTest && x.Payload.Equals(pdu));
         }
 
         [Fact]

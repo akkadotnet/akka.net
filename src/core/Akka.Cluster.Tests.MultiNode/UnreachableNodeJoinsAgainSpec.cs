@@ -138,12 +138,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         var members = ClusterView.Members; // to snapshot the object
-                        Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                        Assert.Single(ClusterView.UnreachableMembers);
                     });
                     AwaitSeenSameState(allButVictim.Select(GetAddress).ToArray());
 
                     // still once unreachable
-                    Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                    Assert.Single(ClusterView.UnreachableMembers);
                     Assert.Equal(Node(_victim.Value).Address, ClusterView.UnreachableMembers.First().Address);
                     Assert.Equal(MemberStatus.Up, ClusterView.UnreachableMembers.First().Status);
                 });
@@ -219,7 +219,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     Cluster.Get(freshSystem).Join(masterAddress);
                     Within(TimeSpan.FromSeconds(15), () =>
                     {
-                        AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address).Contains(victimAddress)));
+                        AwaitAssert(() => Assert.Contains(victimAddress, Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address)));
                         AwaitAssert(() => Assert.Equal(expectedNumberOfMembers,Cluster.Get(freshSystem).ReadView.Members.Count));
                         AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.All(y => y.Status == MemberStatus.Up)));
                     });
