@@ -59,8 +59,9 @@ namespace Akka.Cluster.Tests
 
             await _cluster.LeaveAsync(new CancellationTokenSource(RemainingOrDefault).Token);
 
-            ExpectTerminated(clusterDaemon);
+            
             AwaitAssert(() => tcs.Task.IsCompleted.Should().BeTrue()); // coordinated shutdown should have run successfully
+            ExpectTerminated(clusterDaemon);
         }
     }
 }
