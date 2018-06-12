@@ -411,7 +411,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given function that produces an <see cref="IEnumerable{T}"/>.
         /// The produced stream of elements will continue until the enumerator runs empty
-        /// or fails during evaluation of the <see cref="IEnumerator{T}.MoveNext"/> method.
+        /// or fails during evaluation of the <see cref="System.Collections.IEnumerator.MoveNext">IEnumerator&lt;T&gt;.MoveNext</see> method.
         /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
@@ -791,13 +791,13 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/>
+        /// <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> returns <see cref="Task"/>
         /// which completes with <see cref="QueueOfferResult.Enqueued"/> if element was added to buffer or sent downstream.
         /// It completes with <see cref="QueueOfferResult.Dropped"/> if element was dropped.
         /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
         /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> when buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> when buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
         /// for downstream demand unless there is another message waiting for downstream demand, in that case

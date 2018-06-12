@@ -177,7 +177,7 @@ namespace Akka.Actor
         public bool SerializeAllCreators { get; private set; }
 
         /// <summary>
-        ///     Gets the default timeout for <see cref="Futures.Ask" /> calls.
+        ///     Gets the default timeout for <see cref="Futures.Ask(ICanTell, object, TimeSpan?)">Futures.Ask</see> calls.
         /// </summary>
         /// <value>The ask timeout.</value>
         public TimeSpan AskTimeout { get; private set; }
