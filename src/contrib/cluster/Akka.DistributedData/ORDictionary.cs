@@ -123,12 +123,12 @@ namespace Akka.DistributedData
         /// on other nodes and the outcome depends on what <see cref="IReplicatedData"/>
         /// type that is used.
         /// 
-        /// Consider using <see cref="AddOrUpdate"/> instead of <see cref="SetItem(Akka.Cluster.Cluster,TKey,TValue)"/> if you want modify
+        /// Consider using <see cref="AddOrUpdate(Akka.Cluster.Cluster, TKey, TValue, Func{TValue, TValue})">AddOrUpdate</see> instead of <see cref="SetItem(Akka.Cluster.Cluster,TKey,TValue)"/> if you want modify
         /// existing entry.
         /// 
         /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
         /// value, because important history can be lost when replacing the `ORSet` and
-        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
+        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate(Akka.Cluster.Cluster, TKey, TValue, Func{TValue, TValue})">AddOrUpdate</see> instead.
         /// </summary>
         public ORDictionary<TKey, TValue> SetItem(Cluster.Cluster node, TKey key, TValue value) =>
             SetItem(node.SelfUniqueAddress, key, value);
@@ -139,12 +139,12 @@ namespace Akka.DistributedData
         /// on other nodes and the outcome depends on what <see cref="IReplicatedData"/>
         /// type that is used.
         /// 
-        /// Consider using <see cref="AddOrUpdate"/> instead of <see cref="SetItem(UniqueAddress,TKey,TValue)"/> if you want modify
+        /// Consider using <see cref="AddOrUpdate(Akka.Cluster.Cluster, TKey, TValue, Func{TValue, TValue})">AddOrUpdate</see> instead of <see cref="SetItem(UniqueAddress,TKey,TValue)"/> if you want modify
         /// existing entry.
         /// 
         /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
         /// value, because important history can be lost when replacing the `ORSet` and
-        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
+        /// undesired effects of merging will occur. Use <see cref="ORMultiValueDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate(Akka.Cluster.Cluster, TKey, TValue, Func{TValue, TValue})">AddOrUpdate</see> instead.
         /// </summary>
         public ORDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value)
         {

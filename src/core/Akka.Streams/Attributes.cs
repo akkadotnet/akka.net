@@ -355,7 +355,7 @@ namespace Akka.Streams
         /// Logging a certain operation can be completely disabled by using <see cref="LogLevels.Off"/>
         ///
         /// Passing in null as any of the arguments sets the level to its default value, which is:
-        /// <see cref="LogLevel.DebugLevel"/> for <paramref name="onElement"/> and <paramref name="onFinish"/>, and <see cref="LogLevel.ErrorLevel"/> for <paramref name="onError"/>.
+        /// <see cref="Akka.Event.LogLevel.DebugLevel"/> for <paramref name="onElement"/> and <paramref name="onFinish"/>, and <see cref="Akka.Event.LogLevel.ErrorLevel"/> for <paramref name="onError"/>.
         ///</summary>
         /// <param name="onElement">TBD</param>
         /// <param name="onFinish">TBD</param>

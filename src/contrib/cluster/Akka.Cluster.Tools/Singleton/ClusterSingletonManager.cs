@@ -463,7 +463,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// broadcast its existence when it is started.
     /// </para>
     /// <para>
-    /// Use factory method <see cref="ClusterSingletonManager.Props"/> to create the <see cref="Actor.Props"/> for the actor.
+    /// Use one of the factory methods <see cref="ClusterSingletonManager.Props(Actor.Props, ClusterSingletonManagerSettings)">ClusterSingletonManager.Props</see> to create the <see cref="Actor.Props"/> for the actor.
     /// </para>
     /// </summary>
     public sealed class ClusterSingletonManager : FSM<ClusterSingletonState, IClusterSingletonData>
