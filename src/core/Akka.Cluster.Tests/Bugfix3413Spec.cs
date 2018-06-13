@@ -57,11 +57,13 @@ namespace Akka.Cluster.Tests
                 return tcs.Task;
             });
 
+           
             await _cluster.LeaveAsync(new CancellationTokenSource(RemainingOrDefault).Token);
-
             
-            AwaitAssert(() => tcs.Task.IsCompleted.Should().BeTrue()); // coordinated shutdown should have run successfully
-            ExpectTerminated(clusterDaemon);
+            Within(TimeSpan.FromSeconds(10), () => {
+                AwaitAssert(() => tcs.Task.IsCompleted.Should().BeTrue()); // coordinated shutdown should have run successfully
+                ExpectTerminated(clusterDaemon);
+            });
         }
     }
 }
