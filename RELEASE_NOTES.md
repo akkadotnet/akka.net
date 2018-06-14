@@ -1,4 +1,4 @@
-#### 1.3.9 June 04 2018 ####
+#### 1.4.0 June 14 2018 ####
 Placeholder for nightlies.
 
 #### 1.3.8 June 04 2018 ####
