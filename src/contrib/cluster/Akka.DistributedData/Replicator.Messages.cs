@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -317,9 +317,9 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// Register a subscriber that will be notified with a <see cref="Changed{T}"/> message
+    /// Register a subscriber that will be notified with a <see cref="Changed"/> message
     /// when the value of the given <see cref="Key"/> is changed. Current value is also
-    /// sent as a <see cref="Changed{T}"/> message to a new subscriber.
+    /// sent as a <see cref="Changed"/> message to a new subscriber.
     /// 
     /// Subscribers will be notified periodically with the configured `notify-subscribers-interval`,
     /// and it is also possible to send an explicit `FlushChanges` message to
@@ -327,7 +327,7 @@ namespace Akka.DistributedData
     /// 
     /// The subscriber will automatically be unregistered if it is terminated.
     /// 
-    /// If the key is deleted the subscriber is notified with a <see cref="DataDeleted{T}"/> message.
+    /// If the key is deleted the subscriber is notified with a <see cref="DataDeleted"/> message.
     /// </summary>
     [Serializable]
     public sealed class Subscribe : IReplicatorMessage, IEquatable<Subscribe>
@@ -370,7 +370,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// Unregister a subscriber.
     /// </summary>
-    /// <seealso cref="Subscribe{T}"/>
+    /// <seealso cref="Subscribe"/>
     [Serializable]
     public sealed class Unsubscribe : IEquatable<Unsubscribe>, IReplicatorMessage
     {
@@ -466,7 +466,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to update a data value for the
     /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the 
-    /// <see cref="IUpdateResponse{T}"/> messages.
+    /// <see cref="IUpdateResponse"/> messages.
     /// 
     /// The current data value for the <see cref="Key"/> is passed as parameter to the <see cref="Modify"/> function.
     /// It is <see langword="null"/> if there is no value for the <see cref="Key"/>, and otherwise <see cref="Request"/>. The function
@@ -753,7 +753,7 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to delete a data value for the
-    /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the <see cref="IDeleteResponse{T}"/> messages.
+    /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the <see cref="IDeleteResponse"/> messages.
     /// </summary>
     [Serializable]
     public sealed class Delete : ICommand, INoSerializationVerificationNeeded, IEquatable<Delete>

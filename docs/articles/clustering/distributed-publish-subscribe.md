@@ -120,7 +120,7 @@ If all the subscribed actors have different group names, then this works like no
 > Note that if the group id is used it is part of the topic identifier. Messages published with `SendOneMessageToEachGroup=false` will not be delivered to subscribers that subscribed with a group id. Messages published with `SendOneMessageToEachGroup=true` will not be delivered to subscribers that subscribed without a group id.
 
 ## Send
-This is a point-to-point mode where each message is delivered to one destination, but you still does not have to know where the destination is located. A typical usage of this mode is private chat to one other user in an instant messaging application. It can also be used for distributing tasks to registered workers, like a cluster aware router where the routees dynamically can register themselves.
+This is a point-to-point mode where each message is delivered to one destination, but you still do not have to know where the destination is located. A typical usage of this mode is private chat to one other user in an instant messaging application. It can also be used for distributing tasks to registered workers, like a cluster aware router where the routees dynamically can register themselves.
 
 The message will be delivered to one recipient with a matching path, if any such exists in the registry. If several entries match the path because it has been registered on several nodes the message will be sent via the supplied `RoutingLogic` (default random) to one destination. The sender() of the message can specify that local affinity is preferred, i.e. the message is sent to an actor in the same local actor system as the used mediator actor, if any such exists, otherwise route to any other matching entry.
 

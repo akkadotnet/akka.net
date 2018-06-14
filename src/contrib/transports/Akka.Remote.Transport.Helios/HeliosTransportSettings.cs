@@ -1,11 +1,9 @@
-#region copyright
-// -----------------------------------------------------------------------
-//  <copyright file="HeliosTransportSettings.cs" company="Akka.NET project">
-//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
-//  </copyright>
-// -----------------------------------------------------------------------
-#endregion
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosTransportSettings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Net;

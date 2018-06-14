@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -247,8 +247,7 @@ namespace Akka.Event
         {
             protected override bool Receive(object message)
             {
-                var msg = message as UnhandledMessage;
-                if (msg == null) 
+                if (!(message is UnhandledMessage msg)) 
                     return false;
 
                 Context.System.EventStream.Publish(ToDebug(msg));
@@ -257,9 +256,12 @@ namespace Akka.Event
 
             private static Debug ToDebug(UnhandledMessage message)
             {
+                // avoid NREs when we have ActorRefs.NoSender
+                var sender = Equals(message.Sender, ActorRefs.NoSender) ? "NoSender" : message.Sender.Path.ToString();
+
                 var msg = string.Format(
                     CultureInfo.InvariantCulture, "Unhandled message from {0} : {1}",
-                    message.Sender.Path,
+                    sender,
                     message.Message
                     );
 

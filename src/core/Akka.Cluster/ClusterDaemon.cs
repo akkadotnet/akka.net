@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -2589,7 +2589,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -2685,7 +2685,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {

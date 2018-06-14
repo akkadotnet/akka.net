@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Base64Encoding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,15 +24,9 @@ namespace Akka.Util
         /// </summary>
         /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
-        public static string Base64Encode(this long value) => Base64Encode(value, new StringBuilder()).ToString();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
-        public static StringBuilder Base64Encode(this long value, StringBuilder sb)
+        public static string Base64Encode(this long value)
         {
+            var sb = new StringBuilder();
             var next = value;
             do
             {
@@ -40,7 +34,7 @@ namespace Akka.Util
                 sb.Append(Base64Chars[index]);
                 next = next >> 6;
             } while(next != 0);
-            return sb;
+            return sb.ToString();
         }
 
         /// <summary>

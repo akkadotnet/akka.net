@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,8 +18,12 @@ using Akka.Event;
 namespace Akka.Persistence.Snapshot
 {
     /// <summary>
-    /// TBD
+    /// Local file-based <see cref="SnapshotStore"/> implementation.
     /// </summary>
+    /// <remarks>
+    /// This is the default `akka.peristence.snapshot-store` implementation, when no others are
+    /// explicitly set via HOCON configuration.
+    /// </remarks>
     public class LocalSnapshotStore : SnapshotStore
     {
         private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
@@ -31,10 +35,10 @@ namespace Akka.Persistence.Snapshot
 
         private readonly Akka.Serialization.Serialization _serialization;
 
-        private string _defaultSerializer;
+        private readonly string _defaultSerializer;
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="LocalSnapshotStore"/> instance.
         /// </summary>
         public LocalSnapshotStore()
         {
@@ -51,14 +55,9 @@ namespace Akka.Persistence.Snapshot
             _log = Context.GetLogger();
         }
 
-        private ILoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             //
@@ -72,12 +71,7 @@ namespace Akka.Persistence.Snapshot
             return RunWithStreamDispatcher(() => Load(metadata));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             _saving.Add(metadata);
@@ -88,11 +82,7 @@ namespace Akka.Persistence.Snapshot
             });
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {
             _saving.Remove(metadata);
@@ -109,12 +99,7 @@ namespace Akka.Persistence.Snapshot
             });
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
@@ -123,16 +108,12 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool ReceivePluginInternal(object message)
         {
-            if (message is SaveSnapshotSuccess)
+            if (message is SaveSnapshotSuccess success)
             {
-                _saving.Remove(((SaveSnapshotSuccess) message).Metadata);
+                _saving.Remove(success.Metadata);
             }
             else if (message is SaveSnapshotFailure)
             {

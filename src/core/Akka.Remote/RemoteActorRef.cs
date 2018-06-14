@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using Akka.Actor;
@@ -112,7 +113,16 @@ namespace Akka.Remote
         /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            throw new NotImplementedException();
+            var items = name.ToList();
+            switch (items.FirstOrDefault())
+            {
+                case null:
+                    return this;
+                case "..":
+                    return Parent.GetChild(items.Skip(1));
+                default:
+                    return new RemoteActorRef(Remote, LocalAddressToUse, Path / items, ActorRefs.Nobody, Props.None, Deploy.None);
+            }
         }
 
         /// <summary>

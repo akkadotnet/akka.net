@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -463,8 +463,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            ActorPath actorPath;
-            if (TryParseCachedPath(path, out actorPath))
+            if (TryParseCachedPath(path, out var actorPath))
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
@@ -520,8 +519,7 @@ namespace Akka.Remote
             if (path == String.Empty)
                 return ActorRefs.NoSender;
 
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (ActorPath.TryParse(path, out var actorPath))
                 return ResolveActorRef(actorPath);
 
             _log.Debug("resolve of unknown path [{0}] failed", path);

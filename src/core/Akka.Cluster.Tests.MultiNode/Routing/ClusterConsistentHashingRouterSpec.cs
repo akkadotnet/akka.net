@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConsistentHashingRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -263,8 +263,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             {
                 Cluster.Down(GetAddress(_config.Third));
                 //removed
-                AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Third))));
-                AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.Third))));
+                AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
 
                 // it may take some time until router receives cluster member events
                 AwaitAssert(() =>

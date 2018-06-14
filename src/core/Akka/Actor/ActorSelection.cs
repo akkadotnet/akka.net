@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -296,7 +296,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class ActorSelectionMessage.
+    /// Used to deliver messages via <see cref="ActorSelection"/>.
     /// </summary>
     public class ActorSelectionMessage : IAutoReceivedMessage, IPossiblyHarmful
     {
@@ -324,7 +324,7 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; }
 
         /// <summary>
-        /// TBD
+        /// When <c>true</c>, indicates that this <see cref="ActorSelection"/> includes wildcards.
         /// </summary>
         public bool WildCardFanOut { get; }
 
@@ -333,6 +333,19 @@ namespace Akka.Actor
         {
             var elements = string.Join<SelectionPathElement>("/", Elements);
             return $"ActorSelectionMessage - Message: {Message} - WildCartFanOut: {WildCardFanOut} - Elements: {elements}";
+        }
+
+        /// <summary>
+        /// Creates a deep copy of the <see cref="ActorSelectionMessage"/> with the provided properties.
+        /// </summary>
+        /// <param name="message">Optional. The new message to deliver.</param>
+        /// <param name="elements">Optional. The new elements on the actor selection.</param>
+        /// <param name="wildCardFanOut">Optional. Indicates whether or not we're delivering a wildcard <see cref="ActorSelection"/>.</param>
+        /// <returns>A new <see cref="ActorSelectionMessage"/>.</returns>
+        public ActorSelectionMessage Copy(object message = null, SelectionPathElement[] elements = null,
+            bool? wildCardFanOut = null)
+        {
+            return new ActorSelectionMessage(message ?? Message, elements ?? Elements, wildCardFanOut ?? WildCardFanOut);
         }
     }
 

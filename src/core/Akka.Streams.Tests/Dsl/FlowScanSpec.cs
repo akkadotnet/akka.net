@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowScanSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
-using Akka.Streams.Util;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -25,7 +24,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowScanSpec(ITestOutputHelper helper) : base(helper)
+        public FlowScanSpec(ITestOutputHelper helper):base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -44,13 +43,13 @@ namespace Akka.Streams.Tests.Dsl
             t.Wait(duration.Value).Should().BeTrue();
             return t.Result;
         }
-
+        
         [Fact]
         public void A_Scan_must_Scan()
         {
             Func<int[], int[]> scan = source =>
             {
-                var result = new int[source.Length + 1];
+                var result = new int[source.Length+1];
                 result[0] = 0;
 
                 for (var i = 1; i <= source.Length; i++)
@@ -80,19 +79,19 @@ namespace Akka.Streams.Tests.Dsl
 
         [Fact]
         public void A_Scan_must_Scan_empty() =>
-            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).ShouldAllBeEquivalentTo(new[] { 0 }), Materializer);
+            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).ShouldAllBeEquivalentTo(new[] {0}), Materializer);
 
         [Fact]
         public void A_Scan_must_emit_values_promptly()
         {
-            var task = Source.Single(1).MapMaterializedValue<TaskCompletionSource<Option<int>>>(_ => null)
+            var task = Source.Single(1).MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
                 .Concat(Source.Maybe<int>())
                 .Scan(0, (i, i1) => i + i1)
                 .Take(2)
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 0, 1 });
+            task.Result.ShouldAllBeEquivalentTo(new[] {0, 1});
         }
 
         [Fact]
@@ -106,11 +105,11 @@ namespace Akka.Streams.Tests.Dsl
                 return old + current;
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
 
-            Source.From(new[] { 1, 3, -1, 5, 7 })
+            Source.From(new[] {1, 3, -1, 5, 7})
                 .Via(scan)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .ToStrict(TimeSpan.FromSeconds(1))
-                .ShouldAllBeEquivalentTo(new[] { 0, 1, 4, 0, 5, 12 });
+                .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 0, 5, 12});
 
         }
 
@@ -125,13 +124,13 @@ namespace Akka.Streams.Tests.Dsl
                 return old + current;
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
 
-            Source.From(new[] { 1, 3, -1, 5, 7 })
+            Source.From(new[] {1, 3, -1, 5, 7})
                 .Via(scan)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .ToStrict(TimeSpan.FromSeconds(1))
-                .ShouldAllBeEquivalentTo(new[] { 0, 1, 4, 9, 16 });
+                .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 9, 16});
         }
-
+        
         [Fact]
         public void A_Scan_must_scan_normally_for_empty_source()
         {

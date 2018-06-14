@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -304,25 +304,21 @@ namespace Akka.Actor
                     try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
                     finally
                     {
-                        try { StopFunctionRefs(); }
+                        try { TellWatchersWeDied(); }
                         finally
                         {
-                            try { TellWatchersWeDied(); }
+                            try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
                             finally
                             {
-                                try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
-                                finally
-                                {
-                                    if (System.Settings.DebugLifecycle)
-                                        Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
+                                if (System.Settings.DebugLifecycle)
+                                    Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
-                                    ClearActor(a);
-                                    ClearActorCell();
+                                ClearActor(a);
+                                ClearActorCell();
 
-                                    _actor = null;
+                                _actor = null;
 
-                                }
-                            } 
+                            }
                         }
                     }
                 }

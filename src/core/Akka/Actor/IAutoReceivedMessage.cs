@@ -1,11 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IAutoReceivedMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -22,7 +21,7 @@ namespace Akka.Actor
     /// Terminated message can't be forwarded to another actor, since that actor might not be watching the subject.
     /// Instead, if you need to forward Terminated to another actor you should send the information in your own message.
     /// </summary>
-    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded, IEquatable<Terminated>
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Terminated" /> class.
@@ -60,27 +59,7 @@ namespace Akka.Actor
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return $"Terminated(ref: {ActorRef}, existenceConfirmed: {ExistenceConfirmed}, addressTerminated: {AddressTerminated})";
-        }
-
-        public bool Equals(Terminated other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(ActorRef, other.ActorRef) && AddressTerminated == other.AddressTerminated && ExistenceConfirmed == other.ExistenceConfirmed;
-        }
-
-        public override bool Equals(object obj) => obj is Terminated terminated && Equals(terminated);
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = (ActorRef != null ? ActorRef.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ AddressTerminated.GetHashCode();
-                hashCode = (hashCode * 397) ^ ExistenceConfirmed.GetHashCode();
-                return hashCode;
-            }
+            return $"<Terminated>: {ActorRef} - ExistenceConfirmed={ExistenceConfirmed}";
         }
     }
 
@@ -190,7 +169,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Sending a <see cref="PoisonPill"/> to an will stop the actor when the message 
+    /// Sending a <see cref="PoisonPill"/> to an actor will stop the actor when the message 
     /// is processed. <see cref="PoisonPill"/> is enqueued as ordinary messages and will be handled after 
     /// messages that were already queued in the mailbox.
     /// <para>See also <see cref="Kill"/> which causes the actor to throw an  <see cref="ActorKilledException"/> when 

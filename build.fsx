@@ -282,9 +282,17 @@ Target "NBench" <| fun _ ->
             info.FileName <- nbenchTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
-    
-    nbenchTestAssemblies |> Seq.iter runNBench
+        if result <> 0 then failwithf "%s %s \nexited with code %i" nbenchTestPath args result
+        
+    let failedRuns =
+        nbenchTestAssemblies
+        |> Seq.map (fun asm -> try runNBench asm; None with e -> Some(e.ToString()))
+        |> Seq.filter Option.isSome
+        |> Seq.map Option.get
+        |> Seq.mapi (fun i s -> sprintf "%i: \"%s\"" (i + 1) s)
+        |> Seq.toArray
+    if failedRuns.Length > 0 then
+        failwithf "NBench.Runner failed for %i run(s):\n%s\n\n" failedRuns.Length (String.concat "\n\n" failedRuns)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -300,10 +308,10 @@ let overrideVersionSuffix (project:string) =
     | _ -> versionSuffix
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/*.csproj"
-                   -- "src/**/*.Tests*.csproj"
-                   -- "src/benchmark/**/*.csproj"
-                   -- "src/examples/**/*.csproj"
+    let projects = !! "src/**/*.*sproj"
+                   -- "src/**/*.Tests*.*sproj"
+                   -- "src/benchmark/**/*.*sproj"
+                   -- "src/examples/**/*.*sproj"
                    -- "src/**/*.MultiNodeTestRunner.csproj"
                    -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
                    -- "src/**/*.NodeTestRunner.csproj"
@@ -430,9 +438,9 @@ Target "PublishNuget" (fun _ ->
 Target "Protobuf" <| fun _ ->
 
     let protocPath =
-        if isWindows then findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
-        elif isMacOS then findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/macosx_x64"
-        else findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/linux_x64"
+        if isWindows then findToolInSubPath "protoc.exe" "tools/Google.Protobuf.Tools/tools/windows_x64"
+        elif isMacOS then findToolInSubPath "protoc" "tools/Google.Protobuf.Tools/tools/macosx_x64"
+        else findToolInSubPath "protoc" "tools/Google.Protobuf.Tools/tools/linux_x64"
 
     let protoFiles = [
         ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
@@ -444,8 +452,7 @@ Target "Protobuf" <| fun _ ->
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
-        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
-        ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/")]
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
 
     printfn "Using proto.exe: %s" protocPath
 

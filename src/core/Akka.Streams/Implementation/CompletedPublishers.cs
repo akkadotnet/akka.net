@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="CompletedPublishers.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -113,10 +113,10 @@ namespace Akka.Streams.Implementation
         private class MaybeSubscription : ISubscription
         {
             private readonly ISubscriber<T> _subscriber;
-            private readonly TaskCompletionSource<Option<T>> _promise;
+            private readonly TaskCompletionSource<T> _promise;
             private bool _done;
 
-            public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<Option<T>> promise)
+            public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<T> promise)
             {
                 _subscriber = subscriber;
                 _promise = promise;
@@ -131,9 +131,9 @@ namespace Akka.Streams.Implementation
                     _done = true;
                     _promise.Task.ContinueWith(t =>
                     {
-                        if (!_promise.Task.Result.Equals(Option<T>.None))
+                        if (!_promise.Task.Result.IsDefaultForType())
                         {
-                            ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result.Value);
+                            ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result);
                             ReactiveStreamsCompliance.TryOnComplete(_subscriber);
                         }
                         else
@@ -145,14 +145,14 @@ namespace Akka.Streams.Implementation
             public void Cancel()
             {
                 _done = true;
-                _promise.TrySetResult(Option<T>.None);
+                _promise.TrySetResult(default(T));
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly TaskCompletionSource<Option<T>> Promise;
+        public readonly TaskCompletionSource<T> Promise;
         /// <summary>
         /// TBD
         /// </summary>
@@ -163,7 +163,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="promise">TBD</param>
         /// <param name="name">TBD</param>
-        public MaybePublisher(TaskCompletionSource<Option<T>> promise, string name)
+        public MaybePublisher(TaskCompletionSource<T> promise, string name)
         {
             Promise = promise;
             Name = name;

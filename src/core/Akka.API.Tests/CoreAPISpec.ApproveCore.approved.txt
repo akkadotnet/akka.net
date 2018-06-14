@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
@@ -112,7 +113,6 @@ namespace Akka.Actor
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
         public void Stop() { }
-        protected void StopFunctionRefs() { }
         public void Suspend() { }
         protected void TellWatchersWeDied() { }
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject) { }
@@ -317,6 +317,7 @@ namespace Akka.Actor
         public Akka.Actor.SelectionPathElement[] Elements { get; }
         public object Message { get; }
         public bool WildCardFanOut { get; }
+        public Akka.Actor.ActorSelectionMessage Copy(object message = null, Akka.Actor.SelectionPathElement[] elements = null, System.Nullable<bool> wildCardFanOut = null) { }
         public override string ToString() { }
     }
     public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
@@ -884,7 +885,8 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
-        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static async System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, System.Func<Akka.Actor.IActorRef, object> messageFactory, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
@@ -1700,15 +1702,12 @@ namespace Akka.Actor
         protected override void PreRestart(System.Exception reason, object message) { }
         protected override bool Receive(object message) { }
     }
-    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Actor.Terminated>
+    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
         public Terminated(Akka.Actor.IActorRef actorRef, bool existenceConfirmed, bool addressTerminated) { }
         public Akka.Actor.IActorRef ActorRef { get; }
         public bool AddressTerminated { get; }
         public bool ExistenceConfirmed { get; }
-        public bool Equals(Akka.Actor.Terminated other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class TerminatedProps : Akka.Actor.Props
@@ -4555,7 +4554,6 @@ namespace Akka.Util
     {
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         public static string Base64Encode(this long value) { }
-        public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
         public static string Base64Encode(this string s) { }
     }
     public class static BitArrayHelpers

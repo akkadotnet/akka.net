@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,7 +40,8 @@ namespace Akka.Persistence.Sqlite.Journal
                     orderingColumnName: "ordering",
                     serializerIdColumnName: "serializer_id",
                     timeout: config.GetTimeSpan("connection-timeout"),
-                    defaultSerializer: config.GetString("serializer")))
+                    defaultSerializer: config.GetString("serializer"),
+                    useSequentialAccess: config.GetBoolean("use-sequential-access")))
         {
         }
 

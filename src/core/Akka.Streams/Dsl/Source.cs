@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -235,6 +235,18 @@ namespace Akka.Streams.Dsl
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public Tuple<TMat, Source<TOut, NotUsed>> PreMaterialize(IMaterializer materializer)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
+            return Tuple.Create(tup.Item1, Source.FromPublisher(tup.Item2));
+        }
+
+        /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
         /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
@@ -399,7 +411,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given function that produces an <see cref="IEnumerable{T}"/>.
         /// The produced stream of elements will continue until the enumerator runs empty
-        /// or fails during evaluation of the <see cref="IEnumerator{T}.MoveNext"/> method.
+        /// or fails during evaluation of the <see cref="System.Collections.IEnumerator.MoveNext">IEnumerator&lt;T&gt;.MoveNext</see> method.
         /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
@@ -584,9 +596,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, TaskCompletionSource<Option<T>>> Maybe<T>()
+        public static Source<T, TaskCompletionSource<T>> Maybe<T>()
         {
-            return new Source<T, TaskCompletionSource<Option<T>>>(
+            return new Source<T, TaskCompletionSource<T>>(
                 new MaybeSource<T>(DefaultAttributes.MaybeSource,
                     new SourceShape<T>(new Outlet<T>("MaybeSource"))));
         }
@@ -713,6 +725,29 @@ namespace Akka.Streams.Dsl
                 return new SourceShape<TOut2>(c.Out);
             }));
 
+        /// <summary>
+        /// Combines two sources with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
+        /// <param name="first">TBD</param>
+        /// <param name="second">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
+        {
+            var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
+            {
+                var c = b.Add(strategy(2));
+                b.From(secondShape).To(c.In(1));
+                return new FlowShape<T, TOut2>(c.In(0), c.Out);
+            });
+            return first.ViaMaterialized(secondPartiallyCombined, combineMaterializers);
+        }
 
         /// <summary>
         /// Combines the elements of multiple streams into a stream of lists.
@@ -756,13 +791,13 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/>
+        /// <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> returns <see cref="Task"/>
         /// which completes with <see cref="QueueOfferResult.Enqueued"/> if element was added to buffer or sent downstream.
         /// It completes with <see cref="QueueOfferResult.Dropped"/> if element was dropped.
         /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
         /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> when buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> when buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
         /// for downstream demand unless there is another message waiting for downstream demand, in that case

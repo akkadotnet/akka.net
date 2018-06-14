@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Attributes.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -355,7 +355,7 @@ namespace Akka.Streams
         /// Logging a certain operation can be completely disabled by using <see cref="LogLevels.Off"/>
         ///
         /// Passing in null as any of the arguments sets the level to its default value, which is:
-        /// <see cref="LogLevel.DebugLevel"/> for <paramref name="onElement"/> and <paramref name="onFinish"/>, and <see cref="LogLevel.ErrorLevel"/> for <paramref name="onError"/>.
+        /// <see cref="Akka.Event.LogLevel.DebugLevel"/> for <paramref name="onElement"/> and <paramref name="onFinish"/>, and <see cref="Akka.Event.LogLevel.ErrorLevel"/> for <paramref name="onError"/>.
         ///</summary>
         /// <param name="onElement">TBD</param>
         /// <param name="onFinish">TBD</param>
@@ -470,33 +470,5 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static Attributes CreateSupervisionStrategy(Decider strategy)
             => new Attributes(new SupervisionStrategy(strategy));
-    }
-    
-    /// <summary>
-    /// Attributes for stream refs (<see cref="ISourceRef{TOut}"/> and <see cref="ISinkRef{TIn}"/>).
-    /// Note that more attributes defined in <see cref="Attributes"/> and <see cref="ActorAttributes"/>.
-    /// </summary>
-    public static class StreamRefAttributes
-    {
-        /// <summary>
-        /// Attributes specific to stream refs.
-        /// </summary>
-        public interface IStreamRefAttribute : Attributes.IAttribute { }
-
-        public sealed class SubscriptionTimeout : IStreamRefAttribute
-        {
-            public TimeSpan Timeout { get; }
-
-            public SubscriptionTimeout(TimeSpan timeout)
-            {
-                Timeout = timeout;
-            }
-        }
-        
-        /// <summary>
-        /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
-        /// </summary>
-        public static Attributes CreateSubscriptionTimeout(TimeSpan timeout) =>
-            new Attributes(new SubscriptionTimeout(timeout));
     }
 }
