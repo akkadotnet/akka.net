@@ -1,3 +1,6 @@
+#### 1.4.0 June 14 2018 ####
+Placeholder for nightlies.
+
 #### 1.3.10 August 22 2018 ####
 Placeholder for nightlies
 
@@ -74,7 +77,7 @@ To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.
 | 1 | 86 | 79 | Nick Polideropoulos |
 | 1 | 78 | 0 | v1rusw0rm |
 | 1 | 4 | 4 | Joshua Garnett |
-| 1 | 32 | 17 | Jarl Sveinung Flø Rasmussen |
+| 1 | 32 | 17 | Jarl Sveinung FlÃ¸ Rasmussen |
 | 1 | 27 | 1 | Sam13 |
 | 1 | 250 | 220 | Maxim Cherednik |
 | 1 | 184 | 124 | Josh Taylor |
@@ -83,7 +86,7 @@ To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.
 | 1 | 1 | 1 | Vasily Kirichenko |
 | 1 | 1 | 1 | Samuel Kelemen |
 | 1 | 1 | 1 | Nyola Mike |
-| 1 | 1 | 1 | Fábio Beirão |
+| 1 | 1 | 1 | FÃ¡bio BeirÃ£o |
 
 #### 1.3.8 June 04 2018 ####
 **Maintenance Release for Akka.NET 1.3**
@@ -118,7 +121,7 @@ Relevant documentation for Akka.Streams pre-materialization, for those who are i
 | --- | --- | --- | --- |
 | 17 | 498 | 171 | Aaron Stannard |
 | 4 | 1054 | 23 | Bartosz Sypytkowski |
-| 2 | 2 | 2 | Fábio Beirão |
+| 2 | 2 | 2 | FÃ¡bio BeirÃ£o |
 | 2 | 16 | 2 | Aaron Palmer |
 | 1 | 1063 | 4 | Oleksandr Bogomaz |
 | 1 | 1 | 1 | Ismael Hamed |
@@ -189,7 +192,7 @@ You can see [the full set of changes for Akka.NET v1.3.6 here](hhttps://github.c
 | 1 | 64 | 6 | Robert |
 | 1 | 23 | 29 | nathvi |
 | 1 | 2 | 1 | Sebastien Bacquet |
-| 1 | 1 | 2 | OndÅej PiÃ¡lek |
+| 1 | 1 | 2 | OndÃ…Â™ej PiÃƒÂ¡lek |
 | 1 | 1 | 1 | Steffen Skov |
 | 1 | 1 | 1 | Sean Gilliam |
 | 1 | 1 | 1 | Matthew Herman |
@@ -336,7 +339,7 @@ You can [see the full changeset for Akka.NET 1.3.3 here](https://github.com/akka
 | 1 | 4 | 5 | derrickcrowne |
 | 1 | 3 | 2 | Mikhail Moussikhine |
 | 1 | 20 | 0 | Arturo Sevilla |
-| 1 | 2 | 0 | Paweł Bańka |
+| 1 | 2 | 0 | PaweÅ‚ BaÅ„ka |
 | 1 | 17 | 11 | planerist |
 | 1 | 1 | 4 | lesscode |
 
@@ -410,7 +413,7 @@ Akka.Remote's throughput has been significantly increased.
 | 4 | 1644 | 2210 | Arkatufus |
 | 3 | 32 | 6 | Lukas Rieger |
 | 3 | 153 | 17 | Quartus Dev |
-| 2 | 8 | 11 | Paweł Bańka |
+| 2 | 8 | 11 | PaweÅ‚ BaÅ„ka |
 | 2 | 4866 | 12678 | olegz |
 | 2 | 1148 | 176 | Ismael Hamed |
 | 1 | 62 | 5 | Mikhail Kantarovskiy |
@@ -924,7 +927,7 @@ A special thanks to all of our contributors for making this happen!
 | 1 | 2 | 2 | easuter |
 | 1 | 2 | 1 | Danthar |
 | 1 | 182 | 0 | derwasp |
-| 1 | 179 | 0 | Onat Yiğit Mercan |
+| 1 | 179 | 0 | Onat YiÄŸit Mercan |
 
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**
