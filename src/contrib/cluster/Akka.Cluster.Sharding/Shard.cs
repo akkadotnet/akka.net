@@ -470,6 +470,8 @@ namespace Akka.Cluster.Sharding
                 case Shard.IShardQuery sq:
                     shard.HandleShardRegionQuery(sq);
                     return true;
+                case ShardRegion.RestartShard _:
+                    return true;
                 case var _ when shard.ExtractEntityId(message) != null:
                     return true;
                 case Shard.PassivateIdleTick _:
