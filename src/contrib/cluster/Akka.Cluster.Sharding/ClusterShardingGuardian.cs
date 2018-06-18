@@ -251,12 +251,6 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = startProxy.Settings;
-<<<<<<< HEAD
-                    var encName = Uri.EscapeDataString(startProxy.TypeName);
-                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                    var coordinatorPath = CoordinatorPath(encName);
-                    var shardRegion = Context.Child(encName);
-=======
                     var coordinatorPath = CoordinatorPath(startProxy.TypeName);
 
                     // it must be possible to start several proxies, one per data center
@@ -266,7 +260,6 @@ namespace Akka.Cluster.Sharding
 
                     var shardRegion = Context.Child(actorName);
                     var replicator = Replicator(settings);
->>>>>>> added dc support for cluster sharding proxies
 
                     if (Equals(shardRegion, ActorRefs.Nobody))
                     {
@@ -277,13 +270,8 @@ namespace Akka.Cluster.Sharding
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
                             extractShardId: startProxy.ExtractShardId,
-<<<<<<< HEAD
-                            replicator: Context.System.DeadLetters,
-                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
-=======
                             replicator: replicator,
                             majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), actorName);
->>>>>>> added dc support for cluster sharding proxies
                     }
 
                     Sender.Tell(new Started(shardRegion));
