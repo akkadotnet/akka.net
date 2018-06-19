@@ -13,7 +13,7 @@ namespace Akka.Cluster
 {
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Used for executing <see cref="CoordinatedShutdown"/> phases for graceful
     /// <see cref="Cluster.Leave"/> behaviors.
     /// </summary>
@@ -55,7 +55,13 @@ namespace Akka.Cluster
         {
             Receive<ClusterEvent.CurrentClusterState>(s =>
             {
-                if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
+                if (s.Members.IsEmpty)
+                {
+                    // not joined yet
+                    replyTo.Tell(Done.Instance);
+                    Context.Stop(Self);
+                }
+                else if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
                                        &&
                                        (m.Status == MemberStatus.Leaving || m.Status == MemberStatus.Exiting ||
                                         m.Status == MemberStatus.Down)))

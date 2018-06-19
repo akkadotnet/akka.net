@@ -263,8 +263,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             {
                 Cluster.Down(GetAddress(_config.Third));
                 //removed
-                AwaitAssert(() => Assert.False(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Third))));
-                AwaitAssert(() => Assert.False(ClusterView.Members.Select(x => x.Address).Contains(GetAddress(_config.Third))));
+                AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
 
                 // it may take some time until router receives cluster member events
                 AwaitAssert(() =>

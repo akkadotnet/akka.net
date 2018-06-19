@@ -258,11 +258,12 @@ namespace Akka.Dispatch.SysMsg
     /// Stash this <see cref="ISystemMessage"/> when the actor is in a failed state.
     /// </summary>
     internal interface IStashWhenFailed { }
-    /**
- * public API
- */
+
+    // public API
+
     //@SerialVersionUID(1L)
     //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
+
     /// <summary>
     ///     Class ISystemMessage.
     /// </summary>

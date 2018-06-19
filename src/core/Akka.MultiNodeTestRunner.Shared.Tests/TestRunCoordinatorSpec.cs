@@ -43,7 +43,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             testRunCoordinator.Tell(new EndTestRun(), TestActor);
             var testRunData = ExpectMsg<TestRunTree>();
 
-            Assert.Equal(1, testRunData.Specs.Count());
+            Assert.Single(testRunData.Specs);
 
             var specMessages = new SortedSet<MultiNodeMessage>();
             foreach (var spec in testRunData.Specs)

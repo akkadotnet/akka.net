@@ -416,12 +416,14 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
-        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
+        /// <seealso cref="Limit{T, TMat}(IFlow{T, TMat}, long)"/>
+        /// <seealso cref="LimitWeighted{T, TMat}(IFlow{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
         {

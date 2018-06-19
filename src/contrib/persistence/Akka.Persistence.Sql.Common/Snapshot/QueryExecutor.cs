@@ -345,7 +345,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="snapshotType">TBD</param>
+        /// <param name="snapshot">TBD</param>
         /// <param name="command">TBD</param>
         protected virtual void SetManifestParameters(object snapshot, DbCommand command)
         {

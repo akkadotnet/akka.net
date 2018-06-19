@@ -60,6 +60,17 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             exception.Message.Should().Be("InitialContacts must be defined");
         }
 
+        /// <summary>
+        /// Addresses the bug discussed here: https://github.com/akkadotnet/akka.net/issues/3417#issuecomment-397443227
+        /// </summary>
+        [Fact]
+        public void ClusterClientSettings_must_copy_initial_contacts_via_fluent_interface()
+        {
+            var initialContacts = ImmutableHashSet<ActorPath>.Empty.Add(new RootActorPath(Address.AllSystems) / "user" / "foo");
+            var clusterClientSettings = ClusterClientSettings.Create(Sys).WithInitialContacts(initialContacts).WithBufferSize(2000);
+            clusterClientSettings.InitialContacts.Should().BeEquivalentTo(initialContacts);
+        }
+
         [Fact]
         public void ClusterReceptionistSettings_must_have_default_config()
         {
