@@ -245,7 +245,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
-            return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, null, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
 
         /// <summary>
@@ -259,9 +259,9 @@ namespace Akka.Cluster.Sharding
         /// <param name="replicator"></param>
         /// <param name="majorityMinCap"></param>
         /// <returns>TBD</returns>
-        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, IActorRef replicator, int majorityMinCap)
+        internal static Props ProxyProps(string typeName, string dataCenter, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, IActorRef replicator, int majorityMinCap)
         {
-            return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ShardRegion(typeName, null, dataCenter, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
 
         /// <summary>
@@ -346,19 +346,10 @@ namespace Akka.Cluster.Sharding
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new TaskCompletionSource<Done>();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="entityProps">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="coordinatorPath">TBD</param>
-        /// <param name="extractEntityId">TBD</param>
-        /// <param name="extractShardId">TBD</param>
-        /// <param name="handOffStopMessage">TBD</param>
-        /// <param name="replicator"></param>
-        /// <param name="majorityMinCap"></param>
-        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        /// <summary> When using proxy the data center can be different from the own data center</summary>
+        private readonly string _targetDcRole;
+
+        public ShardRegion(string typeName, Props entityProps, string dataCenter, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             TypeName = typeName;
             EntityProps = entityProps;
@@ -371,6 +362,10 @@ namespace Akka.Cluster.Sharding
             _majorityMinCap = majorityMinCap;
 
             _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
+            _targetDcRole = string.IsNullOrEmpty(dataCenter)
+                ? ClusterSettings.DcRolePrefix + Cluster.Settings.SelfDataCenter
+                : ClusterSettings.DcRolePrefix + dataCenter;
+
             SetupCoordinatedShutdown();
         }
 
@@ -445,7 +440,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected bool MatchingRole(Member member)
         {
-            return string.IsNullOrEmpty(Settings.Role) || member.HasRole(Settings.Role);
+            return member.HasRole(_targetDcRole) && string.IsNullOrEmpty(Settings.Role) || member.HasRole(Settings.Role);
         }
 
         private void ChangeMembers(IImmutableSet<Member> newMembers)
@@ -520,8 +515,23 @@ namespace Akka.Cluster.Sharding
             coordinator?.Tell(RegistrationMessage);
 
             if (ShardBuffers.Count != 0 && _retryCount >= RetryCountThreshold)
-                Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages.",
-                    coordinator != null ? coordinator.PathString : string.Empty, TotalBufferSize);
+            {
+                if (coordinator != null)
+                {
+                    var oldest = MembersByAge.First();
+                    var coordinatorMessage = Cluster.State.Unreachable.Contains(oldest)
+                        ? $"Coordinator [{oldest.UniqueAddress}] is unreachable"
+                        : $"Coordinator [{oldest.UniqueAddress}] is reachable";
+
+                    Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages. [{2}]",
+                        coordinator.PathString, TotalBufferSize, coordinatorMessage);
+                }
+                else
+                {
+                    Log.Warning("No coordinator found to register. Probably, no seed-nodes configured and manual cluster join not performed? Total [{0}] buffered messages.",
+                        TotalBufferSize);
+                }
+            }
         }
 
         private void DeliverStartEntity(object message, IActorRef sender)

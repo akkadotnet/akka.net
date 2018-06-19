@@ -349,11 +349,14 @@ namespace Akka.Cluster.Sharding.Tests
         public DDataClusterShardingSpec() : this(new DDataClusterShardingSpecConfig()) { }
         protected DDataClusterShardingSpec(DDataClusterShardingSpecConfig config) : base(config, typeof(DDataClusterShardingSpec)) { }
     }
-    public class DDataClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
-    {
-        public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
-        protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
-    }
+
+    //TODO: ddata doesn't support entity recovery atm
+    //public class DDataClusterShardingWithEntityRecoverySpec : ClusterShardingSpec
+    //{
+    //    public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
+    //    protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
+    //}
+
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         #region Setup
@@ -478,16 +481,16 @@ namespace Akka.Cluster.Sharding.Tests
             var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
                 .WithRememberEntities(rememberEntities);
 
-            return Sys.ActorOf(Props.Create(() => new ShardRegion(
-                typeName,
-                QualifiedCounter.Props(typeName),
-                settings,
-                "/user/" + typeName + "Coordinator/singleton/coordinator",
-                Counter.ExtractEntityId,
-                Counter.ExtractShardId,
-                PoisonPill.Instance,
-                ReplicatorRef,
-                3)),
+            return Sys.ActorOf(ShardRegion.Props(
+                typeName: typeName,
+                entityProps: QualifiedCounter.Props(typeName),
+                settings: settings,
+                coordinatorPath: "/user/" + typeName + "Coordinator/singleton/coordinator",
+                extractEntityId: Counter.ExtractEntityId,
+                extractShardId: Counter.ExtractShardId,
+                handOffStopMessage: PoisonPill.Instance,
+                replicator: ReplicatorRef,
+                majorityMinCap: 3),
                 typeName + "Region");
         }
 
@@ -671,6 +674,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var settings = ClusterShardingSettings.Create(cfg, Sys.Settings.Config.GetConfig("akka.cluster.singleton"));
                     var proxy = Sys.ActorOf(ShardRegion.ProxyProps(
                         typeName: "counter",
+                        dataCenter: null,
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
                         extractEntityId: Counter.ExtractEntityId,

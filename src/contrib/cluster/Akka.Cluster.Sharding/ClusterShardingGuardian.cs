@@ -266,6 +266,7 @@ namespace Akka.Cluster.Sharding
 
                         shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
                             typeName: startProxy.TypeName,
+                            dataCenter: startProxy.DataCenter,
                             settings: settings,
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
