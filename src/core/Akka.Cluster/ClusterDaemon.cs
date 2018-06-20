@@ -1075,7 +1075,13 @@ namespace Akka.Cluster
         {
             var sys = Context.System;
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () => _selfExiting.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () =>
+            {
+                if (_latestGossip.Members.IsEmpty)
+                    return Task.FromResult(Done.Instance); // not joined yet
+                else
+                    return _selfExiting.Task;
+            });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
                 if (Cluster.Get(sys).IsTerminated)
