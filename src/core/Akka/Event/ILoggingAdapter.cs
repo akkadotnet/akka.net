@@ -108,6 +108,15 @@ namespace Akka.Event
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
         void Log(LogLevel logLevel, string format, params object[] args);
+
+        /// <summary>
+        /// Logs a message with a specified level.
+        /// </summary>
+        /// <param name="logLevel">The level used to log the message.</param>
+        /// <param name="cause">The exception that caused this log message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        void Log(LogLevel logLevel, Exception cause, string format, params object[] args);
     }
 
     /// <summary>
@@ -227,5 +236,16 @@ namespace Akka.Event
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
         public void Log(LogLevel logLevel, string format, params object[] args) { }
+
+        /// <summary>
+        /// Logs a message with a specified level.
+        /// </summary>
+        /// <param name="logLevel">The level used to log the message.</param>
+        /// <param name="cause">The exception that caused this log message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        public void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
+        {
+        }
     }
 }
