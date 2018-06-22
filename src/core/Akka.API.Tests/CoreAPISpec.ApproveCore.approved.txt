@@ -2951,20 +2951,20 @@ namespace Akka.Event
         public abstract bool IsErrorEnabled { get; }
         public abstract bool IsInfoEnabled { get; }
         public abstract bool IsWarningEnabled { get; }
-        public void Debug(string format, params object[] args) { }
-        public void Error(System.Exception cause, string format, params object[] args) { }
-        public void Error(string format, params object[] args) { }
-        public void Info(string format, params object[] args) { }
+        public virtual void Debug(string format, params object[] args) { }
+        public virtual void Error(System.Exception cause, string format, params object[] args) { }
+        public virtual void Error(string format, params object[] args) { }
+        public virtual void Info(string format, params object[] args) { }
         public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
-        public void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
+        public virtual void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
         protected abstract void NotifyDebug(object message);
         protected abstract void NotifyError(object message);
         protected abstract void NotifyError(System.Exception cause, object message);
         protected abstract void NotifyInfo(object message);
         protected void NotifyLog(Akka.Event.LogLevel logLevel, object message) { }
         protected abstract void NotifyWarning(object message);
-        public void Warn(string format, params object[] args) { }
-        public void Warning(string format, params object[] args) { }
+        public virtual void Warn(string format, params object[] args) { }
+        public virtual void Warning(string format, params object[] args) { }
     }
     public class LoggingBus : Akka.Event.ActorEventBus<object, System.Type>
     {
