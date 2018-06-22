@@ -376,7 +376,7 @@ namespace Akka.Event
         /// <param name="cause">The exception associated with this message.</param>
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
-        public void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
+        public virtual void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
         {
             if (args == null || args.Length == 0)
             {
