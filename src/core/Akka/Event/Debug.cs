@@ -20,11 +20,24 @@ namespace Akka.Event
         /// <param name="logSource">The source that generated the log event.</param>
         /// <param name="logClass">The type of logger used to log the event.</param>
         /// <param name="message">The message that is being logged.</param>
-        public Debug(string logSource, Type logClass, object message)
+        public Debug(string logSource, Type logClass, object message) 
+            : this(null, logSource, logClass, message)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Debug" /> class.
+        /// </summary>
+        /// <param name="cause">The exception that generated the log event.</param>
+        /// <param name="logSource">The source that generated the log event.</param>
+        /// <param name="logClass">The type of logger used to log the event.</param>
+        /// <param name="message">The message that is being logged.</param>
+        public Debug(Exception cause, string logSource, Type logClass, object message)
         {
             LogSource = logSource;
             LogClass = logClass;
             Message = message;
+            Cause = cause;
         }
 
         /// <summary>

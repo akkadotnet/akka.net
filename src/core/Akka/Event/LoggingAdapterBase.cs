@@ -150,6 +150,11 @@ namespace Akka.Event
             }
         }
 
+        public virtual void Debug(Exception cause, string format, params object[] args)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Obsolete. Use <see cref="Warning" /> instead!
         /// </summary>
@@ -158,6 +163,11 @@ namespace Akka.Event
         public virtual void Warn(string format, params object[] args)
         {
             Warning(format, args);
+        }
+
+        public virtual void Info(Exception cause, string format, params object[] args)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -178,6 +188,11 @@ namespace Akka.Event
             {
                 NotifyWarning(new LogMessage(_logMessageFormatter, format, args));
             }
+        }
+
+        public virtual void Warning(Exception cause, string format, params object[] args)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
