@@ -149,6 +149,35 @@ namespace Akka.Event
         }
 
         /// <summary>
+        /// Notifies all subscribers that a log event occurred for a particular level.
+        /// </summary>
+        /// <param name="logLevel">The log level associated with the log event.</param>
+        /// <param name="cause">The exception that caused the log event.</param>
+        /// <param name="message">The message related to the log event.</param>
+        /// <exception cref="NotSupportedException">This exception is thrown when the given <paramref name="logLevel"/> is unknown.</exception>
+        protected void NotifyLog(LogLevel logLevel, Exception cause, object message)
+        {
+            switch (logLevel)
+            {
+                case LogLevel.DebugLevel:
+                    if (IsDebugEnabled) NotifyDebug(cause, message);
+                    break;
+                case LogLevel.InfoLevel:
+                    if (IsInfoEnabled) NotifyInfo(cause, message);
+                    break;
+                case LogLevel.WarningLevel:
+                    if (IsWarningEnabled) NotifyWarning(cause, message);
+                    break;
+                case LogLevel.ErrorLevel:
+                    if (IsErrorEnabled) NotifyError(cause, message);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown LogLevel {logLevel}");
+            }
+        }
+
+
+        /// <summary>
         /// Logs a <see cref="LogLevel.DebugLevel" /> message.
         /// </summary>
         /// <param name="format">The message that is being logged.</param>
@@ -337,6 +366,25 @@ namespace Akka.Event
             else
             {
                 NotifyLog(logLevel, new LogMessage(_logMessageFormatter, format, args));
+            }
+        }
+
+        /// <summary>
+        /// Logs a message with a specified level.
+        /// </summary>
+        /// <param name="logLevel">The level used to log the message.</param>
+        /// <param name="cause">The exception associated with this message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
+        public void Log(LogLevel logLevel, Exception cause, string format, params object[] args)
+        {
+            if (args == null || args.Length == 0)
+            {
+                NotifyLog(logLevel, cause, format);
+            }
+            else
+            {
+                NotifyLog(logLevel, cause, new LogMessage(_logMessageFormatter, format, args));
             }
         }
     }

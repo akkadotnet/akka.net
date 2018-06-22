@@ -47,7 +47,7 @@ namespace Akka.Tests.Event
         {
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
             var msg = args != null ? string.Format(formatStr, args) : formatStr;
-            var ex = new Exception();
+            var ex = new Exception("errrrrrr");
             switch (logLevel)
             {
                 case LogLevel.DebugLevel when includeException:
@@ -76,13 +76,35 @@ namespace Akka.Tests.Event
                     break;
             }
 
-            var log = ExpectMsg<LogEvent>();
-            log.Message.ToString().Should().Be(msg);
-            log.LogLevel().Should().Be(logLevel);
+            // log a second log message using the generic method
             if (includeException)
-                log.Cause.Should().Be(ex);
+            {
+                Log.Log(logLevel, ex, formatStr, args);
+               
+            }
             else
-                log.Cause.Should().BeNull();
+            {
+                Log.Log(logLevel, formatStr, args);
+            }
+
+            void ProcessLog(LogEvent logEvent)
+            {
+                logEvent.Message.ToString().Should().Be(msg);
+                logEvent.LogLevel().Should().Be(logLevel);
+                if (includeException)
+                {
+                    logEvent.Cause.Should().Be(ex);
+                    logEvent.ToString().Should().Contain(ex.Message);
+                }
+                else
+                    logEvent.Cause.Should().BeNull();
+            }
+
+            var log = ExpectMsg<LogEvent>();
+            ProcessLog(log);
+
+            var log2 = ExpectMsg<LogEvent>();
+            ProcessLog(log2);
         }
 
         [Fact]
