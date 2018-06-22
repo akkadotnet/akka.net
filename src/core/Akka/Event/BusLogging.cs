@@ -90,6 +90,11 @@ namespace Akka.Event
             _bus.Publish(new Warning(_logSource, _logClass, message));
         }
 
+        protected override void NotifyWarning(Exception cause, object message)
+        {
+            _bus.Publish(new Warning(cause, _logSource, _logClass, message));
+        }
+
         /// <summary>
         /// Publishes the info message onto the LoggingBus.
         /// </summary>
@@ -99,6 +104,11 @@ namespace Akka.Event
             _bus.Publish(new Info(_logSource, _logClass, message));
         }
 
+        protected override void NotifyInfo(Exception cause, object message)
+        {
+            _bus.Publish(new Info(cause, _logSource, _logClass, message));
+        }
+
         /// <summary>
         /// Publishes the debug message onto the LoggingBus.
         /// </summary>
@@ -106,6 +116,11 @@ namespace Akka.Event
         protected override void NotifyDebug(object message)
         {
             _bus.Publish(new Debug(_logSource, _logClass, message));
+        }
+
+        protected override void NotifyDebug(Exception cause, object message)
+        {
+            _bus.Publish(new Debug(cause, _logSource, _logClass, message));
         }
     }
 }

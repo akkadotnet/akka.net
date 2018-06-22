@@ -56,10 +56,24 @@ namespace Akka.Event
         protected abstract void NotifyWarning(object message);
 
         /// <summary>
+        /// Notifies all subscribers that an <see cref="LogLevel.WarningLevel" /> log event occurred.
+        /// </summary>
+        /// <param name="cause">The exception that caused the log event.</param>
+        /// <param name="message">The message related to the log event.</param>
+        protected abstract void NotifyWarning(Exception cause, object message);
+
+        /// <summary>
         /// Notifies all subscribers that an <see cref="LogLevel.InfoLevel" /> log event occurred.
         /// </summary>
         /// <param name="message">The message related to the log event.</param>
         protected abstract void NotifyInfo(object message);
+
+        /// <summary>
+        /// Notifies all subscribers that an <see cref="LogLevel.InfoLevel" /> log event occurred.
+        /// </summary>
+        /// <param name="cause">The exception that caused the log event.</param>
+        /// <param name="message">The message related to the log event.</param>
+        protected abstract void NotifyInfo(Exception cause, object message);
 
         /// <summary>
         /// Notifies all subscribers that an <see cref="LogLevel.DebugLevel" /> log event occurred.
@@ -68,16 +82,20 @@ namespace Akka.Event
         protected abstract void NotifyDebug(object message);
 
         /// <summary>
+        /// Notifies all subscribers that an <see cref="LogLevel.DebugLevel" /> log event occurred.
+        /// </summary>
+        /// <param name="cause">The exception that caused the log event.</param>
+        /// <param name="message">The message related to the log event.</param>
+        protected abstract void NotifyDebug(Exception cause, object message);
+
+        /// <summary>
         /// Creates an instance of the LoggingAdapterBase.
         /// </summary>
         /// <param name="logMessageFormatter">The log message formatter used by this logging adapter.</param>
         /// <exception cref="ArgumentNullException">This exception is thrown when the given <paramref name="logMessageFormatter"/> is undefined.</exception>
         protected LoggingAdapterBase(ILogMessageFormatter logMessageFormatter)
         {
-            if(logMessageFormatter == null)
-                throw new ArgumentNullException(nameof(logMessageFormatter), "The message formatter must not be null.");
-
-            _logMessageFormatter = logMessageFormatter;
+            _logMessageFormatter = logMessageFormatter ?? throw new ArgumentNullException(nameof(logMessageFormatter), "The message formatter must not be null.");
         }
 
         /// <summary>
@@ -150,9 +168,25 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Logs a <see cref="LogLevel.DebugLevel" /> message.
+        /// </summary>
+        /// <param name="cause">The exception associated with this message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
         public virtual void Debug(Exception cause, string format, params object[] args)
         {
-            throw new NotImplementedException();
+            if (!IsDebugEnabled)
+                return;
+
+            if (args == null || args.Length == 0)
+            {
+                NotifyDebug(cause, format);
+            }
+            else
+            {
+                NotifyDebug(cause, new LogMessage(_logMessageFormatter, format, args));
+            }
         }
 
         /// <summary>
@@ -165,9 +199,25 @@ namespace Akka.Event
             Warning(format, args);
         }
 
+        /// <summary>
+        /// Logs a <see cref="LogLevel.InfoLevel" /> message.
+        /// </summary>
+        /// <param name="cause">The exception associated with this message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
         public virtual void Info(Exception cause, string format, params object[] args)
         {
-            throw new NotImplementedException();
+            if (!IsInfoEnabled)
+                return;
+
+            if (args == null || args.Length == 0)
+            {
+                NotifyInfo(cause, format);
+            }
+            else
+            {
+                NotifyInfo(cause, new LogMessage(_logMessageFormatter, format, args));
+            }
         }
 
         /// <summary>
@@ -190,9 +240,25 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Logs a <see cref="LogLevel.WarningLevel" /> message.
+        /// </summary>
+        /// <param name="cause">The exception associated with this message.</param>
+        /// <param name="format">The message that is being logged.</param>
+        /// <param name="args">An optional list of items used to format the message.</param>
         public virtual void Warning(Exception cause, string format, params object[] args)
         {
-            throw new NotImplementedException();
+            if (!IsWarningEnabled)
+                return;
+
+            if (args == null || args.Length == 0)
+            {
+                NotifyWarning(cause, format);
+            }
+            else
+            {
+                NotifyWarning(cause, new LogMessage(_logMessageFormatter, format, args));
+            }
         }
 
         /// <summary>
