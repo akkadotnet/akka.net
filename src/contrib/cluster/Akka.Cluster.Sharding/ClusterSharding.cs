@@ -318,7 +318,7 @@ namespace Akka.Cluster.Sharding
             RequireClusterRole(settings.Role);
 
             var timeout = _system.Settings.CreationTimeout;
-            var startMsg = new ClusterShardingGuardian.Start(typeName, entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
+            var startMsg = new ClusterShardingGuardian.Start(typeName, _ => entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
 
             var reply = _guardian.Value.Ask(startMsg, timeout).Result;
             switch (reply)
@@ -376,7 +376,7 @@ namespace Akka.Cluster.Sharding
             RequireClusterRole(settings.Role);
 
             var timeout = _system.Settings.CreationTimeout;
-            var startMsg = new ClusterShardingGuardian.Start(typeName, entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
+            var startMsg = new ClusterShardingGuardian.Start(typeName, _ => entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
 
             var reply = await _guardian.Value.Ask(startMsg, timeout);
             switch (reply)
@@ -561,6 +561,297 @@ namespace Akka.Cluster.Sharding
         {
             return StartAsync(typeName,
                 entityProps,
+                settings,
+                messageExtractor,
+                new LeastShardAllocationStrategy(
+                    Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                    Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance),
+                PoisonPill.Instance);
+        }
+
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message,
+        /// if the partial function does not match the message will be `unhandled`,
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffStopMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef Start(
+            string typeName,
+            Func<string, Props> entityPropsFactory,
+            ClusterShardingSettings settings,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
+            IShardAllocationStrategy allocationStrategy,
+            object handOffStopMessage)
+        {
+            RequireClusterRole(settings.Role);
+
+            var timeout = _system.Settings.CreationTimeout;
+            var startMsg = new ClusterShardingGuardian.Start(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
+
+            var reply = _guardian.Value.Ask(startMsg, timeout).Result;
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    var shardRegion = started.ShardRegion;
+                    _regions.TryAdd(typeName, shardRegion);
+                    return shardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default:
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message,
+        /// if the partial function does not match the message will be `unhandled`,
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffStopMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public async Task<IActorRef> StartAsync(
+            string typeName,
+            Func<string, Props> entityPropsFactory,
+            ClusterShardingSettings settings,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
+            IShardAllocationStrategy allocationStrategy,
+            object handOffStopMessage)
+        {
+            RequireClusterRole(settings.Role);
+
+            var timeout = _system.Settings.CreationTimeout;
+            var startMsg = new ClusterShardingGuardian.Start(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
+
+            var reply = await _guardian.Value.Ask(startMsg, timeout);
+            switch (reply)
+            {
+                case ClusterShardingGuardian.Started started:
+                    var shardRegion = started.ShardRegion;
+                    _regions.TryAdd(typeName, shardRegion);
+                    return shardRegion;
+
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return ActorRefs.Nobody;
+
+                default:
+                    throw new ActorInitializationException($"Unsupported guardian response: {reply}");
+            }
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message,
+        /// if the partial function does not match the message will be `unhandled`,
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef Start(
+            string typeName,
+            Func<string, Props> entityPropsFactory,
+            ClusterShardingSettings settings,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId)
+        {
+            var allocationStrategy = new LeastShardAllocationStrategy(
+                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
+            return Start(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, PoisonPill.Instance);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="extractEntityId">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message,
+        /// if the partial function does not match the message will be `unhandled`,
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="extractShardId">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(
+            string typeName,
+            Func<string, Props> entityPropsFactory,
+            ClusterShardingSettings settings,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId)
+        {
+            var allocationStrategy = new LeastShardAllocationStrategy(
+                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
+            return StartAsync(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, PoisonPill.Instance);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef Start(string typeName, Func<string, Props> entityPropsFactory, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy, object handOffMessage)
+        {
+            ExtractEntityId extractEntityId = messageExtractor.ToExtractEntityId();
+            ExtractShardId extractShardId = messageExtractor.ShardId;
+
+            return Start(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, handOffMessage);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(string typeName, Func<string, Props> entityPropsFactory, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy, object handOffMessage)
+        {
+            ExtractEntityId extractEntityId = messageExtractor.ToExtractEntityId();
+            ExtractShardId extractShardId = messageExtractor.ShardId;
+
+            return StartAsync(typeName, entityPropsFactory, settings, extractEntityId, extractShardId, allocationStrategy, handOffMessage);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public IActorRef Start(string typeName, Func<string, Props> entityPropsFactory, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor)
+        {
+            return Start(typeName,
+                entityPropsFactory,
+                settings,
+                messageExtractor,
+                new LeastShardAllocationStrategy(
+                    Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                    Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance),
+                PoisonPill.Instance);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/>
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityPropsFactory">
+        /// Function that, given an entity id, returns the <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/>
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(string typeName, Func<string, Props> entityPropsFactory, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor)
+        {
+            return StartAsync(typeName,
+                entityPropsFactory,
                 settings,
                 messageExtractor,
                 new LeastShardAllocationStrategy(

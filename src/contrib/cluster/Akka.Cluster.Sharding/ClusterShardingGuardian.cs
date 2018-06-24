@@ -55,7 +55,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly Props EntityProps;
+            public readonly Func<string, Props> EntityProps;
             /// <summary>
             /// TBD
             /// </summary>
@@ -90,7 +90,7 @@ namespace Akka.Cluster.Sharding
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
             /// </exception>
-            public Start(string typeName, Props entityProps, ClusterShardingSettings settings,
+            public Start(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings,
                 ExtractEntityId extractEntityId, ExtractShardId extractShardId, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
