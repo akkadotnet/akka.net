@@ -288,8 +288,6 @@ namespace Akka.Cluster.Sharding.Tests
             return Actor.Props.Create(() => new QualifiedCounter(typeName, id));
         }
 
-        //public static new string ShardingTypeName => "QualifiedCounter";
-
         public readonly string TypeName;
 
         public override string PersistenceId { get { return TypeName + "-" + Self.Path.Name; } }
@@ -307,7 +305,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             return Actor.Props.Create(() => new AnotherCounter(id));
         }
-        public static new string ShardingTypeName => "AnotherCounter";
+        public static new string ShardingTypeName => nameof(AnotherCounter);
 
         public AnotherCounter(string id)
             : base(AnotherCounter.ShardingTypeName, id)
@@ -317,7 +315,7 @@ namespace Akka.Cluster.Sharding.Tests
 
     internal class CounterSupervisor : ActorBase
     {
-        public static string ShardingTypeName => "CounterSupervisor";
+        public static string ShardingTypeName => nameof(CounterSupervisor);
 
         public static Props Props(string id)
         {
