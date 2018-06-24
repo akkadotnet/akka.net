@@ -218,9 +218,8 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = startProxy.Settings;
-                    var encName = Uri.EscapeDataString(startProxy.TypeName);
-                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                    var coordinatorPath = CoordinatorPath(encName);
+                    var encName = Uri.EscapeDataString(startProxy.TypeName + "Proxy");
+                    var coordinatorPath = CoordinatorPath(Uri.EscapeDataString(startProxy.TypeName));
                     var shardRegion = Context.Child(encName);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))

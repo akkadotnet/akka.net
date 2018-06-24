@@ -229,6 +229,7 @@ namespace Akka.Cluster.Sharding
     {
         private readonly Lazy<IActorRef> _guardian;
         private readonly ConcurrentDictionary<string, IActorRef> _regions = new ConcurrentDictionary<string, IActorRef>();
+        private readonly ConcurrentDictionary<string, IActorRef> _proxies = new ConcurrentDictionary<string, IActorRef>();
         private readonly ExtendedActorSystem _system;
         private readonly Cluster _cluster;
 
@@ -597,7 +598,7 @@ namespace Akka.Cluster.Sharding
             switch (reply)
             {
                 case ClusterShardingGuardian.Started started:
-                    _regions.TryAdd(typeName, started.ShardRegion);
+                    _proxies.TryAdd(typeName, started.ShardRegion);
                     return started.ShardRegion;
 
                 case Status.Failure failure:
@@ -638,7 +639,7 @@ namespace Akka.Cluster.Sharding
             switch (reply)
             {
                 case ClusterShardingGuardian.Started started:
-                    _regions.TryAdd(typeName, started.ShardRegion);
+                    _proxies.TryAdd(typeName, started.ShardRegion);
                     return started.ShardRegion;
 
                 case Status.Failure failure:
@@ -723,7 +724,25 @@ namespace Akka.Cluster.Sharding
         {
             if (_regions.TryGetValue(typeName, out var region))
                 return region;
+            if (_proxies.TryGetValue(typeName, out region))
+                return region;
 
+            throw new ArgumentException($"Shard type [{typeName}] must be started first");
+        }
+
+        /// <summary>
+        /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor that will act as a proxy to the
+        /// named entity type running in another data center. A proxy within the same data center can be accessed
+        /// with <see cref="Sharding.ShardRegion"/> instead of this method. The entity type must be registered with the
+        /// <see cref="ClusterShardingGuardian.StartProxy"/> method before it can be used here. Messages to the entity is always sent
+        /// via the <see cref="Sharding.ShardRegion"/>.
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <returns></returns>
+        public IActorRef ShardRegionProxy(string typeName)
+        {
+            if (_proxies.TryGetValue(typeName, out var proxy))
+                return proxy;
             throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 
