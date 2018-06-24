@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -330,7 +331,7 @@ namespace Akka.Cluster.Sharding
                     ExceptionDispatchInfo.Capture(failure.Cause).Throw();
                     return ActorRefs.Nobody;
 
-                default: 
+                default:
                     throw new ActorInitializationException($"Unsupported guardian response: {reply}");
             }
         }
@@ -702,6 +703,11 @@ namespace Akka.Cluster.Sharding
 
             return StartProxyAsync(typeName, role, extractEntityId, messageExtractor.ShardId);
         }
+
+        /// <summary>
+        /// get all currently defined sharding type names.
+        /// </summary>
+        public ImmutableHashSet<EntityId> ShardTypeNames => _regions.Keys.ToImmutableHashSet();
 
         /// <summary>
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor responsible for the named entity type.
