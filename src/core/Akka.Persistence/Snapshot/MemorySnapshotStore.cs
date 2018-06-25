@@ -20,8 +20,6 @@ namespace Akka.Persistence.Snapshot
     /// </summary>
     public class MemorySnapshotStore : SnapshotStore
     {
-        private readonly object _ssLock = new object();
-
         /// <summary>
         /// This is available to expose/override the snapshots in derived snapshot stores
         /// </summary>
