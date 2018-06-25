@@ -13,20 +13,25 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Snapshot
 {
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// In-memory SnapshotStore implementation.
+    /// </summary>
     public class MemorySnapshotStore : SnapshotStore
     {
-        private readonly List<SnapshotEntry> _snapshotCollection = new List<SnapshotEntry>();
+        private readonly object _ssLock = new object();
 
         /// <summary>
         /// This is available to expose/override the snapshots in derived snapshot stores
         /// </summary>
-        protected virtual List<SnapshotEntry> Snapshots { get { return _snapshotCollection; } }
+        protected virtual List<SnapshotEntry> Snapshots { get; } = new List<SnapshotEntry>();
 
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {
             bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
                                                                                     && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
-
+            
 
             var snapshot = Snapshots.FirstOrDefault(Pred);
             Snapshots.Remove(snapshot);
@@ -45,6 +50,7 @@ namespace Akka.Persistence.Snapshot
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
+
 
             var snapshot = Snapshots.Where(filter).OrderByDescending(x => x.SequenceNr).Take(1).Select(x => ToSelectedSnapshot(x)).FirstOrDefault();
             return Task.FromResult(snapshot);
