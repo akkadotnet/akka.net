@@ -33,7 +33,7 @@ namespace Akka.Cluster.Sharding
 
         public string TypeName { get; }
         public string ShardId { get; }
-        public Props EntityProps { get; }
+        public Func<string, Props> EntityProps { get; }
         public ClusterShardingSettings Settings { get; }
         public ExtractEntityId ExtractEntityId { get; }
         public ExtractShardId ExtractShardId { get; }
@@ -45,12 +45,12 @@ namespace Akka.Cluster.Sharding
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
 
-        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; } 
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
 
         public PersistentShard(
             string typeName,
             string shardId,
-            Props entityProps,
+            Func<string, Props> entityProps,
             ClusterShardingSettings settings,
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,

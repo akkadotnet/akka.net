@@ -279,6 +279,16 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
+        /// If true, this node should run the shard region, otherwise just a shard proxy should started on this node.
+        /// </summary>
+        /// <param name="cluster"></param>
+        /// <returns></returns>
+        internal bool ShouldHostShard(Cluster cluster)
+        {
+            return string.IsNullOrEmpty(Role) || cluster.SelfRoles.Contains(Role);
+        }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="role">TBD</param>

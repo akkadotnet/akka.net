@@ -55,7 +55,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly Props EntityProps;
+            public readonly Func<string, Props> EntityProps;
             /// <summary>
             /// TBD
             /// </summary>
@@ -90,7 +90,7 @@ namespace Akka.Cluster.Sharding
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
             /// </exception>
-            public Start(string typeName, Props entityProps, ClusterShardingSettings settings,
+            public Start(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings,
                 ExtractEntityId extractEntityId, ExtractShardId extractShardId, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
@@ -218,9 +218,8 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = startProxy.Settings;
-                    var encName = Uri.EscapeDataString(startProxy.TypeName);
-                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                    var coordinatorPath = CoordinatorPath(encName);
+                    var encName = Uri.EscapeDataString(startProxy.TypeName + "Proxy");
+                    var coordinatorPath = CoordinatorPath(Uri.EscapeDataString(startProxy.TypeName));
                     var shardRegion = Context.Child(encName);
 
                     if (Equals(shardRegion, ActorRefs.Nobody))

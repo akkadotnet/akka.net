@@ -129,7 +129,7 @@ namespace Akka.Cluster.Sharding
             public readonly ShardId ShardId;
 
             /// <summary>
-            /// Creates a new instance of a <see cref="StartEntityAck"/> class, used to confirm that 
+            /// Creates a new instance of a <see cref="StartEntityAck"/> class, used to confirm that
             /// <see cref="StartEntity"/> request has succeed.
             /// </summary>
             /// <param name="entityId">An identifier of a newly started entity.</param>
@@ -243,7 +243,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="replicator"></param>
         /// <param name="majorityMinCap"></param>
         /// <returns>TBD</returns>
-        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        internal static Props Props(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
@@ -271,7 +271,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Props EntityProps;
+        public readonly Func<string, Props> EntityProps;
         /// <summary>
         /// TBD
         /// </summary>
@@ -358,7 +358,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="handOffStopMessage">TBD</param>
         /// <param name="replicator"></param>
         /// <param name="majorityMinCap"></param>
-        public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        public ShardRegion(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             TypeName = typeName;
             EntityProps = entityProps;
@@ -417,7 +417,7 @@ namespace Akka.Cluster.Sharding
         {
             get
             {
-                if (EntityProps != null && !EntityProps.Equals(Actor.Props.None))
+                if (EntityProps != null)
                     return new PersistentShardCoordinator.Register(Self);
                 return new PersistentShardCoordinator.RegisterProxy(Self);
             }
@@ -518,10 +518,21 @@ namespace Akka.Cluster.Sharding
         {
             var coordinator = CoordinatorSelection;
             coordinator?.Tell(RegistrationMessage);
-
             if (ShardBuffers.Count != 0 && _retryCount >= RetryCountThreshold)
-                Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages.",
-                    coordinator != null ? coordinator.PathString : string.Empty, TotalBufferSize);
+            {
+                if (coordinator != null)
+                {
+                    var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First()) ? $"Coordinator [{MembersByAge.First()}] is unreachable." : $"Coordinator [{MembersByAge.First()}] is reachable.";
+
+                    Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages. [{2}]",
+                        coordinator != null ? coordinator.PathString : string.Empty, TotalBufferSize, coordinatorMessage);
+                }
+                else
+                {
+                    Log.Warning("No coordinator found to register. Probably, no seed-nodes configured and manual cluster join not performed? Total [{0}] buffered messages.",
+                        TotalBufferSize);
+                }
+            }
         }
 
         private void DeliverStartEntity(object message, IActorRef sender)
@@ -902,7 +913,7 @@ namespace Akka.Cluster.Sharding
             //TODO: change on ConcurrentDictionary.GetOrAdd?
             if (!Shards.TryGetValue(id, out var region))
             {
-                if (EntityProps == null || EntityProps.Equals(Actor.Props.Empty))
+                if (EntityProps == null)
                     throw new IllegalStateException("Shard must not be allocated to a proxy only ShardRegion");
 
                 if (ShardsByRef.Values.All(shardId => shardId != id))

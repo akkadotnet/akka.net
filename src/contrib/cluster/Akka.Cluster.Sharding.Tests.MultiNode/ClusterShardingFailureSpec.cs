@@ -41,7 +41,7 @@ namespace Akka.Cluster.Sharding.Tests
                         serialization-bindings {{
                             ""System.Object"" = hyperion
                         }}
-                    }}                    
+                    }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
@@ -176,7 +176,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ClusterShardingFailureSpecConfig _config;
 
         private readonly List<FileInfo> _storageLocations;
-        
+
         protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config, Type type)
             : base(config, type)
         {
@@ -194,7 +194,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();
@@ -364,6 +364,13 @@ namespace Akka.Cluster.Sharding.Tests
 
                     //Test the Shard passivate works during a journal failure
                     shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
+
+                    AwaitAssert(() =>
+                    {
+                        region.Tell(new Get("21"));
+                        ExpectMsg<Value>(v => v.Id == "21" && v.N == 0, hint: "Passivating did not reset Value down to 0");
+                    });
+
                     region.Tell(new Add("21", 1));
 
                     region.Tell(new Get("21"));
