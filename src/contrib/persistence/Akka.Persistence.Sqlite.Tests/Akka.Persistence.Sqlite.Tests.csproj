@@ -3,8 +3,8 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sqlite.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netcoreapp2.0</TargetFrameworks>
-    <RuntimeIdentifier Condition=" '$(TargetFramework)' == 'net452' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>
+    <TargetFrameworks>netcoreapp2.0;net452</TargetFrameworks>
+    <!--<RuntimeIdentifier Condition=" '$(TargetFramework)' == 'net452' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>-->
     <!--<PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>-->
   </PropertyGroup>
  
@@ -24,7 +24,7 @@
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="4.14.0" />
+    <PackageReference Include="FluentAssertions" Version="5.4.1" />
   </ItemGroup>
 
   <ItemGroup>

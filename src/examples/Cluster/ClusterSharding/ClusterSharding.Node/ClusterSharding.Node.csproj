@@ -9,7 +9,7 @@
     <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <PackageReference Include="Microsoft.Data.SQLite" Version="1.1.1" />
+    <PackageReference Include="Microsoft.Data.SQLite" Version="2.1.0" />
   </ItemGroup>
 
 </Project>

@@ -15,8 +15,13 @@
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SQLite" Version="1.1.1" />
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net451' ">
+ <PackageReference Include="Microsoft.Data.SQLite" Version="1.1.1" />    
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+     <PackageReference Include="Microsoft.Data.SQLite" Version="2.1.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
