@@ -7,7 +7,12 @@
 
 using System;
 using Akka.Configuration;
+using Akka.DistributedData;
+using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
+using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -61,6 +66,32 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(string.Empty, singletonConfig.GetString("role"));
             Assert.Equal(TimeSpan.FromSeconds(1), singletonConfig.GetTimeSpan("hand-over-retry-interval"));
             Assert.Equal(10, singletonConfig.GetInt("min-number-of-hand-over-retries"));
+        }
+    }
+
+    public class DDataClusterShardingConfigSpec : TestKit.Xunit2.TestKit
+    {
+        public DDataClusterShardingConfigSpec(ITestOutputHelper helper) : base(GetConfig(), output:helper)
+        {
+        }
+
+        public static Config GetConfig()
+        {
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.cluster.sharding.state-store-mode = ddata
+            ");
+        }
+
+        [Fact]
+        public void Should_load_DData_serializers_when_enabled()
+        {
+            ClusterSharding.Get(Sys);
+
+            var rmSerializer = Sys.Serialization.FindSerializerFor(WriteAck.Instance);
+            rmSerializer.Should().BeOfType<ReplicatorMessageSerializer>();
+
+            var rDSerializer = Sys.Serialization.FindSerializerFor(ORDictionary<string, GSet<string>>.Empty);
+            rDSerializer.Should().BeOfType<ReplicatedDataSerializer>();
         }
     }
 }
