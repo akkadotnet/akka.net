@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Threading;
 using Akka.Actor;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
@@ -21,20 +22,36 @@ namespace Akka.Serialization
     /// <summary>
     /// Serialization information needed for serializing local actor refs.
     /// </summary>
-    internal class Information
+    internal sealed class Information
     {
-        public Address Address { get; set; }
+        public Address Address { get; private set; }
 
-        public ActorSystem System { get; set; }
+        public ActorSystem System { get; private set; }
+
+        public bool IsSet { get; private set; }
+
+        public void Set(Address address, ActorSystem system)
+        {
+            IsSet = true;
+            Address = address;
+            System = system;
+        }
+
+        public void Clear()
+        {
+            IsSet = false;
+            Address = null;
+            System = null;
+        }
     }
 
     /// <summary>
-    /// TBD
+    /// The Akka.NET Serialization system. Can be used to lookup registered <see cref="Serializer"/>
+    /// implementations and serialize / deserialize messages directly.
     /// </summary>
     public class Serialization
     {
-        [ThreadStatic]
-        private static Information _currentTransportInformation;
+        private static readonly ThreadLocal<Information> CurrentTransportInformation = new ThreadLocal<Information>(() => new Information(), false);
 
         /// <summary>
         /// TBD
@@ -46,13 +63,17 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
-            _currentTransportInformation = new Information()
-            {
-                System = system,
-                Address = address
-            };
+            CurrentTransportInformation.Value.Set(address, system);
             var res = action();
-            _currentTransportInformation = null;
+            CurrentTransportInformation.Value.Clear();
+            return res;
+        }
+
+        public static byte[] SerializeWithTransport(ActorSystem system, Address address, Serializer s, object message)
+        {
+            CurrentTransportInformation.Value.Set(address, system);
+            var res = s.ToBinary(message);
+            CurrentTransportInformation.Value.Clear();
             return res;
         }
 
@@ -207,8 +228,8 @@ namespace Akka.Serialization
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
  
-            if (serializer is SerializerWithStringManifest)
-                return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
+            if (serializer is SerializerWithStringManifest stringManifest)
+                return stringManifest.FromBinary(bytes, manifest);
             if (string.IsNullOrEmpty(manifest))
                 return serializer.FromBinary(bytes, null);
             Type type;
@@ -295,12 +316,12 @@ namespace Akka.Serialization
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;
-            if (actorRef is ActorRefWithCell)
+            if (actorRef is ActorRefWithCell cell)
             {
-                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
+                originalSystem = (ExtendedActorSystem)cell.Underlying.System;
             }
 
-            if (_currentTransportInformation == null)
+            if (!CurrentTransportInformation.Value.IsSet)
             {
                 if (originalSystem == null)
                 {
@@ -316,8 +337,8 @@ namespace Akka.Serialization
             }
 
             //CurrentTransportInformation exists
-            var system = _currentTransportInformation.System;
-            var address = _currentTransportInformation.Address;
+            var system = CurrentTransportInformation.Value.System;
+            var address = CurrentTransportInformation.Value.Address;
             if (originalSystem == null || originalSystem == system)
             {
                 var res = path.ToSerializationFormatWithAddress(address);
