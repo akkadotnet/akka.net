@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster.Serialization.Proto.Msg;
 using Akka.Serialization;
@@ -223,15 +224,20 @@ namespace Akka.Cluster.Serialization
 
         private static Proto.Msg.Gossip GossipToProto(Gossip gossip)
         {
-            var allMembers = gossip.Members.ToList();
-            var allAddresses = gossip.Members.Select(x => x.UniqueAddress).ToList();
+            var allMembers = gossip.Members.ToArray();
+            var allAddresses = gossip.Members
+                .Select(x => x.UniqueAddress)
+                .Union(gossip.Tombstones.Select(x => x.Key))
+                .ToImmutableHashSet();
             var addressMapping = allAddresses.ZipWithIndex();
-            var allRoles = allMembers.Aggregate(ImmutableHashSet.Create<string>(), (set, member) => set.Union(member.Roles));
+            var allRoles = allMembers.SelectMany(m => m.Roles).ToImmutableHashSet();
             var roleMapping = allRoles.ZipWithIndex();
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
             var hashMapping = allHashes.ZipWithIndex();
 
             int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
+
+            int MapRole(string role) => MapWithErrorMessage(roleMapping, role, "role");
 
             Proto.Msg.Member MemberToProto(Member m)
             {
@@ -239,33 +245,63 @@ namespace Akka.Cluster.Serialization
                 protoMember.AddressIndex = MapUniqueAddress(m.UniqueAddress);
                 protoMember.UpNumber = m.UpNumber;
                 protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
-                protoMember.RolesIndexes.AddRange(m.Roles.Select(s => MapWithErrorMessage(roleMapping, s, "role")));
+                protoMember.RolesIndexes.AddRange(m.Roles.Select(MapRole));
                 return protoMember;
             }
 
-            var reachabilityProto = ReachabilityToProto(gossip.Overview.Reachability, addressMapping);
-            var membersProtos = gossip.Members.Select((Func<Member, Proto.Msg.Member>)MemberToProto);
-            var seenProtos = gossip.Overview.Seen.Select((Func<UniqueAddress, int>)MapUniqueAddress);
-
-            var overview = new Proto.Msg.GossipOverview();
-            overview.Seen.AddRange(seenProtos);
-            overview.ObserverReachability.AddRange(reachabilityProto);
-
-            var tombstones = gossip.Tombstones.Select(t => new Tombstone
+            IEnumerable<Proto.Msg.ObserverReachability> ReachabilityToProto(Reachability reachability)
             {
-                AddressIndex = MapUniqueAddress(t.Key),
-                Timestamp = t.Value.Ticks / TimeSpan.TicksPerMillisecond // we operate in milliseconds
-            });
+                foreach (var entry in reachability.Versions)
+                {
+                    var observer = entry.Key;
+                    var version = entry.Value;
+                    var subjectReachability = reachability
+                        .RecordsFrom(observer)
+                        .Select(record => new Proto.Msg.SubjectReachability
+                        {
+                            AddressIndex = MapUniqueAddress(record.Subject),
+                            Status = (Proto.Msg.SubjectReachability.Types.ReachabilityStatus)record.Status,
+                            Version = record.Version
+                        });
 
-            var message = new Proto.Msg.Gossip();
-            message.AllAddresses.AddRange(allAddresses.Select(UniqueAddressToProto));
-            message.AllRoles.AddRange(allRoles);
-            message.AllHashes.AddRange(allHashes);
-            message.Members.AddRange(membersProtos);
-            message.Overview = overview;
-            message.Version = VectorClockToProto(gossip.Version, hashMapping);
-            message.Tombstones.AddRange(tombstones);
-            return message;
+                    var observerReachability = new ObserverReachability
+                    {
+                        AddressIndex = MapUniqueAddress(observer),
+                        Version = version
+                    };
+                    observerReachability.SubjectReachability.AddRange(subjectReachability);
+                    yield return observerReachability;
+                }
+            }
+
+            Proto.Msg.Tombstone TombstoneToProto(KeyValuePair<UniqueAddress, DateTime> kv) => 
+                new Tombstone
+                {
+                    AddressIndex = MapUniqueAddress(kv.Key),
+                    Timestamp = kv.Value.Ticks / TimeSpan.TicksPerMillisecond // we operate in milliseconds
+                };
+
+            var protoReachability = ReachabilityToProto(gossip.Overview.Reachability).ToArray();
+            var members = gossip.Members.Select(MemberToProto).ToArray();
+            var seen = gossip.Overview.Seen.Select(MapUniqueAddress).ToArray();
+
+            var overview = new Proto.Msg.GossipOverview{ };
+            overview.Seen.AddRange(seen);
+            overview.ObserverReachability.AddRange(protoReachability);
+
+            var protoAllAddresses = allAddresses.Select(UniqueAddressToProto).ToArray();
+            var result = new Proto.Msg.Gossip
+            {
+                Overview = overview,
+                Version = VectorClockToProto(gossip.Version, hashMapping),
+            };
+            result.AllAddresses.AddRange(protoAllAddresses);
+            result.AllRoles.AddRange(allRoles);
+            result.AllHashes.AddRange(allHashes);
+            result.Members.AddRange(members);
+            result.Tombstones.AddRange(gossip.Tombstones.Select(TombstoneToProto));
+
+            return result;
         }
 
         private static Gossip GossipFrom(Proto.Msg.Gossip gossip)
@@ -294,31 +330,7 @@ namespace Akka.Cluster.Serialization
 
             return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping), tombstones);
         }
-
-        private static IEnumerable<Proto.Msg.ObserverReachability> ReachabilityToProto(Reachability reachability, Dictionary<UniqueAddress, int> addressMapping)
-        {
-            var builderList = new List<Proto.Msg.ObserverReachability>();
-            foreach (var version in reachability.Versions)
-            {
-                var subjectReachability = reachability.RecordsFrom(version.Key).Select(
-                    r =>
-                    {
-                        var sr = new Proto.Msg.SubjectReachability();
-                        sr.AddressIndex = MapWithErrorMessage(addressMapping, r.Subject, "address");
-                        sr.Status = (Proto.Msg.SubjectReachability.Types.ReachabilityStatus)r.Status;
-                        sr.Version = r.Version;
-                        return sr;
-                    });
-
-                var observerReachability = new Proto.Msg.ObserverReachability();
-                observerReachability.AddressIndex = MapWithErrorMessage(addressMapping, version.Key, "address");
-                observerReachability.Version = version.Value;
-                observerReachability.SubjectReachability.AddRange(subjectReachability);
-                builderList.Add(observerReachability);
-            }
-            return builderList;
-        }
-
+        
         private static Reachability ReachabilityFromProto(IEnumerable<Proto.Msg.ObserverReachability> reachabilityProto, List<UniqueAddress> addressMapping)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Reachability.Record>();
@@ -366,7 +378,15 @@ namespace Akka.Cluster.Serialization
             if (map.TryGetValue(value, out int mapIndex))
                 return mapIndex;
 
-            throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
+            var sb = new StringBuilder("{");
+            foreach (var kv in map)
+            {
+                sb.Append(kv.Key).Append(':').Append(kv.Value).Append(",");
+            }
+
+            sb.Append('}');
+
+            throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message. Available entries are: {sb.ToString()}");
         }
 
         //

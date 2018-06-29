@@ -65,11 +65,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        internal static bool IsAssertInvariantsEnabled
-        {
-            //TODO: Consequences of this?
-            get { return false; }
-        }
+        internal const bool IsAssertInvariantsEnabled = false;
 
         /// <summary>
         /// The settings for the cluster.

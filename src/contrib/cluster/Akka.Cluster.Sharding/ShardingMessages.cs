@@ -115,7 +115,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetCurrentRegions"/>.
     /// </summary>
     [Serializable]
-    public sealed class CurrentRegions
+    public sealed class CurrentRegions : IEquatable<CurrentRegions>
     {
         /// <summary>
         /// TBD
@@ -128,6 +128,36 @@ namespace Akka.Cluster.Sharding
         public CurrentRegions(IImmutableSet<Address> regions)
         {
             Regions = regions;
+        }
+
+        public bool Equals(CurrentRegions other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            if (Regions.Count != other.Regions.Count) return false;
+
+            foreach (var address in Regions)
+            {
+                if (!other.Regions.Contains(address)) return false;
+            }
+
+            return true;
+        }
+
+        public override bool Equals(object obj) => obj is CurrentRegions regions && Equals(regions);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 0;
+                foreach (var region in Regions)
+                {
+                    hash ^= 397 * region.GetHashCode();
+                }
+
+                return hash;
+            }
         }
     }
 

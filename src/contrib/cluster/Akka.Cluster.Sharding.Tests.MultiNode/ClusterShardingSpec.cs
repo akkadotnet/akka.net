@@ -423,7 +423,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             RunOn(() =>
             {
-                Cluster.Join(Node(to).Address);
+                Cluster.JoinAsync(Node(to).Address).GetAwaiter().GetResult();
                 CreateCoordinator();
             }, from);
 
@@ -526,7 +526,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        public void ClusterSharding_should_setup_shared_journal()
+        private void ClusterSharding_should_setup_shared_journal()
         {
             // start the Persistence extension
             Persistence.Persistence.Instance.Apply(Sys);
@@ -557,7 +557,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("after-1-test");
         }
 
-        public void ClusterSharding_should_work_in_single_node_cluster()
+        private void ClusterSharding_should_work_in_single_node_cluster()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -581,7 +581,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_use_second_node()
+        private void ClusterSharding_should_use_second_node()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -643,7 +643,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_support_passivation_and_activation_of_entities()
+        private void ClusterSharding_should_support_passivation_and_activation_of_entities()
         {
             RunOn(() =>
             {
@@ -660,7 +660,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("after-4");
         }
 
-        public void ClusterSharding_should_support_proxy_only_mode()
+        private void ClusterSharding_should_support_proxy_only_mode()
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
@@ -692,7 +692,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_failover_shards_on_crashed_node()
+        private void ClusterSharding_should_failover_shards_on_crashed_node()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
@@ -737,7 +737,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_use_third_and_fourth_node()
+        private void ClusterSharding_should_use_third_and_fourth_node()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -750,7 +750,7 @@ namespace Akka.Cluster.Sharding.Tests
                         r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:10, 11:1, 12:1}
 
                     r.Tell(new Counter.Get(3));
-                    ExpectMsg(10);
+                    ExpectMsg(10, hint: "counter 3 should return state 10");
                     LastSender.Path.Should().Be(r.Path / "3" / "3");
                 }, _config.Third);
                 EnterBarrier("third-update");
@@ -764,7 +764,7 @@ namespace Akka.Cluster.Sharding.Tests
                         r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:10, 4:20, 11:1, 12:1}
 
                     r.Tell(new Counter.Get(4));
-                    ExpectMsg(20);
+                    ExpectMsg(20, hint: "counter 4 should return state 20");
                     LastSender.Path.Should().Be(r.Path / "4" / "4");
                 }, _config.Fourth);
                 EnterBarrier("fourth-update");
@@ -774,12 +774,12 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:11, 4:20, 11:1, 12:1}
                     r.Tell(new Counter.Get(3));
-                    ExpectMsg(11);
+                    ExpectMsg(11, hint: "counter 3 should return state 11");
                     LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
 
                     r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance)); // counter state {1:2, 2:4, 3:11, 4:21, 11:1, 12:1}
                     r.Tell(new Counter.Get(4));
-                    ExpectMsg(21);
+                    ExpectMsg(21, hint: "counter 4 should return state 21");
                     LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
                 }, _config.First);
                 EnterBarrier("first-update");
@@ -788,7 +788,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     var r = _region.Value;
                     r.Tell(new Counter.Get(3));
-                    ExpectMsg(11);
+                    ExpectMsg(11, hint: "counter 3 should return state 11 (after update)");
                     LastSender.Path.Should().Be(r.Path / "3" / "3");
                 }, _config.Third);
 
@@ -796,14 +796,14 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     var r = _region.Value;
                     r.Tell(new Counter.Get(4));
-                    ExpectMsg(21);
+                    ExpectMsg(21, hint: "counter 4 should return state 21 (after update)");
                     LastSender.Path.Should().Be(r.Path / "4" / "4");
                 }, _config.Fourth);
                 EnterBarrier("after-7");
             });
         }
 
-        public void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
+        private void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
         {
             Within(TimeSpan.FromSeconds(60), () =>
             {
@@ -842,7 +842,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_rebalance_to_nodes_with_less_shards()
+        private void ClusterSharding_should_rebalance_to_nodes_with_less_shards()
         {
             Within(TimeSpan.FromSeconds(60), () =>
             {
@@ -885,7 +885,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_be_easy_to_use_with_extensions()
+        private void ClusterSharding_should_be_easy_to_use_with_extensions()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -951,7 +951,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void ClusterSharding_should_be_easy_API_for_starting()
+        private void ClusterSharding_should_be_easy_API_for_starting()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -976,7 +976,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         #region Persistent cluster shards specs
 
-        public void PersistentClusterShards_should_recover_entities_upon_restart()
+        private void PersistentClusterShards_should_recover_entities_upon_restart()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -1049,7 +1049,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void PersistentClusterShards_should_permanently_stop_entities_which_passivate()
+        private void PersistentClusterShards_should_permanently_stop_entities_which_passivate()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -1132,7 +1132,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void PersistentClusterShards_should_restart_entities_which_stop_without_passivation()
+        private void PersistentClusterShards_should_restart_entities_which_stop_without_passivation()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -1163,7 +1163,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure()
+        private void PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -1209,7 +1209,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        public void PersistentClusterShards_should_ensure_rebalance_restarts_shards()
+        private void PersistentClusterShards_should_ensure_rebalance_restarts_shards()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {

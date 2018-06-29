@@ -131,6 +131,7 @@ namespace Akka.Cluster
             {
                 case ClusterEvent.CurrentClusterState state: Init(state); return true;
                 case ClusterEvent.MemberRemoved removed: RemoveMember(removed.Member); return true;
+                case ClusterEvent.IMemberEvent e: AddMember(e.Member); return true;
                 case ClusterHeartbeatSender.HeartbeatTick _: return true; // ignore
                 default: return false;
             }

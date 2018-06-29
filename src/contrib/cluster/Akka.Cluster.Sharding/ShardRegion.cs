@@ -374,8 +374,15 @@ namespace Akka.Cluster.Sharding
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
             {
-                self.Tell(GracefulShutdown.Instance);
-                return _gracefulShutdownProgress.Task;
+                if (Cluster.IsTerminated || Cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    self.Tell(GracefulShutdown.Instance);
+                    return _gracefulShutdownProgress.Task;
+                }
             });
         }
 
@@ -440,7 +447,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected bool MatchingRole(Member member)
         {
-            return member.HasRole(_targetDcRole) && string.IsNullOrEmpty(Settings.Role) || member.HasRole(Settings.Role);
+            return member.HasRole(_targetDcRole) && (string.IsNullOrEmpty(Settings.Role) || member.HasRole(Settings.Role));
         }
 
         private void ChangeMembers(IImmutableSet<Member> newMembers)
