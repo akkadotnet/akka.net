@@ -1,37 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGetStatsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
-using System.Collections.Immutable;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGetStatsSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; private set; }
-
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
-
-        public RoleName Third { get; private set; }
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public ClusterShardingGetStatsSpecConfig()
         {
@@ -50,6 +39,9 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.sharding {
                         updating-state-timeout = 2s
@@ -62,13 +54,14 @@ namespace Akka.Cluster.Sharding.Tests
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                     }
-
                     akka.persistence.journal.memory-journal-shared {
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
                     }
                 "))
+                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             NodeConfig(new RoleName[] { First, Second, Third }, new Config[] {
@@ -134,9 +127,9 @@ namespace Akka.Cluster.Sharding.Tests
         readonly static int NumberOfShards = 3;
         readonly static string ShardTypeName = "Ping";
 
-        internal IdExtractor extractEntityId = message => message is Ping ? Tuple.Create(((Ping)message).Id.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? Tuple.Create(p.Id.ToString(), message) : null;
 
-        internal ShardResolver extractShardId = message => message is Ping ? (((Ping)message).Id % NumberOfShards).ToString() : null;
+        internal ExtractShardId extractShardId = message => message is Ping p ? (p.Id % NumberOfShards).ToString() : null;
 
         private Lazy<IActorRef> _region;
 
@@ -174,8 +167,8 @@ namespace Akka.Cluster.Sharding.Tests
                typeName: ShardTypeName,
                entityProps: Props.Create<ShardedActor>(),
                settings: ClusterShardingSettings.Create(Sys).WithRole("shard"),
-               idExtractor: extractEntityId,
-               shardResolver: extractShardId);
+               extractEntityId: extractEntityId,
+               extractShardId: extractShardId);
         }
 
         private void StartProxy()
@@ -183,8 +176,8 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys).StartProxy(
                 typeName: ShardTypeName,
                 role: "shard",
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
         [MultiNodeFact]

@@ -58,7 +58,7 @@ my-custom-mailbox {
 
   The unbounded mailbox priority mailbox is blocking mailbox that allows message prioritization, so that you can choose the order the actor should process messages that are already in the mailbox.
 
-  In order to use this mailbox, you need to extend the `UnboundedPriorityMailbox` class and provide an ordering logic. The value returned by the `PriorityGenerator` method will be used to order the message in the mailbox. Lower values will be delivered first. Messages ordered by the same number will remain in delivery order.
+  In order to use this mailbox, you need to extend the `UnboundedPriorityMailbox` class and provide an ordering logic. The value returned by the `PriorityGenerator` method will be used to order the message in the mailbox. Lower values will be delivered first. Delivery order for messages of equal priority is undefined.
 
   ```cs
   public class IssueTrackerMailbox : UnboundedPriorityMailbox
@@ -82,3 +82,6 @@ my-custom-mailbox {
   ```
 
   Once the class is implemented, you should set it up using the [instructions above](#using-a-mailbox).
+##### Special note
+While we have updated the UnboundedPriorityMailbox to support Stashing. We don't recommend using it.
+Once you stash messages, they are no longer part of the prioritization process that your PriorityMailbox uses. Once you unstash all messages, they are fed to the Actor, in the order of stashing.

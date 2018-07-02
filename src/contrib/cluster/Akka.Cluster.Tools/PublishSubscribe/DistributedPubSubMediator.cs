@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -220,7 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
-                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
+                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && !valueHolder.Ref.IsNobody())
                     {
                         Context.Unwatch(valueHolder.Ref);
                         PutToRegistry(remove.Path, null);
@@ -345,6 +345,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (IsMatchingRole(up.Member)) _nodes.Add(up.Member.Address);
             });
+            Receive<ClusterEvent.MemberWeaklyUp>(weaklyUp =>
+            {
+                if (IsMatchingRole(weaklyUp.Member)) _nodes.Add(weaklyUp.Member.Address);
+            });
             Receive<ClusterEvent.MemberLeft>(left =>
             {
                 if (IsMatchingRole(left.Member))
@@ -367,7 +371,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<ClusterEvent.IMemberEvent>(_ => { /* ignore */ });
             Receive<Count>(_ =>
             {
-                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => kv.Value.Ref != null));
+                var count = _registry.Sum(entry => entry.Value.Content.Count(kv => !kv.Value.Ref.IsNobody()));
                 Sender.Tell(count);
             });
             Receive<DeltaCount>(_ =>
@@ -475,19 +479,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void PublishMessage(string path, object message, bool allButSelf = false)
         {
-            foreach (var entry in _registry)
+            IEnumerable<IActorRef> Refs()
             {
-                var address = entry.Key;
-                var bucket = entry.Value;
-
-                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
+                foreach (var entry in _registry)
                 {
-                    if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
-                        valueHolder.Ref.Forward(message);
-                    else
-                        SendToDeadLetters(message);
+                    var address = entry.Key;
+                    var bucket = entry.Value;
+
+                    if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
+                    {
+                        if (valueHolder != null && !valueHolder.Ref.IsNobody())
+                            yield return valueHolder.Ref;
+                    }
                 }
             }
+
+            var counter = 0;
+            foreach (var r in Refs())
+            {
+                if (r == null) continue;
+                r.Forward(message);
+                counter++;
+            }
+
+            if (counter == 0) SendToDeadLetters(message);
         }
 
         private void PublishToEachGroup(string path, object message)
@@ -534,7 +549,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var bucket = entry.Value;
 
                 var oldRemoved = bucket.Content
-                    .Where(kv => (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
+                    .Where(kv => kv.Value.Ref.IsNobody() && (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
                     .Select(kv => kv.Key);
 
                 if (oldRemoved.Any())

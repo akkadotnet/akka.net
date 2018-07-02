@@ -18,12 +18,12 @@ tasks of this actor will be rather simple:
 When working with objects we usually design our API as _interfaces_, which are basically a collection of abstract
 methods to be filled out by the actual implementation. In the world of actors, the counterpart of interfaces is
 protocols. While it is not possible to formalize general protocols in the programming language, we can formalize
-its most basic elements: the messages.
+its most basic elements: The messages.
 
 ## The Query Protocol
 
-Just because a device have been started it does not mean that it has immediately a temperature measurement. Hence, we
-need to account for the case where a temperature is not present in our protocol. This, fortunately, means that we
+Just because a device has been started it does not mean that it immediately has a temperature measurement. Hence, we
+need to account in our protocol for the case in which a temperature is not present. This, fortunately, means that we
 can test the query part of the actor without the write part present, as it can simply report an empty result.
 
 The protocol for obtaining the current temperature from the device actor is rather simple:
@@ -49,7 +49,7 @@ more steps involved which means that more can go wrong. Another aspect is that a
 reference to the message inside the same CLR, without any restrictions on the underlying object which is sent,
 whereas a remote transport will place a limit on the message size.
 
-It is also important to keep in mind, that while sending inside the same CLR is significantly more reliable, if an
+It is also important to keep in mind that while sending inside the same CLR is significantly more reliable, if an
 actor fails due to a programmer error while processing the message, the effect is basically the same as if a remote,
 network request fails due to the remote host crashing while processing the message. Even though in both cases the
 service is recovered after a while (the actor is restarted by its supervisor, the host is restarted by an operator
@@ -81,7 +81,7 @@ duplicate deliveries.
 
 ### Why No Guaranteed Delivery?
 
-At the core of the problem lies the question what exactly this guarantee shall mean, i.e. at which point does
+At the core of the problem lies the question what exactly this guarantee shall mean, i.e. at which point is
 the delivery considered to be guaranteed:
 
  1. When the message is sent out on the network?
@@ -92,7 +92,7 @@ the delivery considered to be guaranteed:
 
 Most frameworks/protocols claiming guaranteed delivery actually provide something similar to point 4 and 5. While this
 sounds fair, **is this actually useful?** To understand the implications, consider a simple, practical example:
-a user attempts to place an order and we only want to claim that it has successfully processed once it is actually on
+A user attempts to place an order and we only want to claim that it has successfully processed once it is actually on
 disk in the database containing orders.
 
 If we rely on the guarantees of such system it will report success as soon as the order has been submitted to the

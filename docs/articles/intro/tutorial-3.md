@@ -64,7 +64,7 @@ The following guidelines help to arrive at the right granularity:
    states. We will see a very good example for this in the next chapter.
  * Prefer finer granularity if there is too much state to keep around in one place compared to dividing into smaller
    actors.
- * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and restored
+ * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and be restored
    individually.
 
 
@@ -98,7 +98,7 @@ We start implementing the protocol from the bottom first. In practice, both a to
 work, but in our case, we benefit from the bottom-up approach as it allows us to immediately write tests for the
 new features without mocking out parts.
 
-At the bottom of our hierarchy are the `Device` actors. Their job in this registration process is rather simple, just reply to the
+At the bottom of our hierarchy are the `Device` actors. Their job in this registration process is rather simple: just reply to the
 registration request with an acknowledgment to the sender. *We will assume that the sender of the registration
 message is preserved in the upper layers.* We will show you in the next section how this can be achieved.
 
@@ -152,7 +152,7 @@ and be notified if the other actor is stopped. This feature is called _Death Wat
 any Akka.NET application. Unlike supervision, watching is not limited to parent-child relationships, any actor can watch
 any other actor given its `IActorRef`. After a watched actor stops, the watcher receives a `Terminated(ref)` message
 which also contains the reference to the watched actor. The watcher can either handle this message explicitly or, if
-it does not handle it directly it will fail with a `DeathPactException`. This latter is useful if the actor cannot
+it does not handle it directly it will fail with a `DeathPactException`. This latter is useful if the actor can no
 longer perform its duties after its collaborator actor has been stopped. In our case, the group should still function
 after one device have been stopped, so we need to handle this message. The steps we need to follow are the following:
 
@@ -160,9 +160,9 @@ after one device have been stopped, so we need to handle this message. The steps
  2. When we are notified that a device actor has been stopped we also need to remove it from the `Dictionary<string, IActorRef>` which maps
     devices to device actors.
 
-Unfortunately, the `Terminated` message contains only contains the `IActorRef` of the child actor but we do not know
+Unfortunately, the `Terminated` message contains only the `IActorRef` of the child actor but we do not know
 its ID, which we need to remove it from the map of existing device to device actor mappings. To be able to do this removal, we
-need to introduce another placeholder, `Dictionary<string, IActorRef>`, that allow us to find out the device ID corresponding to a given `IActorRef`. Putting
+need to introduce another placeholder, `Dictionary<IActorRef, string>`, that allow us to find out the device ID corresponding to a given `IActorRef`. Putting
 this together the result is:
 
 [!code-csharp[DeviceGroup.scala](../../examples/Tutorials/Tutorial3/DeviceGroupInProgress.cs?name=device-group-remove)]

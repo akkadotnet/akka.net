@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1075,7 +1075,13 @@ namespace Akka.Cluster
         {
             var sys = Context.System;
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () => _selfExiting.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () =>
+            {
+                if (_latestGossip.Members.IsEmpty)
+                    return Task.FromResult(Done.Instance); // not joined yet
+                else
+                    return _selfExiting.Task;
+            });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
                 if (Cluster.Get(sys).IsTerminated)
@@ -2120,6 +2126,10 @@ namespace Akka.Cluster
                 else
                 {
                     _leaderActionCounter += 1;
+
+                    if (_cluster.Settings.AllowWeaklyUpMembers && _leaderActionCounter >= 3)
+                        MoveJoiningToWeaklyUp();
+
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
                         _log.Info(
@@ -2136,6 +2146,39 @@ namespace Akka.Cluster
 
             CleanupExitingConfirmed();
             ShutdownSelfWhenDown();
+        }
+
+        private void MoveJoiningToWeaklyUp()
+        {
+            var localGossip = _latestGossip;
+            var localMembers = localGossip.Members;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
+
+            bool IsJoiningToWeaklyUp(Member m) => m.Status == MemberStatus.Joining
+                                                  && enoughMembers
+                                                  && _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(m.UniqueAddress);
+
+            var changedMembers = localMembers
+                .Where(IsJoiningToWeaklyUp)
+                .Select(m => m.Copy(MemberStatus.WeaklyUp))
+                .ToImmutableSortedSet();
+
+            if (!changedMembers.IsEmpty)
+            {
+                // replace changed members
+                var newMembers = Member.PickNextTransition(localMembers, changedMembers);
+                var newGossip = localGossip.Copy(members: newMembers);
+                UpdateLatestGossip(newGossip);
+
+                // log status change
+                foreach (var m in changedMembers)
+                {
+                    _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+                }
+
+                Publish(newGossip);
+                if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero) PublishInternalStats();
+            }
         }
 
         private void ShutdownSelfWhenDown()
@@ -2197,7 +2240,7 @@ namespace Akka.Cluster
             var localSeen = localOverview.Seen;
 
             bool enoughMembers = IsMinNrOfMembersFulfilled();
-            Func<Member, bool> isJoiningUp = m => m.Status == MemberStatus.Joining && enoughMembers;
+            bool IsJoiningUp(Member m) => (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp) && enoughMembers;
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2211,7 +2254,7 @@ namespace Akka.Cluster
             var upNumber = 0;
             var changedMembers = localMembers.Select(m =>
             {
-                if (isJoiningUp(m))
+                if (IsJoiningUp(m))
                 {
                     // Move JOINING => UP (once all nodes have seen that this node is JOINING, i.e. we have a convergence)
                     // and minimum number of nodes have joined the cluster
@@ -2552,7 +2595,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -2648,7 +2691,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {

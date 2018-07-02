@@ -80,7 +80,7 @@ If a number of occurrences is specific --as demonstrated above-- then `intercept
 ## Timing Assertions
 Another important part of functional testing concerns timing: certain events must not happen immediately (like a timer), others need to happen before a deadline. Therefore, all examination methods accept an upper time limit within the positive or negative result must be obtained. Lower time limits need to be checked external to the examination, which is facilitated by a new construct for managing time constraints:
 
-[!code-csharp[WithinSample](../../examples/DocsExamples/Testkit/WithinSampleTest.cs?range=18-22)]
+[!code-csharp[WithinSample](../../examples/DocsExamples/Testkit/WithinSampleTest.cs?range=10-18)]
 
 The block in `within` must complete after a `Duration` which is between `min` and `max`, where the former defaults to zero. The deadline calculated by adding the `max` parameter to the block's start time is implicitly available within the block to all examination methods, if you do not specify it, it is inherited from the innermost enclosing `within` block.
 
@@ -94,6 +94,7 @@ Within(200.Milliseconds()) {
   ExpectNoMsg(); //will block for the rest of the 200ms
   Thead.Sleep(300); //will NOT make this block fail
 }
+```
 
 ## Accounting for Slow Test System
 The tight timeouts you use during testing on your lightning-fast notebook will invariably lead to spurious test failures on your heavily loaded build server. To account for this situation, all maximum durations are internally scaled by a factor taken from the **Configuration**, `akka.test.timefactor`, which defaults to 1.
@@ -139,17 +140,17 @@ A `TestProbe` can register itself for DeathWatch of any other actor:
 ###Replying to Messages Received by Probes
 The probes stores the sender of the last dequeued message (i.e. after its `ExpectMsg*` reception), which may be retrieved using the `GetLastSender()` method. This information can also implicitly be used for having the probe reply to the last received message:
 
-[!code-csharp[ReplyingToProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=57-62)]
+[!code-csharp[ReplyingToProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=48-58)]
 
 ###Forwarding Messages Received by Probes
 The probe can also forward a received message (i.e. after its `ExpectMsg*` reception), retaining the original sender:
 
-[!code-csharp[ForwardingProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=68-73)]
+[!code-csharp[ForwardingProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=60-69)]
 
 ###Auto-Pilot
 Receiving messages in a queue for later inspection is nice, but in order to keep a test running and verify traces later you can also install an `AutoPilot` in the participating test probes (actually in any `TestKit`) which is invoked before enqueueing to the inspection queue. This code can be used to forward messages, e.g. in a chain `A --> Probe --> B`, as long as a certain protocol is obeyed.
 
-[!code-csharp[ProbeAutopilot](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=79-91)]
+[!code-csharp[ProbeAutopilot](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=71-87)]
 
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
@@ -171,22 +172,22 @@ Conversely, a parent's binding to its child can be lessened as follows:
 
 For example, the structure of the code you want to test may follow this pattern:
 
-[!code-csharp[ParentStructure](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=8-36)]
+[!code-csharp[ParentStructure](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=13-41)]
 
 ###Introduce child to its parent
 The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
 
-[!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=39-52)]
+[!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=44-57)]
 
 ###Using a fabricated parent
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
-[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=58-80)]
+[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=59-81)]
 
 ###Externalize child making from the parent
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
-[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=83-102)]
+[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=84-103)]
 
 Creating the Props is straightforward and the function may look like this in your test code:
 

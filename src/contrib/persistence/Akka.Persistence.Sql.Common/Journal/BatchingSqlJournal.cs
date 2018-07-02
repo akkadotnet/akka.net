@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -225,6 +225,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public QueryConfiguration NamingConventions { get; }
 
         /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public string DefaultSerializer { get; }
+
+    /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
@@ -282,6 +287,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
+            DefaultSerializer = config.GetString("serializer");
         }
 
         /// <summary>
@@ -303,7 +309,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </param>
         /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
-        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
+        /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions, string defaultSerializer)
         {
             ConnectionString = connectionString;
             MaxConcurrentOperations = maxConcurrentOperations;
@@ -315,6 +322,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
+            DefaultSerializer = defaultSerializer;
         }
     }
 
@@ -414,9 +422,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int PayloadIndex = 5;
 
         /// <summary>
+        /// Default index of <see cref="Serializer.Identifier"/>
+        /// </summary>
+        protected const int SerializerIdIndex = 6;
+
+        /// <summary>
         /// Default index of tags column get from <see cref="ByTagSql"/> query.
         /// </summary>
-        protected const int OrderingIndex = 6;
+        protected const int OrderingIndex = 7;
 
         /// <summary>
         /// SQL query executed as result of <see cref="DeleteMessagesTo"/> request to journal.
@@ -507,7 +520,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly HashSet<IActorRef> _allIdsSubscribers;
         private readonly HashSet<string> _allPersistenceIds;
 
-        private readonly Func<Type, Serializer> _getSerializer;
+        private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
@@ -527,7 +540,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
-            _getSerializer = Context.System.Serialization.FindSerializerFor;
+            _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
@@ -542,7 +555,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{conventions.TimestampColumnName} as Timestamp, 
                 e.{conventions.IsDeletedColumnName} as IsDeleted, 
                 e.{conventions.ManifestColumnName} as Manifest, 
-                e.{conventions.PayloadColumnName} as Payload";
+                e.{conventions.PayloadColumnName} as Payload,
+                e.{conventions.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
                 SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as PersistenceId 
@@ -586,7 +600,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {conventions.IsDeletedColumnName},
                     {conventions.ManifestColumnName},
                     {conventions.PayloadColumnName},
-                    {conventions.TagsColumnName}
+                    {conventions.TagsColumnName},
+                    {conventions.SerializerIdColumnName}
                 ) VALUES (
                     @PersistenceId, 
                     @SequenceNr,
@@ -594,7 +609,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                     @IsDeleted,
                     @Manifest,
                     @Payload,
-                    @Tag
+                    @Tag,
+                    @SerializerId
                 )";
         }
 
@@ -1048,14 +1064,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                         var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
                         foreach (var unadapted in writes)
                         {
-                            var e = AdaptToJournal(unadapted);
-
                             try
                             {
                                 command.Parameters.Clear();
                                 tagBuilder.Clear();
 
-                                var persistent = e;
+                                var persistent = AdaptToJournal(unadapted);
                                 if (persistent.Payload is Tagged)
                                 {
                                     var tagged = (Tagged) persistent.Payload;
@@ -1075,7 +1089,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                                 await command.ExecuteNonQueryAsync();
 
-                                var response = new WriteMessageSuccess(persistent, actorInstanceId);
+                                var response = new WriteMessageSuccess(unadapted, actorInstanceId);
                                 responses.Add(response);
                                 persistenceIds.Add(persistent.PersistenceId);
 
@@ -1085,7 +1099,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                             {
                                 // database-related exceptions should result in failure
                                 summary = new WriteMessagesFailed(cause);
-                                var response = new WriteMessageFailure(e, cause, actorInstanceId);
+                                var response = new WriteMessageFailure(unadapted, cause, actorInstanceId);
                                 responses.Add(response);
                             }
                             catch (Exception cause)
@@ -1093,7 +1107,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = new WriteMessageRejected(e, cause, actorInstanceId);
+                                var response = new WriteMessageRejected(unadapted, cause, actorInstanceId);
                                 responses.Add(response);
                             }
                         }
@@ -1148,10 +1162,21 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
             var payloadType = persistent.Payload.GetType();
-            var manifest = string.IsNullOrEmpty(persistent.Manifest)
-                ? payloadType.TypeQualifiedName()
-                : persistent.Manifest;
-            var serializer = _getSerializer(payloadType);
+            var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
+
+            string manifest = "";
+            if (serializer is SerializerWithStringManifest)
+            {
+                manifest = ((SerializerWithStringManifest)serializer).Manifest(persistent.Payload);
+            }
+            else
+            {
+                if (serializer.IncludeManifest)
+                {
+                    manifest = persistent.Payload.GetType().TypeQualifiedName();
+                }
+            }
+
             var binary = serializer.ToBinary(persistent.Payload);
 
             AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
@@ -1161,6 +1186,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             AddParameter(command, "@Manifest", DbType.String, manifest);
             AddParameter(command, "@Payload", DbType.Binary, binary);
             AddParameter(command, "@Tag", DbType.String, tags);
+            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
         }
 
         /// <summary>
@@ -1176,12 +1202,21 @@ namespace Akka.Persistence.Sql.Common.Journal
             var manifest = reader.GetString(ManifestIndex);
             var payload = reader[PayloadIndex];
 
-            var type = Type.GetType(manifest, true);
-            var deserializer = _getSerializer(type);
-            var deserialized = deserializer.FromBinary((byte[])payload, type);
+            object deserialized;
+            if (reader.IsDBNull(SerializerIdIndex))
+            {
+                // Support old writes that did not set the serializer id
+                var type = Type.GetType(manifest, true);
+                var deserializer = _serialization.FindSerializerForType(type, Setup.DefaultSerializer);
+                deserialized = deserializer.FromBinary((byte[])payload, type);
+            }
+            else
+            {
+                var serializerId = reader.GetInt32(SerializerIdIndex);
+                deserialized = _serialization.Deserialize((byte[])payload, serializerId, manifest);
+            }
 
-            var persistent = new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
-            return persistent;
+            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
         }
 
         /// <summary>

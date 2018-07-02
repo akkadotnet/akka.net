@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -622,8 +622,10 @@ namespace Akka.IO
             if (IsWritePending)
             {
                 pendingWrite.Release(); // we should release ConnectionInfo event args (if they're not released already)
-                ReleaseSocketAsyncEventArgs();
             }
+
+            // always try to release SocketAsyncEventArgs to avoid memory leaks
+            ReleaseSocketAsyncEventArgs();
 
             if (closedMessage != null)
             {
@@ -799,26 +801,27 @@ namespace Akka.IO
 
         private sealed class PendingBufferWrite : PendingWrite
         {
-            private readonly TcpConnection connection;
-            private readonly IActorRef self;
-            private readonly ByteString data;
-            private readonly WriteCommand tail;
-            private readonly SocketAsyncEventArgs sendArgs;
+            private readonly TcpConnection _connection;
+            private readonly IActorRef _self;
+            private readonly ByteString _remainingData;
+            private readonly ByteString _buffer;
+            private readonly WriteCommand _tail;
+            private readonly SocketAsyncEventArgs _sendArgs;
 
             public PendingBufferWrite(
                 TcpConnection connection,
                 SocketAsyncEventArgs sendArgs,
                 IActorRef self,
                 IActorRef commander,
-                ByteString data,
+                ByteString buffer,
                 object ack,
                 WriteCommand tail) : base(commander, ack)
             {
-                this.connection = connection;
-                this.sendArgs = sendArgs;
-                this.self = self;
-                this.data = data;
-                this.tail = tail;
+                _connection = connection;
+                _sendArgs = sendArgs;
+                _self = self;
+                _buffer = buffer;
+                _tail = tail;
 
                 // start immediatelly as we'll need to cover the case if 
                 // after buffer write request, the remaining enumerator is empty
@@ -829,45 +832,51 @@ namespace Akka.IO
             {
                 try
                 {
-                    if (!data.IsEmpty)
+                    var data = _buffer;
+                    while(true)
                     {
-                        connection.SetStatus(ConnectionStatus.Sending);
+                        var bytesWritten = Send(data);
 
-                        SetBuffer(data);
-
-                        if (!connection.Socket.SendAsync(sendArgs))
-                            self.Tell(SocketSent.Instance);
+                        if (_connection.traceLogging)
+                            _connection.Log.Debug("Wrote [{0}] bytes to channel", bytesWritten);
+                        if (bytesWritten < data.Count)
+                        {
+                            // we weren't able to write all bytes from the buffer, so we need to try again later
+                            data = data.Slice(bytesWritten);
+                        }
+                        else // finished writing
+                        {
+                            if(Ack != NoAck.Instance) Commander.Tell(Ack);
+                            Release();
+                            return _connection.CreatePendingWrite(Commander, _tail, info);
+                        }
                     }
 
-                    var ack = Ack == NoAck.Instance ? null : Tuple.Create(Commander, Ack);
-                    connection.SetPendingAcknowledgement(ack);
-                    return connection.CreatePendingWrite(Commander, tail, info);
                 }
                 catch (SocketException e)
                 {
-                    connection.HandleError(info.Handler, e);
+                    _connection.HandleError(info.Handler, e);
                     return this;
                 }
             }
 
-            private void SetBuffer(ByteString data)
+            private int Send(ByteString data)
             {
-                if (data.IsCompact)
+                try
                 {
-                    var buffer = data.Buffers[0];
-                    if (sendArgs.BufferList != null)
-                    {
-                        // BufferList property setter is not simple member association operation, 
-                        // but the getter is. Therefore we first check if we need to clear buffer list
-                        // and only do so if necessary.
-                        sendArgs.BufferList = null;
-                    }
-                    sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+                    return _connection.Socket.Send(data.Buffers);
                 }
-                else
+                catch (SocketException e) when (e.SocketErrorCode == SocketError.WouldBlock)
                 {
-                    sendArgs.SetBuffer(null, 0, 0);
-                    sendArgs.BufferList = data.Buffers;
+                    try
+                    {
+                        _connection.Socket.Blocking = true;
+                        return _connection.Socket.Send(data.Buffers);
+                    }
+                    finally
+                    {
+                        _connection.Socket.Blocking = false;
+                    }
                 }
             }
 

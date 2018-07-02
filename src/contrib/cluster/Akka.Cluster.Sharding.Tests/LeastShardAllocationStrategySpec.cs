@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeastShardAllocationStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,6 +103,23 @@ namespace Akka.Cluster.Sharding.Tests
             r1.Should().BeEquivalentTo(new[] { "shard3" });
 
             var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard2", "shard3")).Result;
+            r2.Count.Should().Be(0);
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_dont_rebalance_excessive_shards_if_maxSimultaneousRebalance_gt_rebalanceThreshold()
+        {
+            var allocationStrategy = new LeastShardAllocationStrategy(2, 5);
+            var allocations = new Dictionary<IActorRef, IImmutableList<string>>
+            {
+                {_regionA, new []{"shard1", "shard2", "shard3", "shard4", "shard5", "shard6", "shard7", "shard8"}.ToImmutableList() },
+                {_regionB, new []{"shard9", "shard10", "shard11", "shard12" }.ToImmutableList() }
+            }.ToImmutableDictionary();
+
+            var r1 = allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard2")).Result;
+            r1.Should().BeEquivalentTo(new[] { "shard1", "shard3", "shard4" });
+
+            var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard5", "shard6", "shard7", "shard8")).Result;
             r2.Count.Should().Be(0);
         }
     }

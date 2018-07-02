@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconObject.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace Akka.Configuration.Hocon
 {
@@ -32,6 +33,8 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class HoconObject : IHoconElement
     {
+        private static readonly Regex EscapeRegex = new Regex("[ \t:]{1}", RegexOptions.Compiled);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HoconObject"/> class.
         /// </summary>
@@ -165,10 +168,13 @@ namespace Akka.Configuration.Hocon
 
         private string QuoteIfNeeded(string text)
         {
-            if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            if (text == null) return "";
+
+            if (EscapeRegex.IsMatch(text))
             {
                 return "\"" + text + "\"";
             }
+
             return text;
         }
 

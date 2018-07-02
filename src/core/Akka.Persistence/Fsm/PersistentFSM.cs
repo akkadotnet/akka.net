@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Serialization;
 using static Akka.Persistence.Fsm.PersistentFSM;
 
 namespace Akka.Persistence.Fsm
@@ -171,9 +172,8 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// Persisted on state change
-        /// TODO: should implement IMessage
         /// </summary>
-        public class StateChangeEvent
+        public class StateChangeEvent : IMessage
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="StateChangeEvent"/> class.
@@ -199,9 +199,8 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         /// FSM state and data snapshot
-        /// TODO: should implement IMessage
         /// </summary>
-        public class PersistentFSMSnapshot<TD>
+        public class PersistentFSMSnapshot<TD> : IMessage
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PersistentFSMSnapshot{TD}"/> class.

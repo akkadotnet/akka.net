@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Broadcast.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -301,7 +301,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -325,7 +325,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public Group WithDispatcher(string dispatcher)
         {
-            return new BroadcastGroup(Paths, dispatcher);
+            return new BroadcastGroup(InternalPaths, dispatcher);
         }
 
         /// <summary>
@@ -337,7 +337,7 @@ namespace Akka.Routing
         {
             return new BroadcastGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }

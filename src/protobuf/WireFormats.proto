@@ -5,7 +5,8 @@
 syntax = "proto3";
 package Akka.Remote.Serialization.Proto.Msg;
 
-import "ContainerFormats.proto";
+import 'ContainerFormats.proto';
+import 'duration.proto';
 
 /******************************************
  * Remoting message formats
@@ -124,20 +125,16 @@ message GenericRoutingPool {
 
 message ScatterGatherPool {
   GenericRoutingPool generic = 1;
-  Timespan within = 2;
+  google.protobuf.Duration within = 2;
 }
 
 message TailChoppingPool {
   GenericRoutingPool generic = 1;
-  Timespan within = 2;
-  Timespan interval = 3;
+  google.protobuf.Duration within = 2;
+  google.protobuf.Duration interval = 3;
 }
 
 message RemoteRouterConfig {
   Payload local = 1;
   repeated AddressData nodes = 2;
-}
-
-message Timespan {
-  uint64 ticks = 1; // TODO: temporary
 }

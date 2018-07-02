@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoutingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,10 +52,12 @@ namespace Akka.Cluster.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterGroupSettings"/> class.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="routeesPaths">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="useRole">TBD</param>
+        /// <param name="totalInstances">The total number of routees. Defaults to 10000.</param>
+        /// <param name="routeesPaths">The actor selection paths to use for each routee.</param>
+        /// <param name="allowLocalRoutees">When <c>true</c>, allows routees to be deployed locally 
+        /// on the node doing the deploying so long as that node also 
+        /// satisfies the useRole setting when used.</param>
+        /// <param name="useRole">The role of the node upon which we are able to create routees.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="routeesPaths"/> is undefined
         /// or a path defined in the specified <paramref name="routeesPaths"/> is an invalid relative actor path.
@@ -79,7 +81,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The paths of the routees to use on each qualified node.
         /// </summary>
         public IEnumerable<string> RouteesPaths { get; }
 
@@ -150,7 +152,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The maximum number of routee actors that can be deployed per valid node.
         /// </summary>
         public int MaxInstancesPerNode { get; }
 
@@ -708,7 +710,8 @@ namespace Akka.Cluster.Routing
         /// <returns>TBD</returns>
         public bool IsAvailable(Member member)
         {
-            return member.Status == MemberStatus.Up && SatisfiesRole(member.Roles) &&
+            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && 
+                   SatisfiesRole(member.Roles) &&
                    (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }
 

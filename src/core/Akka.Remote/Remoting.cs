@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,14 +45,14 @@ namespace Akka.Remote
     internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
     {
         //this is why this extension is called "RARP"
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
 
         /// <summary>
         /// Used as part of the <see cref="ExtensionIdProvider{RARP}"/>
         /// </summary>
         public RARP() { }
 
-        private RARP(RemoteActorRefProvider provider)
+        private RARP(IRemoteActorRefProvider provider)
         {
             _provider = provider;
         }
@@ -74,13 +74,13 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
-            return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+            return new RARP((IRemoteActorRefProvider)system.Provider);
         }
 
         /// <summary>
-        /// TBD
+        /// The underlying remote actor reference provider.
         /// </summary>
-        public RemoteActorRefProvider Provider
+        public IRemoteActorRefProvider Provider
         {
             get { return _provider; }
         }
@@ -252,18 +252,19 @@ namespace Akka.Remote
             else
             {
                 var timeout = Provider.RemoteSettings.ShutdownTimeout;
-                Action finalize = () =>
+
+                void Action()
                 {
                     _eventPublisher.NotifyListeners(new RemotingShutdownEvent());
                     _endpointManager = null;
-                };
+                }
 
                 return _endpointManager.Ask<bool>(new EndpointManager.ShutdownAndFlush(), timeout).ContinueWith(result =>
                 {
                     if (result.IsFaulted || result.IsCanceled) //Shutdown was not successful
                     {
                         NotifyError("Failure during shutdown of remoting", result.Exception);
-                        finalize();
+                        Action();
                     }
                     else
                     {
@@ -272,7 +273,7 @@ namespace Akka.Remote
                             _log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
-                        finalize();
+                        Action();
                     }
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }

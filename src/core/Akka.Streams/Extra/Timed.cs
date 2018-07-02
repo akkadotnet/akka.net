@@ -1,12 +1,13 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Timed.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
+using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
@@ -34,6 +35,7 @@ namespace Akka.Streams.Extra
         /// <param name="measuredOps">TBD</param>
         /// <param name="onComplete">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
             var ctx = new TimedFlowContext();
@@ -89,6 +91,7 @@ namespace Akka.Streams.Extra
         /// <param name="matching">TBD</param>
         /// <param name="onInterval">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static IFlow<TIn, TMat> TimedIntervalBetween<TIn, TMat>(IFlow<TIn, TMat> flow, Func<TIn, bool> matching, Action<TimeSpan> onInterval)
         {
             var timedInterval =

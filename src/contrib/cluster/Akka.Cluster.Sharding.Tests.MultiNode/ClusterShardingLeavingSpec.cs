@@ -1,74 +1,95 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingLeavingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Xunit;
 using System.Collections.Immutable;
+using System.IO;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingLeavingSpecConfig : MultiNodeConfig
+    public abstract class ClusterShardingLeavingSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
+        public string Mode { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
 
-        public RoleName Second { get; private set; }
-
-        public RoleName Third { get; private set; }
-
-        public RoleName Fourth { get; private set; }
-
-        public ClusterShardingLeavingSpecConfig()
+        protected ClusterShardingLeavingSpecConfig(string mode)
         {
+            Mode = mode;
             First = Role("first");
             Second = Role("second");
             Third = Role("third");
             Fourth = Role("fourth");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
+                .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
+                        }}
+                        serialization-bindings {{
                             ""System.Object"" = hyperion
-                        }
-                    }
+                        }}
+                    }}
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
-
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                    akka.persistence.journal.MemoryJournal {
+                    akka.persistence.journal.MemoryJournal {{
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-
-                    akka.persistence.journal.memory-journal-shared {
+                    }}
+                    akka.persistence.journal.memory-journal-shared {{
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
-                    }
+                    }}
+                    akka.cluster.sharding.state-store-mode = ""{mode}""
+                    akka.cluster.sharding.distributed-data.durable.lmdb {{
+                      dir = ""target/ClusterShardinLeavingSpec/sharding-ddata""
+                      map-size = 10000000
+                    }}
                 "))
+                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
+    public class PersistentClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+    {
+        public PersistentClusterShardingLeavingSpecConfig() : base("persistence") { }
+    }
+    public class DDataClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+    {
+        public DDataClusterShardingLeavingSpecConfig() : base("ddata") { }
+    }
 
-    public class ClusterShardinLeavingSpec : MultiNodeClusterSpec
+    public class PersistentClusterShardingLeavingSpec : ClusterShardinLeavingSpec
+    {
+        public PersistentClusterShardingLeavingSpec() : this(new PersistentClusterShardingLeavingSpecConfig()) { }
+        protected PersistentClusterShardingLeavingSpec(PersistentClusterShardingLeavingSpecConfig config) : base(config, typeof(PersistentClusterShardingLeavingSpec)) { }
+    }
+    public class DDataClusterShardingLeavingSpec : ClusterShardinLeavingSpec
+    {
+        public DDataClusterShardingLeavingSpec() : this(new DDataClusterShardingLeavingSpecConfig()) { }
+        protected DDataClusterShardingLeavingSpec(DDataClusterShardingLeavingSpecConfig config) : base(config, typeof(DDataClusterShardingLeavingSpec)) { }
+    }
+    public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -122,27 +143,45 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal IdExtractor extractEntityId = message => message is Ping ? Tuple.Create((message as Ping).Id, message) : null;
-        internal ShardResolver extractShardId = message => message is Ping ? (message as Ping).Id[0].ToString() : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? Tuple.Create(p.Id, message) : null;
+        internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : null;
 
         private readonly Lazy<IActorRef> _region;
 
         private readonly ClusterShardingLeavingSpecConfig _config;
 
-        public ClusterShardinLeavingSpec()
-            : this(new ClusterShardingLeavingSpecConfig())
-        {
-        }
+        private readonly List<FileInfo> _storageLocations;
 
-        protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config)
-            : base(config, typeof(ClusterShardinLeavingSpec))
+        protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type) : base(config, type)
         {
             _config = config;
-
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
+            _storageLocations = new List<FileInfo>
+            {
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+            };
+            IsDDataMode = config.Mode == "ddata";
+
+            DeleteStorageLocations();
+            EnterBarrier("startup");
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
+        protected override int InitialParticipantsValueFactory => Roles.Count;
+        protected bool IsDDataMode { get; }
+        
+        protected override void AfterTermination()
+        {
+            base.AfterTermination();
+            DeleteStorageLocations();
+        }
+
+        private void DeleteStorageLocations()
+        {
+            foreach (var fileInfo in _storageLocations)
+            {
+                if (fileInfo.Exists) fileInfo.Delete();
+            }
+        }
 
         #endregion
 
@@ -169,14 +208,17 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: "Entity",
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
-                idExtractor: extractEntityId,
-                shardResolver: extractShardId);
+                extractEntityId: extractEntityId,
+                extractShardId: extractShardId);
         }
 
         [MultiNodeFact]
         public void ClusterSharding_with_leaving_member_specs()
         {
-            ClusterSharding_with_leaving_member_should_setup_shared_journal();
+            if (!IsDDataMode)
+            {
+                ClusterSharding_with_leaving_member_should_setup_shared_journal();
+            }
             ClusterSharding_with_leaving_member_should_join_cluster();
             ClusterSharding_with_leaving_member_should_initialize_shards();
             ClusterSharding_with_leaving_member_should__recover_after_leaving_coordinator_node();

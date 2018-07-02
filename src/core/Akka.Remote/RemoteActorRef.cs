@@ -1,15 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -19,10 +21,12 @@ namespace Akka.Remote
     /// Marker interface for Actors that are deployed in a remote scope
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal interface IRemoteRef : IActorRefScope { }
+    [InternalApi]
+    public interface IRemoteRef : IActorRefScope { }
 
     /// <summary>
-    /// Class RemoteActorRef.
+    /// RemoteActorRef - used to provide a local handle to an actor
+    /// running in a remote process.
     /// </summary>
     public class RemoteActorRef : InternalActorRefBase, IRemoteRef
     {
@@ -51,7 +55,7 @@ namespace Akka.Remote
         /// <param name="parent">The parent.</param>
         /// <param name="props">The props.</param>
         /// <param name="deploy">The deploy.</param>
-        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, IInternalActorRef parent,
+        public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, IInternalActorRef parent,
             Props props, Deploy deploy)
         {
             Remote = remote;
@@ -92,10 +96,10 @@ namespace Akka.Remote
             get { return Remote.Provider; }
         }
 
-        private RemoteActorRefProvider RemoteProvider => Provider as RemoteActorRefProvider;
+        private IRemoteActorRefProvider RemoteProvider => Provider as IRemoteActorRefProvider;
 
         /// <summary>
-        /// Obsolete. Use <see cref="Akka.Actor.UntypedActor.Context.Watch(IActorRef)"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
+        /// Obsolete. Use <see cref="Watch"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
@@ -109,7 +113,16 @@ namespace Akka.Remote
         /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            throw new NotImplementedException();
+            var items = name.ToList();
+            switch (items.FirstOrDefault())
+            {
+                case null:
+                    return this;
+                case "..":
+                    return Parent.GetChild(items.Skip(1));
+                default:
+                    return new RemoteActorRef(Remote, LocalAddressToUse, Path / items, ActorRefs.Nobody, Props.None, Deploy.None);
+            }
         }
 
         /// <summary>

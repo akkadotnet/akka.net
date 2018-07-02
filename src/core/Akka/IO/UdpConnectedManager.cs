@@ -1,19 +1,23 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpConnectedManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 
 namespace Akka.IO
 {
     using ByteBuffer = ArraySegment<byte>;
 
-    // INTERNAL API
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     class UdpConnectedManager : ActorBase
     {
         private readonly UdpConnectedExt _udpConn;
@@ -27,33 +31,34 @@ namespace Akka.IO
             _udpConn = udpConn;
             Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
-        
+
         protected override bool Receive(object message)
         {
-            var c = message as UdpConnected.Connect;
-            if (c != null)
+            switch (message)
             {
-                var commander = Sender;
-                Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, c)));
-                return true;
-            }
-            var dl = message as DeadLetter;
-            if (dl != null)
-            {
-                var completed = dl.Message as UdpConnected.SocketCompleted;
-                if (completed != null)
-                {
-                    var e = completed.EventArgs;
-                    if (e.Buffer != null)
+                case UdpConnected.Connect connect:
                     {
-                        var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
-                        _udpConn.BufferPool.Release(buffer);
+                        var commander = Sender; // NOTE: Aaronontheweb (9/1/2017) this should probably be the Handler...
+                        Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, connect)));
+                        return true;
                     }
-                    _udpConn.SocketEventArgsPool.Release(e);
-                }
-                return true;
+                case DeadLetter dl when dl.Message is UdpConnected.SocketCompleted completed:
+                    {
+                        var e = completed.EventArgs;
+                        if (e.Buffer != null)
+                        {
+                            // no need to check for e.BufferList: release buffer only 
+                            // on complete reads, which are always mono-buffered 
+                            var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
+                            _udpConn.BufferPool.Release(buffer);
+                        }
+                        _udpConn.SocketEventArgsPool.Release(e);
+                        return true;
+                    }
+                case DeadLetter _: return true;
+                default: throw new ArgumentException($"The supplied message type [{message.GetType()}] is invalid. Only Connect messages are supported.", nameof(message));
+
             }
-            throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(message));
         }
 
     }

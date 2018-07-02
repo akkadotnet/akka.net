@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,10 +11,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Stage;
-using Akka.Util.Internal;
 using Reactive.Streams;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
@@ -24,6 +24,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class GraphModule : AtomicModule
     {
         /// <summary>
@@ -65,31 +66,21 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new GraphModule(Assembly, Shape, attributes, MaterializedValueIds);
-        }
+        public override IModule WithAttributes(Attributes attributes) => new GraphModule(Assembly, Shape, attributes, MaterializedValueIds);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override IModule CarbonCopy()
-        {
-            return new CopiedModule(Shape.DeepCopy(), Attributes.None, this);
-        }
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes.None, this);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="newShape">TBD</param>
         /// <returns>TBD</returns>
-        public override IModule ReplaceShape(Shape newShape)
-        {
-            if (!newShape.Equals(Shape))
-                return CompositeModule.Create(this, newShape);
-            return this;
-        }
+        public override IModule ReplaceShape(Shape newShape) =>
+            !newShape.Equals(Shape) ? (IModule)CompositeModule.Create(this, newShape) : this;
 
         /// <summary>
         /// TBD
@@ -104,6 +95,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class GraphInterpreterShell
     {
         private readonly GraphAssembly _assembly;
@@ -441,6 +433,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class ActorGraphInterpreter : ActorBase
     {
         #region messages
@@ -742,10 +735,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// TBD
             /// </summary>
             /// <param name="shell">TBD</param>
-            public Resume(GraphInterpreterShell shell)
-            {
-                Shell = shell;
-            }
+            public Resume(GraphInterpreterShell shell) => Shell = shell;
 
             /// <summary>
             /// TBD
@@ -762,10 +752,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// TBD
             /// </summary>
             /// <param name="shell">TBD</param>
-            public Abort(GraphInterpreterShell shell)
-            {
-                Shell = shell;
-            }
+            public Abort(GraphInterpreterShell shell) => Shell = shell;
 
             /// <summary>
             /// TBD
@@ -917,26 +904,23 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 private readonly BatchingActorInputBoundary _that;
 
-                public OutHandler(BatchingActorInputBoundary that)
-                {
-                    _that = that;
-                }
+                public OutHandler(BatchingActorInputBoundary that) => _that = that;
 
                 public override void OnPull()
                 {
                     var elementsCount = _that._inputBufferElements;
                     var upstreamCompleted = _that._upstreamCompleted;
-                    if (elementsCount > 1) _that.Push(_that.Out, _that.Dequeue());
+                    if (elementsCount > 1) _that.Push(_that._outlet, _that.Dequeue());
                     else if (elementsCount == 1)
                     {
                         if (upstreamCompleted)
                         {
-                            _that.Push(_that.Out, _that.Dequeue());
-                            _that.Complete(_that.Out);
+                            _that.Push(_that._outlet, _that.Dequeue());
+                            _that.Complete(_that._outlet);
                         }
-                        else _that.Push(_that.Out, _that.Dequeue());
+                        else _that.Push(_that._outlet, _that.Dequeue());
                     }
-                    else if (upstreamCompleted) _that.Complete(_that.Out);
+                    else if (upstreamCompleted) _that.Complete(_that._outlet);
                 }
 
                 public override void OnDownstreamFinish() => _that.Cancel();
@@ -958,7 +942,7 @@ namespace Akka.Streams.Implementation.Fusing
             private bool _downstreamCanceled;
             private readonly int _requestBatchSize;
             private int _batchRemaining;
-            private readonly Outlet _outlet;
+            private readonly Outlet<object> _outlet;
 
             /// <summary>
             /// TBD
@@ -998,7 +982,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!(_upstreamCompleted || _downstreamCanceled) && !ReferenceEquals(_upstream, null))
                     _upstream.Cancel();
 
-                if (!IsClosed(Out))
+                if (!IsClosed(_outlet))
                     OnError(reason);
             }
 
@@ -1012,7 +996,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     _upstreamCompleted = true;
                     Clear();
-                    Fail(Out, reason);
+                    Fail(_outlet, reason);
                 }
             }
 
@@ -1025,7 +1009,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     _upstreamCompleted = true;
                     if (_inputBufferElements == 0)
-                        Complete(Out);
+                        Complete(_outlet);
                 }
             }
 
@@ -1064,8 +1048,8 @@ namespace Akka.Streams.Implementation.Fusing
                         throw new IllegalStateException("Input buffer overrun");
                     _inputBuffer[(_nextInputElementCursor + _inputBufferElements) & _indexMask] = element;
                     _inputBufferElements++;
-                    if (IsAvailable(Out))
-                        Push(Out, Dequeue());
+                    if (IsAvailable(_outlet))
+                        Push(_outlet, Dequeue());
                 }
             }
 
@@ -1157,18 +1141,15 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 private readonly ActorOutputBoundary<T> _that;
 
-                public InHandler(ActorOutputBoundary<T> that)
-                {
-                    _that = that;
-                }
+                public InHandler(ActorOutputBoundary<T> that) => _that = that;
 
                 public override void OnPush()
                 {
-                    _that.OnNext(_that.Grab<T>(_that.In));
+                    _that.OnNext(_that.Grab(_that._inlet));
                     if (_that._downstreamCompleted)
-                        _that.Cancel(_that.In);
+                        _that.Cancel(_that._inlet);
                     else if (_that._downstreamDemand > 0)
-                        _that.Pull(_that.In);
+                        _that.Pull(_that._inlet);
                 }
 
                 public override void OnUpstreamFinish() => _that.Complete();
@@ -1232,8 +1213,8 @@ namespace Akka.Streams.Implementation.Fusing
                     _downstreamDemand += elements;
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
-                    if (!HasBeenPulled(In) && !IsClosed(In))
-                        Pull(In);
+                    if (!HasBeenPulled(_inlet) && !IsClosed(_inlet))
+                        Pull(_inlet);
                 }
             }
 
@@ -1281,7 +1262,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _downstreamCompleted = true;
                 _subscriber = null;
                 _exposedPublisher.Shutdown(new NormalShutdownException("UpstreamBoundary"));
-                Cancel(In);
+                Cancel(_inlet);
             }
 
             /// <summary>
@@ -1443,8 +1424,7 @@ namespace Akka.Streams.Implementation.Fusing
             while (_shortCircuitBuffer.Count != 0 && _currentLimit > 0 && _activeInterpreters.Count != 0)
             {
                 var element = _shortCircuitBuffer.Dequeue();
-                var boundary = element as IBoundaryEvent;
-                if (boundary != null)
+                if (element is IBoundaryEvent boundary)
                     ProcessEvent(boundary);
                 else if (element is ShellRegistered)
                     FinishShellRegistration();
@@ -1497,7 +1477,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_shortCircuitBuffer != null)
                         ShortCircuitBatch();
                     return true;
-                case StreamSupervisor.PrintDebugDump print:
+                case StreamSupervisor.PrintDebugDump _:
                     var builder = new StringBuilder($"activeShells (actor: {Self}):\n");
 
                     foreach (var shell in _activeInterpreters)

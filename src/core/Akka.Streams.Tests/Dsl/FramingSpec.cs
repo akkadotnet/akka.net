@@ -1,16 +1,18 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FramingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text; 
 using Akka.IO;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -34,39 +36,71 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private sealed class Rechunker : PushPullStage<ByteString, ByteString>
+        private sealed class Rechunker : SimpleLinearGraphStage<ByteString>
         {
-            private ByteString _rechunkBuffer = ByteString.Empty;
+            #region Logic
 
-            public override ISyncDirective OnPush(ByteString element, IContext<ByteString> context)
+            private sealed class Logic : InAndOutGraphStageLogic
             {
-                _rechunkBuffer += element;
-                return Rechunk(context);
+                private readonly Rechunker _stage;
+                private ByteString _buffer;
+
+                public Logic(Rechunker stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _buffer = ByteString.Empty;
+
+                    SetHandler(stage.Inlet, stage.Outlet, this);
+                }
+
+                public override void OnPush()
+                {
+                    _buffer += Grab(_stage.Inlet);
+                    Rechunk();
+                }
+
+                public override void OnPull() => Rechunk();
+
+                public override void OnUpstreamFinish()
+                {
+                    if (_buffer.IsEmpty)
+                        CompleteStage();
+                    else if (IsAvailable(_stage.Outlet))
+                        OnPull();
+                }
+
+                private void Rechunk()
+                {
+                    if (!IsClosed(_stage.Inlet) && ThreadLocalRandom.Current.Next(1, 3) == 2)
+                        Pull(_stage.Inlet);
+                    else
+                    {
+                        var nextChunkSize = _buffer.IsEmpty
+                            ? 0
+                            : ThreadLocalRandom.Current.Next(0, _buffer.Count + 1);
+                        var newChunk = _buffer.Slice(0, nextChunkSize).Compact();
+                        _buffer = _buffer.Slice(nextChunkSize).Compact();
+
+                        Push(_stage.Outlet, newChunk);
+
+                        if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
+                            CompleteStage();
+                    }
+                }
             }
 
-            public override ISyncDirective OnPull(IContext<ByteString> context) => Rechunk(context);
+            #endregion
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<ByteString> context)
-                => _rechunkBuffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
-
-            private ISyncDirective Rechunk(IContext<ByteString> context)
+            public Rechunker() : base("Rechunker")
             {
-                if (!context.IsFinishing && ThreadLocalRandom.Current.Next(1, 3) == 2)
-                    return context.Pull();
 
-                var nextChunkSize = _rechunkBuffer.IsEmpty
-                    ? 0
-                    : ThreadLocalRandom.Current.Next(0, _rechunkBuffer.Count + 1);
-                var newChunk = _rechunkBuffer.Slice(0, nextChunkSize).Compact();
-                _rechunkBuffer = _rechunkBuffer.Slice(nextChunkSize).Compact();
-                return context.IsFinishing && _rechunkBuffer.IsEmpty
-                    ? context.PushAndFinish(newChunk)
-                    : context.Push(newChunk);
             }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
         private Flow<ByteString, ByteString, NotUsed> Rechunk
-            => Flow.Create<ByteString>().Transform(() => new Rechunker()).Named("rechunker");
+            => Flow.Create<ByteString>().Via(new Rechunker()).Named("rechunker");
 
         private static readonly List<ByteString> DelimiterBytes =
             new List<string> {"\n", "\r\n", "FOO"}.Select(ByteString.FromString).ToList();
@@ -332,6 +366,39 @@ namespace Akka.Streams.Tests.Dsl
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(testMessages);
+        }
+
+        [Fact]
+        public void Length_field_based_framing_must_fail_the_stage_on_negative_length_field_values()
+        {
+            // A 4-byte message containing only an Int specifying the length of the payload
+            // The issue shows itself if length in message is less than or equal
+            // to -4 (if expected length field is length 4)
+            var bytes = ByteString.FromBytes(BitConverter.GetBytes(-4).ToArray());
+
+            var result = Source.Single(bytes)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.Invoking(t => t.AwaitResult())
+                .ShouldThrow<Framing.FramingException>()
+                .WithMessage("Decoded frame header reported negative size -4");
+        }
+
+        [Fact]
+        public void Length_field_based_framing_must_let_zero_length_field_values_pass_through()
+        {
+            // Interleave empty frames with a frame with data
+            var b = ByteString.FromBytes(BitConverter.GetBytes(42).ToArray());
+            var encodedPayload = Encode(b, 0, 4, ByteOrder.LittleEndian);
+            var emptyFrame = Encode(ByteString.Empty, 0, 4, ByteOrder.LittleEndian);
+            var bytes = new[] { emptyFrame, encodedPayload, emptyFrame };
+
+            var result = Source.From(bytes)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.AwaitResult().Should().BeEquivalentTo(bytes.ToImmutableList());
         }
     }
 }

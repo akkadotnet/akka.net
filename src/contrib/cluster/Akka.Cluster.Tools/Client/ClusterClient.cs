@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClient.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -468,17 +468,18 @@ namespace Akka.Cluster.Tools.Client
         {
             if (_settings.BufferSize == 0)
             {
-                _log.Debug("Receptionist not available and buffering is disabled, dropping message [{0}]", message.GetType().Name);
+                _log.Warning("Receptionist not available and buffering is disabled, dropping message [{0}]", message.GetType().Name);
             }
             else if (_buffer.Count == _settings.BufferSize)
             {
                 var m = _buffer.Dequeue();
-                _log.Debug("Receptionist not available, buffer is full, dropping first message [{0}]", m.Item1.GetType().Name);
+                _log.Warning("Receptionist not available, buffer is full, dropping first message [{0}]", m.Item1.GetType().Name);
                 _buffer.Enqueue(Tuple.Create(message, Sender));
             }
             else
             {
-                _log.Debug("Receptionist not available, buffering message type [{0}]", message.GetType().Name);
+                if(_log.IsDebugEnabled) // don't invoke reflection call on message type if we don't have to
+                    _log.Debug("Receptionist not available, buffering message type [{0}]", message.GetType().Name);
                 _buffer.Enqueue(Tuple.Create(message, Sender));
             }
         }

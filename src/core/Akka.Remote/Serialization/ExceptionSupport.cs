@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="WrappedPayloadSupport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="ExceptionSupport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -149,6 +149,14 @@ namespace Akka.Remote.Serialization
         }
 #else
         private TypeInfo ExceptionTypeInfo = typeof(Exception).GetTypeInfo();
+        private static readonly Func<Type, object> GetUninitializedObjectDelegate = (Func<Type, object>)
+            typeof(string)
+                .GetTypeInfo()
+                .Assembly
+                .GetType("System.Runtime.Serialization.FormatterServices")
+                ?.GetTypeInfo()
+                ?.GetMethod("GetUninitializedObject", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+                ?.CreateDelegate(typeof(Func<Type, object>));
 
         internal Proto.Msg.ExceptionData ExceptionToProtoNetCore(Exception exception)
         {
@@ -185,7 +193,7 @@ namespace Akka.Remote.Serialization
 
             Type exceptionType = Type.GetType(proto.TypeName);
 
-            var obj = Activator.CreateInstance(exceptionType);
+            var obj = GetUninitializedObjectDelegate(exceptionType);
 
             if (!string.IsNullOrEmpty(proto.Message))
                 ExceptionTypeInfo?.GetField("_message", All)?.SetValue(obj, proto.Message);

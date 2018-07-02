@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-#region internal classes
+        #region internal classes
 
         /// <summary>
         /// TBD
@@ -157,6 +157,7 @@ namespace Akka.Streams.Implementation.IO
         {
             private readonly InputStreamSinkStage _stage;
             private readonly Action<IAdapterToStageMessage> _callback;
+            private bool _completionSignalled;
 
             public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
@@ -186,12 +187,14 @@ namespace Akka.Streams.Implementation.IO
             public override void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(Finished.Instance);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._dataQueue.Add(new Failed(ex));
+                _completionSignalled = true;
                 FailStage(ex);
             }
 
@@ -199,6 +202,12 @@ namespace Akka.Streams.Implementation.IO
             {
                 _stage._dataQueue.Add(Initialized.Instance);
                 Pull(_stage._in);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _stage._dataQueue.Add(new Failed(new AbruptStageTerminationException(this)));
             }
 
             public void WakeUp(IAdapterToStageMessage msg) => _callback(msg);
@@ -210,7 +219,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-#endregion
+        #endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -352,6 +361,7 @@ namespace Akka.Streams.Implementation.IO
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
+
             ExecuteIfNotClosed(() =>
             {
                 // at this point Subscriber may be already terminated

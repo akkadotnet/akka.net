@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -292,6 +292,22 @@ namespace Akka.Cluster
             /// <param name="member">The node that changed state.</param>
             public MemberUp(Member member)
                 : base(member, MemberStatus.Up) { }
+        }
+
+        /// <summary>
+        /// Member status changed to WeaklyUp.
+        /// A joining member can be moved to <see cref="MemberStatus.WeaklyUp"/> if convergence
+        /// cannot be reached, i.e. there are unreachable nodes.
+        /// It will be moved to <see cref="MemberStatus.Up"/> when convergence is reached.
+        /// </summary>
+        public sealed class MemberWeaklyUp : MemberStatusChange
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MemberWeaklyUp"/> class.
+            /// </summary>
+            /// <param name="member">The node that changed state.</param>
+            public MemberWeaklyUp(Member member)
+                : base(member, MemberStatus.WeaklyUp) { }
         }
 
         /// <summary>
@@ -852,10 +868,24 @@ namespace Akka.Cluster
         {
             foreach (var member in members)
             {
-                if (member.Status == MemberStatus.Joining) yield return new MemberJoined(member);
-                if (member.Status == MemberStatus.Up) yield return new MemberUp(member);
-                if (member.Status == MemberStatus.Leaving) yield return new MemberLeft(member);
-                if (member.Status == MemberStatus.Exiting) yield return new MemberExited(member);
+                switch (member.Status)
+                {
+                    case MemberStatus.Joining:
+                        yield return new MemberJoined(member);
+                        break;
+                    case MemberStatus.WeaklyUp:
+                        yield return new MemberWeaklyUp(member);
+                        break;
+                    case MemberStatus.Up:
+                        yield return new MemberUp(member);
+                        break;
+                    case MemberStatus.Leaving:
+                        yield return new MemberLeft(member);
+                        break;
+                    case MemberStatus.Exiting:
+                        yield return new MemberExited(member);
+                        break;
+                }
             }
         }
 

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FileSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -198,6 +198,31 @@ namespace Akka.Streams.Tests.IO
                 sub.Request(1);
                 c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectComplete();
+            }, _materializer);
+        }
+
+        [Fact]
+        public void FileSource_should_open_file_in_shared_mode_for_reading_multiple_times()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var testFile = TestFile();
+                var p1 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+                var p2 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+                
+                var c1 = this.CreateManualSubscriberProbe<ByteString>();
+                var c2 = this.CreateManualSubscriberProbe<ByteString>();
+                p1.Subscribe(c1);
+                p2.Subscribe(c2);
+                var s1 = c1.ExpectSubscription();
+                var s2 = c2.ExpectSubscription();
+
+                s1.Request(5000);
+                s2.Request(5000);
+
+                c1.ExpectNext();
+                c2.ExpectNext();
+
             }, _materializer);
         }
 

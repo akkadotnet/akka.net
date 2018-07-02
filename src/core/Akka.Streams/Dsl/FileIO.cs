@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FileIO.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,8 +40,8 @@ namespace Akka.Streams.Dsl
                 new SourceShape<ByteString>(new Outlet<ByteString>("FileSource"))));
 
         /// <summary>
-        /// Creates a Sink which writes incoming <see cref="ByteString"/> elements to the given file and either overwrites
-        /// or appends to it.
+        /// Creates a Sink which writes incoming <see cref="ByteString"/> elements to the given file. Overwrites existing files
+        /// by truncating their contents as default.
         ///
         /// Materializes a <see cref="Task{TResult}"/> of <see cref="IOResult"/> that will be completed with the size of the file(in bytes) at the streams completion,
         /// and a possible exception if IO operation was not completed successfully.
@@ -54,7 +54,7 @@ namespace Akka.Streams.Dsl
         /// <param name="startPosition">the start position to write to, defaults to 0</param>
         /// <returns>TBD</returns>
         public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0) =>
-            new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.OpenOrCreate, DefaultAttributes.FileSink,
+            new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
                 new SinkShape<ByteString>(new Inlet<ByteString>("FileSink"))));
     }
 }

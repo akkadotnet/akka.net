@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,6 +81,7 @@ namespace Akka.Cluster
                 DowningProviderType = typeof(NoDowning);
 
             RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
+            AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
         }
 
         /// <summary>
@@ -229,6 +230,16 @@ namespace Akka.Cluster
         /// means, such as being downed.
         /// </summary>
         public bool RunCoordinatedShutdownWhenDown { get; }
+
+        /// <summary>
+        /// If this is set to "off", the leader will not move <see cref="MemberStatus.Joining"/> members to <see cref="MemberStatus.Up"/> during a network
+        /// split. This feature allows the leader to accept <see cref="MemberStatus.Joining"/> members to be <see cref="MemberStatus.WeaklyUp"/>
+        /// so they become part of the cluster even during a network split. The leader will
+        /// move <see cref="MemberStatus.Joining"/> members to <see cref="MemberStatus.WeaklyUp"/> after 3 rounds of 'leader-actions-interval'
+        /// without convergence.
+        /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
+        /// </summary>
+        public bool AllowWeaklyUpMembers { get; }
     }
 }
 

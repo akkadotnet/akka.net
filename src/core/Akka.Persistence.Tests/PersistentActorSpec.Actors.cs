@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1118,6 +1118,45 @@ namespace Akka.Persistence.Tests
                     PersistAsync(s + "-1", WeMustGoDeeper);
                     return true;
                 }
+                return false;
+            }
+        }
+
+        internal class PersistInRecovery : ExamplePersistentActor
+        {
+            public PersistInRecovery(string name)
+                : base(name)
+            { }
+
+            protected override bool ReceiveRecover(object message)
+            {
+                switch (message)
+                {
+                    case Evt evt when evt.Data?.ToString() == "invalid":
+                        Persist(new Evt("invalid-recovery"), UpdateStateHandler);
+                        return true;
+                    case Evt evt:
+                        return UpdateState(evt);
+                    case RecoveryCompleted _:
+                        PersistAsync(new Evt("rc-1"), UpdateStateHandler);
+                        Persist(new Evt("rc-2"), UpdateStateHandler);
+                        PersistAsync(new Evt("rc-3"), UpdateStateHandler);
+                        return true;
+                }
+
+                return false;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (CommonBehavior(message)) return true;
+
+                if (message is Cmd cmd)
+                {
+                    Persist(new Evt(cmd.Data), UpdateStateHandler);
+                    return true;
+                }
+
                 return false;
             }
         }

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TcpStages.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -123,17 +124,19 @@ namespace Akka.Streams.Implementation.IO
                         _listener.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
 
                     var thisStage = StageActorRef;
-                    _bindingPromise.TrySetResult(new StreamTcp.ServerBinding(bound.LocalAddress, () =>
+                    var binding = new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                     {
                         // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
                         thisStage.Tell(Tcp.Unbind.Instance, thisStage);
                         return _unbindPromise.Task;
-                    }));
+                    });
+
+                    _bindingPromise.NonBlockingTrySetResult(binding);
                 }
                 else if (msg is Tcp.CommandFailed)
                 {
                     var ex = BindFailedException.Instance;
-                    _bindingPromise.TrySetException(ex);
+                    _bindingPromise.NonBlockingTrySetException(ex);
                     _unbindPromise.TrySetResult(NotUsed.Instance);
                     FailStage(ex);
                 }
@@ -161,7 +164,7 @@ namespace Akka.Streams.Implementation.IO
             public override void PostStop()
             {
                 _unbindPromise.TrySetResult(NotUsed.Instance);
-                _bindingPromise.TrySetException(
+                _bindingPromise.NonBlockingTrySetException(
                     new NoSuchElementException("Binding was unbound before it was completely finished"));
             }
         }
@@ -219,7 +222,7 @@ namespace Akka.Streams.Implementation.IO
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<StreamTcp.ServerBinding>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var bindingPromise = new TaskCompletionSource<StreamTcp.ServerBinding>();
+            var bindingPromise = TaskEx.NonBlockingTaskCompletionSource<StreamTcp.ServerBinding>();
             var logic = new ConnectionSourceStageLogic(Shape, this, bindingPromise);
             return new LogicAndMaterializedValue<Task<StreamTcp.ServerBinding>>(logic, bindingPromise.Task);
         }
@@ -228,6 +231,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
     {
         private readonly IActorRef _connection;

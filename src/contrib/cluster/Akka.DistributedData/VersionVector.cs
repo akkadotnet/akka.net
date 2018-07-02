@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="VersionVector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -100,8 +100,8 @@ namespace Akka.DistributedData
         public override bool Equals(object obj) => obj is VersionVector && Equals((VersionVector)obj);
 
         /// <summary>
-        /// Returns true if <paramref name="x"/> VersionVector has the same 
-        /// history as the <paramref name="y"/> VersionVector else false.
+        /// Returns true if this VersionVector has the same history
+        /// as the <paramref name="y"/> VersionVector else false.
         /// </summary>
         public bool IsSame(VersionVector y) => CompareOnlyTo(y, Ordering.Same) == Ordering.Same;
 

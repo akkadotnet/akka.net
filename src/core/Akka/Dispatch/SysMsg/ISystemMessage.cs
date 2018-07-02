@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Assert = System.Diagnostics.Debug;
 
@@ -257,11 +258,12 @@ namespace Akka.Dispatch.SysMsg
     /// Stash this <see cref="ISystemMessage"/> when the actor is in a failed state.
     /// </summary>
     internal interface IStashWhenFailed { }
-    /**
- * public API
- */
+
+    // public API
+
     //@SerialVersionUID(1L)
     //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
+
     /// <summary>
     ///     Class ISystemMessage.
     /// </summary>
@@ -276,6 +278,7 @@ namespace Akka.Dispatch.SysMsg
     /// <see cref="ISystemMessage"/> is an interface and too basic to express
     /// all of the capabilities needed to express a full-fledged system message.
     /// </summary>
+    [InternalApi]
     public abstract class SystemMessage : ISystemMessage
     {
         /// <summary>
@@ -356,6 +359,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
         private readonly long _uid;

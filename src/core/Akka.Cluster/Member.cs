@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Cluster
     /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
     /// not its <see cref="MemberStatus"/> and roles.
     /// </remarks>
-    public class Member : IComparable<Member>
+    public class Member : IComparable<Member>, IComparable
     {
         /// <summary>
         /// TBD
@@ -112,9 +112,13 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="IComparable.CompareTo"/>
-        public int CompareTo(Member other)
+        public int CompareTo(Member other) => Ordering.Compare(this, other);
+
+        int IComparable.CompareTo(object obj)
         {
-            return Ordering.Compare(this, other);
+            if (obj is Member member) return CompareTo(member);
+
+            throw new ArgumentException($"Cannot compare {nameof(Member)} to an instance of type '{obj?.GetType().FullName ?? "null"}'");
         }
 
         /// <inheritdoc cref="object.ToString"/>
@@ -192,10 +196,13 @@ namespace Akka.Cluster
             /// <inheritdoc cref="IComparer{Address}.Compare"/>
             public int Compare(Address x, Address y)
             {
-                if (x.Equals(y)) return 0;
-                if (!x.Host.Equals(y.Host)) return String.Compare(x.Host.GetOrElse(""), y.Host.GetOrElse(""), StringComparison.Ordinal);
-                if (!x.Port.Equals(y.Port)) return Nullable.Compare(x.Port.GetOrElse(0), (y.Port.GetOrElse(0)));
-                return 0;
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                if (ReferenceEquals(x, y)) return 0;
+                var result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                if (result != 0) return result;
+                return Nullable.Compare(x.Port, y.Port);
             }
         }
 
@@ -241,6 +248,8 @@ namespace Akka.Cluster
                 if (@bs == MemberStatus.Exiting) return -1;
                 if (@as == MemberStatus.Joining) return 1;
                 if (@bs == MemberStatus.Joining) return -1;
+                if (@as == MemberStatus.WeaklyUp) return 1;
+                if (@bs == MemberStatus.WeaklyUp) return -1;
                 return Ordering.Compare(a, b);
             }
         }
@@ -258,7 +267,10 @@ namespace Akka.Cluster
             /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member x, Member y)
             {
-                return x.UniqueAddress.CompareTo(y.UniqueAddress);
+                if (ReferenceEquals(x, null)) throw new ArgumentNullException(nameof(x));
+                if (ReferenceEquals(y, null)) throw new ArgumentNullException(nameof(y));
+
+                return x.UniqueAddress.CompareTo(y.UniqueAddress, AddressOrdering);
             }
         }
 
@@ -363,6 +375,8 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
+            if (m1Status == MemberStatus.WeaklyUp) return m2;
+            if (m2Status == MemberStatus.WeaklyUp) return m1;
             return m1;
         }
 
@@ -372,7 +386,8 @@ namespace Akka.Cluster
         internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
-                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed) },
                 {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Leaving, ImmutableHashSet.Create(MemberStatus.Exiting, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Down, ImmutableHashSet.Create(MemberStatus.Removed)},
@@ -385,34 +400,39 @@ namespace Akka.Cluster
     /// <summary>
     /// Defines the current status of a cluster member node
     /// 
-    /// Can be one of: Joining, Up, Leaving, Exiting and Down.
+    /// Can be one of: Joining, Up, WeaklyUp, Leaving, Exiting and Down.
     /// </summary>
     public enum MemberStatus
     {
         /// <summary>
         /// Indicates that a new node is joining the cluster.
         /// </summary>
-        Joining,
+        Joining = 0,
         /// <summary>
         /// Indicates that a node is a current member of the cluster.
         /// </summary>
-        Up,
+        Up = 1,
         /// <summary>
         /// Indicates that a node is beginning to leave the cluster.
         /// </summary>
-        Leaving,
+        Leaving = 2,
         /// <summary>
         /// Indicates that all nodes are aware that this node is leaving the cluster.
         /// </summary>
-        Exiting,
+        Exiting = 3,
         /// <summary>
         /// Node was forcefully removed from the cluster by means of <see cref="Cluster.Down"/>
         /// </summary>
-        Down,
+        Down = 4,
         /// <summary>
         /// Node was removed as a member from the cluster.
         /// </summary>
-        Removed
+        Removed = 5,
+        /// <summary>
+        /// Indicates that new node has already joined, but it cannot be set to <see cref="Up"/>
+        /// because cluster convergence cannot be reached i.e. because of unreachable nodes.
+        /// </summary>
+        WeaklyUp = 6,
     }
 
     /// <summary>
@@ -420,7 +440,7 @@ namespace Akka.Cluster
     /// The `uid` is needed to be able to distinguish different
     /// incarnations of a member with same hostname and port.
     /// </summary>
-    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>
+    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>, IComparable
     {
         /// <summary>
         /// The bound listening address for Akka.Remote.
@@ -468,16 +488,23 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="that">TBD</param>
+        /// <param name="uniqueAddress">TBD</param>
         /// <returns>TBD</returns>
-        public int CompareTo(UniqueAddress that)
+        public int CompareTo(UniqueAddress uniqueAddress) => CompareTo(uniqueAddress, Address.Comparer);
+
+        int IComparable.CompareTo(object obj)
         {
-            var result = Member.AddressOrdering.Compare(Address, that.Address);
-            if (result == 0)
-                if (Uid < that.Uid) return -1;
-                else if (Uid == that.Uid) return 0;
-                else return 1;
-            return result;
+            if (obj is UniqueAddress address) return CompareTo(address);
+
+            throw new ArgumentException($"Cannot compare {nameof(UniqueAddress)} with instance of type '{obj?.GetType().FullName ?? "null"}'.");
+        }
+
+        internal int CompareTo(UniqueAddress uniqueAddress, IComparer<Address> addresComparer)
+        {
+            if (uniqueAddress == null) throw new ArgumentNullException(nameof(uniqueAddress));
+
+            var result = addresComparer.Compare(Address, uniqueAddress.Address);
+            return result == 0 ? Uid.CompareTo(uniqueAddress.Uid) : result;
         }
 
         /// <inheritdoc cref="object.ToString"/>

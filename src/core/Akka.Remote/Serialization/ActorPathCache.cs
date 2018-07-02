@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorPathCache.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using Akka.Actor;
 using System.Threading;
@@ -40,8 +47,7 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            ActorPath actorPath;
-            if (ActorPath.TryParse(k, out actorPath))
+            if (ActorPath.TryParse(k, out var actorPath))
                 return actorPath;
             return null;
         }

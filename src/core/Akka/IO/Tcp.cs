@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ using Akka.IO.Buffers;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// The set of TCP capabilities for Akka.IO are exposed via this extension.
     /// </summary>
     public class Tcp : ExtensionIdProvider<TcpExt>
     {
@@ -843,14 +843,14 @@ namespace Akka.IO
         public class Bound : Event
         {
             /// <summary>
-            /// TBD
+            /// The local listening endpoint of the bound socket.
             /// </summary>
             public EndPoint LocalAddress { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates a new bound message.
             /// </summary>
-            /// <param name="localAddress">TBD</param>
+            /// <param name="localAddress">The local listening endpoint of the bound socket.</param>
             public Bound(EndPoint localAddress)
             {
                 LocalAddress = localAddress;
@@ -867,7 +867,7 @@ namespace Akka.IO
         public class Unbound : Event
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance
             /// </summary>
             public static Unbound Instance = new Unbound();
         }
@@ -1106,7 +1106,8 @@ namespace Akka.IO
             actorRef?.Tell(ResolveMessage(e));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // Disabled pending resolution: https://github.com/akkadotnet/akka.net/issues/3092
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
         {
             switch (e.LastOperation)

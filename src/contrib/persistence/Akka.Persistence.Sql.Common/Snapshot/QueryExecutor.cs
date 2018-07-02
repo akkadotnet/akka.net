@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,12 +10,13 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Serialization;
 using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
-    /// Flattened and serialized snapshot object used as intermediate representation 
+    /// Flattened and serialized snapshot object used as intermediate representation
     /// before saving snapshot with metadata inside SQL Server database.
     /// </summary>
     public class SnapshotEntry
@@ -96,11 +97,25 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// TBD
         /// </summary>
         public readonly string TimestampColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly string SerializerIdColumnName;
 
         /// <summary>
         /// TBD
         /// </summary>
         public readonly TimeSpan Timeout;
+
+        /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public readonly string DefaultSerializer;
+
+        /// <summary>
+        /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
+        /// </summary>
+        public bool UseSequentialAccess { get; }
 
         /// <summary>
         /// TBD
@@ -112,7 +127,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="payloadColumnName">TBD</param>
         /// <param name="manifestColumnName">TBD</param>
         /// <param name="timestampColumnName">TBD</param>
+        /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
         public QueryConfiguration(
             string schemaName,
             string snapshotTableName,
@@ -121,7 +139,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             string payloadColumnName,
             string manifestColumnName,
             string timestampColumnName,
-            TimeSpan timeout)
+            string serializerIdColumnName,
+            TimeSpan timeout,
+            string defaultSerializer,
+            bool useSequentialAccess)
         {
             SchemaName = schemaName;
             SnapshotTableName = snapshotTableName;
@@ -130,7 +151,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             PayloadColumnName = payloadColumnName;
             ManifestColumnName = manifestColumnName;
             TimestampColumnName = timestampColumnName;
+            SerializerIdColumnName = serializerIdColumnName;
             Timeout = timeout;
+            DefaultSerializer = defaultSerializer;
+            UseSequentialAccess = useSequentialAccess;
         }
 
         /// <summary>
@@ -150,7 +174,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         QueryConfiguration Configuration { get; }
 
         /// <summary>
-        /// Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId"/>, 
+        /// Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId"/>,
         /// <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -162,7 +186,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr, DateTime? timestamp);
 
         /// <summary>
-        /// Deletes all snapshot matching persistent actor's <paramref name="persistenceId"/> as well as 
+        /// Deletes all snapshot matching persistent actor's <paramref name="persistenceId"/> as well as
         /// upper (inclusive) bounds of the both <paramref name="maxSequenceNr"/> and <paramref name="maxTimestamp"/>.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -251,12 +275,14 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     {Configuration.SequenceNrColumnName}, 
                     {Configuration.TimestampColumnName}, 
                     {Configuration.ManifestColumnName}, 
-                    {Configuration.PayloadColumnName}   
+                    {Configuration.PayloadColumnName},
+                    {Configuration.SerializerIdColumnName}
                 FROM {Configuration.FullSnapshotTableName} 
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId 
                     AND {Configuration.SequenceNrColumnName} <= @SequenceNr
                     AND {Configuration.TimestampColumnName} <= @Timestamp
-                ORDER BY {Configuration.SequenceNrColumnName} DESC";
+                ORDER BY {Configuration.SequenceNrColumnName} DESC
+                LIMIT 1";
 
             DeleteSnapshotSql = $@"
                 DELETE FROM {Configuration.FullSnapshotTableName}
@@ -275,7 +301,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     {Configuration.SequenceNrColumnName}, 
                     {Configuration.TimestampColumnName}, 
                     {Configuration.ManifestColumnName}, 
-                    {Configuration.PayloadColumnName}) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
+                    {Configuration.PayloadColumnName},
+                    {Configuration.SerializerIdColumnName}) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
         }
 
         /// <summary>
@@ -309,7 +336,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType);
+            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
 
             var binary = serializer.ToBinary(snapshot);
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -318,9 +345,28 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="snapshotType">TBD</param>
+        /// <param name="snapshot">TBD</param>
         /// <param name="command">TBD</param>
-        protected virtual void SetManifestParameter(Type snapshotType, DbCommand command) => AddParameter(command, "@Manifest", DbType.String, snapshotType.TypeQualifiedName());
+        protected virtual void SetManifestParameters(object snapshot, DbCommand command)
+        {
+            var snapshotType = snapshot.GetType();
+            var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
+
+            string manifest = "";
+            if (serializer is SerializerWithStringManifest)
+            {
+                manifest = ((SerializerWithStringManifest)serializer).Manifest(snapshot);
+            }
+            else
+            {
+                if (serializer.IncludeManifest)
+                {
+                    manifest = snapshotType.TypeQualifiedName();
+                }
+            }
+            AddParameter(command, "@Manifest", DbType.String, manifest);
+            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+        }
 
         /// <summary>
         /// TBD
@@ -402,7 +448,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 SetPersistenceIdParameter(metadata.PersistenceId, command);
                 SetSequenceNrParameter(metadata.SequenceNr, command);
                 SetTimestampParameter(metadata.Timestamp, command);
-                SetManifestParameter(snapshot.GetType(), command);
+                SetManifestParameters(snapshot, command);
                 SetPayloadParameter(snapshot, command);
 
                 await command.ExecuteNonQueryAsync(cancellationToken);
@@ -428,7 +474,19 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
+                {
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
                     if (await reader.ReadAsync(cancellationToken))
                     {
@@ -520,11 +578,21 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <returns>TBD</returns>
         protected object GetSnapshot(DbDataReader reader)
         {
-            var type = Type.GetType(reader.GetString(3), true);
-            var serializer = Serialization.FindSerializerForType(type);
+            var manifest = reader.GetString(3);
             var binary = (byte[])reader[4];
 
-            var obj = serializer.FromBinary(binary, type);
+            object obj;
+            if (reader.IsDBNull(5))
+            {
+                var type = Type.GetType(manifest, true);
+                var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
+                obj = serializer.FromBinary(binary, type);
+            }
+            else
+            {
+                var serializerId = reader.GetInt32(5);
+                obj = Serialization.Deserialize(binary, serializerId, manifest);
+            }
 
             return obj;
         }

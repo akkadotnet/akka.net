@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JsonObjectParser.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Util;
@@ -22,6 +23,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Leading whitespace between elements will be trimmed.
     /// </summary>
+    [InternalApi]
     public class JsonObjectParser
     {
         private static readonly byte SquareBraceStart = Convert.ToByte('[');

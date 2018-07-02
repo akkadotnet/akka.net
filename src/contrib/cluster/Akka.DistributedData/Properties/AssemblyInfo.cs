@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,3 +22,6 @@ using System.Runtime.InteropServices;
 [assembly: Guid("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,51 +19,100 @@ namespace Akka.Cluster.Sharding
     using EntityId = String;
     using Msg = Object;
 
-    public class ShardActor : ActorBase
+    internal interface IShard
     {
-        private readonly Shard _shardSemantic;
-
-        public ShardActor(
-            string typeName,
-            string shardId,
-            Props entityProps,
-            ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
-            object handOffStopMessage)
-        {
-            _shardSemantic = new Shard(
-                context: Context,
-                unhandled: Unhandled,
-                typeName: typeName,
-                shardId: shardId,
-                entityProps: entityProps,
-                settings: settings,
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId,
-                handOffStopMessage: handOffStopMessage);
-        }
-
-
-        protected override bool Receive(object message)
-        {
-            return _shardSemantic.HandleCommand(message);
-        }
+        IActorContext Context { get; }
+        IActorRef Self { get; }
+        IActorRef Sender { get; }
+        string TypeName { get; }
+        ShardId ShardId { get; }
+        Func<string, Props> EntityProps { get; }
+        ClusterShardingSettings Settings { get; }
+        ExtractEntityId ExtractEntityId { get; }
+        ExtractShardId ExtractShardId { get; }
+        object HandOffStopMessage { get; }
+        ILoggingAdapter Log { get; }
+        IActorRef HandOffStopper { get; set; }
+        Shard.ShardState State { get; set; }
+        ImmutableDictionary<EntityId, IActorRef> RefById { get; set; }
+        ImmutableDictionary<IActorRef, EntityId> IdByRef { get; set; }
+        ImmutableHashSet<IActorRef> Passivating { get; set; }
+        ImmutableDictionary<EntityId, ImmutableList<Tuple<Msg, IActorRef>>> MessageBuffers { get; set; }
+        void Unhandled(object message);
+        void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange;
+        void EntityTerminated(IActorRef tref);
+        void DeliverTo(string id, object message, object payload, IActorRef sender);
     }
 
-
-    //TODO: figure out how not to derive from persistent actor for the sake of alternative ddata based impl
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public class Shard
+    internal sealed class Shard : ActorBase, IShard
     {
+        #region internal classes
+
+        /// <summary>
+        /// Persistent state of the Shard.
+        /// </summary>
+        [Serializable]
+        public class ShardState : IClusterShardingSerializable
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<EntityId> Entries;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entries">TBD</param>
+            public ShardState(IImmutableSet<EntityId> entries)
+            {
+                Entries = entries;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                var other = obj as ShardState;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Entries.SequenceEqual(other.Entries);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = 13;
+
+                    foreach (var v in Entries)
+                    {
+                        hashCode = (hashCode * 397) ^ (v?.GetHashCode() ?? 0);
+                    }
+
+                    return hashCode;
+                }
+            }
+
+            #endregion
+        }
+        #endregion
+
         #region messages
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected interface IShardCommand { }
+        public interface IShardCommand { }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -71,11 +120,11 @@ namespace Akka.Cluster.Sharding
 
 
         /// <summary>
-        /// When an remembering entries and the entity stops without issuing a <see cref="Shard.Passivate"/>,
+        /// When an remembering entries and the entity stops without issuing a <see cref="Passivate"/>,
         /// we restart it after a back off using this message.
         /// </summary>
         [Serializable]
-        protected internal sealed class RestartEntity : IShardCommand
+        public sealed class RestartEntity : IShardCommand
         {
             /// <summary>
             /// TBD
@@ -97,7 +146,7 @@ namespace Akka.Cluster.Sharding
         /// batches of entity actors at a time.
         /// </summary>
         [Serializable]
-        protected internal sealed class RestartEntities : IShardCommand
+        public sealed class RestartEntities : IShardCommand
         {
             /// <summary>
             /// TBD
@@ -117,7 +166,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public abstract class StateChange: IClusterShardingSerializable
+        public abstract class StateChange : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -217,7 +266,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IImmutableSet< string> EntityIds;
+            public readonly IImmutableSet<string> EntityIds;
 
             /// <summary>
             /// TBD
@@ -303,166 +352,37 @@ namespace Akka.Cluster.Sharding
 
         #endregion
 
-        public static Props Props(
-            string typeName,
-            ShardId shardId,
-            Props entityProps,
-            ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
-            object handOffStopMessage)
-        {
-            if (settings.RememberEntities)
-                return Actor.Props.Create(() => new PersistentShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage))
-                .WithDeploy(Deploy.Local);
-            else
-                return Actor.Props.Create(() => new ShardActor(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage))
-                  .WithDeploy(Deploy.Local);
-        }
+        IActorContext IShard.Context => Context;
+        IActorRef IShard.Self => Self;
+        IActorRef IShard.Sender => Sender;
+        void IShard.Unhandled(object message) => base.Unhandled(message);
 
+        public ILoggingAdapter Log { get; } = Context.GetLogger();
+        public string TypeName { get; }
+        public string ShardId { get; }
+        public Func<string, Props> EntityProps { get; }
+        public ClusterShardingSettings Settings { get; }
+        public ExtractEntityId ExtractEntityId { get; }
+        public ExtractShardId ExtractShardId { get; }
+        public object HandOffStopMessage { get; }
+        public IActorRef HandOffStopper { get; set; }
+        public Shard.ShardState State { get; set; } = Shard.ShardState.Empty;
+        public ImmutableDictionary<string, IActorRef> RefById { get; set; } = ImmutableDictionary<string, IActorRef>.Empty;
+        public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
+        public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
+        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
 
-        /// <summary>
-        /// Persistent state of the Shard.
-        /// </summary>
-        [Serializable]
-        public class ShardState : IClusterShardingSerializable
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IImmutableSet<EntityId> Entries;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="entries">TBD</param>
-            public ShardState(IImmutableSet<EntityId> entries)
-            {
-                Entries = entries;
-            }
-
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                var other = obj as ShardState;
-
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(other, this)) return true;
-
-                return Entries.SequenceEqual(other.Entries);
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    int hashCode = 13;
-
-                    foreach (var v in Entries)
-                    {
-                        hashCode = (hashCode * 397) ^ (v?.GetHashCode() ?? 0);
-                    }
-
-                    return hashCode;
-                }
-            }
-
-            #endregion
-        }
-
-        protected readonly IActorContext _context;
-        protected readonly Action<object> _unhandled;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string TypeName;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ShardId ShardId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Actor.Props EntityProps;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ClusterShardingSettings Settings;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IdExtractor ExtractEntityId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ShardResolver ExtractShardId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object HandOffStopMessage;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected IImmutableDictionary<IActorRef, EntityId> IdByRef = ImmutableDictionary<IActorRef, EntityId>.Empty;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected IImmutableDictionary<EntityId, IActorRef> RefById = ImmutableDictionary<EntityId, IActorRef>.Empty;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected IImmutableSet<IActorRef> Passivating = ImmutableHashSet<IActorRef>.Empty;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected IImmutableDictionary<EntityId, IImmutableList<Tuple<Msg, IActorRef>>> MessageBuffers =
-            ImmutableDictionary<EntityId, IImmutableList<Tuple<Msg, IActorRef>>>.Empty;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected IActorRef HandOffStopper = null;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected ShardState State = ShardState.Empty;
-
-        private ILoggingAdapter _log;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="shardId">TBD</param>
-        /// <param name="entityProps">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="extractEntityId">TBD</param>
-        /// <param name="extractShardId">TBD</param>
-        /// <param name="handOffStopMessage">TBD</param>
         public Shard(
-            IActorContext context,
-            Action <object> unhandled,
             string typeName,
             string shardId,
-            Props entityProps,
+            Func<string, Props> entityProps,
             ClusterShardingSettings settings,
-            IdExtractor extractEntityId,
-            ShardResolver extractShardId,
+            ExtractEntityId extractEntityId,
+            ExtractShardId extractShardId,
             object handOffStopMessage)
         {
-            _context = context;
-            _unhandled = unhandled;
             TypeName = typeName;
             ShardId = shardId;
             EntityProps = entityProps;
@@ -470,167 +390,188 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId = extractEntityId;
             ExtractShardId = extractShardId;
             HandOffStopMessage = handOffStopMessage;
+            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+                ? EntityRecoveryStrategy.ConstantStrategy(
+                    Context.System,
+                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                : EntityRecoveryStrategy.AllStrategy;
 
-            Initialized();
+            this.Initialized();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected ILoggingAdapter Log
-        {
-            get { return _log ?? (_log = _context.GetLogger()); }
-        }
+        protected override bool Receive(object message) => this.HandleCommand(message);
+        public void ProcessChange<T>(T evt, Action<T> handler) where T : StateChange => this.BaseProcessChange(evt, handler);
+        public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
+        public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected int TotalBufferSize
-        {
-            get { return MessageBuffers.Aggregate(0, (sum, entity) => sum + entity.Value.Count); }
-        }
-
+    internal static class Shards
+    {
         #region common shard methods
 
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual void Initialized()
+        public static void Initialized<TShard>(this TShard shard) where TShard : IShard
         {
-            _context.Parent.Tell(new ShardInitialized(ShardId));
+            shard.Context.Parent.Tell(new ShardInitialized(shard.ShardId));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        protected virtual void ProcessChange<T>(T evt, Action<T> handler)
+        public static void BaseProcessChange<TShard, T>(this TShard shard, T evt, Action<T> handler)
+            where TShard : IShard
+            where T : Shard.StateChange
         {
             handler(evt);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        public bool HandleCommand(object message)
+        public static bool HandleCommand<TShard>(this TShard shard, object message) where TShard : IShard
         {
-            if (message is Terminated) HandleTerminated(((Terminated) message).ActorRef);
-            else if (message is PersistentShardCoordinator.ICoordinatorMessage) HandleCoordinatorMessage(message as PersistentShardCoordinator.ICoordinatorMessage);
-            else if (message is IShardCommand) HandleShardCommand(message as IShardCommand);
-            else if (message is ShardRegion.StartEntity) HandleStartEntity(message as ShardRegion.StartEntity);
-            else if (message is ShardRegion.StartEntityAck) HandleStartEntityAck(message as ShardRegion.StartEntityAck);
-            else if (message is IShardRegionCommand) HandleShardRegionCommand(message as IShardRegionCommand);
-            else if (message is IShardQuery) HandleShardRegionQuery(message as IShardQuery);
-            else if (ExtractEntityId(message) != null) DeliverMessage(message, _context.Sender);
-            else return false;
-            return true;
-        }
-
-        private void HandleShardRegionQuery(IShardQuery query)
-        {
-            if(query is GetCurrentShardState) _context.Sender.Tell(new CurrentShardState(ShardId, RefById.Keys.ToImmutableHashSet()));
-            else if (query is GetShardStats) _context.Sender.Tell(new ShardStats(ShardId, State.Entries.Count));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tref">TBD</param>
-        protected virtual void EntityTerminated(IActorRef tref)
-        {
-            if (IdByRef.TryGetValue(tref, out var id))
+            switch (message)
             {
-                IdByRef = IdByRef.Remove(tref);
-                RefById = RefById.Remove(id);
+                case Terminated t:
+                    shard.HandleTerminated(t.ActorRef);
+                    return true;
+                case PersistentShardCoordinator.ICoordinatorMessage cm:
+                    shard.HandleCoordinatorMessage(cm);
+                    return true;
+                case Shard.IShardCommand sc:
+                    shard.HandleShardCommand(sc);
+                    return true;
+                case ShardRegion.StartEntity se:
+                    shard.HandleStartEntity(se);
+                    return true;
+                case ShardRegion.StartEntityAck sea:
+                    shard.HandleStartEntityAck(sea);
+                    return true;
+                case IShardRegionCommand src:
+                    shard.HandleShardRegionCommand(src);
+                    return true;
+                case Shard.IShardQuery sq:
+                    shard.HandleShardRegionQuery(sq);
+                    return true;
+                case ShardRegion.RestartShard _:
+                    return true;
+                case var _ when shard.ExtractEntityId(message) != null:
+                    shard.DeliverMessage(message, shard.Context.Sender);
+                    return true;
+            }
+            return false;
+        }
 
-                if (MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
-                {
-                    Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
-                    SendMessageBuffer(new EntityStarted(id));
-                }
-                else
-                    ProcessChange(new EntityStopped(id), PassivateCompleted);
-
-                Passivating = Passivating.Remove(tref);
+        private static void HandleShardRegionQuery<TShard>(this TShard shard, Shard.IShardQuery query) where TShard : IShard
+        {
+            switch (query)
+            {
+                case Shard.GetCurrentShardState _:
+                    shard.Context.Sender.Tell(new Shard.CurrentShardState(shard.ShardId, shard.RefById.Keys.ToImmutableHashSet()));
+                    break;
+                case Shard.GetShardStats _:
+                    shard.Context.Sender.Tell(new Shard.ShardStats(shard.ShardId, shard.State.Entries.Count));
+                    break;
             }
         }
 
-        private void HandleShardCommand(IShardCommand message)
+        public static void BaseEntityTerminated<TShard>(this TShard shard, IActorRef tref) where TShard : IShard
         {
-            message.Match()
-                .With<RestartEntity>(restartEntity => GetEntity(restartEntity.EntityId))
-                .With<RestartEntities>(restartEntities => HandleRestartEntities(restartEntities.Entries));
-        }
-
-        private void HandleStartEntity(ShardRegion.StartEntity start)
-        {
-            Log.Debug("Got a request from [{0}] to start entity [{1}] in shard [{2}]", _context.Sender, start.EntityId, ShardId);
-            GetEntity(start.EntityId);
-            _context.Sender.Tell(new ShardRegion.StartEntityAck(start.EntityId, ShardId));
-        }
-
-        private void HandleStartEntityAck(ShardRegion.StartEntityAck ack)
-        {
-            if (ack.ShardId != ShardId && State.Entries.Contains(ack.EntityId))
+            if (shard.IdByRef.TryGetValue(tref, out var id))
             {
-                Log.Debug("Entity [{0}] previously owned by shard [{1}] started in shard [{2}]", ack.EntityId, ShardId, ack.ShardId);
-                ProcessChange(new EntityStopped(ack.EntityId), _ =>
+                shard.IdByRef = shard.IdByRef.Remove(tref);
+                shard.RefById = shard.RefById.Remove(id);
+
+                if (shard.MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
                 {
-                    State = new ShardState(State.Entries.Remove(ack.EntityId));
-                    MessageBuffers = MessageBuffers.Remove(ack.EntityId);
+                    shard.Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
+                    shard.SendMessageBuffer(new Shard.EntityStarted(id));
+                }
+                else
+                    shard.ProcessChange(new Shard.EntityStopped(id), stopped => shard.PassivateCompleted(stopped));
+
+                shard.Passivating = shard.Passivating.Remove(tref);
+            }
+        }
+
+        private static void HandleShardCommand<TShard>(this TShard shard, Shard.IShardCommand message) where TShard : IShard
+        {
+            switch (message)
+            {
+                case Shard.RestartEntity restartEntity:
+                    shard.GetEntity(restartEntity.EntityId);
+                    break;
+                case Shard.RestartEntities restartEntities:
+                    shard.HandleRestartEntities(restartEntities.Entries);
+                    break;
+            }
+        }
+
+        private static void HandleStartEntity<TShard>(this TShard shard, ShardRegion.StartEntity start) where TShard : IShard
+        {
+            shard.Log.Debug("Got a request from [{0}] to start entity [{1}] in shard [{2}]", shard.Sender, start.EntityId, shard.ShardId);
+            shard.GetEntity(start.EntityId);
+            shard.Context.Sender.Tell(new ShardRegion.StartEntityAck(start.EntityId, shard.ShardId));
+        }
+
+        private static void HandleStartEntityAck<TShard>(this TShard shard, ShardRegion.StartEntityAck ack) where TShard : IShard
+        {
+            if (ack.ShardId != shard.ShardId && shard.State.Entries.Contains(ack.EntityId))
+            {
+                shard.Log.Debug("Entity [{0}] previously owned by shard [{1}] started in shard [{2}]", ack.EntityId, shard.ShardId, ack.ShardId);
+                shard.ProcessChange(new Shard.EntityStopped(ack.EntityId), _ =>
+                {
+                    shard.State = new Shard.ShardState(shard.State.Entries.Remove(ack.EntityId));
+                    shard.MessageBuffers = shard.MessageBuffers.Remove(ack.EntityId);
                 });
             }
         }
 
-        private void HandleRestartEntities(IImmutableSet<EntityId> ids)
+        private static void HandleRestartEntities<TShard>(this TShard shard, IImmutableSet<EntityId> ids) where TShard : IShard
         {
-            _context.ActorOf(RememberEntityStarter.Props(_context.Parent, TypeName, ShardId, ids, Settings, _context.Sender));
+            shard.Context.ActorOf(RememberEntityStarter.Props(shard.Context.Parent, shard.TypeName, shard.ShardId, ids, shard.Settings, shard.Sender));
         }
 
 
-        private void HandleShardRegionCommand(IShardRegionCommand message)
+        private static void HandleShardRegionCommand<TShard>(this TShard shard, IShardRegionCommand message) where TShard : IShard
         {
-            var passivate = message as Passivate;
-            if (passivate != null)
-                Passivate(_context.Sender, passivate.StopMessage);
+            if (message is Passivate passivate)
+                shard.Passivate(shard.Sender, passivate.StopMessage);
             else
-                _unhandled(message);
+                shard.Unhandled(message);
         }
 
-        private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
+        private static void HandleCoordinatorMessage<TShard>(this TShard shard, PersistentShardCoordinator.ICoordinatorMessage message) where TShard : IShard
         {
-            var handOff = message as PersistentShardCoordinator.HandOff;
-            if (handOff != null)
+            switch (message)
             {
-                if (handOff.Shard == ShardId) HandOff(_context.Sender);
-                else Log.Warning("Shard [{0}] can not hand off for another Shard [{1}]", ShardId, handOff.Shard);
+                case PersistentShardCoordinator.HandOff handOff when handOff.Shard == shard.ShardId:
+                    shard.HandOff(shard.Sender);
+                    break;
+                case PersistentShardCoordinator.HandOff handOff:
+                    shard.Log.Warning("Shard [{0}] can not hand off for another Shard [{1}]", shard.ShardId, handOff.Shard);
+                    break;
+                default:
+                    shard.Unhandled(message);
+                    break;
             }
-            else _unhandled(message);
         }
 
-        private void HandOff(IActorRef replyTo)
+        private static void HandOff<TShard>(this TShard shard, IActorRef replyTo) where TShard: IShard
         {
-            if (HandOffStopper != null) Log.Warning("HandOff shard [{0}] received during existing handOff", ShardId);
+            if (shard.HandOffStopper != null) shard.Log.Warning("HandOff shard [{0}] received during existing handOff", shard.ShardId);
             else
             {
-                Log.Debug("HandOff shard [{0}]", ShardId);
+                shard.Log.Debug("HandOff shard [{0}]", shard.ShardId);
 
-                if (State.Entries.Count != 0)
+                if (shard.State.Entries.Count != 0)
                 {
-                    HandOffStopper = _context.Watch(_context.ActorOf(
-                        ShardRegion.HandOffStopper.Props(ShardId, replyTo, IdByRef.Keys, HandOffStopMessage)));
+                    shard.HandOffStopper = shard.Context.Watch(shard.Context.ActorOf(
+                        ShardRegion.HandOffStopper.Props(shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage)));
 
                     //During hand off we only care about watching for termination of the hand off stopper
-                    _context.Become(message =>
+                    shard.Context.Become(message =>
                     {
-                        var terminated = message as Terminated;
-                        if (terminated != null)
+                        if (message is Terminated terminated)
                         {
-                            HandleTerminated(terminated.ActorRef);
+                            shard.HandleTerminated(terminated.ActorRef);
                             return true;
                         }
                         return false;
@@ -638,156 +579,151 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    replyTo.Tell(new PersistentShardCoordinator.ShardStopped(ShardId));
-                    _context.Stop(_context.Self);
+                    replyTo.Tell(new PersistentShardCoordinator.ShardStopped(shard.ShardId));
+                    shard.Context.Stop(shard.Context.Self);
                 }
             }
         }
 
-        private void HandleTerminated(IActorRef terminatedRef)
+        private static void HandleTerminated<TShard>(this TShard shard, IActorRef terminatedRef) where TShard : IShard
         {
-            if (Equals(HandOffStopper, terminatedRef))
-                _context.Stop(_context.Self);
-            else if (IdByRef.ContainsKey(terminatedRef) && HandOffStopper == null)
-                EntityTerminated(terminatedRef);
+            if (Equals(shard.HandOffStopper, terminatedRef))
+                shard.Context.Stop(shard.Context.Self);
+            else if (shard.IdByRef.ContainsKey(terminatedRef) && shard.HandOffStopper == null)
+                shard.EntityTerminated(terminatedRef);
         }
 
-        private void Passivate(IActorRef entity, object stopMessage)
+        private static void Passivate<TShard>(this TShard shard, IActorRef entity, object stopMessage) where TShard : IShard
         {
-            if (IdByRef.TryGetValue(entity, out var id))
+            if (shard.IdByRef.TryGetValue(entity, out var id))
             {
-                if (!MessageBuffers.ContainsKey(id))
+                if (!shard.MessageBuffers.ContainsKey(id))
                 {
-                    Log.Debug("Passivating started on entity {0}", id);
+                    shard.Log.Debug("Passivating started on entity {0}", id);
 
-                    Passivating = Passivating.Add(entity);
-                    MessageBuffers = MessageBuffers.Add(id, ImmutableList<Tuple<object, IActorRef>>.Empty);
+                    shard.Passivating = shard.Passivating.Add(entity);
+                    shard.MessageBuffers = shard.MessageBuffers.Add(id, ImmutableList<Tuple<object, IActorRef>>.Empty);
 
                     entity.Tell(stopMessage);
                 }
                 else
                 {
-                    Log.Debug("Passivation already in progress for {0}. Not sending stopMessage back to entity.", entity);
+                    shard.Log.Debug("Passivation already in progress for {0}. Not sending stopMessage back to entity.", entity);
                 }
             }
             else
             {
-                Log.Debug("Unknown entity {0}. Not sending stopMessage back to entity.", entity);
+                shard.Log.Debug("Unknown entity {0}. Not sending stopMessage back to entity.", entity);
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        protected void PassivateCompleted(EntityStopped evt)
+        public static void PassivateCompleted<TShard>(this TShard shard, Shard.EntityStopped evt) where TShard: IShard
         {
-            Log.Debug("Entity stopped after passivation [{0}]", evt.EntityId);
-            State = new ShardState(State.Entries.Remove(evt.EntityId));
-            MessageBuffers = MessageBuffers.Remove(evt.EntityId);
+            shard.Log.Debug("Entity stopped after passivation [{0}]", evt.EntityId);
+            shard.State = new Shard.ShardState(shard.State.Entries.Remove(evt.EntityId));
+            shard.MessageBuffers = shard.MessageBuffers.Remove(evt.EntityId);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        protected void SendMessageBuffer(EntityStarted message)
+        public static void SendMessageBuffer<TShard>(this TShard shard, Shard.EntityStarted message) where TShard: IShard
         {
             var id = message.EntityId;
 
             // Get the buffered messages and remove the buffer
-            if (MessageBuffers.TryGetValue(id, out var buffer))
+            if (shard.MessageBuffers.TryGetValue(id, out var buffer))
             {
-                MessageBuffers = MessageBuffers.Remove(id);
+                shard.MessageBuffers = shard.MessageBuffers.Remove(id);
 
                 if (buffer.Count != 0)
                 {
-                    Log.Debug("Sending message buffer for entity [{0}] ([{1}] messages)", id, buffer.Count);
+                    shard.Log.Debug("Sending message buffer for entity [{0}] ([{1}] messages)", id, buffer.Count);
 
-                    GetEntity(id);
+                    shard.GetEntity(id);
 
                     // Now there is no deliveryBuffer we can try to redeliver
                     // and as the child exists, the message will be directly forwarded
                     foreach (var pair in buffer)
-                        DeliverMessage(pair.Item1, pair.Item2);
+                        shard.DeliverMessage(pair.Item1, pair.Item2);
                 }
             }
         }
 
-        private void DeliverMessage(object message, IActorRef sender)
+        private static void DeliverMessage<TShard>(this TShard shard, object message, IActorRef sender) where TShard : IShard
         {
-            var t = ExtractEntityId(message);
+            var t = shard.ExtractEntityId(message);
             var id = t.Item1;
             var payload = t.Item2;
 
             if (string.IsNullOrEmpty(id))
             {
-                Log.Warning("Id must not be empty, dropping message [{0}]", message.GetType());
-                _context.System.DeadLetters.Tell(message);
+                shard.Log.Warning("Id must not be empty, dropping message [{0}]", message.GetType());
+                shard.Context.System.DeadLetters.Tell(message);
             }
             else
             {
-                if (MessageBuffers.TryGetValue(id, out var buffer))
+                if (shard.MessageBuffers.TryGetValue(id, out var buffer))
                 {
-                    if (TotalBufferSize >= Settings.TunningParameters.BufferSize)
+                    if (shard.TotalBufferSize() >= shard.Settings.TunningParameters.BufferSize)
                     {
-                        Log.Warning("Buffer is full, dropping message for entity [{0}]", id);
-                        _context.System.DeadLetters.Tell(message);
+                        shard.Log.Warning("Buffer is full, dropping message for entity [{0}]", id);
+                        shard.Context.System.DeadLetters.Tell(message);
                     }
                     else
                     {
-                        Log.Debug("Message for entity [{0}] buffered", id);
-                        MessageBuffers = MessageBuffers.SetItem(id, buffer.Add(Tuple.Create(message, sender)));
+                        shard.Log.Debug("Message for entity [{0}] buffered", id);
+                        shard.MessageBuffers = shard.MessageBuffers.SetItem(id, buffer.Add(Tuple.Create(message, sender)));
                     }
                 }
                 else
-                    DeliverTo(id, message, payload, sender);
+                    shard.DeliverTo(id, message, payload, sender);
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="id">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="payload">TBD</param>
-        /// <param name="sender">TBD</param>
-        protected virtual void DeliverTo(string id, object message, object payload, IActorRef sender)
+        internal static void BaseDeliverTo<TShard>(this TShard shard, string id, object message, object payload, IActorRef sender) where TShard : IShard
         {
             var name = Uri.EscapeDataString(id);
-            var child = _context.Child(name);
+            var child = shard.Context.Child(name);
 
             if (Equals(child, ActorRefs.Nobody))
-                GetEntity(id).Tell(payload, sender);
+                shard.GetEntity(id).Tell(payload, sender);
             else
                 child.Tell(payload, sender);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
-        protected IActorRef GetEntity(string id)
+        internal static IActorRef GetEntity<TShard>(this TShard shard, string id) where TShard: IShard
         {
             var name = Uri.EscapeDataString(id);
-            var child = _context.Child(name);
+            var child = shard.Context.Child(name);
             if (Equals(child, ActorRefs.Nobody))
             {
-                Log.Debug("Starting entity [{0}] in shard [{1}]", id, ShardId);
+                shard.Log.Debug("Starting entity [{0}] in shard [{1}]", id, shard.ShardId);
 
-                child = _context.Watch(_context.ActorOf(EntityProps, name));
-                IdByRef = IdByRef.SetItem(child, id);
-                RefById = RefById.SetItem(id, child);
-                State = new ShardState(State.Entries.Add(id));
+                child = shard.Context.Watch(shard.Context.ActorOf(shard.EntityProps(id), name));
+                shard.IdByRef = shard.IdByRef.SetItem(child, id);
+                shard.RefById = shard.RefById.SetItem(id, child);
+                shard.State = new Shard.ShardState(shard.State.Entries.Add(id));
             }
 
             return child;
         }
 
-        #endregion
-    }
+        internal static int TotalBufferSize<TShard>(this TShard shard) where TShard : IShard =>
+            shard.MessageBuffers.Aggregate(0, (sum, entity) => sum + entity.Value.Count);
 
+        #endregion
+
+        public static Props Props(string typeName, ShardId shardId, Func<string, Props> entityProps, ClusterShardingSettings settings, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        {
+            switch (settings.StateStoreMode)
+            {
+                case StateStoreMode.Persistence when settings.RememberEntities:
+                    return Actor.Props.Create(() => new PersistentShard(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+                case StateStoreMode.DData when settings.RememberEntities:
+                    return Actor.Props.Create(() => new DDataShard(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
+                default:
+                    return Actor.Props.Create(() => new Shard(typeName, shardId, entityProps, settings, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+            }
+        }
+    }
 
     class RememberEntityStarter : ActorBase
     {
@@ -851,7 +787,7 @@ namespace Akka.Cluster.Sharding
 
         private void SendStart(IImmutableSet<EntityId> ids)
         {
-            foreach(var id in ids)
+            foreach (var id in ids)
             {
                 _region.Tell(new ShardRegion.StartEntity(id));
             }

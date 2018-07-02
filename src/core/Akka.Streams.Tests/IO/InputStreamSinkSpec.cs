@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -362,6 +362,17 @@ namespace Akka.Streams.Tests.IO
             Source.empty is used, the same exception is thrown by
             Materializer.
             */
+        }
+
+        [Fact]
+        public void InputStreamSink_should_throw_from_inputstream_read_if_terminated_abruptly()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = this.CreatePublisherProbe<ByteString>();
+            var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
+            materializer.Shutdown();
+
+            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<AbruptTerminationException>();
         }
 
         private static ByteString RandomByteString(int size)

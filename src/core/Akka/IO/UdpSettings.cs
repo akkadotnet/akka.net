@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="UdpSettings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -57,7 +64,7 @@ namespace Akka.IO
         /// Enable fine grained logging of what goes on inside the implementation. 
         /// Be aware that this may log more than once per message sent to the 
         /// actors of the tcp implementation.
-        /// </summary
+        /// </summary>
         public bool TraceLogging { get; }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -610,6 +610,22 @@ namespace Akka.Persistence.Tests
             var persistentActor = ActorOf(Props.Create(() => new RecoverMessageCausedRestart(Name)));
             persistentActor.Tell("boom");
             ExpectMsg("failed with TestException while processing boom");
+        }
+
+        [Fact]
+        public void PersistentActor_should_be_able_to_persist_events_that_happen_during_recovery()
+        {
+            var persistentActor = ActorOf(Props.Create(() => new PersistInRecovery(Name)));
+            persistentActor.Tell(GetState.Instance);
+            ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2");
+            persistentActor.Tell(GetState.Instance);
+            ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2", "rc-3");
+            persistentActor.Tell(new Cmd("invalid"));
+            persistentActor.Tell(GetState.Instance);
+            ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2", "rc-3", "invalid");
+            Watch(persistentActor);
+            persistentActor.Tell("boom");
+            ExpectTerminated(persistentActor);
         }
     }
 }

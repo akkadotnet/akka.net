@@ -1,9 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FastMerge.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Akka.Annotations;
 
 namespace Akka.DistributedData
 {
@@ -24,6 +26,7 @@ namespace Akka.DistributedData
     /// a full merge is performed instead of the fast forward merge.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public abstract class FastMerge<T> : IReplicatedData<T> where T : FastMerge<T>
     {
         /// <summary>
@@ -36,6 +39,7 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="newData">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected T AssignAncestor(T newData)
         {
             newData.Ancestor = Ancestor ?? this;
@@ -48,12 +52,14 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="newData">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected bool IsAncestorOf(T newData) => ReferenceEquals(newData.Ancestor, this);
 
         /// <summary>
         /// INTERNAL API: should be called from merge 
         /// </summary>
         /// <returns>TBD</returns>
+        [InternalApi]
         protected T ClearAncestor()
         {
             Ancestor = null;

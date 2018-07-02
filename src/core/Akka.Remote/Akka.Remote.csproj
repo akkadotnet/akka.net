@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
-
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote</AssemblyTitle>
     <Description>Remote actor support for Akka.NET</Description>
@@ -9,35 +8,24 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Remote.conf" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="DotNetty.Handlers" version="0.4.6" />
+    <PackageReference Include="DotNetty.Handlers" Version="0.4.8" />
     <PackageReference Include="Google.Protobuf" Version="3.3.0" />
   </ItemGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
-
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.6|AnyCPU'">
-    <Optimize>False</Optimize>
-  </PropertyGroup>
-
   <PropertyGroup>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
-
 </Project>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -18,23 +19,21 @@ namespace Akka.IO
     using static Udp;
     using ByteBuffer = ArraySegment<byte>;
 
-    // INTERNAL API
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     class UdpListener : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly IActorRef _bindCommander;
         private readonly Bind _bind;
-
         protected readonly ILoggingAdapter Log = Context.GetLogger();
-
-        private IActorRef _selector;
 
         public UdpListener(UdpExt udp, IActorRef bindCommander, Bind bind)
         {
             Udp = udp;
             _bindCommander = bindCommander;
             _bind = bind;
-
-            _selector = Context.Parent;
 
             Context.Watch(bind.Handler);        // sign death pact
 
@@ -85,38 +84,33 @@ namespace Akka.IO
 
         private bool ReadHandlers(object message)
         {
-            if (message is SuspendReading)
+            switch (message)
             {
-                // TODO: What should we do here - we cant cancel a pending ReceiveAsync
-                return true;
-            }
-            if (message is ResumeReading)
-            {
-                ReceiveAsync();
-                return true;
-            }
-            if (message is SocketReceived)
-            {
-                var received = (SocketReceived) message;
-                DoReceive(received.EventArgs, _bind.Handler);
-                return true;
+                case SuspendReading _:
+                    // TODO: What should we do here - we cant cancel a pending ReceiveAsync
+                    return true;
+                case ResumeReading _:
+                    ReceiveAsync();
+                    return true;
+                case SocketReceived _:
+                    var received = (SocketReceived) message;
+                    DoReceive(received.EventArgs, _bind.Handler);
+                    return true;
+                case Unbind _:
+                    Log.Debug("Unbinding endpoint [{0}]", _bind.LocalAddress);
+                    try
+                    {
+                        Socket.Dispose();
+                        Sender.Tell(Unbound.Instance);
+                        Log.Debug("Unbound endpoint [{0}], stopping listener", _bind.LocalAddress);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
+                    return true;
             }
 
-            if (message is Unbind)
-            {
-                Log.Debug("Unbinding endpoint [{0}]", _bind.LocalAddress);
-                try
-                {
-                    Socket.Dispose();
-                    Sender.Tell(Unbound.Instance);
-                    Log.Debug("Unbound endpoint [{0}], stopping listener", _bind.LocalAddress);
-                }
-                finally
-                {
-                    Context.Stop(Self);
-                }
-                return true;
-            }
             return false;
         }
 
@@ -124,7 +118,7 @@ namespace Akka.IO
         {
             try
             {
-                handler.Tell(new Received(ByteString.FromBytes(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint));
+                handler.Tell(new Received(ByteString.CopyFrom(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint));
                 ReceiveAsync();
             }
             finally

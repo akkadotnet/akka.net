@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Logging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -169,8 +169,8 @@ namespace Akka.Event
         /// Retrieves the log level associated with the specified <typeparamref name="T">log event</typeparamref>.
         /// </summary>
         /// <typeparam name="T">The type of the log event.</typeparam>
-        /// <exception cref="ArgumentException">The exception is thrown if the given <paramref name="logLevel"/> is unknown.</exception>
-        /// <returns>The log level associated with the specified type.</returns>
+        /// <exception cref="ArgumentException">The exception is thrown if the given <typeparamref name="T">log event</typeparamref> is unknown.</exception>
+        /// <returns>The log level associated with the specified <see cref="LogEvent"/> type.</returns>
         public static LogLevel LogLevelFor<T>() where T:LogEvent
         {
             var type = typeof(T);

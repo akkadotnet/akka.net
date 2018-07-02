@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="AsyncWriteProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="AsyncWriteProxyEx.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,9 +129,9 @@ namespace Akka.Cluster.Sharding.Tests
                 if (!(message is InitTimeout))
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore)
+            else if (message is SetStore msg)
             {
-                _store = ((SetStore)message).Store;
+                _store = msg.Store;
                 Stash.UnstashAll();
                 _isInitialized = true;
             }
@@ -337,30 +337,27 @@ namespace Akka.Cluster.Sharding.Tests
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is ReplayedMessage rm)
+            switch (message)
             {
-                //rm.Persistent
-                _replayCallback(rm.Persistent);
+                case ReplayedMessage rm:
+                    //rm.Persistent
+                    _replayCallback(rm.Persistent);
+                    return true;
+                case RecoverySuccess _:
+                    _replayCompletionPromise.SetResult(new object());
+                    Context.Stop(Self);
+                    return true;
+                case ReplayMessagesFailure failure:
+                    _replayCompletionPromise.SetException(failure.Cause);
+                    Context.Stop(Self);
+                    return true;
+                case ReceiveTimeout _:
+                    var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
+                    _replayCompletionPromise.SetException(timeoutException);
+                    Context.Stop(Self);
+                    return true;
             }
-            else if (message is RecoverySuccess)
-            {
-                _replayCompletionPromise.SetResult(new object());
-                Context.Stop(Self);
-            }
-            else if (message is ReplayMessagesFailure)
-            {
-                var failure = message as ReplayMessagesFailure;
-                _replayCompletionPromise.SetException(failure.Cause);
-                Context.Stop(Self);
-            }
-            else if (message is ReceiveTimeout)
-            {
-                var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
-                _replayCompletionPromise.SetException(timeoutException);
-                Context.Stop(Self);
-            }
-            else return false;
-            return true;
+            return false;
         }
     }
 
@@ -391,71 +388,82 @@ namespace Akka.Cluster.Sharding.Tests
             return self.AskEx<T>(messageFactory, null, cancellationToken);
         }
 
-        public static Task<T> AskEx<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static async Task<T> AskEx<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return AskEx(self, messageFactory, provider, timeout, cancellationToken).CastTask<object, T>();
+            return (T)await AskEx(self, messageFactory, provider, timeout, cancellationToken);
         }
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
             if (InternalCurrentActorCellKeeper.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
+            if (self is IInternalActorRef iar)
+                return iar.Provider;
 
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            if (self is ActorSelection asel)
+                return ResolveProvider(asel.Anchor);
 
             return null;
         }
 
-        private static Task<object> AskEx(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider, TimeSpan? timeout, CancellationToken cancellationToken)
+        private static async Task<object> AskEx(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             var result = new TaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
-            List<CancellationTokenRegistration> ctrList = new List<CancellationTokenRegistration>(2);
+            var ctrList = new List<CancellationTokenRegistration>(2);
 
-            if (timeout != System.Threading.Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
+            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetCanceled()));
+
+                ctrList.Add(timeoutCancellation.Token.Register(() =>
+                {
+                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
+                }));
+
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
             if (cancellationToken.CanBeCanceled)
+            {
                 ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
+            }
 
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
-            //callback to unregister from tempcontainer
-            Action unregister =
-                () =>
-                {
-                    // cancelling timeout (if any) in order to prevent memory leaks
-                    // (a reference to 'result' variable in CancellationToken's callback)
-                    if (timeoutCancellation != null)
-                    {
-                        timeoutCancellation.Cancel();
-                        timeoutCancellation.Dispose();
-                    }
-                    for (var i = 0; i < ctrList.Count; i++)
-                    {
-                        ctrList[i].Dispose();
-                    }
-                    provider.UnregisterTempActor(path);
-                };
 
-            var future = new FutureActorRef(result, unregister, path);
+            var future = new FutureActorRef(result, () => { }, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
+
             self.Tell(messageFactory(future), future);
-            return result.Task;
+
+            try
+            {
+                return await result.Task;
+            }
+            finally
+            {
+                //callback to unregister from tempcontainer
+
+                provider.UnregisterTempActor(path);
+
+                for (var i = 0; i < ctrList.Count; i++)
+                {
+                    ctrList[i].Dispose();
+                }
+
+                if (timeoutCancellation != null)
+                {
+                    timeoutCancellation.Dispose();
+                }
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,6 +114,11 @@ namespace Akka.Persistence.Sql.Common
         public bool AutoInitialize { get; private set; }
 
         /// <summary>
+        /// The default serializer being used if no type match override is specified
+        /// </summary>
+        public string DefaultSerializer { get; private set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotStoreSettings"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the settings.</param>
@@ -130,6 +135,7 @@ namespace Akka.Persistence.Sql.Common
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
+            DefaultSerializer = config.GetString("serializer");
         }
 
         /// <summary>

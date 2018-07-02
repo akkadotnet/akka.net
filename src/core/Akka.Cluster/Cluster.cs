@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,8 +52,6 @@ namespace Akka.Cluster
     /// </summary>
     public class Cluster : IExtension
     {
-        //TODO: Issue with missing overrides for Get and Lookup
-
         /// <summary>
         /// Retrieves the extension from the specified actor system.
         /// </summary>
@@ -95,10 +93,9 @@ namespace Akka.Cluster
             System = system;
             Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
-            var provider = system.Provider as ClusterActorRefProvider;
-            if (provider == null)
+            if (!(system.Provider is IClusterActorRefProvider provider))
                 throw new ConfigurationException(
-                    $"ActorSystem {system} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
+                    $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
@@ -223,6 +220,37 @@ namespace Akka.Cluster
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
+        /// <summary>
+        /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
+        /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
+        /// once current cluster node will be moved into <see cref="MemberStatus.Up"/> state,
+        /// or cancelled when provided <paramref name="token"/> cancellation triggers. Cancelling this 
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
+        /// leave the cluster gracefully.
+        /// 
+        /// An actor system can only join a cluster once. Additional attempts will be ignored.
+        /// When it has successfully joined it must be restarted to be able to join another
+        /// cluster or to join the same cluster again.
+        /// 
+        /// Once cluster has been shutdown, <see cref="JoinAsync"/> will always fail until an entire 
+        /// actor system is manually restarted.
+        /// </summary>
+        /// <param name="address">The address of the node we want to join.</param>
+        /// <param name="token">An optional cancellation token used to cancel returned task before it completes.</param>
+        /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
+        public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
+        {
+            var completion = new TaskCompletionSource<NotUsed>();
+            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
+            this.RegisterOnMemberRemoved(() => completion.TrySetException(
+                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided address: {address}")));
+
+            Join(address);
+
+            return completion.Task.WithCancellation(token);
+        }
+
         private Address FillLocal(Address address)
         {
             // local address might be used if grabbed from IActorRef.Path.Address
@@ -249,6 +277,36 @@ namespace Akka.Cluster
         {
             ClusterCore.Tell(
                 new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
+        }
+
+        /// <summary>
+        /// Joins the specified seed nodes without defining them in config.
+        /// Especially useful from tests when Addresses are unknown before startup time.
+        /// Returns a task, which completes once current cluster node has successfully joined the cluster
+        /// or which cancels, when a cancellation <paramref name="token"/> has been cancelled. Cancelling this 
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
+        /// leave the cluster gracefully.
+        /// 
+        /// An actor system can only join a cluster once. Additional attempts will be ignored.
+        /// When it has successfully joined it must be restarted to be able to join another
+        /// cluster or to join the same cluster again.
+        /// 
+        /// Once cluster has been shutdown, <see cref="JoinSeedNodesAsync"/> will always fail until an entire 
+        /// actor system is manually restarted.
+        /// </summary>
+        /// <param name="seedNodes">TBD</param>
+        /// <param name="token">TBD</param>
+        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
+        {
+            var completion = new TaskCompletionSource<NotUsed>();
+            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
+            this.RegisterOnMemberRemoved(() => completion.TrySetException(
+                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}.")));
+
+            JoinSeedNodes(seedNodes);
+
+            return completion.Task.WithCancellation(token);
         }
 
         /// <summary>
@@ -367,7 +425,7 @@ namespace Akka.Cluster
         /// ActorRef with the cluster's <see cref="SelfAddress"/>, unless address' host is already defined
         /// </summary>
         /// <param name="actorRef">An <see cref="IActorRef"/> belonging to the current node.</param>
-        /// <returns>The absolute remote <see cref="ActorPath"/> of <see cref="actorRef"/>.</returns>
+        /// <returns>The absolute remote <see cref="ActorPath"/> of <paramref name="actorRef"/>.</returns>
         public ActorPath RemotePathOf(IActorRef actorRef)
         {
             var path = actorRef.Path;
@@ -526,6 +584,16 @@ namespace Akka.Cluster
         internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
+        }
+    }
+
+    /// <summary>
+    /// Exception thrown, when <see cref="Cluster.JoinAsync"/> or <see cref="Cluster.JoinSeedNodesAsync"/> fails to succeed.
+    /// </summary>
+    public class ClusterJoinFailedException : AkkaException
+    {
+        public ClusterJoinFailedException(string message) : base(message)
+        {
         }
     }
 }

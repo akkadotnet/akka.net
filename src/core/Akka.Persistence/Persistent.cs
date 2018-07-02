@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Serialization;
 
@@ -275,6 +276,7 @@ namespace Akka.Persistence
     /// <summary>
     /// INTERNAL API.
     /// </summary>
+    [InternalApi]
     [Serializable]
     public class Persistent : IPersistentRepresentation, IEquatable<IPersistentRepresentation>
     {

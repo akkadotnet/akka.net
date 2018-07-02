@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -494,6 +494,7 @@ namespace Akka.DistributedData
             Receive<Subscribe>(s => ReceiveSubscribe(s.Key, s.Subscriber));
             Receive<Unsubscribe>(u => ReceiveUnsubscribe(u.Key, u.Subscriber));
             Receive<Terminated>(t => ReceiveTerminated(t.ActorRef));
+            Receive<ClusterEvent.MemberWeaklyUp>(m => ReceiveMemberWeaklyUp(m.Member));
             Receive<ClusterEvent.MemberUp>(m => ReceiveMemberUp(m.Member));
             Receive<ClusterEvent.MemberRemoved>(m => ReceiveMemberRemoved(m.Member));
             Receive<ClusterEvent.IMemberEvent>(_ => { });
@@ -1016,7 +1017,7 @@ namespace Akka.DistributedData
                         _statusTotChunks = totChunks;
                     }
                     var chunk = (int)(_statusCount % totChunks);
-                    var entries = _dataEntries.Where(x => Math.Abs(x.Key.GetHashCode()) % totChunks == chunk)
+                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key)) % totChunks == chunk)
                         .Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key)))
                         .ToImmutableDictionary();
                     var status = new Internal.Status(entries, chunk, totChunks);
@@ -1063,7 +1064,7 @@ namespace Akka.DistributedData
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
-                    : _dataEntries.Keys.Where(x => Math.Abs(x.GetHashCode()) % totChunks == chunk))
+                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x)) % totChunks == chunk))
                 .ToImmutableHashSet();
 
             var otherMissingKeys = myKeys.Except(otherKeys);
@@ -1190,6 +1191,14 @@ namespace Akka.DistributedData
                     if (!_subscribers.ContainsKey(k) && !_newSubscribers.ContainsKey(k))
                         _subscriptionKeys = _subscriptionKeys.Remove(k);
                 }
+            }
+        }
+
+        private void ReceiveMemberWeaklyUp(Member m)
+        {
+            if (MatchingRole(m) && m.Address != _selfAddress)
+            {
+                _weaklyUpNodes = _weaklyUpNodes.Add(m.Address);
             }
         }
 

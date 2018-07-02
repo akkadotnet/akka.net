@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -136,6 +136,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <param name="flow">TBD</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static Source<TOut, TMat> SelectError<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -378,10 +379,13 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
+        /// <para>
         /// Backpressures when downstream backpressures
+        /// </para>
         /// <para>
         /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
         /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
@@ -390,6 +394,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
         public static Source<TOut, TMat> TakeWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
@@ -1101,7 +1106,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
-        /// Backpressures when depending on OverflowStrategy
+        /// Backpressures when downstream backpressures or depending on OverflowStrategy:
         /// <para/> * Backpressure - backpressures when buffer is full
         /// <para/> * DropHead, DropTail, DropBuffer - never backpressures
         /// <para/> * Fail - fails the stream if buffer gets full
@@ -1553,7 +1558,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1595,7 +1600,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -2033,6 +2038,24 @@ namespace Akka.Streams.Dsl
         public static Source<TOut, TMat> Concat<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Concat(flow, other);
+        }
+
+        /// <summary>
+        /// Combines the given <see cref="Source{TOut, TMat}"/> to this <see cref="Source{TOut,TMat}"/> with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Source<T, TMat1> flow, Source<T, TMat2> other, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
+        {
+            return Source.CombineMaterialized(flow, other, strategy, combineMaterializers);
         }
 
         /// <summary>

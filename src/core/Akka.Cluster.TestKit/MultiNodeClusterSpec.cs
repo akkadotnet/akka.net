@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -246,7 +246,7 @@ namespace Akka.Cluster.TestKit
             if (ClusterView.Members.IsEmpty)
             {
                 Cluster.Join(GetAddress(Myself));
-                AwaitAssert(() => Assert.True(ClusterView.Members.Select(m => m.Address).Contains(GetAddress(Myself))));
+                AwaitAssert(() => Assert.Contains(GetAddress(Myself), ClusterView.Members.Select(m => m.Address)));
             }
         }
 
@@ -362,14 +362,14 @@ namespace Akka.Cluster.TestKit
                     AwaitAssert(() =>
                     {
                         foreach (var a in canNotBePartOfMemberRing)
-                            ClusterView.Members.Select(m => m.Address).Contains(a).ShouldBeFalse();
+                            _assertions.AssertFalse(ClusterView.Members.Select(m => m.Address).Contains(a));
                     });
-                AwaitAssert(() => ClusterView.Members.Count.ShouldBe(numbersOfMembers));
-                AwaitAssert(() => ClusterView.Members.All(m => m.Status == MemberStatus.Up).ShouldBeTrue("All members should be up"));
+                AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
+                AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up), "All members should be up"));
                 // clusterView.leader is updated by LeaderChanged, await that to be updated also
                 var firstMember = ClusterView.Members.FirstOrDefault();
                 var expectedLeader = firstMember == null ? null : firstMember.Address;
-                AwaitAssert(() => ClusterView.Leader.ShouldBe(expectedLeader));
+                AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
             });
         }
 

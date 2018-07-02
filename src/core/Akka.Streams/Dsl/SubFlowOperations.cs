@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SubFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -139,6 +139,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <param name="flow">TBD</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static SubFlow<TOut, TMat, TClosed> SelectError<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<Exception, Exception> selector)
         {
@@ -388,18 +389,23 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
+        /// <para>
         /// Backpressures when downstream backpressures
+        /// </para>
         /// <para>
         /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </para>
-        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
+        /// <seealso cref="Limit{T,TMat,TClosed}"/> <seealso cref="LimitWeighted{T,TMat,TClosed}"/>
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
@@ -609,7 +615,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Similar to <see cref="Scan{TOut1,TOut2,TMat}"/> but with a asynchronous function,
+        /// Similar to <see cref="Scan{TOut1,TOut2,TMat,TClosed}"/> but with a asynchronous function,
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>
         /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
@@ -1135,7 +1141,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
-        /// Backpressures when depending on OverflowStrategy
+        /// Backpressures when downstream backpressures or depending on OverflowStrategy:
         /// <para/> * Backpressure - backpressures when buffer is full
         /// <para/> * DropHead, DropTail, DropBuffer - never backpressures
         /// <para/> * Fail - fails the stream if buffer gets full
@@ -1409,7 +1415,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1452,7 +1458,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
