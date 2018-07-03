@@ -97,7 +97,8 @@ namespace Akka.Cluster.Sharding.Tests
         public PersistentClusterShardingRememberEntitiesNewExtractorSpec() : this(new PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig()) { }
         protected PersistentClusterShardingRememberEntitiesNewExtractorSpec(PersistentClusterShardingRememberEntitiesSpecNewExtractorConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesNewExtractorSpec)) { }
     }
-    public class DDataClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
+    // DData has no support for remember-entities at this point
+    internal class DDataClusterShardingRememberEntitiesNewExtractorSpec : ClusterShardingRememberEntitiesNewExtractorSpec
     {
         public DDataClusterShardingRememberEntitiesNewExtractorSpec() : this(new DDataClusterShardingRememberEntitiesNewExtractorSpecConfig()) { }
         protected DDataClusterShardingRememberEntitiesNewExtractorSpec(DDataClusterShardingRememberEntitiesNewExtractorSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesNewExtractorSpec)) { }
