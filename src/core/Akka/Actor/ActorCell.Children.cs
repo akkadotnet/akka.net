@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Collections.Immutable;
+using System.Text;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -20,18 +22,58 @@ namespace Akka.Actor
     {
         private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
+        private ImmutableDictionary<string, FunctionRef> _functionRefsDoNotCallMeDirectly = ImmutableDictionary<string, FunctionRef>.Empty;
 
         /// <summary>
         /// The child container collection, used to house information about all child actors.
         /// </summary>
         public IChildrenContainer ChildrenContainer
         {
-            get { return _childrenContainerDoNotCallMeDirectly; }
+            get { return _childrenContainerDoNotCallMeDirectly; } 
         }
 
         private IReadOnlyCollection<IActorRef> Children
         {
             get { return ChildrenContainer.Children; }
+        }
+
+        private ImmutableDictionary<string, FunctionRef> FunctionRefs => Volatile.Read(ref _functionRefsDoNotCallMeDirectly);
+        internal bool TryGetFunctionRef(string name, out FunctionRef functionRef) =>
+            FunctionRefs.TryGetValue(name, out functionRef);
+
+        internal bool TryGetFunctionRef(string name, int uid, out FunctionRef functionRef) =>
+            FunctionRefs.TryGetValue(name, out functionRef) && (uid == ActorCell.UndefinedUid || uid == functionRef.Path.Uid);
+
+        internal FunctionRef AddFunctionRef(Action<IActorRef, object> tell, string suffix = "")
+        {
+            var r = GetRandomActorName("$$");
+            var n = string.IsNullOrEmpty(suffix) ? r : r + "-" + suffix;
+            var childPath = new ChildActorPath(Self.Path, n, NewUid());
+            var functionRef = new FunctionRef(childPath, SystemImpl.Provider, SystemImpl.EventStream, tell);
+
+            return ImmutableInterlocked.GetOrAdd(ref _functionRefsDoNotCallMeDirectly, childPath.Name, functionRef);
+        }
+
+        internal bool RemoveFunctionRef(FunctionRef functionRef)
+        {
+            if (functionRef.Path.Parent != Self.Path) throw new InvalidOperationException($"Trying to remove FunctionRef {functionRef.Path} from wrong ActorCell");
+
+            var name = functionRef.Path.Name;
+            if (ImmutableInterlocked.TryRemove(ref _functionRefsDoNotCallMeDirectly, name, out var fref))
+            {
+                fref.Stop();
+                return true;
+            }
+            else return false;
+        }
+
+        protected void StopFunctionRefs()
+        {
+            var refs = Interlocked.Exchange(ref _functionRefsDoNotCallMeDirectly, ImmutableDictionary<string, FunctionRef>.Empty);
+            foreach (var pair in refs)
+            {
+                pair.Value.Stop();
+            }
         }
 
         /// <summary>
@@ -88,10 +130,11 @@ namespace Akka.Actor
             return MakeChild(props, name, isAsync, isSystemService);
         }
 
-        private string GetRandomActorName()
+        private string GetRandomActorName(string prefix = "$")
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
-            return "$" + id.Base64Encode();
+            var sb = new StringBuilder(prefix);
+            return id.Base64Encode(sb).ToString();
         }
 
         /// <summary>
@@ -106,22 +149,46 @@ namespace Akka.Actor
                 var repointableActorRef = child as RepointableActorRef;
                 if (repointableActorRef == null || repointableActorRef.IsStarted)
                 {
-                    while (true)
-                    {
-                        var oldChildren = ChildrenContainer;
-                        var newChildren = oldChildren.ShallDie(child);
-
-                        if (SwapChildrenRefs(oldChildren, newChildren)) break;
-                    }
+                    UpdateChildrenRefs(c => c.ShallDie(child));
                 }
             }
             ((IInternalActorRef)child).Stop();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool SwapChildrenRefs(IChildrenContainer oldChildren, IChildrenContainer newChildren)
+        /// <summary>
+        /// Swaps out the children container, by calling <paramref name="updater"/>  to produce the new container.
+        /// If the underlying container has been updated while <paramref name="updater"/> was called,
+        /// <paramref name="updater"/> will be called again with the new container. This will repeat until the 
+        /// container can be swapped out, or until <see cref="Tuple{T1,T2,T3}.Item1"/> contains <c>false</c>.
+        /// <para>The returned tuple should contain:</para>
+        /// <para>Item1: <c>true</c> if the container should be updated; <c>false</c> to not update and return Item3</para>
+        /// <para>Item2: The new container (will only be used if Item1=<c>true</c>)</para>
+        /// <para>Item3: The return value</para>
+        /// </summary>
+        /// <param name="updater">A function that returns a new container.</param>
+        /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
+        private TReturn UpdateChildrenRefs<TReturn>(Func<IChildrenContainer, Tuple<bool, IChildrenContainer, TReturn>> updater)
         {
-            return ReferenceEquals(Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, newChildren, oldChildren), oldChildren);
+            while (true)
+            {
+                var current = ChildrenContainer;
+                var t = updater(current);
+                if (!t.Item1) return t.Item3;
+                if (Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, t.Item2, current) == current) return t.Item3;
+            }
+        }
+
+        /// <summary>
+        /// Swaps out the children container, by calling <paramref name="updater" />  to produce the new container.
+        /// If the underlying container has been updated while <paramref name="updater" /> was called,
+        /// <paramref name="updater" /> will be called again with the new container. This will repeat until the
+        /// container can be swapped out.
+        /// </summary>
+        /// <param name="updater">A function that returns a new container.</param>
+        /// <returns>The new updated <see cref="ChildrenContainer"/></returns>
+        private IChildrenContainer UpdateChildrenRefs(Func<IChildrenContainer, IChildrenContainer> updater)
+        {
+            return InterlockedSpin.Swap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
 
         /// <summary>
@@ -130,13 +197,7 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         public void ReserveChild(string name)
         {
-            while (true)
-            {
-                var oldChildren = ChildrenContainer;
-                var newChildren = oldChildren.Reserve(name);
-
-                if (SwapChildrenRefs(oldChildren, newChildren)) break;
-            }
+            UpdateChildrenRefs(c => c.Reserve(name));
         }
 
         /// <summary>
@@ -145,13 +206,8 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         protected void UnreserveChild(string name)
         {
-            while (true)
-            {
-                var oldChildren = ChildrenContainer;
-                var newChildren = oldChildren.Unreserve(name);
+            UpdateChildrenRefs(c => c.Unreserve(name));
 
-                if (SwapChildrenRefs(oldChildren, newChildren)) break;
-            }
         }
 
         /// <summary>
@@ -161,25 +217,29 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public ChildRestartStats InitChild(IInternalActorRef actor)
         {
-            var name = actor.Path.Name;
-            while (true)
+            return UpdateChildrenRefs(cc =>
             {
-                var cc = ChildrenContainer;
-                if (cc.TryGetByName(name, out var old))
+                IChildStats stats;
+                var name = actor.Path.Name;
+                if (cc.TryGetByName(name, out stats))
                 {
-                    switch (old)
+                    var old = stats as ChildRestartStats;
+                    if (old != null)
                     {
-                        case ChildRestartStats restartStats:
-                            return restartStats;
-                        case ChildNameReserved _:
-                            var crs = new ChildRestartStats(actor);
-                            if (SwapChildrenRefs(cc, cc.Add(name, crs)))
-                                return crs;
-                            break;
+                        //Do not update. Return old
+                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, old);
+                    }
+                    if (stats is ChildNameReserved)
+                    {
+                        var crs = new ChildRestartStats(actor);
+                        var updatedContainer = cc.Add(name, crs);
+                        //Update (if it's still cc) and return the new crs
+                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(true, updatedContainer, crs);
                     }
                 }
-                else return null;
-            }
+                //Do not update. Return null
+                return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, null);
+            });
         }
 
         /// <summary>
@@ -189,15 +249,16 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
-            while (true)
+            return UpdateChildrenRefs(cc =>
             {
-                if (ChildrenContainer is TerminatingChildrenContainer c)
-                {
-                    var n = c.CreateCopyWithReason(reason);
-                    if (SwapChildrenRefs(c, n)) return true;
-                }
-                else return false;
-            }
+                var c = cc as TerminatingChildrenContainer;
+                if (c != null)
+                    //The arguments says: Update; with a new reason; and return true
+                    return new Tuple<bool, IChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
+                
+                //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
+                return new Tuple<bool, IChildrenContainer, bool>(false, cc, false);
+            });
         }
 
         /// <summary>
@@ -205,7 +266,7 @@ namespace Akka.Actor
         /// </summary>
         protected void SetTerminated()
         {
-            Interlocked.Exchange(ref _childrenContainerDoNotCallMeDirectly, TerminatedChildrenContainer.Instance);
+            UpdateChildrenRefs(c => TerminatedChildrenContainer.Instance);
         }
 
         /// <summary>
@@ -329,18 +390,21 @@ namespace Akka.Actor
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(name, out stats))
+                if (TryGetChildRestartStatsByName(name, out var stats))
                 {
                     child = stats.Child;
+                    return true;
+                }
+                else if (TryGetFunctionRef(name, out var functionRef))
+                {
+                    child = functionRef;
                     return true;
                 }
             }
             else
             {
                 var nameAndUid = SplitNameAndUid(name);
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
+                if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
                 {
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
@@ -348,6 +412,11 @@ namespace Akka.Actor
                         child = stats.Child;
                         return true;
                     }
+                }
+                else if (TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                {
+                    child = functionRef;
+                    return true;
                 }
             }
             child = ActorRefs.Nobody;
@@ -361,29 +430,14 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
         {
-            var terminating = ChildrenContainer as TerminatingChildrenContainer;
-            if (terminating != null)
+            if (ChildrenContainer is TerminatingChildrenContainer terminating)
             {
-                var n = RemoveChild(child);
-                if (!(n is TerminatingChildrenContainer))
-                    return terminating.Reason;
-                else
-                    return null;
+                var newContainer = UpdateChildrenRefs(c => c.Remove(child));
+                if (newContainer is TerminatingChildrenContainer) return null;
+                return terminating.Reason;
             }
-
-            RemoveChild(child);
+            UpdateChildrenRefs(c => c.Remove(child));
             return null;
-        }
-
-        private IChildrenContainer RemoveChild(IActorRef child)
-        {
-            while (true)
-            {
-                var oldChildren = ChildrenContainer;
-                var newChildren = oldChildren.Remove(child);
-
-                if (SwapChildrenRefs(oldChildren, newChildren)) return newChildren;
-            }
         }
 
         private static string CheckName(string name)
@@ -457,7 +511,7 @@ namespace Akka.Actor
 
                 if (Mailbox != null && IsFailed)
                 {
-                    for (var i = 1; i <= Mailbox.SuspendCount(); i++)
+                    for(var i = 1; i <= Mailbox.SuspendCount(); i++)
                         actor.Suspend();
                 }
 
