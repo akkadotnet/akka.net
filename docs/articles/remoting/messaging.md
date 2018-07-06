@@ -67,7 +67,7 @@ What's really going on there?
 
 The `Sender`, an `IActorRef`, is actually an `Akka.Remote.RemoteActorRef`! But the fact that this actor reference resides elsewhere on the network is a detail that's transparent to the actor code you wrote!
 
-In essence, minus the initial `ActorSelection` used to start remote communication between the two `ActorSystem`s, any actor in either `ActorSystem` could reply to eachother without knowing or caring that they exist elsewhere on the network. That's pretty cool! 
+In essence, minus the initial `ActorSelection` used to start remote communication between the two `ActorSystem`s, any actor in either `ActorSystem` could reply to each other without knowing or caring that they exist elsewhere on the network. That's pretty cool! 
 ## `RemoteActorRef` and Location Transparency
 What `RemoteActorRef` gives us is a magical property called [Location Transparency](/concepts/location-transparency.md).
 
@@ -78,7 +78,7 @@ It's the job of the `RemoteActorRef` to make a remote actor running on in a diff
 
 Regardless of where the actor actually resides, it doesn't affect your code one way or another.
 
-**So this has one profound implicat on your Akka.NET applications - all of your actor code *is already able to run on the network by default*. **
+**So this has one profound implication on your Akka.NET applications - all of your actor code** ***is already able to run on the network by default.***
 
 Therefore, many of the code samples in *Akka.NET Remoting* won't look very "networky." That's on purpose. That's Akka.NET taking care of the heavy lifting for us!
 

@@ -84,7 +84,7 @@ is known up front: device groups and device actors are created on-demand. The st
     the acknowledgment, the receiver, i.e. the device, will be able to learn its `IActorRef` and send direct messages to its device actor in the future.
 
 Now that the steps are defined, we only need to define the messages that we will use to communicate requests and
-their acknowledgement:
+their acknowledgment:
 
 [!code-csharp[DeviceManager.scala](../../examples/Tutorials/Tutorial3/DeviceManager.cs?name=device-manager-msgs)]
 
