@@ -10,8 +10,11 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.TestKit;
+using Akka.TestKit.Xunit2.Internals;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
@@ -28,8 +31,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.loglevel = DEBUG
+                akka.actor.provider = cluster
                 akka.cluster.pub-sub.gossip-interval = 500ms
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
@@ -53,14 +56,17 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
     public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
     {
         private readonly DistributedPubSubRestartSpecConfig _config;
+        private readonly ITestOutputHelper _output;
 
-        public DistributedPubSubRestartSpec() : this(new DistributedPubSubRestartSpecConfig())
+        public DistributedPubSubRestartSpec(ITestOutputHelper output) : this(new DistributedPubSubRestartSpecConfig())
         {
+            _output = output;
         }
 
         protected DistributedPubSubRestartSpec(DistributedPubSubRestartSpecConfig config) : base(config, typeof(DistributedPubSubRestartSpec))
         {
             _config = config;
+            InitializeLogger(Sys);
         }
 
         [MultiNodeFact]
@@ -122,8 +128,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     {
                         AwaitAssert(() =>
                         {
-                            Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null));
-                            ExpectMsg<ActorIdentity>(1.Seconds()).Subject.Should().NotBeNull();
+                            var p = CreateTestProbe();
+                            Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), p.Ref);
+                            p.ExpectMsg<ActorIdentity>(1.Seconds()).Subject.Should().NotBeNull();
                         });
                     });
 
@@ -144,6 +151,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                         ConfigurationFactory
                             .ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
+
+                    InitializeLogger(newSystem);
 
                     try
                     {
@@ -168,6 +177,16 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     }
                 }, _config.Third);
             });
+        }
+
+        private void InitializeLogger(ActorSystem system)
+        {
+            if (_output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(_output)), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
         }
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
