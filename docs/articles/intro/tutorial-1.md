@@ -59,12 +59,14 @@ guide us through these initial steps.
 
 When one creates an actor in Akka.NET it always belongs to a certain parent.
 This means that actors are always organized into a tree. In general, creating an
-actor can only happen from inside another actor. This creator actor becomes the
-_parent_ of the newly created _child_ actor. You might ask then, who is the
-parent of the _first_ actor you create? As we have seen in the previous
-chapters, to create a top-level actor one must call `System.ActorOf()`. This
-does not create a "freestanding" actor though, instead, it injects the
-corresponding actor as a child into an already existing tree:
+actor can only happen from inside another actor. This 'creator' actor becomes
+the _parent_ of the newly created _child_ actor. You might ask then, who is the
+parent of the _first_ actor you create? To create a top-level actor one must
+first initialise an _actor system_, let's refer to this as the object `System`.
+This is followed by a call to `System.ActorOf()` which returns a reference to
+the newly created actor. This does not create a "freestanding" actor though,
+instead, it injects the corresponding actor as a child into an already existing
+tree:
 
 ![box diagram of the architecture](/images/actor_top_tree.png)
 
@@ -89,7 +91,7 @@ _supervising_ every actor living as a child of them, i.e. under their path. We
 will explain supervision in more detail, all you need to know now is that every
 unhandled failure from actors bubbles up to their parent that, in turn, can
 decide how to handle this failure. These predefined actors are guardians in the
-sense that they are the final lines of defense, where all unhandled failures
+sense that they are the final lines of defence, where all unhandled failures
 from user, or system, actors end up.
 
 > Does the root guardian (the root path `/`) have a parent? As it turns out, it
