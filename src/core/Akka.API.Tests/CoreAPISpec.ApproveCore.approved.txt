@@ -113,6 +113,7 @@ namespace Akka.Actor
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
         public void Stop() { }
+        protected void StopFunctionRefs() { }
         public void Suspend() { }
         protected void TellWatchersWeDied() { }
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject) { }
@@ -1702,12 +1703,15 @@ namespace Akka.Actor
         protected override void PreRestart(System.Exception reason, object message) { }
         protected override bool Receive(object message) { }
     }
-    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
+    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Actor.Terminated>
     {
         public Terminated(Akka.Actor.IActorRef actorRef, bool existenceConfirmed, bool addressTerminated) { }
         public Akka.Actor.IActorRef ActorRef { get; }
         public bool AddressTerminated { get; }
         public bool ExistenceConfirmed { get; }
+        public bool Equals(Akka.Actor.Terminated other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class TerminatedProps : Akka.Actor.Props
@@ -4575,6 +4579,7 @@ namespace Akka.Util
     {
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         public static string Base64Encode(this long value) { }
+        public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
         public static string Base64Encode(this string s) { }
     }
     public class static BitArrayHelpers
