@@ -11,6 +11,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -45,6 +46,8 @@ namespace Akka.Streams.Tests.Dsl
 
             public override bool Equals(object obj) => obj is Reply reply && Equals(reply);
             public override int GetHashCode() => Payload;
+
+            public override string ToString() => $"Reply({Payload})";
         }
 
         sealed class Replier : UntypedActor
@@ -116,10 +119,27 @@ namespace Akka.Streams.Tests.Dsl
 
         #endregion
 
+        private static readonly Config SpecConfig = ConfigurationFactory.ParseString(@"
+            akka.test.stream-dispatcher {
+              type = Dispatcher
+              executor = ""fork-join-executor""
+              fork-join-executor {
+                parallelism-min = 8
+                parallelism-max = 8
+              }
+              mailbox-requirement = ""Akka.Dispatch.IUnboundedMessageQueueSemantics""
+            }
+            
+            akka.stream {
+              materializer {
+                dispatcher = ""akka.test.stream-dispatcher""
+              }
+            }"); 
+        
         private readonly IMaterializer _materializer;
         private readonly TimeSpan _timeout = 10.Seconds();
 
-        public FlowAskSpec(ITestOutputHelper output) : base(output)
+        public FlowAskSpec(ITestOutputHelper output) : base(SpecConfig, output)
         {
             _materializer = Sys.Materializer();
         }
@@ -128,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Flow_with_ask_must_produce_asked_elements() => this.AssertAllStagesStopped(() =>
         {
             var replyOnInts =
-                Sys.ActorOf(Props.Create(() => new Replier()),
+                Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"),
                     "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
@@ -149,7 +169,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_must_produce_asked_elements_for_simple_ask() => this.AssertAllStagesStopped(() =>
         {
-            var replyOnInts = Sys.ActorOf(Props.Create(() => new Replier()), "replyOnInts");
+            var replyOnInts = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 3))
@@ -169,7 +189,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_must_produce_asked_elements_when_response_is_Status_Success() => this.AssertAllStagesStopped(() =>
         {
-            var statusReplier = Sys.ActorOf(Props.Create(() => new StatusReplier()), "statusReplier");
+            var statusReplier = Sys.ActorOf(Props.Create(() => new StatusReplier()).WithDispatcher("akka.test.stream-dispatcher"), "statusReplier");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 3))
@@ -189,7 +209,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_must_produce_future_elements_in_order()
         {
-            var replyRandomDelays = Sys.ActorOf(Props.Create(() => new RandomDelaysReplier()), "replyRandomDelays");
+            var replyRandomDelays = Sys.ActorOf(Props.Create(() => new RandomDelaysReplier()).WithDispatcher("akka.test.stream-dispatcher"), "replyRandomDelays");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 50))
@@ -207,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_must_signal_ask_timeout_failure() => this.AssertAllStagesStopped(() =>
         {
-            var dontReply = Sys.ActorOf(BlackHoleActor.Props, "dontReply");
+            var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 50))
@@ -239,7 +259,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_signal_failure_when_target_actor_is_terminated() => this.AssertAllStagesStopped(() =>
         {
-            var r = Sys.ActorOf(Props.Create(() => new Replier()), "replyRandomDelays");
+            var r = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyRandomDelays");
             var done = Source.Maybe<int>()
                 .Ask<Reply>(r, _timeout, 4)
                 .RunWith(Sink.Ignore<Reply>(), _materializer);
@@ -326,7 +346,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_with_ask_should_handle_cancel_properly() => this.AssertAllStagesStopped(() =>
         {
-            var dontReply = Sys.ActorOf(BlackHoleActor.Props, "dontReply");
+            var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var pub = this.CreateManualPublisherProbe<int>();
             var sub = this.CreateManualSubscriberProbe<Reply>();
 
@@ -340,8 +360,12 @@ namespace Akka.Streams.Tests.Dsl
             upstream.ExpectCancellation();
         }, _materializer);
 
-        private IActorRef ReplierFailOn(int n) => Sys.ActorOf(Props.Create(() => new FailOn(n)), "failureReplier-" + n);
+        private IActorRef ReplierFailOn(int n) => 
+            Sys.ActorOf(Props.Create(() => new FailOn(n)).WithDispatcher("akka.test.stream-dispatcher"), 
+                "failureReplier-" + n);
 
-        private IActorRef ReplierFailAllExceptOn(int n) => Sys.ActorOf(Props.Create(() => new FailOnAllExcept(n)), "failureReplier-" + n);
+        private IActorRef ReplierFailAllExceptOn(int n) => 
+            Sys.ActorOf(Props.Create(() => new FailOnAllExcept(n)).WithDispatcher("akka.test.stream-dispatcher"), 
+                "failureReplier-" + n);
     }
 }
