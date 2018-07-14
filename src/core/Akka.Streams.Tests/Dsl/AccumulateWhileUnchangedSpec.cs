@@ -10,7 +10,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl

@@ -16,7 +16,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
                     .Wait(TimeSpan.FromSeconds(3));
             };
-            a.ShouldThrow<SubscriptionTimeoutException>();
+            a.Should().Throw<SubscriptionTimeoutException>();
         }, Materializer);
 
         // Probably covert by SplitAfter_should_work_when_last_element_is_split_by

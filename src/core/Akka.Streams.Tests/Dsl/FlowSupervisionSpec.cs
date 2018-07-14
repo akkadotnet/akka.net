@@ -12,7 +12,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_supervision_must_stop_and_complete_stream_with_failure_by_default()
         {
             Action action = () => Run(FailingMap);
-            action.ShouldThrow<Exception>().And.Should().BeEquivalentTo(Exception);
+            action.Should().Throw<Exception>().And.Should().BeEquivalentTo(Exception);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
             var task = Source.From(new[] {"a", "b"}).Select(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
 
             task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                .ShouldThrow<ArgumentNullException>()
+                .Should().Throw<ArgumentNullException>()
                 .And.Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
         }
 

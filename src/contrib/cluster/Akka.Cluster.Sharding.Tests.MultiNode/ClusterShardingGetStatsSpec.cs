@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Sharding.Tests
 {

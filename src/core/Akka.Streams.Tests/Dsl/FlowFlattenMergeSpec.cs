@@ -16,7 +16,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(1, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 })
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]

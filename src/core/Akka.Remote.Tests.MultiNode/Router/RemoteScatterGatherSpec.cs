@@ -17,7 +17,7 @@ using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Remote.Tests.MultiNode.Router

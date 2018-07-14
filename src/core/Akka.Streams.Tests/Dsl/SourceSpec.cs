@@ -14,7 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -164,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.SetException(new Exception("Boom"));
 
-                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>()
+                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>()
                     .WithMessage("Boom");
             }, Materializer);
         }
@@ -350,7 +350,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ints;
                 }, Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<Exception>()
+                    .Should().Throw<Exception>()
                     .WithMessage("expected");
             });
         }
@@ -416,7 +416,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var empty = Enumerable.Empty<int>().GetEnumerator();
             var task = Source.Cycle(()=>empty).RunWith(Sink.First<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -432,7 +432,7 @@ namespace Akka.Streams.Tests.Dsl
                 b = true;
                 return single;
             }).RunWith(Sink.Last<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -554,7 +554,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.Empty<int>().MapMaterializedValue<int>(_ => throw new InvalidOperationException("boom"));
 
             Action thrower = () => matValPoweredSource.PreMaterialize(Sys.Materializer());
-            thrower.ShouldThrow<InvalidOperationException>();
+            thrower.Should().Throw<InvalidOperationException>();
         }
     }
 }

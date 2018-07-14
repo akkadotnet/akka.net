@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;

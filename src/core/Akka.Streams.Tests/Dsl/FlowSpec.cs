@@ -22,7 +22,7 @@ using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;

@@ -13,7 +13,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
                 latch.CountDown();
                 probe.ExpectMsgAllOf(1, 2);
 
-                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<AggregateException>().Which;
+                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
                 ex.Flatten().InnerException.Should().BeOfType<TestException>();
                 ex.Flatten().InnerException.Message.Should().Be("err2");
 

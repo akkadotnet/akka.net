@@ -13,7 +13,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.DistributedData.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.DistributedData.Tests

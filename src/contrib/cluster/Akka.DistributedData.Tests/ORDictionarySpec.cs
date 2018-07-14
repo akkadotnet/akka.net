@@ -11,7 +11,7 @@ using System.Linq;
 using System.Numerics;
 using Akka.Actor;
 using Akka.Cluster;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

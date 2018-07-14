@@ -17,7 +17,7 @@ using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -428,7 +428,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("THIS IS NOT VALID { \name\": \"john\"}"));
-            buffer.Invoking(b => b.Poll()).ShouldThrow<Framing.FramingException>();
+            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -437,7 +437,7 @@ namespace Akka.Streams.Tests.Dsl
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john\"} THIS IS NOT VALID "));
             buffer.Poll(); // first emitting the valid element
-            buffer.Invoking(b => b.Poll()).ShouldThrow<Framing.FramingException>();
+            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -454,7 +454,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]

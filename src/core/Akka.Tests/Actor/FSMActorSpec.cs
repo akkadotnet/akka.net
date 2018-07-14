@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using static Akka.Actor.FSMBase;
 

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 }));
             };
 
-            action.ShouldThrow<ArgumentException>()
+            action.Should().Throw<ArgumentException>()
                 .And.Message.Should()
                 .Contain("The input port [MergePreferred.preferred] is already connected");
         }

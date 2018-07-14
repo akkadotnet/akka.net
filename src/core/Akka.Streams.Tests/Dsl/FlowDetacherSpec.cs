@@ -11,7 +11,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).Detach().RunWith(Sink.Seq<int>(), Materializer);
 
-                result.Invoking(r => r.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<TestException>().And.Should().Be(ex);
+                result.Invoking(r => r.Wait(TimeSpan.FromSeconds(2))).Should().Throw<TestException>().And.Should().Be(ex);
             }, Materializer);
         }
 

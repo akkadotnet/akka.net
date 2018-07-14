@@ -10,7 +10,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
             var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
             materializer.Shutdown();
             Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.ShouldThrow<AbruptTerminationException>();
+            a.Should().Throw<AbruptTerminationException>();
         }
     }
 }

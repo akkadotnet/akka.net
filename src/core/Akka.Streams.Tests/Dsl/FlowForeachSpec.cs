@@ -12,7 +12,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>()
+                    .Should().Throw<TestException>()
                     .And.Should()
                     .Be(error);
             }, Materializer);

@@ -18,7 +18,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 #if CORECLR
 using System.Runtime.InteropServices;
 #endif

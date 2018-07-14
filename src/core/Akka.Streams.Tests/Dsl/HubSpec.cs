@@ -15,7 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Akka.Actor;
 using Akka.Util.Internal;
@@ -569,7 +569,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(50);
 
                 var task = source.RunWith(Sink.Seq<int>(), Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>();
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -904,7 +904,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(50);
 
                 Action a = () => source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult();
-                a.ShouldThrow<TestException>().WithMessage("Fail!");
+                a.Should().Throw<TestException>().WithMessage("Fail!");
             }, Materializer);
         }
     }

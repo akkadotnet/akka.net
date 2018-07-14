@@ -15,7 +15,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -294,7 +294,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.From(Enumerable.Range(1, 6))
                         .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
                         .RunWith(Sink.Ignore<int>(), Materializer);
-                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
+                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).Should().Throw<OverflowException>();
             }, Materializer);
         }
 
@@ -511,7 +511,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.From(Enumerable.Range(1, 6))
                         .Throttle(2, TimeSpan.FromMilliseconds(200), 5, x => x, ThrottleMode.Enforcing)
                         .RunWith(Sink.Ignore<int>(), Materializer);
-                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
+                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).Should().Throw<OverflowException>();
             }, Materializer);
         }
 

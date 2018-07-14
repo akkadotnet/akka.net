@@ -20,7 +20,7 @@ using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
+                done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
                 latch.CountDown();
             }, Materializer);
         }

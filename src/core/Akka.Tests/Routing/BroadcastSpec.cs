@@ -13,7 +13,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Routing
 {

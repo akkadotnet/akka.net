@@ -13,7 +13,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Routing;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {

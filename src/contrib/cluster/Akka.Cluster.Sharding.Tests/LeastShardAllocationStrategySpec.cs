@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Sharding.Tests
 {

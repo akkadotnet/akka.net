@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Linq;
 using Akka.Remote.Serialization;
 using Akka.Util;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Remote.Tests.Serialization

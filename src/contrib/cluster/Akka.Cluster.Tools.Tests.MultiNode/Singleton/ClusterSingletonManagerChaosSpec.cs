@@ -13,7 +13,7 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Akka.TestKit.TestEvent;
 using Akka.TestKit.Internal;
 

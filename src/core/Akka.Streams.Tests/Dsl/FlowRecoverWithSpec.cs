@@ -12,7 +12,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Flow.Create<int>()
                     .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))
-                    .ShouldThrow<ArgumentException>();
+                    .Should().Throw<ArgumentException>();
             }, Materializer);
         }
 

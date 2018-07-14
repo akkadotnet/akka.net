@@ -19,7 +19,7 @@ using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Remote.Tests.Serialization
@@ -344,7 +344,7 @@ namespace Akka.Remote.Tests.Serialization
         {
             var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
             Action comparison = () => serializer.Manifest("INVALID");
-            comparison.ShouldThrow<ArgumentException>();
+            comparison.Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -352,7 +352,7 @@ namespace Akka.Remote.Tests.Serialization
         {
             var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
             Action comparison = () => serializer.FromBinary(new byte[0], "INVALID");
-            comparison.ShouldThrow<SerializationException>();
+            comparison.Should().Throw<SerializationException>();
         }
 
         private T AssertAndReturn<T>(T message)

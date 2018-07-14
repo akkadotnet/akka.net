@@ -14,7 +14,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.IO;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Sharding.Tests
 {

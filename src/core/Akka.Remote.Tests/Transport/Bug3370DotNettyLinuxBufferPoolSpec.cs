@@ -12,7 +12,7 @@ using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using DotNetty.Buffers;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport

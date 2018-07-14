@@ -12,7 +12,7 @@ using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl

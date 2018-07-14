@@ -9,7 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

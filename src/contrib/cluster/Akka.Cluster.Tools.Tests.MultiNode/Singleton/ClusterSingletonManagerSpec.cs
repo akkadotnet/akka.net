@@ -16,7 +16,7 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {

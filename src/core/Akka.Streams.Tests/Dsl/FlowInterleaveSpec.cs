@@ -12,7 +12,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var source = Source.From(Enumerable.Range(0, 3));
                 source.Invoking(s => s.Interleave(Source.From(Enumerable.Range(3, 3)), 0))
-                    .ShouldThrow<ArgumentException>();
+                    .Should().Throw<ArgumentException>();
             }, Materializer);
         }
 

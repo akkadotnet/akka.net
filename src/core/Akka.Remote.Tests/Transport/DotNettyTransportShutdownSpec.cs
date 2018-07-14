@@ -14,7 +14,7 @@ using Akka.Remote.Transport;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests.Transport
 {

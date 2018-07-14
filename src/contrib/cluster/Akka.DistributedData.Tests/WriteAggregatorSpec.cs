@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

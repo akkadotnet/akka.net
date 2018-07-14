@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<string>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
         }
     }
 }

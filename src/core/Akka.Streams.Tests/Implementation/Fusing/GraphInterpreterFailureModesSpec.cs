@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Cancel = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.Cancel;

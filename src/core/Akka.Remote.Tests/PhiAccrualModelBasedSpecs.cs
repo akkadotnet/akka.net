@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Util;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using FsCheck;
 using FsCheck.Experimental;
 using FsCheck.Xunit;

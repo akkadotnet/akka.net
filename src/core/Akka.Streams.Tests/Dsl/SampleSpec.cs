@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
 
             aсtion = () =>
             {
@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
         }
     }
 }

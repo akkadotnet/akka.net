@@ -10,7 +10,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests.MultiNode
 {

@@ -16,7 +16,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests

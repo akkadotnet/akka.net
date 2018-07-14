@@ -12,7 +12,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -81,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Must be a Sink.seq, otherwise there is a race due to the concat in the `lift` implementation
                 Action action = () => s3.RunWith(Sink.Seq<int>(), Materializer).Wait(RemainingOrDefault);
-                action.ShouldThrow<SubscriptionTimeoutException>();
+                action.Should().Throw<SubscriptionTimeoutException>();
 
                 publisherProbe.SendComplete();
             }, Materializer);

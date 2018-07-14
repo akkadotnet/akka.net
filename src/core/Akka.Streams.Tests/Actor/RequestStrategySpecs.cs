@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Akka.Streams.Actors;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Actor

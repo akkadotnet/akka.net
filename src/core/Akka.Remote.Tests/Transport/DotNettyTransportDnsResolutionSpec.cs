@@ -19,7 +19,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
 using Config = Akka.Configuration.Config;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 // ReSharper disable EmptyGeneralCatchClause
 
 namespace Akka.Remote.Tests.Transport

@@ -13,7 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>().WithMessage("test");
+                    .Should().Throw<TestException>().WithMessage("test");
 
             }, Materializer);
         }
@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>().WithMessage("test");
+                    .Should().Throw<TestException>().WithMessage("test");
             }, Materializer);
         }
         
@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>().WithMessage("test");
+                    .Should().Throw<TestException>().WithMessage("test");
             }, Materializer);
         }
 

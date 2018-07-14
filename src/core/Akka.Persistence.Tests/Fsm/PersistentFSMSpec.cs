@@ -7,7 +7,7 @@
 
 using Akka.Actor;
 using Akka.Persistence.Fsm;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using System;
 using System.Collections.Generic;
 using Akka.Configuration;

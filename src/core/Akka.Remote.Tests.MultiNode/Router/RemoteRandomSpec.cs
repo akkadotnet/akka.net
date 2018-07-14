@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests.MultiNode.Router
 {

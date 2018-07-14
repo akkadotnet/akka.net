@@ -18,7 +18,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {

@@ -17,7 +17,7 @@ using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.IO
                 probe.ExpectCancellation();
 
                 Action block = () => inputStream.Read(new byte[1], 0, 1);
-                block.ShouldThrow<IOException>();
+                block.Should().Throw<IOException>();
             }, _materializer);
         }
 
@@ -193,10 +193,10 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var buf = new byte[3];
 
-                Action(() => inputStream.Read(buf, -1, 2)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(buf, 0, 5)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(new byte[0], 0, 1)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(buf, 0, 0)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(buf, -1, 2)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 5)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(new byte[0], 0, 1)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 0)).Should().Throw<ArgumentException>();
             }, _materializer);
         }
 
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.IO
                 var task = Task.Run(() => inputStream.ReadByte());
 
                 Action block = () => task.Wait(Timeout);
-                block.ShouldThrow<Exception>();
+                block.Should().Throw<Exception>();
 
                 task.Exception.InnerException.Should().Be(ex);
 
@@ -355,7 +355,7 @@ namespace Akka.Streams.Tests.IO
         public void InputStreamSink_should_fail_to_materialize_with_zero_sized_input_buffer()
         {
             Action a = () => Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(Timeout).WithAttributes(Attributes.CreateInputBuffer(0, 0)), _materializer);
-            a.ShouldThrow<ArgumentException>();
+            a.Should().Throw<ArgumentException>();
             /*
             With Source.single we test the code path in which the sink
             itself throws an exception when being materialized. If
@@ -372,7 +372,7 @@ namespace Akka.Streams.Tests.IO
             var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
             materializer.Shutdown();
 
-            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<AbruptTerminationException>();
+            inputStream.Invoking(i => i.ReadByte()).Should().Throw<AbruptTerminationException>();
         }
 
         private static ByteString RandomByteString(int size)

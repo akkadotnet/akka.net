@@ -12,7 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using static Akka.Cluster.ClusterCoreDaemon;
 
 namespace Akka.Cluster.Tests

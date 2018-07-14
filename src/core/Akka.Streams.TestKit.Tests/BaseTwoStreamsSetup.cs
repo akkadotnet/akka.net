@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Reactive.Streams;

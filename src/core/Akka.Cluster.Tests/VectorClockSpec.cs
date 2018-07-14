@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Cluster.Tests

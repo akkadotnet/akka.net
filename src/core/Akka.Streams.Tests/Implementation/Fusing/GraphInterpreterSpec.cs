@@ -9,7 +9,7 @@ using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using RequestOne = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.RequestOne;

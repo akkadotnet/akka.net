@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Util.Internal.Collections;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Util.Internal.Collections

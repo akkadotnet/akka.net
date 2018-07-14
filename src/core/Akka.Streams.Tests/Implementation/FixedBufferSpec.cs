@@ -8,7 +8,7 @@
 using System.Collections.Generic;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Buffer = Akka.Streams.Implementation.Buffer;
 

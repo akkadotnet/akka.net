@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using FluentAssertions.Execution;
 using Xunit;
 

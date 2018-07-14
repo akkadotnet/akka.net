@@ -12,7 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {

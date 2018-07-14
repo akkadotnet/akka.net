@@ -14,7 +14,7 @@ using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

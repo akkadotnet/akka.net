@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

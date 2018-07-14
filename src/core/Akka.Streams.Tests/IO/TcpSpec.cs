@@ -19,7 +19,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Tcp = Akka.Streams.Dsl.Tcp;
@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.IO
                         .Run(Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<Exception>()
+                    .Should().Throw<Exception>()
                     .And.Message.Should()
                     .Contain("Connection failed");
             }, Materializer);
@@ -491,7 +491,7 @@ namespace Akka.Streams.Tests.IO
 
             // Getting rid of existing connection actors by using a blunt instrument
             system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
-            result.Invoking(r => r.Wait()).ShouldThrow<StreamTcpException>();
+            result.Invoking(r => r.Wait()).Should().Throw<StreamTcpException>();
 
             await binding.Result.Unbind();
             await system2.Terminate();
@@ -620,8 +620,8 @@ namespace Akka.Streams.Tests.IO
                 var binding3F = bind.To(Sink.FromSubscriber(probe3)).Run(Materializer);
                 probe3.ExpectSubscriptionAndError().Should().BeOfType<BindFailedException>();
                 
-                binding2F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<BindFailedException>();
-                binding3F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<BindFailedException>();
+                binding2F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).Should().Throw<BindFailedException>();
+                binding3F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).Should().Throw<BindFailedException>();
                 
                 // Now unbind first
                 binding1.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -706,7 +706,7 @@ namespace Akka.Streams.Tests.IO
                 total.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
                 total.Result.Should().Be(100);
 
-                rejected.Invoking(x => x.Wait(5.Seconds())).ShouldThrow<StreamTcpException>();
+                rejected.Invoking(x => x.Wait(5.Seconds())).Should().Throw<StreamTcpException>();
             }, Materializer);
         }
     }

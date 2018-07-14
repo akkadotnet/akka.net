@@ -17,7 +17,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {

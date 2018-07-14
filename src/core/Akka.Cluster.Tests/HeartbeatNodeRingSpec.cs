@@ -8,7 +8,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests
 {

@@ -11,7 +11,7 @@ using Akka.Cluster.Routing;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.Serialization
 {

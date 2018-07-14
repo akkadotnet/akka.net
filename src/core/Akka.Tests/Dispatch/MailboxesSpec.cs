@@ -18,7 +18,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.Actor;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;

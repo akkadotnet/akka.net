@@ -1,5 +1,5 @@
 ﻿using Akka.TestKit.Xunit2;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using static Tutorials.Tutorial2.MainDevice;
 

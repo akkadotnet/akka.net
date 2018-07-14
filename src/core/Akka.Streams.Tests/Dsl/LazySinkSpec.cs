@@ -15,7 +15,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
                 sourceSub.ExpectCancellation();
-                taskProbe.Invoking(t => t.Wait()).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait()).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -171,7 +171,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw Ex;
                     });
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
             }, Materializer);
         }
 

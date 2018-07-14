@@ -8,7 +8,7 @@
 using Akka.Cluster;
 using System.Numerics;
 using Akka.Actor;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

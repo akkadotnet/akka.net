@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Cluster.Tests

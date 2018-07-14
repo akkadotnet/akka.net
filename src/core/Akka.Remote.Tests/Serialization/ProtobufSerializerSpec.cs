@@ -12,7 +12,7 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Remote.Tests.Serialization

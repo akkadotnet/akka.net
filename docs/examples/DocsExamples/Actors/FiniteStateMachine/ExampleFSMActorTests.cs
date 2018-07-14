@@ -1,6 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.TestKit.Xunit2;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using System.Collections.Immutable;
 using Xunit;
 

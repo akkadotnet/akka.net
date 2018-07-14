@@ -14,7 +14,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var error = new TestException("fail!");
                 Action fail = () => Scan(Source.Failed<int>(error));
-                fail.ShouldThrow<TestException>();
+                fail.Should().Throw<TestException>();
             }, Materializer);
         }
 

@@ -9,7 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
+using FluentAssertions; using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
