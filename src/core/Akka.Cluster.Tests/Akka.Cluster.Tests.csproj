@@ -18,7 +18,7 @@
     <PackageReference Include="FsCheck" Version="2.9.0" />
     <PackageReference Include="FsCheck.Xunit" Version="2.9.0" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="4.14.0" />
+    <PackageReference Include="FluentAssertions" Version="5.4.1" />
   </ItemGroup>
 
   <ItemGroup>
