@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] {1, 2, 3});
+            task.Result.Should().AllBeEquivalentTo(new[] {1, 2, 3});
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -155,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -168,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -181,7 +181,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -207,7 +207,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -242,7 +242,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -257,7 +257,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -278,7 +278,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -303,7 +303,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            task.Result.Should().AllBeEquivalentTo(new[] { 1, 2, 3 });
         }
     }
 }

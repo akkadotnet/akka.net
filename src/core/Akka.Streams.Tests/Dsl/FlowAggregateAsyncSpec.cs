@@ -294,7 +294,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                    .AwaitResult().ShouldAllBeEquivalentTo(2);
+                    .AwaitResult().Should().AllBeEquivalentTo(2);
             }, Materializer);
         }
 

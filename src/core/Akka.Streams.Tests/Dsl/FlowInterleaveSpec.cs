@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
                     collected.Add(probe.ExpectNext());
                 }
 
-                collected.ShouldAllBeEquivalentTo(new[] {0, 1, 4, 7, 8, 9, 5, 2, 3, 10, 11, 6});
+                collected.Should().AllBeEquivalentTo(new[] {0, 1, 4, 7, 8, 9, 5, 2, 3, 10, 11, 6});
                 probe.ExpectComplete();
             }, Materializer);
         }

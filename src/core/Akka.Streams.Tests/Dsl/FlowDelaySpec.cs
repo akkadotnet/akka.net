@@ -128,7 +128,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(5, 16));
+                task.Result.Should().AllBeEquivalentTo(Enumerable.Range(5, 16));
             }, Materializer);
         }
 
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(17, 4));
+                task.Result.Should().AllBeEquivalentTo(Enumerable.Range(17, 4));
             }, Materializer);
         }
 

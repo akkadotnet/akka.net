@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 3));
+            task.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 3));
         }
 
         [Fact]
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 collected.Add(probe.ExpectNext());
             }
 
-            collected.ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+            collected.Should().AllBeEquivalentTo(Enumerable.Range(1, 5));
             probe.ExpectComplete();
         }
 

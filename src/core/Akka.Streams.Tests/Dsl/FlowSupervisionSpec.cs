@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
             var withAttributes =
                 FailingMap.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
             var result = Run(withAttributes);
-            result.ShouldAllBeEquivalentTo(new [] {1,2,4,5,1,2,4,5});
+            result.Should().AllBeEquivalentTo(new [] {1,2,4,5,1,2,4,5});
         }
 
         [Fact]
@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
             var withAttributes =
                 FailingMap.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
             var result = Run(withAttributes);
-            result.ShouldAllBeEquivalentTo(new[] { 1, 2, 4, 5, 1, 2, 4, 5 });
+            result.Should().AllBeEquivalentTo(new[] { 1, 2, 4, 5, 1, 2, 4, 5 });
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Limit(1000)
                 .RunWith(Sink.Seq<string>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new [] {"a", "c"});
+            task.Result.Should().AllBeEquivalentTo(new [] {"a", "c"});
         }
     }
 }

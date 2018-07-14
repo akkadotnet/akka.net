@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
 
             subscriber.ExpectNoMsg(TimeSpan.FromSeconds(1));
             sub.Request(1);
-            subscriber.ExpectNext().ShouldAllBeEquivalentTo(new [] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+            subscriber.ExpectNext().Should().AllBeEquivalentTo(new [] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
             sub.Cancel();
         }
 

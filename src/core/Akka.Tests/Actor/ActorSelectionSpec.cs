@@ -317,7 +317,7 @@ namespace Akka.Tests.Actor
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
             var actors = ReceiveWhile(_ => LastSender, msgs: 3).Distinct();
-            actors.ShouldAllBeEquivalentTo(new[] { _c1, _c2 });
+            actors.Should().AllBeEquivalentTo(new[] { _c1, _c2 });
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
@@ -421,7 +421,7 @@ namespace Akka.Tests.Actor
             probe.ReceiveN(2)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ShouldAllBeEquivalentTo(new[] { b1, b2 });
+                .Should().AllBeEquivalentTo(new[] { b1, b2 });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b1/*").Tell(new Identify(2), probe.Ref);

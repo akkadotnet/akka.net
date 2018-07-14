@@ -393,7 +393,7 @@ namespace Akka.Cluster.Sharding.Tests
                         foreach (var entityId in shardState.EntityIds)
                         {
                             var calculatedShardId = extractShardId2(int.Parse(entityId));
-                            calculatedShardId.ShouldAllBeEquivalentTo(shardState.ShardId);
+                            calculatedShardId.Should().AllBeEquivalentTo(shardState.ShardId);
                         }
                     }
 

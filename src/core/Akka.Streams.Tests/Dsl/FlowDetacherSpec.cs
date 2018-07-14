@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 100))
                     .Detach()
                     .RunWith(Sink.Seq<int>(), Materializer)
-                    .Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+                    .Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
