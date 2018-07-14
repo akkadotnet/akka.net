@@ -36,7 +36,7 @@ namespace Akka.Tests.Util.Internal
             var actual = AlternateSelectMany(input, count => Enumerable.Repeat("even", count),
                 count => Enumerable.Repeat("odd", count)).ToArray();
             var expectation = new[] {"even", "odd", "even", "even", "odd", "odd", "even"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"akka.actor.deployment.""/a/dotted.path/*"".dispatcher";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"akka", "actor", "deployment", "/a/dotted.path/*", "dispatcher"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -54,7 +54,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"akka";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"akka"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"akka.dot.net.rules";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"akka", "dot", "net", "rules"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -72,7 +72,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"""akka""";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"akka"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -81,7 +81,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"""ak.ka""";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"ak.ka"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact]
@@ -90,7 +90,7 @@ namespace Akka.Tests.Util.Internal
             var path = @"akka.actor.deployment.""/a/dotted.path/*"".""dispatcher""";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {"akka", "actor", "deployment", "/a/dotted.path/*", "dispatcher"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Fact(DisplayName = "SplitDottedPathHonouringQuotes handles dots next to quotes")]
@@ -99,7 +99,7 @@ namespace Akka.Tests.Util.Internal
             var path = @""".akka."".""actor."".deployment."".""."".dispatcher""";
             var actual = path.SplitDottedPathHonouringQuotes().ToArray();
             var expectation = new[] {".akka.", "actor.", "deployment", ".", ".dispatcher"};
-            actual.Should().AllBeEquivalentTo(expectation);
+            actual.Should().BeEquivalentTo(expectation);
         }
 
         [Property]

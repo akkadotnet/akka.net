@@ -234,7 +234,7 @@ namespace Akka.Tests.Routing
 
             routerConfig.Should().BeOfType<RandomGroup>();
             var randomGroup = (RandomGroup)routerConfig;
-            randomGroup.GetPaths(Sys).Should().AllBeEquivalentTo(new List<string> { "/user/service1", "/user/service2" });
+            randomGroup.GetPaths(Sys).Should().BeEquivalentTo(new List<string> { "/user/service1", "/user/service2" });
 
             var result = await actor.GracefulStop(3.Seconds());
             result.Should().BeTrue();
