@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Dsl
                         .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(),
                     Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldBeEquivalentTo(default(IEnumerable<int>));
+                task.Result.Should().BeEquivalentTo(default(IEnumerable<int>));
             }, Materializer);
         }
 

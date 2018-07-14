@@ -435,7 +435,7 @@ namespace Akka.Streams.Tests.Implementation
 
                 error1.Should().BeOfType<TimeoutException>();
                 error1.Message.Should().Be($"No elements passed in the last {TimeSpan.FromSeconds(2)}.");
-                error2.ShouldBeEquivalentTo(error1);
+                error2.Should().BeEquivalentTo(error1);
 
                 upWrite.ExpectCancellation();
                 downWrite.ExpectCancellation();
@@ -469,8 +469,8 @@ namespace Akka.Streams.Tests.Implementation
 
                 upWrite.SendError(te);
 
-                upRead.ExpectSubscriptionAndError().ShouldBeEquivalentTo(te);
-                downRead.ExpectSubscriptionAndError().ShouldBeEquivalentTo(te);
+                upRead.ExpectSubscriptionAndError().Should().BeEquivalentTo(te);
+                downRead.ExpectSubscriptionAndError().Should().BeEquivalentTo(te);
                 downWrite.ExpectCancellation();
             }, Materializer);
         }

@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }

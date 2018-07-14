@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(5);
-                probe.ExpectNext().ShouldBeEquivalentTo(new Person("Caplin", "Capybara", 55));
+                probe.ExpectNext().Should().BeEquivalentTo(new Person("Caplin", "Capybara", 55));
 
                 probe.ExpectComplete();
             }, Materializer);

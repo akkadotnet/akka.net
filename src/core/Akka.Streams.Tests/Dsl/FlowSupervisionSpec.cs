@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_supervision_must_stop_and_complete_stream_with_failure_by_default()
         {
             Action action = () => Run(FailingMap);
-            action.ShouldThrow<Exception>().And.ShouldBeEquivalentTo(Exception);
+            action.ShouldThrow<Exception>().And.Should().BeEquivalentTo(Exception);
         }
 
         [Fact]

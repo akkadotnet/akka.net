@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(Sink.First<ByteString>(), _materializer);
 
                 f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                f.Result.ShouldBeEquivalentTo(ByteString.FromString("abc"));
+                f.Result.Should().BeEquivalentTo(ByteString.FromString("abc"));
             }, _materializer);
         }
 

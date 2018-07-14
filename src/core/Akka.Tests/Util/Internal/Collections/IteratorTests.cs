@@ -45,7 +45,7 @@ namespace Akka.Tests.Util.Internal.Collections
 
 
             var vector = iter.ToVector();
-            vector.ShouldBeEquivalentTo(new[] { 8, 5, 23 });
+            vector.Should().BeEquivalentTo(new[] { 8, 5, 23 });
         }
     }
 }

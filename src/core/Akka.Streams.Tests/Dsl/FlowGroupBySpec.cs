@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.OrderBy(e => e.First())
-                .ShouldBeEquivalentTo(new[] { new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" } });
+                .Should().BeEquivalentTo(new[] { new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" } });
         }
 
         [Fact]
@@ -475,7 +475,7 @@ namespace Akka.Streams.Tests.Dsl
                     var byteString = RandomByteString(10);
                     upstreamSubscription.ExpectRequest();
                     upstreamSubscription.SendNext(byteString);
-                    subscriber.ExpectNext().ShouldBeEquivalentTo(byteString);
+                    subscriber.ExpectNext().Should().BeEquivalentTo(byteString);
                 }
 
                 upstreamSubscription.SendComplete();
@@ -565,7 +565,7 @@ namespace Akka.Streams.Tests.Dsl
                         {
                             if (props.BlockingNextElement == null)
                             {
-                                state.Probe.ExpectNext().ShouldBeEquivalentTo(byteString);
+                                state.Probe.ExpectNext().Should().BeEquivalentTo(byteString);
                                 map[index] = new SubFlowState(state.Probe, false, null);
                                 RandomDemand(map, props);
                             }
@@ -671,12 +671,12 @@ namespace Akka.Streams.Tests.Dsl
                     // pushing next element from upstream 
                     if (state.FirstElement != null)
                     {
-                        state.Probe.ExpectNext().ShouldBeEquivalentTo(state.FirstElement);
+                        state.Probe.ExpectNext().Should().BeEquivalentTo(state.FirstElement);
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }
                     else if (props.BlockingNextElement != null && Math.Abs(props.BlockingNextElement[0] % 100) == key)
                     {
-                        state.Probe.ExpectNext().ShouldBeEquivalentTo(props.BlockingNextElement);
+                        state.Probe.ExpectNext().Should().BeEquivalentTo(props.BlockingNextElement);
                         props.BlockingNextElement = null;
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }
