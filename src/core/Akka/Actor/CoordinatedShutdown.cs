@@ -567,7 +567,7 @@ namespace Akka.Actor
                     else if (terminateActorSystem)
                     {
                         await system.Terminate();
-                        if (!coord._runningClrHook)
+                        if (exitClr && !coord._runningClrHook)
                         {
                             Environment.Exit(0);
                         }
