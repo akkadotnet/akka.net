@@ -247,7 +247,7 @@ namespace Akka.Cluster.Sharding.Tests
                     extractShardId: extractShardId);
 
                 proxy.Tell(new GetCount("5"));
-                ExpectMsg(2);
+                ExpectMsg(1);
             }, Second);
             EnterBarrier("after-4");
         }
