@@ -18,7 +18,7 @@ namespace Akka.Cluster
     /// Represents the address, current status, and roles of a cluster member node.
     /// </summary>
     /// <remarks>
-    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
+    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>,
     /// not its <see cref="MemberStatus"/> and roles.
     /// </remarks>
     public class Member : IComparable<Member>, IComparable
@@ -169,7 +169,7 @@ namespace Akka.Cluster
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
                 throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
-            
+
             return new Member(UniqueAddress, UpNumber, status, Roles);
         }
 
@@ -305,7 +305,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="a">First member instance.</param>
         /// <param name="b">Second member instance.</param>
-        /// <returns>If a and b are different members, this method will return <c>null</c>. 
+        /// <returns>If a and b are different members, this method will return <c>null</c>.
         /// Otherwise, will return a or b depending on which one is a valid transition of the other.
         /// If neither are a valid transition, we return <c>null</c></returns>
         public static Member PickNextTransition(Member a, Member b)
@@ -386,8 +386,8 @@ namespace Akka.Cluster
         internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
-                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
-                {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed) },
+                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up,MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed) },
                 {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Leaving, ImmutableHashSet.Create(MemberStatus.Exiting, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Down, ImmutableHashSet.Create(MemberStatus.Removed)},
@@ -399,7 +399,7 @@ namespace Akka.Cluster
 
     /// <summary>
     /// Defines the current status of a cluster member node
-    /// 
+    ///
     /// Can be one of: Joining, Up, WeaklyUp, Leaving, Exiting and Down.
     /// </summary>
     public enum MemberStatus

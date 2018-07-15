@@ -398,7 +398,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ExitingConfirmed && Equals((ExitingConfirmed) obj);
+                return obj is ExitingConfirmed && Equals((ExitingConfirmed)obj);
             }
 
             /// <inheritdoc/>
@@ -1320,7 +1320,7 @@ namespace Akka.Cluster
             {
                 var ge = message as GossipEnvelope;
                 var receivedType = ReceiveGossip(ge);
-                if(_cluster.Settings.VerboseGossipReceivedLogging)
+                if (_cluster.Settings.VerboseGossipReceivedLogging)
                     _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
             else if (message is GossipStatus)
@@ -1394,7 +1394,7 @@ namespace Akka.Cluster
             }
             else if (message is InternalClusterAction.ExitingConfirmed)
             {
-                var c = (InternalClusterAction.ExitingConfirmed) message;
+                var c = (InternalClusterAction.ExitingConfirmed)message;
                 ReceiveExitingConfirmed(c.Address);
             }
             else if (ReceiveExitingCompleted(message)) { }
@@ -1668,7 +1668,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up))
+            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp || m.Status == MemberStatus.Up)))
             {
                 // mark node as LEAVING
                 var newMembers = _latestGossip.Members.Select(m =>

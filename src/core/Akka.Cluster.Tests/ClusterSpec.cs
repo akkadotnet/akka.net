@@ -505,6 +505,38 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_cluster_must_leave_via_CoordinatedShutdownRun_when_member_status_is_Joining()
+        {
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
+                akka.cluster.run-coordinated-shutdown-when-down = off
+                akka.cluster.min-nr-of-members = 2
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
+
+            try
+            {
+                var probe = CreateTestProbe(sys2);
+                Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+                probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
+                Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+                probe.ExpectMsg<ClusterEvent.MemberJoined>();
+
+                CoordinatedShutdown.Get(sys2).Run(CoordinatedShutdown.UnknownReason.Instance);
+
+                probe.ExpectMsg<ClusterEvent.MemberLeft>();
+                probe.ExpectMsg<ClusterEvent.MemberExited>();
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
+        }
+
+        [Fact]
         public void A_cluster_must_terminate_ActorSystem_via_leave_CoordinatedShutdown()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
