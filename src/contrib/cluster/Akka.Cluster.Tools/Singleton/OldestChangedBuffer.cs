@@ -172,9 +172,13 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void SendFirstChange()
         {
-            object change;
-            _changes = _changes.Dequeue(out change);
-            Context.Parent.Tell(change);
+            // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
+            if (!_cluster.IsTerminated)
+            {
+                object change;
+                _changes = _changes.Dequeue(out change);
+                Context.Parent.Tell(change);
+            }
         }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
