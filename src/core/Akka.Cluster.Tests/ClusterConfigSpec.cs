@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
-            settings.Roles.Should().BeEquivalentTo(ImmutableHashSet<string>.Empty);
+            settings.Roles.Should().BeEquivalentTo(ImmutableHashSet.Create(ClusterSettings.DcRolePrefix + "default"));
             settings.UseDispatcher.Should().Be(Dispatchers.DefaultDispatcherId);
             settings.GossipDifferentViewProbability.Should().Be(0.8);
             settings.ReduceGossipDifferentViewProbability.Should().Be(400);

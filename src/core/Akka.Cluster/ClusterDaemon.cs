@@ -60,7 +60,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return Node.Equals(other.Node) && !Roles.SetEquals(other.Roles);
+                return Node.Equals(other.Node) && Roles.SetEquals(other.Roles);
             }
 
             /// <inheritdoc/>

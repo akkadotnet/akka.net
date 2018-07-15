@@ -71,7 +71,13 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public async Task Shard_coordinator_should_be_found()
         {
-            var proxyRef = await Sys.ActorSelection($"akka.tcp://{Sys.Name}/system/sharding/myTypeCoordinator").ResolveOne(TimeSpan.FromSeconds(5));
+            var shardRegion = await _clusterSharding.StartAsync(
+                typeName: "myType",
+                entityProps: Props.Create<EchoActor>(),
+                settings: _shardingSettings,
+                messageExtractor: _messageExtractor);
+            
+            var proxyRef = await Sys.ActorSelection($"akka://{Sys.Name}/system/sharding/myTypeCoordinator").ResolveOne(TimeSpan.FromSeconds(5));
             proxyRef.Path.Should().NotBeNull();
             proxyRef.Path.ToString().Should().EndWith("Coordinator");
         }
