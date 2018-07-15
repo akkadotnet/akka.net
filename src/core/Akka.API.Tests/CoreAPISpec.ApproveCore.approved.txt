@@ -503,12 +503,35 @@ namespace Akka.Actor
         public const string PhaseServiceRequestsDone = "service-requests-done";
         public const string PhaseServiceStop = "service-stop";
         public const string PhaseServiceUnbind = "service-unbind";
+        public Akka.Actor.CoordinatedShutdown.Reason ShutdownReason { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        [System.ObsoleteAttribute("Use the method with \'reason\' parameter instead")]
         public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
+        public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class Reason
+        {
+            protected Reason() { }
+        }
+        public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
     {

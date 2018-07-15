@@ -492,7 +492,7 @@ namespace Akka.Cluster.Tests
                 Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                 probe.ExpectMsg<ClusterEvent.MemberUp>();
 
-                CoordinatedShutdown.Get(sys2).Run();
+                CoordinatedShutdown.Get(sys2).Run(CoordinatedShutdown.UnknownReason.Instance);
 
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 probe.ExpectMsg<ClusterEvent.MemberExited>();
@@ -528,6 +528,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
+                CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();
             }
             finally
             {
@@ -559,6 +560,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();
+                CoordinatedShutdown.Get(sys3).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterDowningReason>();
             }
             finally
             {

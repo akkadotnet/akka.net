@@ -898,7 +898,8 @@ namespace Akka.Cluster
             _clusterPromise.TrySetResult(Done.Instance);
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
-                _coordShutdown.Run();
+                // if it was stopped due to leaving CoordinatedShutdown was started earlier
+                _coordShutdown.Run(CoordinatedShutdown.ClusterDowningReason.Instance);
             }
         }
     }
@@ -1973,7 +1974,7 @@ namespace Akka.Cluster
                 _exitingTasksInProgress = true;
                 _log.Info("Exiting, starting coordinated shutdown.");
                 _selfExiting.TrySetResult(Done.Instance);
-                _coordShutdown.Run();
+                _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
 
             if (talkback)
@@ -2319,7 +2320,7 @@ namespace Akka.Cluster
                     _exitingTasksInProgress = true;
                     _log.Info("Exiting (leader), starting coordinated shutdown.");
                     _selfExiting.TrySetResult(Done.Instance);
-                    _coordShutdown.Run();
+                    _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
                 }
 
                 UpdateLatestGossip(newGossip);
