@@ -189,8 +189,9 @@ namespace Akka.Cluster.Tests
 
             leaveTask.IsCompleted.Should().BeFalse();
             probe.ExpectMsg<ClusterEvent.MemberLeft>();
-            probe.ExpectMsg<ClusterEvent.MemberExited>();
-            probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+            // MemberExited might not be published before MemberRemoved
+            var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
+            removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
 
             AwaitCondition(() => leaveTask.IsCompleted);
 
@@ -495,8 +496,9 @@ namespace Akka.Cluster.Tests
                 CoordinatedShutdown.Get(sys2).Run(CoordinatedShutdown.UnknownReason.Instance);
 
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
-                probe.ExpectMsg<ClusterEvent.MemberExited>();
-                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+                // MemberExited might not be published before MemberRemoved
+                var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
+                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
             }
             finally
             {
@@ -527,8 +529,9 @@ namespace Akka.Cluster.Tests
                 CoordinatedShutdown.Get(sys2).Run(CoordinatedShutdown.UnknownReason.Instance);
 
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
-                probe.ExpectMsg<ClusterEvent.MemberExited>();
-                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+                // MemberExited might not be published before MemberRemoved
+                var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
+                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
             }
             finally
             {
@@ -556,8 +559,9 @@ namespace Akka.Cluster.Tests
                 Cluster.Get(sys2).Leave(Cluster.Get(sys2).SelfAddress);
 
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
-                probe.ExpectMsg<ClusterEvent.MemberExited>();
-                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+                // MemberExited might not be published before MemberRemoved
+                var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
+                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
                 AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();
