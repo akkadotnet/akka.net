@@ -571,11 +571,24 @@ namespace Akka.Cluster.Tools.Singleton
         private void SetupCoordinatedShutdown()
         {
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-singleton-exiting", () => _memberExitingProgress.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-singleton-exiting", () =>
+            {
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                    return Task.FromResult(Done.Instance);
+                else
+                    return _memberExitingProgress.Task;
+            });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-2", () =>
             {
-                var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                }
             });
         }
 
@@ -751,7 +764,8 @@ namespace Akka.Cluster.Tools.Singleton
                     // transition when OldestChanged
                     return Stay().Using(new YoungerData(null));
                 }
-                else if (e.FsmEvent is HandOverToMe) {
+                else if (e.FsmEvent is HandOverToMe)
+                {
                     // this node was probably quickly restarted with same hostname:port,
                     // confirm that the old singleton instance has been stopped
                     Sender.Tell(HandOverDone.Instance);

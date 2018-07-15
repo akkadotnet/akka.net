@@ -872,7 +872,7 @@ namespace Akka.Cluster
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "leave", () =>
             {
-                if (Cluster.Get(sys).IsTerminated)
+                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
                 {
                     return Task.FromResult(Done.Instance);
                 }
@@ -898,8 +898,7 @@ namespace Akka.Cluster
             _clusterPromise.TrySetResult(Done.Instance);
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
-                // run the last phases if the node was downed (not leaving)
-                _coordShutdown.Run(CoordinatedShutdown.PhaseClusterShutdown);
+                _coordShutdown.Run();
             }
         }
     }
@@ -941,7 +940,7 @@ namespace Akka.Cluster
         {
             return new OneForOneStrategy(e =>
             {
-                //TODO: JVM version matches NonFatal. Can / should we do something similar? 
+                //TODO: JVM version matches NonFatal. Can / should we do something similar?
                 _log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
                     Cluster.Get(Context.System).SelfAddress, e);
                 Self.Tell(PoisonPill.Instance);
@@ -968,7 +967,7 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Actor used to power the guts of the Akka.Cluster membership and gossip protocols.
     /// </summary>
     internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
@@ -1084,7 +1083,7 @@ namespace Akka.Cluster
             });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
-                if (Cluster.Get(sys).IsTerminated)
+                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
                     return TaskEx.Completed;
                 else
                 {
@@ -1301,7 +1300,7 @@ namespace Akka.Cluster
         private void BecomeInitialized()
         {
             // start heartbeatSender here, and not in constructor to make sure that
-            // heartbeating doesn't start before Welcome is received            
+            // heartbeating doesn't start before Welcome is received
             Context.ActorOf(Props.Create<ClusterHeartbeatSender>().WithDispatcher(_cluster.Settings.UseDispatcher),
                 "heartbeatSender");
             // make sure that join process is stopped
@@ -2100,7 +2099,7 @@ namespace Akka.Cluster
                 // linear reduction of the probability with increasing number of nodes
                 // from ReduceGossipDifferentViewProbability at ReduceGossipDifferentViewProbability nodes
                 // to ReduceGossipDifferentViewProbability / 10 at ReduceGossipDifferentViewProbability * 3 nodes
-                // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes     
+                // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes
                 var k = (minP - _cluster.Settings.GossipDifferentViewProbability) / (high - low);
                 return _cluster.Settings.GossipDifferentViewProbability + (size - low) * k;
             }
@@ -2208,7 +2207,7 @@ namespace Akka.Cluster
         /// this function will check to see if that threshold is met.
         /// </summary>
         /// <returns>
-        /// <c>true</c> if the setting isn't enabled or is satisfied. 
+        /// <c>true</c> if the setting isn't enabled or is satisfied.
         /// <c>false</c> is the setting is enabled and unsatisfied.
         /// </returns>
         public bool IsMinNrOfMembersFulfilled()
@@ -2559,21 +2558,21 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes (except itself) and expect
     /// <see cref="InternalClusterAction.InitJoinAck"/> reply back. The seed node that replied first
     /// will be used and joined to. <see cref="InternalClusterAction.InitJoinAck"/> replies received after
     /// the first one are ignored.
-    /// 
-    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the 
+    ///
+    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the
     /// <see cref="ClusterSettings.SeedNodeTimeout"/>. When at least one reply has been received it stops itself after
     /// an idle <see cref="ClusterSettings.SeedNodeTimeout"/>.
-    /// 
+    ///
     /// The seed nodes can be started in any order, but they will not be "active" until they have been
     /// able to join another seed node (seed1.)
-    /// 
+    ///
     /// They will retry the join procedure.
-    /// 
+    ///
     /// Possible scenarios:
     ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
     ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
@@ -2665,12 +2664,12 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Used only for the first seed node.
     /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes except itself.
-    /// If other seed nodes are not part of the cluster yet they will reply with 
+    /// If other seed nodes are not part of the cluster yet they will reply with
     /// <see cref="InternalClusterAction.InitJoinNack"/> or not respond at all and then the
-    /// first seed node will join itself to initialize the new cluster. When the first seed 
+    /// first seed node will join itself to initialize the new cluster. When the first seed
     /// node is restarted, and some other seed node is part of the cluster it will reply with
     /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
     /// join that other seed node to join the existing cluster.
@@ -2902,7 +2901,7 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// The supplied callback will be run once when the current cluster member has the same status.
     /// </summary>
     internal class OnMemberStatusChangedListener : ReceiveActor

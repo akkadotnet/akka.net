@@ -123,14 +123,10 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void InitCluster()
         {
-            // FIXME this test should also work when coordinator is on the leaving sys1 node,
-            //       but currently there seems to be a race between the CS and the ClusterSingleton observing OldestChanged
-            //       and terminating coordinator singleton before the graceful sharding stop is done.
+            Cluster.Get(_sys1).Join(Cluster.Get(_sys1).SelfAddress); // coordinator will initially run on sys1
+            AwaitAssert(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
 
-            Cluster.Get(_sys2).Join(Cluster.Get(_sys2).SelfAddress); // coordinator will initially run on sys2
-            AwaitAssert(() => Cluster.Get(_sys2).SelfMember.Status.Should().Be(MemberStatus.Up));
-
-            Cluster.Get(_sys1).Join(Cluster.Get(_sys2).SelfAddress);
+            Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
@@ -164,7 +160,7 @@ namespace Akka.Cluster.Sharding.Tests
             Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
             _probe1.ExpectMsg("CS-unbind-1");
 
-            Within(10.Seconds(), () =>
+            Within(20.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -191,7 +187,7 @@ namespace Akka.Cluster.Sharding.Tests
             Cluster.Get(_sys2).Down(Cluster.Get(_sys3).SelfAddress);
             _probe3.ExpectMsg("CS-unbind-3");
 
-            Within(10.Seconds(), () =>
+            Within(20.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
