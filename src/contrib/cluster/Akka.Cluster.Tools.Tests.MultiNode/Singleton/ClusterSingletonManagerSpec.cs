@@ -43,8 +43,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Sixth = Role("sixth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.loglevel = DEBUG
+                akka.actor.provider = cluster
+                akka.actor.debug.fsm = on
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
             ")
@@ -523,37 +524,37 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Join(_first, _first);
                 AwaitMemberUp(memberProbe, _first);
                 VerifyRegistration(_first);
-                VerifyMsg(_first, Msg);
+                VerifyMsg(_first, Msg); // 1
 
                 // join the observer node as well, which should not influence since it doesn't have the "worker" role
                 Join(_observer, _first);
                 AwaitMemberUp(memberProbe, _observer, _first);
-                VerifyProxyMsg(_first, _first, Msg);
+                VerifyProxyMsg(_first, _first, Msg); // 2
 
                 Join(_second, _first);
                 AwaitMemberUp(memberProbe, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _second, Msg);
+                VerifyMsg(_first, Msg); // 3
+                VerifyProxyMsg(_first, _second, Msg); // 4
 
                 Join(_third, _first);
                 AwaitMemberUp(memberProbe, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _third, Msg);
+                VerifyMsg(_first, Msg); // 5
+                VerifyProxyMsg(_first, _third, Msg); // 6
 
                 Join(_fourth, _first);
                 AwaitMemberUp(memberProbe, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _fourth, Msg);
+                VerifyMsg(_first, Msg); // 7
+                VerifyProxyMsg(_first, _fourth, Msg); // 8
 
                 Join(_fifth, _first);
                 AwaitMemberUp(memberProbe, _fifth, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _fifth, Msg);
+                VerifyMsg(_first, Msg); // 9
+                VerifyProxyMsg(_first, _fifth, Msg); // 10
 
                 Join(_sixth, _first);
                 AwaitMemberUp(memberProbe, _sixth, _fifth, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _sixth, Msg);
+                VerifyMsg(_first, Msg); // 11
+                VerifyProxyMsg(_first, _sixth, Msg); // 12
 
                 EnterBarrier("after-1");
             });
@@ -563,12 +564,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
             Within(TimeSpan.FromSeconds(60), () =>
             {
-                VerifyProxyMsg(_first, _first, Msg);
-                VerifyProxyMsg(_first, _second, Msg);
-                VerifyProxyMsg(_first, _third, Msg);
-                VerifyProxyMsg(_first, _fourth, Msg);
-                VerifyProxyMsg(_first, _fifth, Msg);
-                VerifyProxyMsg(_first, _sixth, Msg);
+                VerifyProxyMsg(_first, _first, Msg); // 13
+                VerifyProxyMsg(_first, _second, Msg); // 14
+                VerifyProxyMsg(_first, _third, Msg); // 15
+                VerifyProxyMsg(_first, _fourth, Msg); // 16
+                VerifyProxyMsg(_first, _fifth, Msg); // 17
+                VerifyProxyMsg(_first, _sixth, Msg); // 18
             });
         }
 
@@ -584,12 +585,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 }, leaveNode);
 
                 VerifyRegistration(_second);
-                VerifyMsg(_second, Msg);
-                VerifyProxyMsg(_second, _second, Msg);
-                VerifyProxyMsg(_second, _third, Msg);
-                VerifyProxyMsg(_second, _fourth, Msg);
-                VerifyProxyMsg(_second, _fifth, Msg);
-                VerifyProxyMsg(_second, _sixth, Msg);
+                VerifyMsg(_second, Msg); // 19
+                VerifyProxyMsg(_second, _second, Msg); // 20
+                VerifyProxyMsg(_second, _third, Msg); // 21
+                VerifyProxyMsg(_second, _fourth, Msg); // 22
+                VerifyProxyMsg(_second, _fifth, Msg); // 23
+                VerifyProxyMsg(_second, _sixth, Msg); // 24
 
                 RunOn(() =>
                 {
@@ -618,11 +619,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
                 Crash(_second);
                 VerifyRegistration(_third);
-                VerifyMsg(_third, Msg);
-                VerifyProxyMsg(_third, _third, Msg);
-                VerifyProxyMsg(_third, _fourth, Msg);
-                VerifyProxyMsg(_third, _fifth, Msg);
-                VerifyProxyMsg(_third, _sixth, Msg);
+                VerifyMsg(_third, Msg); // 25
+                VerifyProxyMsg(_third, _third, Msg); // 26
+                VerifyProxyMsg(_third, _fourth, Msg); // 27
+                VerifyProxyMsg(_third, _fifth, Msg); // 28
+                VerifyProxyMsg(_third, _sixth, Msg); // 29
             });
         }
 
@@ -632,9 +633,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 Crash(_third, _fourth);
                 VerifyRegistration(_fifth);
-                VerifyMsg(_fifth, Msg);
-                VerifyProxyMsg(_fifth, _fifth, Msg);
-                VerifyProxyMsg(_fifth, _sixth, Msg);
+                VerifyMsg(_fifth, Msg); // 30
+                VerifyProxyMsg(_fifth, _fifth, Msg); // 31
+                VerifyProxyMsg(_fifth, _sixth, Msg); // 32
             });
         }
 
@@ -644,8 +645,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 Crash(_fifth);
                 VerifyRegistration(_sixth);
-                VerifyMsg(_sixth, Msg);
-                VerifyProxyMsg(_sixth, _sixth, Msg);
+                VerifyMsg(_sixth, Msg); // 33
+                VerifyProxyMsg(_sixth, _sixth, Msg); // 34
             });
         }
     }
