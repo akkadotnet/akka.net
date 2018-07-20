@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -21,11 +22,11 @@ namespace Akka.Actor
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
         /// <summary>
-        /// TBD
+        /// The child container collection, used to house information about all child actors.
         /// </summary>
         public IChildrenContainer ChildrenContainer
         {
-            get { return _childrenContainerDoNotCallMeDirectly; } 
+            get { return _childrenContainerDoNotCallMeDirectly; }
         }
 
         private IReadOnlyCollection<IActorRef> Children
@@ -34,11 +35,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Attaches a child to the current <see cref="ActorCell"/>.
+        /// 
+        /// This method is used in the process of starting actors.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="isSystemService">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="props">The <see cref="Props"/> this child actor will use.</param>
+        /// <param name="isSystemService">If <c>true</c>, then this actor is a system actor and activates a special initialization path.</param>
+        /// <param name="name">The name of the actor being started. Can be <c>null</c>, and if it is we will automatically 
+        /// generate a random name for this actor.</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>
@@ -48,7 +52,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A reference to the initialized child actor.</returns>
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
@@ -83,7 +87,7 @@ namespace Akka.Actor
 
             return MakeChild(props, name, isAsync, isSystemService);
         }
-        
+
         private string GetRandomActorName()
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
@@ -102,46 +106,22 @@ namespace Akka.Actor
                 var repointableActorRef = child as RepointableActorRef;
                 if (repointableActorRef == null || repointableActorRef.IsStarted)
                 {
-                    UpdateChildrenRefs(c => c.ShallDie(child));
+                    while (true)
+                    {
+                        var oldChildren = ChildrenContainer;
+                        var newChildren = oldChildren.ShallDie(child);
+
+                        if (SwapChildrenRefs(oldChildren, newChildren)) break;
+                    }
                 }
             }
             ((IInternalActorRef)child).Stop();
         }
 
-        /// <summary>
-        /// Swaps out the children container, by calling <paramref name="updater"/>  to produce the new container.
-        /// If the underlying container has been updated while <paramref name="updater"/> was called,
-        /// <paramref name="updater"/> will be called again with the new container. This will repeat until the 
-        /// container can be swapped out, or until <see cref="Tuple{T1,T2,T3}.Item1"/> contains <c>false</c>.
-        /// <para>The returned tuple should contain:</para>
-        /// <para>Item1: <c>true</c> if the container should be updated; <c>false</c> to not update and return Item3</para>
-        /// <para>Item2: The new container (will only be used if Item1=<c>true</c>)</para>
-        /// <para>Item3: The return value</para>
-        /// </summary>
-        /// <param name="updater">A function that returns a new container.</param>
-        /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
-        private TReturn UpdateChildrenRefs<TReturn>(Func<IChildrenContainer, Tuple<bool, IChildrenContainer, TReturn>> updater)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool SwapChildrenRefs(IChildrenContainer oldChildren, IChildrenContainer newChildren)
         {
-            while (true)
-            {
-                var current = ChildrenContainer;
-                var t = updater(current);
-                if (!t.Item1) return t.Item3;
-                if (Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, t.Item2, current) == current) return t.Item3;
-            }
-        }
-
-        /// <summary>
-        /// Swaps out the children container, by calling <paramref name="updater" />  to produce the new container.
-        /// If the underlying container has been updated while <paramref name="updater" /> was called,
-        /// <paramref name="updater" /> will be called again with the new container. This will repeat until the
-        /// container can be swapped out.
-        /// </summary>
-        /// <param name="updater">A function that returns a new container.</param>
-        /// <returns>The new updated <see cref="ChildrenContainer"/></returns>
-        private IChildrenContainer UpdateChildrenRefs(Func<IChildrenContainer, IChildrenContainer> updater)
-        {
-            return InterlockedSpin.Swap(ref _childrenContainerDoNotCallMeDirectly, updater);
+            return ReferenceEquals(Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, newChildren, oldChildren), oldChildren);
         }
 
         /// <summary>
@@ -150,7 +130,13 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         public void ReserveChild(string name)
         {
-            UpdateChildrenRefs(c => c.Reserve(name));
+            while (true)
+            {
+                var oldChildren = ChildrenContainer;
+                var newChildren = oldChildren.Reserve(name);
+
+                if (SwapChildrenRefs(oldChildren, newChildren)) break;
+            }
         }
 
         /// <summary>
@@ -159,8 +145,13 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         protected void UnreserveChild(string name)
         {
-            UpdateChildrenRefs(c => c.Unreserve(name));
+            while (true)
+            {
+                var oldChildren = ChildrenContainer;
+                var newChildren = oldChildren.Unreserve(name);
 
+                if (SwapChildrenRefs(oldChildren, newChildren)) break;
+            }
         }
 
         /// <summary>
@@ -170,29 +161,25 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public ChildRestartStats InitChild(IInternalActorRef actor)
         {
-            return UpdateChildrenRefs(cc =>
+            var name = actor.Path.Name;
+            while (true)
             {
-                IChildStats stats;
-                var name = actor.Path.Name;
-                if (cc.TryGetByName(name, out stats))
+                var cc = ChildrenContainer;
+                if (cc.TryGetByName(name, out var old))
                 {
-                    var old = stats as ChildRestartStats;
-                    if (old != null)
+                    switch (old)
                     {
-                        //Do not update. Return old
-                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, old);
-                    }
-                    if (stats is ChildNameReserved)
-                    {
-                        var crs = new ChildRestartStats(actor);
-                        var updatedContainer = cc.Add(name, crs);
-                        //Update (if it's still cc) and return the new crs
-                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(true, updatedContainer, crs);
+                        case ChildRestartStats restartStats:
+                            return restartStats;
+                        case ChildNameReserved _:
+                            var crs = new ChildRestartStats(actor);
+                            if (SwapChildrenRefs(cc, cc.Add(name, crs)))
+                                return crs;
+                            break;
                     }
                 }
-                //Do not update. Return null
-                return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, null);
-            });
+                else return null;
+            }
         }
 
         /// <summary>
@@ -202,16 +189,15 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
-            return UpdateChildrenRefs(cc =>
+            while (true)
             {
-                var c = cc as TerminatingChildrenContainer;
-                if (c != null)
-                    //The arguments says: Update; with a new reason; and return true
-                    return new Tuple<bool, IChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
-                
-                //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
-                return new Tuple<bool, IChildrenContainer, bool>(false, cc, false);
-            });
+                if (ChildrenContainer is TerminatingChildrenContainer c)
+                {
+                    var n = c.CreateCopyWithReason(reason);
+                    if (SwapChildrenRefs(c, n)) return true;
+                }
+                else return false;
+            }
         }
 
         /// <summary>
@@ -219,7 +205,7 @@ namespace Akka.Actor
         /// </summary>
         protected void SetTerminated()
         {
-            UpdateChildrenRefs(c => TerminatedChildrenContainer.Instance);
+            Interlocked.Exchange(ref _childrenContainerDoNotCallMeDirectly, TerminatedChildrenContainer.Instance);
         }
 
         /// <summary>
@@ -321,11 +307,11 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use TryGetSingleChild")]
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
             IInternalActorRef child;
@@ -378,12 +364,26 @@ namespace Akka.Actor
             var terminating = ChildrenContainer as TerminatingChildrenContainer;
             if (terminating != null)
             {
-                var newContainer = UpdateChildrenRefs(c => c.Remove(child));
-                if (newContainer is TerminatingChildrenContainer) return null;
-                return terminating.Reason;
+                var n = RemoveChild(child);
+                if (!(n is TerminatingChildrenContainer))
+                    return terminating.Reason;
+                else
+                    return null;
             }
-            UpdateChildrenRefs(c => c.Remove(child));
+
+            RemoveChild(child);
             return null;
+        }
+
+        private IChildrenContainer RemoveChild(IActorRef child)
+        {
+            while (true)
+            {
+                var oldChildren = ChildrenContainer;
+                var newChildren = oldChildren.Remove(child);
+
+                if (SwapChildrenRefs(oldChildren, newChildren)) return newChildren;
+            }
         }
 
         private static string CheckName(string name)
@@ -399,7 +399,7 @@ namespace Akka.Actor
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            if (_systemImpl.Settings.SerializeAllCreators && !systemService && props.Deploy != Deploy.Local)
+            if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var ser = _systemImpl.Serialization;
                 if (props.Arguments != null)
@@ -408,13 +408,12 @@ namespace Akka.Actor
                     {
                         if (argument != null && !(argument is INoSerializationVerificationNeeded))
                         {
-                            var objectType = argument.GetType();
-                            var serializer = ser.FindSerializerFor(objectType);
-                            var bytes = serializer.ToBinary(objectType);
+                            var serializer = ser.FindSerializerFor(argument);
+                            var bytes = serializer.ToBinary(argument);
                             var manifestSerializer = serializer as SerializerWithStringManifest;
                             if (manifestSerializer != null)
                             {
-                                var manifest = manifestSerializer.Manifest(objectType);
+                                var manifest = manifestSerializer.Manifest(argument);
                                 if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
@@ -422,7 +421,7 @@ namespace Akka.Actor
                             }
                             else
                             {
-                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
+                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().TypeQualifiedName()) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
                                 }
@@ -458,7 +457,7 @@ namespace Akka.Actor
 
                 if (Mailbox != null && IsFailed)
                 {
-                    for(var i = 1; i <= Mailbox.SuspendCount(); i++)
+                    for (var i = 1; i <= Mailbox.SuspendCount(); i++)
                         actor.Suspend();
                 }
 

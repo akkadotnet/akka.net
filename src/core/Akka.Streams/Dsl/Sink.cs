@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -80,6 +80,20 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
             => new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
+
+        /// <summary>
+        /// Materializes this Sink immediately.
+        /// 
+        /// Useful for when you need a materialized value of a Sink when handing it out to someone to materialize it for you.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Sink"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Sink"/>.</returns>
+        public Tuple<TMat, Sink<TIn, NotUsed>> PreMaterialize(IMaterializer materializer)
+        {
+            var sub = Source.AsSubscriber<TIn>().ToMaterialized(this, Keep.Both).Run(materializer);
+            return Tuple.Create(sub.Item2, Sink.FromSubscriber(sub.Item1));
+        }
 
         /// <summary>
         /// Change the attributes of this <see cref="IGraph{TShape}"/> to the given ones
@@ -178,7 +192,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, TMat> Wrap<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
             => graph is Sink<TIn, TMat>
-                ? (Sink<TIn, TMat>) graph
+                ? (Sink<TIn, TMat>)graph
                 : new Sink<TIn, TMat>(graph.Module);
 
         /// <summary>
@@ -222,18 +236,18 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task<TIn>> Last<TIn>() 
+        public static Sink<TIn, Task<TIn>> Last<TIn>()
             => FromGraph(new LastOrDefault<TIn>(throwOnDefault: true)).WithAttributes(DefaultAttributes.LastOrDefaultSink);
 
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be return a default value.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error, the Task will be failed with the stream's exception.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -241,7 +255,12 @@ namespace Akka.Streams.Dsl
             => FromGraph(new LastOrDefault<TIn>()).WithAttributes(DefaultAttributes.LastOrDefaultSink);
 
         /// <summary>
-        /// TBD
+        /// A <see cref="Sink{TIn,TMat}"/> that keeps on collecting incoming elements until upstream terminates.
+        /// As upstream may be unbounded, `Flow.Create{T}().Take` or the stricter `Flow.Create{T}().Limit` (and their variants)
+        /// may be used to ensure boundedness.
+        /// Materializes into a <see cref="Task"/> of <see cref="Seq{TIn}"/> containing all the collected elements.
+        /// `Seq` is limited to <see cref="int.MaxValue"/> elements, this Sink will cancel the stream
+        /// after having received that many elements.
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -270,8 +289,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> Ignore<TIn>()
-            => new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
+        public static Sink<TIn, Task> Ignore<TIn>() => FromGraph(new IgnoreSink<TIn>());
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
@@ -380,15 +398,21 @@ namespace Akka.Streams.Dsl
                 .Named("AggregateAsyncSink");
 
         /// <summary>
+        /// <para>
         /// A <see cref="Sink{TIn,Task}"/> that will invoke the given <paramref name="reduce"/> for every received element, giving it its previous
         /// output (from the second element) and the element as input.
         /// The returned <see cref="Task{TIn}"/> will be completed with value of the final
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream. 
-        /// 
-        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// </para>
+        /// <para>
+        /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <param name="reduce">TBD</param>
@@ -408,7 +432,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, NotUsed> OnComplete<TIn>(Action success, Action<Exception> failure)
             => Flow.Create<TIn>()
-                .Transform(() => new OnCompleted<TIn, NotUsed>(success, failure))
+                .Via(new OnCompleted<TIn>(success, failure))
                 .To(Ignore<NotUsed>())
                 .Named("OnCompleteSink");
 
@@ -500,13 +524,18 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>() => FromGraph(new QueueSink<TIn>());
 
         /// <summary>
+        /// <para>
         /// Creates a real <see cref="Sink{TIn,TMat}"/> upon receiving the first element. Internal <see cref="Sink{TIn,TMat}"/> will not be created if there are no elements,
         /// because of completion or error.
-        /// 
+        /// </para>
+        /// <para>
         /// If <paramref name="sinkFactory"/> throws an exception and the supervision decision is <see cref="Supervision.Directive.Stop"/> 
         /// the <see cref="Task"/> will be completed with failure. For all other supervision options it will try to create sink with next element.
-        /// 
+        /// </para>
         /// <paramref name="fallback"/> will be executed when there was no elements and completed is received from upstream.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
@@ -526,7 +555,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
             => graph is Sink<TIn, TMat>
-                ? (Sink<TIn, TMat>) graph
+                ? (Sink<TIn, TMat>)graph
                 : new Sink<TIn, TMat>(graph.Module);
 
         /// <summary>

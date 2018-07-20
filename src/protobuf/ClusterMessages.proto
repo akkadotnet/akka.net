@@ -1,0 +1,182 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+package Akka.Cluster.Serialization.Proto.Msg;
+
+import "ContainerFormats.proto";
+
+/****************************************
+ * Cluster User Messages
+ ****************************************/
+
+/**
+ * Leave
+ * Sends an Address
+ */
+
+/**
+ * Down
+ * Sends an Address
+ */
+
+
+/****************************************
+ * Internal Cluster Action Messages
+ ****************************************/
+
+// Join
+message Join {
+  UniqueAddress node = 1;
+  repeated string roles = 2;
+}
+
+// Welcome, reply to Join
+message Welcome {
+  UniqueAddress from = 1;
+  Gossip gossip = 2;
+}
+
+/**
+ * InitJoin
+ * Sends Empty
+ */
+
+/**
+ * InitJoinAck
+ * Sends an Address
+ */
+
+/**
+ * InitJoinNack
+ * Sends an Address
+ */
+
+/****************************************
+ * Cluster Heartbeat Messages
+ ****************************************/
+
+/**
+ * Heartbeat
+ * Sends an Address
+ */
+
+/**
+ * HeartbeatRsp
+ * Sends an UniqueAddress
+ */
+
+/****************************************
+ * Cluster Gossip Messages
+ ****************************************/
+
+// Gossip Envelope
+message GossipEnvelope {
+  UniqueAddress from = 1;
+  UniqueAddress to = 2;
+  bytes serializedGossip = 3;
+}
+
+// Gossip Status
+message GossipStatus {
+  UniqueAddress from = 1;
+  repeated string allHashes = 2;
+  VectorClock version = 3;
+}
+
+// Gossip
+message Gossip {
+  repeated UniqueAddress allAddresses = 1;
+  repeated string allRoles = 2;
+  repeated string allHashes = 3;
+  repeated Member members = 4;
+  GossipOverview overview = 5;
+  VectorClock version = 6;
+}
+
+// Gossip Overview
+message GossipOverview {
+  /* This is the address indexes for the nodes that have seen this gossip */
+  repeated int32 seen = 1;
+  repeated ObserverReachability observerReachability = 2;
+}
+
+// Reachability
+message ObserverReachability {
+  int32 addressIndex = 1;
+  int64 version = 4;
+  repeated SubjectReachability subjectReachability = 2;
+}
+
+message SubjectReachability {
+  enum ReachabilityStatus {
+    Reachable = 0;
+    Unreachable = 1;
+    Terminated = 2;
+  }
+  int32 addressIndex = 1;
+  ReachabilityStatus status = 3;
+  int64 version = 4;
+}
+
+// Member
+message Member {
+  enum MemberStatus {
+    Joining = 0;
+    Up = 1;
+    Leaving = 2;
+    Exiting = 3;
+    Down = 4;
+    Removed = 5;
+    WeaklyUp = 6;
+  }
+
+  int32 addressIndex = 1;
+  int32 upNumber = 2;
+  MemberStatus status = 3;
+  repeated int32 rolesIndexes = 4 [packed = true];
+}
+
+// Vector Clock
+message VectorClock {
+  message Version {
+    int32 hashIndex = 1;
+    int64 timestamp = 2;
+  }
+  // the timestamp could be removed but left for test data compatibility
+  int64 timestamp = 1;
+  repeated Version versions = 2;
+}
+
+/****************************************
+ * Common Datatypes and Messages
+ ****************************************/
+
+// Defines a remote address with uid.
+message UniqueAddress {
+  Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
+  uint32 uid = 2;
+}
+
+/****************************************
+ * Cluster routing
+ ****************************************/
+
+message ClusterRouterPool {
+  Pool pool = 1;
+  ClusterRouterPoolSettings settings = 2;
+}
+
+message Pool {
+  uint32 serializerId = 1;
+  string manifest = 2;
+  bytes data = 3;
+}
+
+message ClusterRouterPoolSettings {
+  uint32 totalInstances = 1;
+  uint32 maxInstancesPerNode = 2;
+  bool allowLocalRoutees = 3;
+  string useRole = 4;
+}

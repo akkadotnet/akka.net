@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Shape.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Streams
     /// <summary>
     /// An input port of a <see cref="IModule"/>. This type logically belongs
     /// into the impl package but must live here due to how sealed works.
-    /// It is also used in the Java DSL for “untyped Inlets” as a work-around
+    /// It is also used in the Java DSL for "untyped Inlets" as a work-around
     /// for otherwise unreasonable existential types.
     /// </summary>
     public abstract class InPort
@@ -30,7 +30,7 @@ namespace Akka.Streams
     /// <summary>
     /// An output port of a StreamLayout.Module. This type logically belongs
     /// into the impl package but must live here due to how sealed works.
-    /// It is also used in the Java DSL for “untyped Outlets” as a work-around
+    /// It is also used in the Java DSL for "untyped Outlets" as a work-around
     /// for otherwise unreasonable existential types.
     /// </summary>
     public abstract class OutPort 
@@ -60,12 +60,10 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        protected Inlet(string name)
-        {
-            if (name == null) throw new ArgumentException("Inlet name must be defined");
-            Name = name;
-        }
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="name"/> is undefined.
+        /// </exception>
+        protected Inlet(string name) => Name = name ?? throw new ArgumentException("Inlet name must be defined");
 
         /// <summary>
         /// TBD
@@ -78,10 +76,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Inlet CarbonCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => Name;
     }
 
@@ -130,10 +125,7 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
-        protected Outlet(string name)
-        {
-            Name = name;
-        }
+        protected Outlet(string name) => Name = name;
 
         /// <summary>
         /// TBD
@@ -146,10 +138,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Outlet CarbonCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => Name;
     }
 
@@ -184,7 +173,10 @@ namespace Akka.Streams
     /// matters from the outside are the connections that can be made with it,
     /// otherwise it is just a black box.
     /// </summary>
-    public abstract class Shape : ICloneable
+    public abstract class Shape
+#if CLONEABLE
+     : ICloneable
+#endif
     {
         /// <summary>
         /// Gets list of all input ports.
@@ -239,10 +231,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public object Clone() => DeepCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => $"{GetType().Name}([{string.Join(", ", Inlets)}] [{string.Join(", ", Outlets)}])";
     }
 
@@ -280,7 +269,10 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlets">TBD</param>
         /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
+        /// or the size of the specified <paramref name="outlets"/> array is zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
@@ -352,10 +344,7 @@ namespace Akka.Streams
         /// <exception cref="ArgumentNullException">TBD</exception>
         public SourceShape(Outlet<TOut> outlet)
         {
-            if (outlet == null)
-                throw new ArgumentNullException(nameof(outlet));
-
-            Outlet = outlet;
+            Outlet = outlet ?? throw new ArgumentNullException(nameof(outlet));
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
 
@@ -385,7 +374,10 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlets">TBD</param>
         /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
+        /// or the size of the specified <paramref name="outlets"/> array is one.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
@@ -397,11 +389,7 @@ namespace Akka.Streams
             return new SourceShape<TOut>(outlets[0] as Outlet<TOut>);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -409,20 +397,13 @@ namespace Akka.Streams
             if (ReferenceEquals(this, obj))
                 return true;
 
-            return obj is SourceShape<TOut> && Equals((SourceShape<TOut>) obj);
+            return obj is SourceShape<TOut> shape && Equals(shape);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         private bool Equals(SourceShape<TOut> other) => Outlet.Equals(other.Outlet);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => Outlet.GetHashCode();
     }
 
@@ -454,16 +435,13 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlet">TBD</param>
         /// <param name="outlet">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when either the specified <paramref name="inlet"/> or <paramref name="outlet"/> is undefined.
+        /// </exception>
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
-            if (inlet == null)
-                throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
-            if (outlet == null)
-                throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
-
-            Inlet = inlet;
-            Outlet = outlet;
+            Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
+            Outlet = outlet ?? throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
             Inlets = ImmutableArray.Create<Inlet>(inlet);
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
@@ -504,7 +482,10 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlets">TBD</param>
         /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is one
+        /// or the size of the specified <paramref name="outlets"/> array is one.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
@@ -532,11 +513,12 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="inlet">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="inlet"/> is undefined.
+        /// </exception>
         public SinkShape(Inlet<TIn> inlet)
         {
-            if (inlet == null) throw new ArgumentNullException(nameof(inlet));
-            Inlet = inlet;
+            Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "SinkShape expected non-null inlet");
             Inlets = ImmutableArray.Create<Inlet>(inlet);
         }
 
@@ -561,7 +543,10 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlets">TBD</param>
         /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
+        /// or the size of the specified <paramref name="outlets"/> array is one.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
@@ -573,11 +558,7 @@ namespace Akka.Streams
             return new SinkShape<TIn>(inlets[0] as Inlet<TIn>);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -585,15 +566,12 @@ namespace Akka.Streams
             if (ReferenceEquals(this, obj))
                 return true;
 
-            return obj is SinkShape<TIn> && Equals((SinkShape<TIn>) obj);
+            return obj is SinkShape<TIn> shape && Equals(shape);
         }
 
         private bool Equals(SinkShape<TIn> other) => Equals(Inlet, other.Inlet);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => Inlet.GetHashCode();
     }
 
@@ -630,22 +608,16 @@ namespace Akka.Streams
         /// <param name="out1">TBD</param>
         /// <param name="in2">TBD</param>
         /// <param name="out2">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when either the specified <paramref name="in1"/>, <paramref name="out1"/>,
+        /// <paramref name="in2"/>, or <paramref name="out2"/> is undefined.
+        /// </exception>
         public BidiShape(Inlet<TIn1> in1, Outlet<TOut1> out1, Inlet<TIn2> in2, Outlet<TOut2> out2)
         {
-            if (in1 == null)
-                throw new ArgumentNullException(nameof(in1));
-            if (out1 == null)
-                throw new ArgumentNullException(nameof(out1));
-            if (in2 == null)
-                throw new ArgumentNullException(nameof(in2));
-            if (out2 == null)
-                throw new ArgumentNullException(nameof(out2));
-
-            Inlet1 = in1;
-            Inlet2 = in2;
-            Outlet1 = out1;
-            Outlet2 = out2;
+            Inlet1 = in1 ?? throw new ArgumentNullException(nameof(in1));
+            Inlet2 = in2 ?? throw new ArgumentNullException(nameof(in2));
+            Outlet1 = out1 ?? throw new ArgumentNullException(nameof(out1));
+            Outlet2 = out2 ?? throw new ArgumentNullException(nameof(out2));
 
             Inlets = ImmutableArray.Create<Inlet>(Inlet1, Inlet2);
             Outlets = ImmutableArray.Create<Outlet>(Outlet1, Outlet2);
@@ -687,16 +659,19 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="i">TBD</param>
-        /// <param name="o">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="inlets">TBD</param>
+        /// <param name="outlets">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is two
+        /// or the size of the specified <paramref name="outlets"/> array is two.
+        /// </exception>
         /// <returns>TBD</returns>
-        public override Shape CopyFromPorts(ImmutableArray<Inlet> i, ImmutableArray<Outlet> o)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            if (i.Length != 2) throw new ArgumentException($"Proposed inlets [{string.Join(", ", i)}] don't fit BidiShape");
-            if (o.Length != 2) throw new ArgumentException($"Proposed outlets [{string.Join(", ", o)}] don't fit BidiShape");
+            if (inlets.Length != 2) throw new ArgumentException($"Proposed inlets [{string.Join(", ", inlets)}] don't fit BidiShape");
+            if (outlets.Length != 2) throw new ArgumentException($"Proposed outlets [{string.Join(", ", outlets)}] don't fit BidiShape");
 
-            return new BidiShape<TIn1, TOut1, TIn2, TOut2>((Inlet<TIn1>)i[0], (Outlet<TOut1>)o[0], (Inlet<TIn2>)i[1], (Outlet<TOut2>)o[1]);
+            return new BidiShape<TIn1, TOut1, TIn2, TOut2>((Inlet<TIn1>)inlets[0], (Outlet<TOut1>)outlets[0], (Inlet<TIn2>)inlets[1], (Outlet<TOut2>)outlets[1]);
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ namespace Akka.Streams.Actors
     /// subscriber requests more elements.
     /// </summary>
     [Serializable]
-    public sealed class Request : IActorPublisherMessage
+    public sealed class Request : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -115,7 +115,7 @@ namespace Akka.Streams.Actors
     /// subscriber cancels the subscription.
     /// </summary>
     [Serializable]
-    public sealed class Cancel : IActorPublisherMessage
+    public sealed class Cancel : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -130,7 +130,7 @@ namespace Akka.Streams.Actors
     /// publisher will already be in cancelled state, thus the actor should clean-up and stop itself.
     /// </summary>
     [Serializable]
-    public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage
+    public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -273,14 +273,24 @@ namespace Akka.Streams.Actors
 
 
         /// <summary>
-        /// Send an element to the stream subscriber. You are allowed to send as many elements
+        /// Sends an element to the stream subscriber. You are allowed to send as many elements
         /// as have been requested by the stream subscriber. This amount can be inquired with
         /// <see cref="TotalDemand"/>. It is only allowed to use <see cref="OnNext"/> when
         /// <see cref="IsActive"/> and <see cref="TotalDemand"/> &gt; 0,
         /// otherwise <see cref="OnNext"/> will throw <see cref="IllegalStateException"/>.
         /// </summary>
         /// <param name="element">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown for a number of reasons. These include:
+        /// <dl>
+        ///   <dt>when in the <see cref="LifecycleState.Active"/> or <see cref="LifecycleState.PreSubscriber"/> state</dt>
+        ///   <dd>This exception is thrown when the <see cref="ActorPublisher{T}"/> has zero <see cref="TotalDemand"/>.</dd>
+        ///   <dt>when in the <see cref="LifecycleState.ErrorEmitted"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already terminated due to an error.</dd>
+        ///   <dt>when in the <see cref="LifecycleState.Completed"/> or <see cref="LifecycleState.CompleteThenStop"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already completed.</dd>
+        /// </dl>
+        /// </exception>
         public void OnNext(T element)
         {
             switch (_lifecycleState)
@@ -311,7 +321,15 @@ namespace Akka.Streams.Actors
         /// Complete the stream. After that you are not allowed to
         /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
         /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown for a number of reasons. These include:
+        /// <dl>
+        ///   <dt>when in the <see cref="LifecycleState.ErrorEmitted"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already terminated due to an error.</dd>
+        ///   <dt>when in the <see cref="LifecycleState.Completed"/> or <see cref="LifecycleState.CompleteThenStop"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already completed.</dd>
+        /// </dl>
+        /// </exception>
         public void OnComplete()
         {
             switch (_lifecycleState)
@@ -382,7 +400,15 @@ namespace Akka.Streams.Actors
         /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
         /// </summary>
         /// <param name="cause">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown for a number of reasons. These include:
+        /// <dl>
+        ///   <dt>when in the <see cref="LifecycleState.ErrorEmitted"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already terminated due to an error.</dd>
+        ///   <dt>when in the <see cref="LifecycleState.Completed"/> or <see cref="LifecycleState.CompleteThenStop"/> state</dt>
+        ///   <dd>This exception is thrown when this <see cref="ActorPublisher{T}"/> has already completed.</dd>
+        /// </dl>
+        /// </exception>
         public void OnError(Exception cause)
         {
             switch (_lifecycleState)
@@ -458,7 +484,7 @@ namespace Akka.Streams.Actors
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (message is Request)
             {
@@ -639,7 +665,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="ref">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
+        /// </exception>
         public ActorPublisherImpl(IActorRef @ref)
         {
             if(@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
@@ -650,7 +678,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="subscriber">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="subscriber"/> is undefined.
+        /// </exception>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             if (subscriber == null) throw new ArgumentNullException(nameof(subscriber), "Subscriber must not be null");
@@ -669,7 +699,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="ref">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
+        /// </exception>
         public ActorPublisherSubscription(IActorRef @ref)
         {
             if (@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
@@ -767,8 +799,8 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Get(IActorRef actorRef)
         {
-            State state;
-            return _state.TryGetValue(actorRef, out state) ? state : null;
+            _state.TryGetValue(actorRef, out var state);
+            return state;
         }
 
         /// <summary>

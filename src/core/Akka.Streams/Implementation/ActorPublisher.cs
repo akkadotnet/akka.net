@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
@@ -107,16 +109,19 @@ namespace Akka.Streams.Implementation
     public class NormalShutdownException : IllegalStateException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NormalShutdownException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public NormalShutdownException(string message) : base(message) { }
+
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NormalShutdownException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>
@@ -150,7 +155,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
     }
-    
+
     /// <summary>
     /// INTERNAL API
     /// 
@@ -158,6 +163,7 @@ namespace Akka.Streams.Implementation
     /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         /// <summary>

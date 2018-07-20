@@ -1,31 +1,29 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DBHelper.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.Data.SQLite;
 using Akka.Actor;
+using Microsoft.Data.Sqlite;
 
 namespace ClusterSharding.Node.AutomaticJoin
 {
     public class DbHelper
     {
-        private readonly Func<SQLiteConnection> _connectionFactory;
+        private readonly Func<SqliteConnection> _connectionFactory;
 
-        public DbHelper(Func<SQLiteConnection> connectionFactory)
+        public DbHelper(Func<SqliteConnection> connectionFactory)
         {
             _connectionFactory = connectionFactory;
         }
 
         public void InitializeNodesTable()
         {
-            using (var cmd = new SQLiteCommand(_connectionFactory()))
+            using (var cmd = new SqliteCommand("", _connectionFactory()))
             {
                 cmd.CommandText = @"CREATE TABLE IF NOT EXISTS cluster_nodes (
                     member_address VARCHAR(255) NOT NULL PRIMARY KEY
@@ -37,7 +35,7 @@ namespace ClusterSharding.Node.AutomaticJoin
 
         public IEnumerable<Address> GetClusterMembers()
         {
-            using (var cmd = new SQLiteCommand(@"SELECT member_address from cluster_nodes", _connectionFactory()))
+            using (var cmd = new SqliteCommand(@"SELECT member_address from cluster_nodes", _connectionFactory()))
             {
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -54,12 +52,12 @@ namespace ClusterSharding.Node.AutomaticJoin
 
         public void AddClusterMember(Address address)
         {
-            using (var cmd = new SQLiteCommand(@"INSERT INTO cluster_nodes(member_address) VALUES (@addr)", _connectionFactory()))
+            using (var cmd = new SqliteCommand(@"INSERT INTO cluster_nodes(member_address) VALUES (@addr)", _connectionFactory()))
             using (var tx = cmd.Connection.BeginTransaction())
             {
                 cmd.Transaction = tx;
                 var addr = address.ToString();
-                cmd.Parameters.Add("@addr", DbType.String);
+                cmd.Parameters.Add("@addr", SqliteType.Text);
                 cmd.Parameters["@addr"].Value = addr;
 
                 cmd.ExecuteNonQuery();
@@ -69,12 +67,12 @@ namespace ClusterSharding.Node.AutomaticJoin
 
         public void RemoveClusterMember(Address address)
         {
-            using (var cmd = new SQLiteCommand(@"DELETE FROM cluster_nodes WHERE member_address = @addr", _connectionFactory()))
+            using (var cmd = new SqliteCommand(@"DELETE FROM cluster_nodes WHERE member_address = @addr", _connectionFactory()))
             using (var tx = cmd.Connection.BeginTransaction())
             {
                 cmd.Transaction = tx;
                 var addr = address.ToString();
-                cmd.Parameters.Add("@addr", DbType.String);
+                cmd.Parameters.Add("@addr", SqliteType.Text);
                 cmd.Parameters["@addr"].Value = addr;
 
                 cmd.ExecuteNonQuery();

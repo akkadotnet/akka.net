@@ -1,13 +1,14 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowRecoverWithSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -133,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_not_influece_stream_when_there_is_no_exception()
+        public void A_RecoverWith_must_not_influence_stream_when_there_is_no_exception()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -278,5 +279,59 @@ namespace Akka.Streams.Tests.Dsl
                     .ShouldThrow<ArgumentException>();
             }, Materializer);
         }
+
+        [Fact]
+        public void A_RecoverWith_must_fail_correctly_when_materialization_of_recover_source_fails()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                var matFail = new TestException("fail!");
+
+                var task = Source.Failed<string>(new TestException("trigger"))
+                    .RecoverWithRetries(ex => Source.FromGraph(new FailingInnerMat(matFail)), 1)
+                    .RunWith(Sink.Ignore<string>(), Materializer);
+
+                try
+                {
+                    task.Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (AggregateException) { }
+
+                task.IsFaulted.ShouldBe(true);
+                task.Exception.ShouldNotBe(null);
+                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+
+            }, Materializer);
+        }
+
+        private sealed class FailingInnerMat : GraphStage<SourceShape<string>>
+        {
+            #region Logic
+            private sealed class FailingLogic : GraphStageLogic
+            {
+                public FailingLogic(Shape shape, TestException ex) : base(shape)
+                {
+                    throw ex;
+                }
+            }
+            #endregion
+
+            public FailingInnerMat(TestException ex)
+            {
+                var outlet = new Outlet<string>("out");
+                Shape = new SourceShape<string>(outlet);
+                _ex = ex;
+            }
+
+            private readonly TestException _ex;
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            {
+                return new FailingLogic(Shape, _ex);
+            }
+        }
+
     }
 }

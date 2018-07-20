@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSpecExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,7 +109,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldBeTrue(this bool b, string message = null)
         {
-            Assert.True(b);
+            Assert.True(b, message);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldBeFalse(this bool b, string message = null)
         {
-            Assert.False(b);
+            Assert.False(b, message);
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace Akka.TestKit
         public static void ShouldBeLessThan<T>(this T actual, T value, string message = null) where T : IComparable<T>
         {
             var comparisonResult = actual.CompareTo(value);
-            Assert.True(comparisonResult < 0, "Expected Actual: " + actual + " to be less than " + value);
+            Assert.True(comparisonResult < 0, message ?? "Expected Actual: " + actual + " to be less than " + value);
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace Akka.TestKit
         public static void ShouldBeLessOrEqualTo<T>(this T actual, T value, string message = null) where T : IComparable<T>
         {
             var comparisonResult = actual.CompareTo(value);
-            Assert.True(comparisonResult <= 0, "Expected Actual: " + actual + " to be less than " + value);
+            Assert.True(comparisonResult <= 0, message ?? "Expected Actual: " + actual + " to be less than " + value);
         }
 
         /// <summary>
@@ -158,7 +158,7 @@ namespace Akka.TestKit
         public static void ShouldBeGreaterThan<T>(this T actual, T value, string message = null) where T : IComparable<T>
         {
             var comparisonResult = actual.CompareTo(value);
-            Assert.True(comparisonResult > 0, "Expected Actual: " + actual + " to be less than " + value);
+            Assert.True(comparisonResult > 0, message ?? "Expected Actual: " + actual + " to be less than " + value);
         }
 
         /// <summary>
@@ -171,7 +171,7 @@ namespace Akka.TestKit
         public static void ShouldBeGreaterOrEqual<T>(this T actual, T value, string message = null) where T : IComparable<T>
         {
             var comparisonResult = actual.CompareTo(value);
-            Assert.True(comparisonResult >= 0, "Expected Actual: " + actual + " to be less than " + value);
+            Assert.True(comparisonResult >= 0, message ?? "Expected Actual: " + actual + " to be less than " + value);
         }
 
         /// <summary>
@@ -192,6 +192,17 @@ namespace Akka.TestKit
         /// <param name="actual">TBD</param>
         /// <param name="expected">TBD</param>
         public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
+        {
+            ShouldBe(actual, expected);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="actual">TBD</param>
+        /// <param name="expected">TBD</param>
+        public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, IEnumerable<T> expected)
         {
             ShouldBe(actual, expected);
         }

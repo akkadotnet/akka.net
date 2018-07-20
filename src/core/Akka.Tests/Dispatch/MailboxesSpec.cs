@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.Actor;
 using Akka.Util.Internal;
+using FluentAssertions;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
@@ -56,6 +57,68 @@ namespace Akka.Tests.Dispatch
         public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
         {
         }
+    }
+
+    public class StashingActor : ReceiveActor, IWithUnboundedStash
+    {
+        private readonly TestKitBase _testkit;
+        private readonly bool _echoBackToSenderAsWell;
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="echoBackToSenderAsWell">TBD</param>
+        public StashingActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
+        {
+            _testkit = testkit;
+            _echoBackToSenderAsWell = echoBackToSenderAsWell;
+            StashAll();
+        }
+
+        private void StashAll()
+        {
+            Receive<Start>(_ =>
+            {
+                Become(Process);
+                Stash.UnstashAll();
+            });
+            ReceiveAny(msg =>
+            {
+                Stash.Stash();
+            });
+        }
+
+        private void Process()
+        {
+            ReceiveAny(msg =>
+            {
+                var sender = Sender;
+                var testActor = _testkit.TestActor;
+                if (_echoBackToSenderAsWell && testActor != sender)
+                    sender.Forward(msg);
+                testActor.Tell(msg, Sender);
+            });
+        }
+
+        /// <summary>
+        /// Returns a <see cref="Props"/> object that can be used to create an <see cref="EchoActor"/>.
+        /// The  <see cref="EchoActor"/> echoes whatever is sent to it, to the
+        /// TestKit's <see cref="TestKitBase.TestActor"/>.
+        /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
+        /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless 
+        /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="echoBackToSenderAsWell">TBD</param>
+        /// <returns>TBD</returns>
+        public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
+        {
+            return Akka.Actor.Props.Create(() => new StashingActor(testkit, echoBackToSenderAsWell));
+        }
+
+        public class Start { }
     }
 
     public class MailboxesSpec : AkkaSpec
@@ -177,6 +240,49 @@ int-prio-mailbox {
                 ExpectMsg(value);
                 ExpectMsg(value);
             }
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
+
+        [Fact]
+        public void Unbounded_Priority_Mailbox_Supports_Unbounded_Stashing()
+        {
+            var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
+            var values = new int[10];
+            var increment = (int)(UInt32.MaxValue / values.Length);
+
+            for (var i = 0; i < values.Length; i++)
+                values[i] = Int32.MinValue + increment * i;
+
+            // tell the actor in reverse order
+            foreach (var value in values.Reverse())
+            {
+                actor.Tell(value);
+                actor.Tell(value);
+                actor.Tell(value);
+            }
+
+            actor.Tell(new StashingActor.Start());
+
+            //resume mailbox, this prevents the mailbox from running to early
+            actor.SendSystemMessage(new Resume(null));
+
+            this.Within(5.Seconds(), () =>
+            {
+                // expect the messages in the correct order
+                foreach (var value in values)
+                {
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                }
+            }); 
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }

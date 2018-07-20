@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,17 +15,23 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
 
 
 namespace Akka.Actor.Internal
 {
+    internal interface ISupportSerializationConfigReload
+    {
+        void ReloadSerialization();
+    }
+
     /// <summary>
     /// TBD
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class ActorSystemImpl : ExtendedActorSystem
+    public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
@@ -43,9 +49,9 @@ namespace Akka.Actor.Internal
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ActorSystemImpl"/> class.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
@@ -65,7 +71,7 @@ namespace Akka.Actor.Internal
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
-                    $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+                    $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')", nameof(name));
             if(config == null)
                 throw new ArgumentNullException(nameof(config), "Configuration must not be null.");
 
@@ -124,33 +130,37 @@ namespace Akka.Actor.Internal
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
-
         /// <summary>
-        /// Creates a new system actor that lives under the /system guardian.
+        /// Creates a new system actor that lives under the "/system" guardian.
         /// </summary>
-        /// <param name="props">The props used to create this actor.</param>
-        /// <param name="name">Optional. The name of this actor.</param>
+        /// <param name="props">The <see cref="Props"/> used to create the actor.</param>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <exception cref="InvalidActorNameException">
+        /// This exception is thrown when the given name is invalid or already in use.
+        /// </exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when deployment, dispatcher or mailbox configuration is incorrect.
+        /// </exception>
         /// <returns>A reference to the underlying actor.</returns>
-        /// <exception cref="InvalidActorNameException">Thrown if the given name is
-        /// invalid or already in use</exception>
-        /// <exception cref="ConfigurationException">Thrown if deployment, dispatcher
-        /// or mailbox configuration is wrong</exception>
         public override IActorRef SystemActorOf(Props props, string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(props, true, name);
         }
 
         /// <summary>
-        /// Creates a new system actor that lives under the /system guardian.
+        /// Creates a new system actor that lives under the "/system" guardian.
         /// </summary>
-        /// <param name="name">Optional. The name of this actor.</param>
+        /// <typeparam name="TActor">
+        /// The type of the actor to create. Must have a default constructor declared.
+        /// </typeparam>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <exception cref="InvalidActorNameException">
+        /// This exception is thrown when the given name is invalid or already in use.
+        /// </exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when deployment, dispatcher or mailbox configuration is incorrect.
+        /// </exception>
         /// <returns>A reference to the underlying actor.</returns>
-        /// <exception cref="InvalidActorNameException">Thrown if the given name is
-        /// invalid or already in use</exception>
-        /// <exception cref="ConfigurationException">Thrown if deployment, dispatcher
-        /// or mailbox configuration is wrong</exception>
-        /// <typeparam name="TActor">The type of the actor that will be created. 
-        /// Must have a default constructor declared.</typeparam>
         public override IActorRef SystemActorOf<TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
@@ -221,37 +231,24 @@ namespace Akka.Actor.Internal
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
-                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer ). " +
+                            $"(for more info visit: http://getakka.net/articles/networking/serialization.html#how-to-setup-hyperion-as-default-serializer ). " +
                             $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.AttachChild(props, false, name);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
@@ -269,16 +266,13 @@ namespace Akka.Actor.Internal
             sched?.Dispose();
         }
 
-        /// <summary>
-        /// Load all of the extensions registered in the <see cref="ActorSystem.Settings"/>
-        /// </summary>
         private void LoadExtensions()
         {
             var extensions = new List<IExtensionId>();
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
@@ -308,10 +302,10 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Registers the specified extension with this actor system.
         /// </summary>
-        /// <param name="extension">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="extension">The extension to register with this actor system</param>
+        /// <returns>The extension registered with this actor system</returns>
         public override object RegisterExtension(IExtensionId extension)
         {
             if (extension == null) return null;
@@ -322,10 +316,10 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the specified extension that is registered to this actor system.
         /// </summary>
-        /// <param name="extensionId">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="extensionId">The extension to retrieve</param>
+        /// <returns>The specified extension registered to this actor system</returns>
         public override object GetExtension(IExtensionId extensionId)
         {
             object extension;
@@ -334,38 +328,36 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Tries to retrieve an extension with the specified type.
         /// </summary>
-        /// <param name="extensionType">TBD</param>
-        /// <param name="extension">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="extensionType">The type of extension to retrieve</param>
+        /// <param name="extension">The extension that is retrieved if successful</param>
+        /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension(Type extensionType, out object extension)
         {
-            Lazy<object> lazyExtension;
-            var wasFound = _extensions.TryGetValue(extensionType, out lazyExtension);
+            var wasFound = _extensions.TryGetValue(extensionType, out var lazyExtension);
             extension = wasFound ? lazyExtension.Value : null;
             return wasFound;
         }
 
         /// <summary>
-        /// TBD
+        /// Tries to retrieve an extension with the specified type.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="extension">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of extension to retrieve</typeparam>
+        /// <param name="extension">The extension that is retrieved if successful</param>
+        /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension<T>(out T extension)
         {
-            Lazy<object> lazyExtension;
-            var wasFound = _extensions.TryGetValue(typeof(T), out lazyExtension);
+            var wasFound = _extensions.TryGetValue(typeof(T), out var lazyExtension);
             extension = wasFound ? lazyExtension.Value as T : null;
             return wasFound;
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves an extension with the specified type that is registered to this actor system.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of extension to retrieve</typeparam>
+        /// <returns>The specified extension registered to this actor system</returns>
         public override T GetExtension<T>()
         {
             T extension;
@@ -374,66 +366,55 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether this actor system has an extension with the specified type.
         /// </summary>
-        /// <param name="t">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool HasExtension(Type t)
+        /// <param name="type">The type of the extension being queried.</param>
+        /// <returns><c>true</c> if this actor system has the extension; otherwise <c>false</c>.</returns>
+        public override bool HasExtension(Type type)
         {
-            if (typeof(IExtension).IsAssignableFrom(t))
+            if (typeof(IExtension).IsAssignableFrom(type))
             {
-                return _extensions.ContainsKey(t);
+                return _extensions.ContainsKey(type);
             }
             return false;
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether this actor system has the specified extension.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of the extension being queried</typeparam>
+        /// <returns><c>true</c> if this actor system has the extension; otherwise <c>false</c>.</returns>
         public override bool HasExtension<T>()
         {
             return _extensions.ContainsKey(typeof(T));
         }
 
-        /// <summary>
-        ///     Configures the settings.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
         private void ConfigureSettings(Config config)
         {
             _settings = new Settings(this, config);
         }
 
-        /// <summary>
-        ///     Configures the event stream.
-        /// </summary>
         private void ConfigureEventStream()
         {
             _eventStream = new EventStream(_settings.DebugEventStream);
             _eventStream.StartStdoutLogger(_settings);
         }
 
-        /// <summary>
-        ///     Configures the serialization.
-        /// </summary>
         private void ConfigureSerialization()
         {
             _serialization = new Serialization.Serialization(this);
         }
 
-        /// <summary>
-        ///     Configures the mailboxes.
-        /// </summary>
+        void ISupportSerializationConfigReload.ReloadSerialization() {
+            if(_serialization != null)
+                ConfigureSerialization();
+        }
+
         private void ConfigureMailboxes()
         {
             _mailboxes = new Mailboxes(this);
         }
 
-        /// <summary>
-        ///     Configures the provider.
-        /// </summary>
         private void ConfigureProvider()
         {
             try
@@ -455,75 +436,60 @@ namespace Akka.Actor.Internal
             }
         }
 
-        /// <summary>
-        /// Extensions depends on loggers being configured before Start() is called
-        /// </summary>
         private void ConfigureLoggers()
         {
             _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
         }
 
-        /// <summary>
-        ///     Configures the dispatchers.
-        /// </summary>
         private void ConfigureDispatchers()
         {
             _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
         }
 
-        /// <summary>
-        /// Configures the actor producer pipeline.
-        /// </summary>
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
-        /// <summary>
-        /// Configures the termination callbacks.
-        /// </summary>
         private void ConfigureTerminationCallbacks()
         {
             _terminationCallbacks = new TerminationCallbacks(Provider.TerminationTask);
         }
 
         /// <summary>
-        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
-        /// all actors in this actor system have been stopped.
-        /// Multiple code blocks may be registered by calling this method multiple times.
-        /// The callbacks will be run sequentially in reverse order of registration, i.e.
-        /// last registration is run first.
+        /// <para>
+        /// Registers a block of code (callback) to run after ActorSystem.shutdown has been issued and all actors
+        /// in this actor system have been stopped. Multiple code blocks may be registered by calling this method
+        /// multiple times.
+        /// </para>
+        /// <para>
+        /// The callbacks will be run sequentially in reverse order of registration, i.e. last registration is run first.
+        /// </para>
         /// </summary>
         /// <param name="code">The code to run</param>
-        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        /// <exception cref="Exception">
+        /// This exception is thrown if the system has already shut down or if shutdown has been initiated.
+        /// </exception>
         public override void RegisterOnTermination(Action code)
         {
             _terminationCallbacks.Add(code);
         }
 
         /// <summary>
-        ///     Stop this actor system. This will stop the guardian actor, which in turn
-        ///     will recursively stop all its child actors, then the system guardian
-        ///     (below which the logging actors reside) and the execute all registered
-        ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// <para>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn will recursively stop
+        /// all its child actors, then the system guardian (below which the logging actors reside) and the execute
+        /// all registered termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// </para>
+        /// <para>
+        /// Be careful to not schedule any operations on completion of the returned task using the `dispatcher`
+        /// of this actor system as it will have been shut down before the task completes.
+        /// </para>
         /// </summary>
-        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
-        public override void Shutdown()
-        {
-            Terminate();
-        }
-
-        /// <summary>
-        /// Terminates this actor system. This will stop the guardian actor, which in turn
-        /// will recursively stop all its child actors, then the system guardian
-        /// (below which the logging actors reside) and the execute all registered
-        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
-        /// Be careful to not schedule any operations on completion of the returned task
-        /// using the `dispatcher` of this actor system as it will have been shut down before the
-        /// task completes.
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="Task"/> that will complete once the actor system has finished terminating and all actors are stopped.
+        /// </returns>
         public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
@@ -532,63 +498,17 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
-        public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override void AwaitTermination()
-        {
-            AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override bool AwaitTermination(TimeSpan timeout)
-        {
-            return AwaitTermination(timeout, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return WhenTerminated.Wait((int)timeout.TotalMilliseconds, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                //The cancellationToken was canceled.
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Returns a task which will be completed after the ActorSystem has been terminated
-        /// and termination hooks have been executed. Be careful to not schedule any operations
-        /// on the `dispatcher` of this actor system as it will have been shut down before this
-        /// task completes.
+        /// Returns a task which will be completed after the <see cref="ActorSystem"/> has been
+        /// terminated and termination hooks have been executed. Be careful to not schedule any
+        /// operations on the `dispatcher` of this actor system as it will have been shut down
+        /// before this task completes.
         /// </summary>
         public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
         /// <summary>
-        /// TBD
+        /// Stops the specified actor permanently.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor to stop</param>
         public override void Stop(IActorRef actor)
         {
             var path = actor.Path;
@@ -600,11 +520,10 @@ namespace Akka.Actor.Internal
             else
                 ((IInternalActorRef)actor).Stop();
         }
-
     }
 
     /// <summary>
-    /// TBD
+    /// This class represents a callback used to run a task when the actor system is terminating.
     /// </summary>
     class TerminationCallbacks
     {
@@ -612,9 +531,9 @@ namespace Akka.Actor.Internal
         private readonly AtomicReference<Task> _atomicRef;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TerminationCallbacks" /> class.
         /// </summary>
-        /// <param name="upStreamTerminated">TBD</param>
+        /// <param name="upStreamTerminated">The task to run when the actor system is terminating</param>
         public TerminationCallbacks(Task upStreamTerminated)
         {
             _atomicRef = new AtomicReference<Task>(new Task(() => { }));
@@ -627,11 +546,10 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a continuation to the current task being performed.
         /// </summary>
-        /// <param name="code">TBD</param>
+        /// <param name="code">The method to run as part of the continuation</param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the actor system has been terminated.</exception>
-        /// <returns>TBD</returns>
         public void Add(Action code)
         {
             var previous = _atomicRef.Value;
@@ -651,7 +569,7 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// The task that is currently being performed
         /// </summary>
         public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
     }

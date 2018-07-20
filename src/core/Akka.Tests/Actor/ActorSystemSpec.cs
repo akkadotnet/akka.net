@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            eventFilter.Info("{\r\n  akka : {\r\n    log-config-on-start : on\r\n  }\r\n}").ExpectOne(() => system.Start());
+            eventFilter.Info(contains:"akka : {\r\n    log-config-on-start : on\r\n  }").ExpectOne(() => system.Start());
 
             system.Terminate();
         }
@@ -242,8 +242,7 @@ namespace Akka.Tests.Actor
 
             var nonTerminatedOrNonstartedActors = created.Cast<ActorRefWithCell>()
                 .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)).ToList();
-            Assert.Equal(0, 
-                nonTerminatedOrNonstartedActors.Count);
+            Assert.Empty(nonTerminatedOrNonstartedActors);
         }
 
         #region Extensions tests
@@ -269,11 +268,11 @@ namespace Akka.Tests.Actor
 
         public void Handle_extensions_that_fail_to_initialize()
         {
-            Action loadExtenions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
+            Action loadExtensions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
 
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
             // same exception should be reported next time
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
         }
 
         #endregion

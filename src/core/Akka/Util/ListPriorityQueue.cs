@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ListPriorityQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Util
         /// DEPRECATED. Should always specify priority calculator instead.
         /// </summary>
         /// <param name="initialCapacity">The current capacity of the priority queue.</param>
-        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
+        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead [1.1.3]")]
         public ListPriorityQueue(int initialCapacity) : this (initialCapacity, DefaultPriorityCalculator)
         {
             
@@ -40,7 +40,7 @@ namespace Akka.Util
         /// Creates a new priority queue.
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the queue.</param>
-        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
         public ListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
         {
             _data = new List<Envelope>(initialCapacity);
@@ -50,11 +50,11 @@ namespace Akka.Util
         /// <summary>
         /// DEPRECATED. Sets a new priority calculator.
         /// </summary>
-        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
         /// <remarks>
         /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
         /// </remarks>
-        [Obsolete("Use the constructor to set the priority calculator instead.")]
+        [Obsolete("Use the constructor to set the priority calculator instead. [1.1.3]")]
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)
         {
             _priorityCalculator = priorityCalculator;

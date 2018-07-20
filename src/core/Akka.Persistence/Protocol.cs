@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Protocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,8 +19,8 @@ namespace Akka.Persistence
     /// should always be a local Actor (and serialization is performed by plugins).
     /// One notable exception to this is the shared journal used for testing.
     /// </summary>
-    public interface IPersistenceMessage // : INoSerializationVerificationNeeded
+    public interface IPersistenceMessage : INoSerializationVerificationNeeded
     {
-        // TODO look into why extending INoSerializationVerificationNeeded breaks the tests
+
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowMonitorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -140,17 +141,29 @@ namespace Akka.Streams.Tests.Dsl
             var source = t.Item1.Item1;
             var monitor = t.Item1.Item2;
             var sink = t.Item2;
-            var messsage = new FlowMonitor.Received<string>("message");
-            source.SendNext(messsage);
-            sink.RequestNext(messsage);
+            var message = new FlowMonitor.Received<string>("message");
+            source.SendNext(message);
+            sink.RequestNext(message);
             AwaitAssert(() =>
             {
                 var state = monitor.State as FlowMonitor.Received<FlowMonitor.Received<string>>;
-                if (state != null && state.Message == messsage)
+                if (state != null && state.Message == message)
                     return;
 
                 throw new Exception();
             });
+        }
+
+        [Fact]
+        public void A_FlowMonitor_must_return_failed_when_stream_is_abruptly_terminated()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var t = this.SourceProbe<string>().Monitor(Keep.Both).To(Sink.Ignore<string>()).Run(materializer);
+            var monitor = t.Item2;
+
+            materializer.Shutdown();
+            AwaitAssert(() => monitor.State.Should().BeOfType<FlowMonitor.Failed>(), RemainingOrDefault);
         }
     }
 }

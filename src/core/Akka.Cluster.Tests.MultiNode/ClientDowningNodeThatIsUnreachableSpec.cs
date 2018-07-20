@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClientDowningNodeThatIsUnreachableSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster.TestKit;
@@ -38,7 +39,7 @@ namespace Akka.Cluster.Tests.MultiNode
     class ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : ClientDowningNodeThatIsUnreachableSpec
     {
         public ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode()
-            : base(true)
+            : base(true, typeof(ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode))
         {
         }
     }
@@ -47,7 +48,7 @@ namespace Akka.Cluster.Tests.MultiNode
     class ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : ClientDowningNodeThatIsUnreachableSpec
     {
         public ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode()
-            : base(false)
+            : base(false, typeof(ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode))
         {
         }
     }
@@ -56,13 +57,13 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private readonly ClientDowningNodeThatIsUnreachableMultiNodeConfig _config;
 
-        protected ClientDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet)
-            : this(new ClientDowningNodeThatIsUnreachableMultiNodeConfig(failureDetectorPuppet))
+        protected ClientDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet, Type type)
+            : this(new ClientDowningNodeThatIsUnreachableMultiNodeConfig(failureDetectorPuppet), type)
         {
         }
 
-        protected ClientDowningNodeThatIsUnreachableSpec(ClientDowningNodeThatIsUnreachableMultiNodeConfig config)
-            : base(config)
+        protected ClientDowningNodeThatIsUnreachableSpec(ClientDowningNodeThatIsUnreachableMultiNodeConfig config, Type type)
+            : base(config, type)
         {
             _config = config;
         }

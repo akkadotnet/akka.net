@@ -4,6 +4,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.Performance")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
@@ -11,6 +12,12 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
 namespace Akka.Cluster
 {
+    public sealed class AutoDowning : Akka.Cluster.IDowningProvider
+    {
+        public AutoDowning(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Props DowningActorProps { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
+    }
     public class Cluster : Akka.Actor.IExtension
     {
         public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
@@ -26,9 +33,12 @@ namespace Akka.Cluster
         public void Down(Akka.Actor.Address address) { }
         public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
         public void Join(Akka.Actor.Address address) { }
+        public System.Threading.Tasks.Task JoinAsync(Akka.Actor.Address address, System.Threading.CancellationToken token = null) { }
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
+        public System.Threading.Tasks.Task JoinSeedNodesAsync(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes, System.Threading.CancellationToken token = null) { }
         public void Leave(Akka.Actor.Address address) { }
         public System.Threading.Tasks.Task LeaveAsync() { }
+        public System.Threading.Tasks.Task LeaveAsync(System.Threading.CancellationToken cancellationToken) { }
         public void RegisterOnMemberRemoved(System.Action callback) { }
         public void RegisterOnMemberUp(System.Action callback) { }
         public Akka.Actor.ActorPath RemotePathOf(Akka.Actor.IActorRef actorRef) { }
@@ -38,12 +48,19 @@ namespace Akka.Cluster
         public void Unsubscribe(Akka.Actor.IActorRef subscriber) { }
         public void Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type to) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider, Akka.Actor.IActorRefProvider, Akka.Cluster.IClusterActorRefProvider, Akka.Remote.IRemoteActorRefProvider
+    {
+        public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
+        protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public override void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+    }
     public class ClusterEvent
     {
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsSnapshot;
         public ClusterEvent() { }
-        public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
             public override string ToString() { }
@@ -106,6 +123,10 @@ namespace Akka.Cluster
         {
             public MemberUp(Akka.Cluster.Member member) { }
         }
+        public sealed class MemberWeaklyUp : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberWeaklyUp(Akka.Cluster.Member member) { }
+        }
         public abstract class ReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IReachabilityEvent
         {
             protected ReachabilityEvent(Akka.Cluster.Member member) { }
@@ -142,6 +163,10 @@ namespace Akka.Cluster
         public ClusterExtension() { }
         public override Akka.Cluster.Cluster CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    public class ClusterJoinFailedException : Akka.Actor.AkkaException
+    {
+        public ClusterJoinFailedException(string message) { }
+    }
     public class ClusterScope : Akka.Actor.Scope
     {
         public static readonly Akka.Cluster.ClusterScope Instance;
@@ -151,9 +176,10 @@ namespace Akka.Cluster
     public sealed class ClusterSettings
     {
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
+        public bool AllowWeaklyUpMembers { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
         public System.Type DowningProviderType { get; }
-        [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin")]
+        [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public System.TimeSpan DownRemovalMargin { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
@@ -172,21 +198,25 @@ namespace Akka.Cluster
         public int ReduceGossipDifferentViewProbability { get; }
         public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
+        public bool RunCoordinatedShutdownWhenDown { get; }
         public System.TimeSpan SchedulerTickDuration { get; }
         public int SchedulerTicksPerWheel { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
+        public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
     public interface IClusterMessage { }
     public interface IDowningProvider
     {
         Akka.Actor.Props DowningActorProps { get; }
         System.TimeSpan DownRemovalMargin { get; }
     }
-    public class Member : System.IComparable<Akka.Cluster.Member>
+    public class Member : System.IComparable, System.IComparable<Akka.Cluster.Member>
     {
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
         public Akka.Actor.Address Address { get; }
@@ -202,6 +232,8 @@ namespace Akka.Cluster
         public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
         public bool IsOlderThan(Akka.Cluster.Member other) { }
         public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
         public override string ToString() { }
     }
     public enum MemberStatus
@@ -212,6 +244,7 @@ namespace Akka.Cluster
         Exiting = 3,
         Down = 4,
         Removed = 5,
+        WeaklyUp = 6,
     }
     public sealed class NoDowning : Akka.Cluster.IDowningProvider
     {
@@ -219,12 +252,19 @@ namespace Akka.Cluster
         public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
     }
-    public class UniqueAddress : System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
+    public sealed class SplitBrainResolver : Akka.Cluster.IDowningProvider
+    {
+        public SplitBrainResolver(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Props DowningActorProps { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public System.TimeSpan StableAfter { get; }
+    }
+    public class UniqueAddress : System.IComparable, System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
     {
         public UniqueAddress(Akka.Actor.Address address, int uid) { }
         public Akka.Actor.Address Address { get; }
         public int Uid { get; }
-        public int CompareTo(Akka.Cluster.UniqueAddress that) { }
+        public int CompareTo(Akka.Cluster.UniqueAddress uniqueAddress) { }
         public bool Equals(Akka.Cluster.UniqueAddress other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -236,6 +276,8 @@ namespace Akka.Cluster
         public Akka.Cluster.VectorClock.Ordering CompareTo(Akka.Cluster.VectorClock that) { }
         public static Akka.Cluster.VectorClock Create() { }
         public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public Akka.Cluster.VectorClock Increment(Akka.Cluster.VectorClock.Node node) { }
         public bool IsAfter(Akka.Cluster.VectorClock that) { }
         public bool IsBefore(Akka.Cluster.VectorClock that) { }
@@ -278,13 +320,13 @@ namespace Akka.Cluster.Routing
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig other) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
     }
     public sealed class ClusterRouterGroupSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {
-        [System.ObsoleteAttribute()]
+        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, System.Collections.Generic.IEnumerable<string> routeesPaths) { }
-        [System.ObsoleteAttribute()]
+        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths) { }
         public ClusterRouterGroupSettings(int totalInstances, System.Collections.Generic.IEnumerable<string> routeesPaths, bool allowLocalRoutees, string useRole = null) { }
         public System.Collections.Generic.IEnumerable<string> RouteesPaths { get; }
@@ -307,13 +349,15 @@ namespace Akka.Cluster.Routing
     }
     public sealed class ClusterRouterPoolSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {
-        [System.ObsoleteAttribute()]
+        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode) { }
-        [System.ObsoleteAttribute()]
+        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) { }
         public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null) { }
         public int MaxInstancesPerNode { get; }
+        public override bool Equals(object obj) { }
         public static Akka.Cluster.Routing.ClusterRouterPoolSettings FromConfig(Akka.Configuration.Config config) { }
+        public override int GetHashCode() { }
     }
     public abstract class ClusterRouterSettingsBase
     {
@@ -321,5 +365,15 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; }
         public int TotalInstances { get; }
         public string UseRole { get; }
+    }
+}
+namespace Akka.Cluster.Serialization
+{
+    public class ClusterMessageSerializer : Akka.Serialization.Serializer
+    {
+        public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
     }
 }

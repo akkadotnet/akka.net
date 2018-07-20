@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,21 +12,13 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;
+using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public interface IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         object Event { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
         Action<object> Handler { get; }
     }
 
@@ -35,72 +27,45 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
         public StashingHandlerInvocation(object evt, Action<object> handler)
         {
             Event = evt;
             Handler = handler;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
+        public object Event { get; }
+
+        public Action<object> Handler { get; }
     }
 
     /// <summary>
     /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
-    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> 
+    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,Action{TEvent})"/> 
     /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
     /// </summary>
     public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
         public AsyncHandlerInvocation(object evt, Action<object> handler)
         {
             Event = evt;
             Handler = handler;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
+        public object Event { get; }
+
+        public Action<object> Handler { get; }
     }
 
     /// <summary>
-    /// message used to detect that recovery timed out
+    /// Message used to detect that recovery timed out.
     /// </summary>
     public sealed class RecoveryTick
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="snapshot">TBD</param>
         public RecoveryTick(bool snapshot)
         {
             Snapshot = snapshot;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public bool Snapshot { get; }
     }
 
@@ -121,22 +86,23 @@ namespace Akka.Persistence
         private long _sequenceNr;
         private EventsourcedState _currentState;
         private LinkedList<IPersistentEnvelope> _eventBatch = new LinkedList<IPersistentEnvelope>();
+        private bool _asyncTaskRunning = false;
 
         /// Used instead of iterating `pendingInvocations` in order to check if safe to revert to processing commands
         private long _pendingStashingPersistInvocations = 0L;
 
         /// Holds user-supplied callbacks for persist/persistAsync calls
-        private LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
+        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly PersistenceExtension Extension;
-        private readonly ILoggingAdapter _log;
+        protected PersistenceExtension Extension { get; }
+
         private IStash _stash;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Eventsourced"/> class.
         /// </summary>
         protected Eventsourced()
         {
@@ -149,13 +115,13 @@ namespace Akka.Persistence
             _writerGuid = Guid.NewGuid().ToString();
             _currentState = null;
             _internalStash = CreateStash();
-            _log = Context.GetLogger();
+            Log = Context.GetLogger();
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected virtual ILoggingAdapter Log { get { return _log; } }
+        protected virtual ILoggingAdapter Log { get; }
 
         /// <summary>
         /// Id of the persistent entity for which messages should be replayed.
@@ -165,19 +131,16 @@ namespace Akka.Persistence
         /// <summary>
         /// Called when the persistent actor is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
-        /// will recover its persistent state behore handling the first incoming message.
+        /// will recover its persistent state before handling the first incoming message.
         /// 
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>
-        public virtual Recovery Recovery { get { return Recovery.Default;} }
+        public virtual Recovery Recovery => Recovery.Default;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual IStashOverflowStrategy InternalStashOverflowStrategy
-        {
-            get { return Extension.DefaultInternalStashOverflowStrategy; }
-        }
+        public virtual IStashOverflowStrategy InternalStashOverflowStrategy => Extension.DefaultInternalStashOverflowStrategy;
 
         /// <summary>
         /// TBD
@@ -201,40 +164,27 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Journal
-        {
-            get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
-        }
+        public IActorRef Journal => _journal ?? (_journal = Extension.JournalFor(JournalPluginId));
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef SnapshotStore
-        {
-            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
-        }
+        public IActorRef SnapshotStore => _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId));
 
         /// <summary>
         /// Returns <see cref="PersistenceId"/>.
         /// </summary>
-        public string SnapshotterId { get { return PersistenceId; } }
+        public string SnapshotterId => PersistenceId;
 
         /// <summary>
         /// Returns true if this persistent entity is currently recovering.
         /// </summary>
-        public bool IsRecovering
-        {
-            get
-            {
-                // _currentState is null if this is called from constructor
-                return _currentState?.IsRecoveryRunning ?? true;
-            }
-        }
+        public bool IsRecovering => _currentState?.IsRecoveryRunning() ?? true;
 
         /// <summary>
         /// Returns true if this persistent entity has successfully finished recovery.
         /// </summary>
-        public bool IsRecoveryFinished { get { return !IsRecovering; } }
+        public bool IsRecoveryFinished => !IsRecovering;
 
         /// <summary>
         /// Highest received sequence number so far or `0L` if this actor 
@@ -245,8 +195,8 @@ namespace Akka.Persistence
         /// <summary>
         /// Returns <see cref="LastSequenceNr"/>
         /// </summary>
-        public long SnapshotSequenceNr { get { return LastSequenceNr; } }
-        
+        public long SnapshotSequenceNr => LastSequenceNr;
+
         /// <summary>
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
@@ -346,6 +296,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void Persist<TEvent>(TEvent @event, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
@@ -362,31 +317,25 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             if (events == null) return;
 
-            Action<object> inv = o => handler((TEvent)o);
+            void Inv(object o) => handler((TEvent)o);
             var persistents = ImmutableList<IPersistentRepresentation>.Empty.ToBuilder();
             foreach (var @event in events)
             {
                 _pendingStashingPersistInvocations++;
-                _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, inv));
+                _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, Inv));
                 persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
             }
+
             if (persistents.Count > 0)
                 _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use PersistAll instead")]
-        public void Persist<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            PersistAll(events, handler);
         }
 
         /// <summary> 
@@ -419,6 +368,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
@@ -434,26 +388,21 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
-            Action<object> inv = o => handler((TEvent)o);
-            foreach (var @event in events)
+            if (IsRecovering)
             {
-                _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, inv));
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
             }
-            _eventBatch.AddFirst(new AtomicWrite(events.Select(e => new Persistent(e, persistenceId: PersistenceId,
-                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
-                .ToImmutableList<IPersistentRepresentation>()));
-        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use PersistAllAsync instead")]
-        public void PersistAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            PersistAllAsync(events, handler);
+            void Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            foreach (var @event in enumerable)
+            {
+                _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
+            }
+
+            _eventBatch.AddFirst(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
         }
 
         /// <summary>
@@ -479,6 +428,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void DeferAsync<TEvent>(TEvent evt, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             if (_pendingInvocations.Count == 0)
             {
                 handler(evt);
@@ -491,36 +445,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Permanently deletes all persistent messages with sequence numbers less than or equal <paramref name="toSequenceNr"/>.
+        /// If the delete is successful a <see cref="DeleteMessagesSuccess"/> will be sent to the actor.
+        /// If the delete fails a <see cref="DeleteMessagesFailure"/> will be sent to the actor.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use DeferAsync instead")]
-        public void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
-        {
-            DeferAsync(evt, handler);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use DeferAsync instead")]
-        public void Defer<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            foreach (var @event in events)
-            {
-                DeferAsync(@event, handler);
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">Upper sequence number bound of persistent messages to be deleted.</param>
         public void DeleteMessages(long toSequenceNr)
         {
             Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, Self));
@@ -540,12 +469,12 @@ namespace Akka.Persistence
         {
             if (message != null)
             {
-               _log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
-                   message.GetType(), LastSequenceNr, PersistenceId);
+                Log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
+                    message.GetType(), LastSequenceNr, PersistenceId);
             }
             else
             {
-                _log.Error(reason, "Persistence failure when replaying events for persistenceId [{0}]. Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
+                Log.Error(reason, "Persistence failure when replaying events for persistenceId [{0}]. Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
             }
         }
 
@@ -564,7 +493,7 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            _log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
+            Log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
                 @event.GetType(), sequenceNr, PersistenceId);
         }
 
@@ -579,9 +508,49 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
-            if (_log.IsWarningEnabled)
-                _log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
+            if (Log.IsWarningEnabled)
+                Log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
                     @event.GetType(), sequenceNr, PersistenceId, cause.Message);
+        }
+
+        /// <summary>
+        /// Runs an asynchronous task for incoming messages in context of <see cref="ReceiveCommand(object)"/> .
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="action"/> completes, including the <see cref="Eventsourced.Persist{TEvent}(TEvent, Action{TEvent})" />
+        /// and <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent}, Action{TEvent})" /> calls.</remarks>
+        /// </summary>
+        /// <param name="action">Async task to run</param>
+        protected void RunTask(Func<Task> action)
+        {
+            if (_asyncTaskRunning)
+                throw new NotSupportedException("RunTask calls cannot be nested");
+            Func<Task> wrap = () =>
+            {
+                Task t = action();
+                if (!t.IsCompleted)
+                {
+                    _asyncTaskRunning = true;
+                    var tcs = new TaskCompletionSource<object>();
+
+                    t.ContinueWith(r =>
+                    {
+                        _asyncTaskRunning = false;
+
+                        OnProcessingCommandsAroundReceiveComplete(r.IsFaulted || r.IsCanceled);
+
+                        if (r.IsFaulted)
+                            tcs.TrySetException(r.Exception);
+                        else if (r.IsCanceled)
+                            tcs.TrySetCanceled();
+                        else
+                            tcs.TrySetResult(null);
+                    }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+
+                    t = tcs.Task;
+                }
+                return t;
+            };
+
+            Dispatch.ActorTaskScheduler.RunTask(wrap);
         }
 
         private void ChangeState(EventsourcedState state)
@@ -620,7 +589,7 @@ namespace Akka.Persistence
             {
                 _internalStash.Stash();
             }
-            catch(StashOverflowException e)
+            catch (StashOverflowException e)
             {
                 var strategy = InternalStashOverflowStrategy;
                 if (strategy is DiscardToDeadLetterStrategy)
@@ -698,4 +667,3 @@ namespace Akka.Persistence
         }
     }
 }
-

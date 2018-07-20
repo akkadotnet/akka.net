@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="OverflowStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Represents a strategy that decides how to deal with a buffer of time based stage that is full but is about to receive a new element.
     /// </summary>
     public enum DelayOverflowStrategy
     {
@@ -94,29 +94,31 @@ namespace Akka.Streams
     public class BufferOverflowException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BufferOverflowException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public BufferOverflowException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BufferOverflowException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="inner">TBD</param>
-        public BufferOverflowException(string message, Exception inner) : base(message, inner)
+        /// <param name="message">The error message that explains the reason for the exception.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
+        public BufferOverflowException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BufferOverflowException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

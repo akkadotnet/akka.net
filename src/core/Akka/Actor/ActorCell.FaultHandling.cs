@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,7 +197,7 @@ namespace Akka.Actor
                 // separate iteration because this is a very rare case that should not penalize normal operation
                 foreach (var child in Children)
                 {
-                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification pre-emptively for non-local children
+                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification preemptively for non-local children
                         Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new DeathWatchNotification(child, true, false));
                 }
             }

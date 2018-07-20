@@ -1,11 +1,9 @@
-﻿#region copyright
-// -----------------------------------------------------------------------
-//  <copyright file="DotNettyTransport.cs" company="Akka.NET project">
-//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
-//  </copyright>
-// -----------------------------------------------------------------------
-#endregion
+﻿//-----------------------------------------------------------------------
+// <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -97,15 +95,27 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal class DotNettyTransportException : RemoteTransportException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public DotNettyTransportException(string message, Exception cause = null) : base(message, cause)
         {
         }
 
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected DotNettyTransportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
-    
+
     internal abstract class DotNettyTransport : Transport
     {
         internal readonly ConcurrentSet<IChannel> ConnectionGroup;
@@ -113,10 +123,10 @@ namespace Akka.Remote.Transport.DotNetty
         protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
         protected readonly ILoggingAdapter Log;
         protected volatile Address LocalAddress;
-        protected volatile IChannel ServerChannel;
+        protected internal volatile IChannel ServerChannel;
 
-        private readonly IEventLoopGroup serverEventLoopGroup;
-        private readonly IEventLoopGroup clientEventLoopGroup;
+        private readonly IEventLoopGroup _serverEventLoopGroup;
+        private readonly IEventLoopGroup _clientEventLoopGroup;
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -131,8 +141,8 @@ namespace Akka.Remote.Transport.DotNetty
 
             Settings = DotNettyTransportSettings.Create(config);
             Log = Logging.GetLogger(System, GetType());
-            serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
-            clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
+            _serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
+            _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
@@ -143,7 +153,7 @@ namespace Akka.Remote.Transport.DotNetty
         public sealed override string SchemeIdentifier { get; protected set; }
         public override long MaximumPayloadBytes => Settings.MaxFrameSize;
         private TransportMode InternalTransport => Settings.TransportMode;
-        
+
         public sealed override bool IsResponsibleFor(Address remote) => true;
 
         protected async Task<IChannel> NewServer(EndPoint listenAddress)
@@ -151,12 +161,11 @@ namespace Akka.Remote.Transport.DotNetty
             if (InternalTransport != TransportMode.Tcp)
                 throw new NotImplementedException("Haven't implemented UDP transport at this time");
 
-            var dns = listenAddress as DnsEndPoint;
-            if (dns != null)
+            if (listenAddress is DnsEndPoint dns)
             {
-                listenAddress = await DnsToIPEndpoint(dns);
+                listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             }
-            
+
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
@@ -171,8 +180,8 @@ namespace Akka.Remote.Transport.DotNetty
 
             try
             {
-                var newServerChannel = await NewServer(listenAddress);
-                
+                var newServerChannel = await NewServer(listenAddress).ConfigureAwait(false);
+
                 // Block reads until a handler actor is registered
                 // no incoming connections will be accepted until this value is reset
                 // it's possible that the first incoming association might come in though
@@ -181,10 +190,11 @@ namespace Akka.Remote.Transport.DotNetty
                 ServerChannel = newServerChannel;
 
                 var addr = MapSocketToAddress(
-                    socketAddress: (IPEndPoint)newServerChannel.LocalAddress, 
-                    schemeIdentifier: SchemeIdentifier, 
+                    socketAddress: (IPEndPoint)newServerChannel.LocalAddress,
+                    schemeIdentifier: SchemeIdentifier,
                     systemName: System.Name,
-                    hostName: Settings.PublicHostname);
+                    hostName: Settings.PublicHostname,
+                    publicPort: Settings.PublicPort);
 
                 if (addr == null) throw new ConfigurationException($"Unknown local address type {newServerChannel.LocalAddress}");
 
@@ -203,7 +213,7 @@ namespace Akka.Remote.Transport.DotNetty
                 Log.Error(ex, "Failed to bind to {0}; shutting down DotNetty transport.", listenAddress);
                 try
                 {
-                    await Shutdown();
+                    await Shutdown().ConfigureAwait(false);
                 }
                 catch
                 {
@@ -218,7 +228,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (!ServerChannel.Open)
                 throw new ChannelException("Transport is not open");
 
-            return await AssociateInternal(remoteAddress);
+            return await AssociateInternal(remoteAddress).ConfigureAwait(false);
         }
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
@@ -233,10 +243,10 @@ namespace Akka.Remote.Transport.DotNetty
                     tasks.Add(channel.CloseAsync());
                 }
                 var all = Task.WhenAll(tasks);
-                await all;
+                await all.ConfigureAwait(false);
 
                 var server = ServerChannel?.CloseAsync() ?? TaskEx.Completed;
-                await server;
+                await server.ConfigureAwait(false);
 
                 return all.IsCompleted && server.IsCompleted;
             }
@@ -245,12 +255,12 @@ namespace Akka.Remote.Transport.DotNetty
                 // free all of the connection objects we were holding onto
                 ConnectionGroup.Clear();
 #pragma warning disable 4014 // shutting down the worker groups can take up to 10 seconds each. Let that happen asnychronously.
-                clientEventLoopGroup.ShutdownGracefullyAsync();
-                serverEventLoopGroup.ShutdownGracefullyAsync();
+                _clientEventLoopGroup.ShutdownGracefullyAsync();
+                _serverEventLoopGroup.ShutdownGracefullyAsync();
 #pragma warning restore 4014
             }
         }
-        
+
         protected Bootstrap ClientFactory(Address remoteAddress)
         {
             if (InternalTransport != TransportMode.Tcp)
@@ -259,12 +269,13 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var client = new Bootstrap()
-                .Group(clientEventLoopGroup)
+                .Group(_clientEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                 .Option(ChannelOption.AutoRead, false)
+                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpSocketChannel(addressFamily)
                     : new TcpSocketChannel())
@@ -283,12 +294,12 @@ namespace Akka.Remote.Transport.DotNetty
             IPEndPoint endpoint;
             //if (!Settings.EnforceIpFamily)
             //{
-            //    endpoint = await ResolveNameAsync(dns);
+            //    endpoint = await ResolveNameAsync(dns).ConfigureAwait(false);
             //}
             //else
             //{
-                var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-                endpoint = await ResolveNameAsync(dns, addressFamily);
+            var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+            endpoint = await ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
             //}
             return endpoint;
         }
@@ -326,7 +337,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
                 var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host)) 
+                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host))
                     : TlsHandler.Client(host, certificate);
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
@@ -367,12 +378,13 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var server = new ServerBootstrap()
-                .Group(serverEventLoopGroup)
+                .Group(_serverEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.AutoRead, false)
                 .Option(ChannelOption.SoBacklog, Settings.Backlog)
+                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpServerSocketChannel(addressFamily)
                     : new TcpServerSocketChannel())
@@ -388,7 +400,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address)
         {
-            var resolved = await Dns.GetHostEntryAsync(address.Host);
+            var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             //NOTE: for some reason while Helios takes first element from resolved address list
             // on the DotNetty side we need to take the last one in order to be compatible
             return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
@@ -396,7 +408,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
-            var resolved = await Dns.GetHostEntryAsync(address.Host);
+            var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
             if (found == null)
             {
@@ -410,11 +422,11 @@ namespace Akka.Remote.Transport.DotNetty
 
         #region static methods
 
-        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null)
+        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null, int? publicPort = null)
         {
             return socketAddress == null
                 ? null
-                : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), socketAddress.Port);
+                : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
         }
 
         private static string SafeMapHostName(string hostName)

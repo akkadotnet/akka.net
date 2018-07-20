@@ -1,11 +1,12 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Keep.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 
 namespace Akka.Streams.Dsl
 {
@@ -55,7 +56,11 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static NotUsed None<TLeft, TRight>(TLeft left, TRight right) => NotUsed.Instance;
 
+#if !CORECLR
         private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof(Keep).GetMethod(nameof(Right)).MethodHandle;
+#else
+        private static readonly MethodInfo KeepRightMethodInfo = typeof(Keep).GetMethod(nameof(Right));
+#endif
 
         /// <summary>
         /// TBD
@@ -67,10 +72,18 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static bool IsRight<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
-            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
+#if !CORECLR
+            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
+#else
+            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().Equals(KeepRightMethodInfo);
+#endif
         }
 
+#if !CORECLR
         private static readonly RuntimeMethodHandle KeepLeftMethodhandle = typeof(Keep).GetMethod(nameof(Left)).MethodHandle;
+#else
+        private static readonly MethodInfo KeepLeftMethodInfo = typeof(Keep).GetMethod(nameof(Left));
+#endif
 
         /// <summary>
         /// TBD
@@ -82,7 +95,11 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static bool IsLeft<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
-            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;
+#if !CORECLR
+            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;
+#else
+            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().Equals(KeepLeftMethodInfo);
+#endif
         }
     }
 }

@@ -1,12 +1,13 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Timed.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
+using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
@@ -34,6 +35,7 @@ namespace Akka.Streams.Extra
         /// <param name="measuredOps">TBD</param>
         /// <param name="onComplete">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
             var ctx = new TimedFlowContext();
@@ -89,11 +91,12 @@ namespace Akka.Streams.Extra
         /// <param name="matching">TBD</param>
         /// <param name="onInterval">TBD</param>
         /// <returns>TBD</returns>
+        [InternalApi]
         public static IFlow<TIn, TMat> TimedIntervalBetween<TIn, TMat>(IFlow<TIn, TMat> flow, Func<TIn, bool> matching, Action<TimeSpan> onInterval)
         {
             var timedInterval =
                 Flow.Create<TIn>()
-                    .Via(new TimedIntervall<TIn>(matching, onInterval))
+                    .Via(new TimedInterval<TIn>(matching, onInterval))
                     .Named("timedInterval");
 
             return flow.Via(timedInterval);
@@ -254,17 +257,17 @@ namespace Akka.Streams.Extra
         /// TBD
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        internal sealed class TimedIntervall<T> : SimpleLinearGraphStage<T>
+        internal sealed class TimedInterval<T> : SimpleLinearGraphStage<T>
         {
             #region Loigc 
 
             private sealed class Logic : InAndOutGraphStageLogic
             {
-                private readonly TimedIntervall<T> _stage;
+                private readonly TimedInterval<T> _stage;
                 private long _previousTicks;
                 private long _matched;
 
-                public Logic(TimedIntervall<T> stage) : base(stage.Shape)
+                public Logic(TimedInterval<T> stage) : base(stage.Shape)
                 {
                     _stage = stage;
 
@@ -307,7 +310,7 @@ namespace Akka.Streams.Extra
             /// </summary>
             /// <param name="matching">TBD</param>
             /// <param name="onInterval">TBD</param>
-            public TimedIntervall(Func<T, bool> matching, Action<TimeSpan> onInterval)
+            public TimedInterval(Func<T, bool> matching, Action<TimeSpan> onInterval)
             {
                 _matching = matching;
                 _onInterval = onInterval;

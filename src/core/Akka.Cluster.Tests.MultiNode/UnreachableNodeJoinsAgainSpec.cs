@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnreachableNodeJoinsAgainSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public UnreachableNodeJoinsAgainSpec () : this(new UnreachableNodeJoinsAgainConfig()){ }
 
-        protected UnreachableNodeJoinsAgainSpec(UnreachableNodeJoinsAgainConfig config) : base(config)
+        protected UnreachableNodeJoinsAgainSpec(UnreachableNodeJoinsAgainConfig config) : base(config, typeof(UnreachableNodeJoinsAgainSpec))
         {
             _config = config;
             _master = new Lazy<RoleName>(() => _config.Second);
@@ -138,12 +138,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         var members = ClusterView.Members; // to snapshot the object
-                        Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                        Assert.Single(ClusterView.UnreachableMembers);
                     });
                     AwaitSeenSameState(allButVictim.Select(GetAddress).ToArray());
 
                     // still once unreachable
-                    Assert.Equal(1, ClusterView.UnreachableMembers.Count);
+                    Assert.Single(ClusterView.UnreachableMembers);
                     Assert.Equal(Node(_victim.Value).Address, ClusterView.UnreachableMembers.First().Address);
                     Assert.Equal(MemberStatus.Up, ClusterView.UnreachableMembers.First().Status);
                 });
@@ -219,7 +219,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     Cluster.Get(freshSystem).Join(masterAddress);
                     Within(TimeSpan.FromSeconds(15), () =>
                     {
-                        AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address).Contains(victimAddress)));
+                        AwaitAssert(() => Assert.Contains(victimAddress, Cluster.Get(freshSystem).ReadView.Members.Select(x => x.Address)));
                         AwaitAssert(() => Assert.Equal(expectedNumberOfMembers,Cluster.Get(freshSystem).ReadView.Members.Count));
                         AwaitAssert(() => Assert.True(Cluster.Get(freshSystem).ReadView.Members.All(y => y.Status == MemberStatus.Up)));
                     });

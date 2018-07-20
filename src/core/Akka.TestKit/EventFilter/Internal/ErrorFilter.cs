@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ErrorFilter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,11 +37,13 @@ namespace Akka.TestKit.Internal
         /// <param name="messageMatcher">TBD</param>
         /// <param name="sourceMatcher">TBD</param>
         /// <param name="recurseInnerExceptions">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="exceptionType"/> does not implement <see cref="Exception"/>.
+        /// </exception>
         public ErrorFilter(Type exceptionType, IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null, bool recurseInnerExceptions=false)
             : base(messageMatcher,sourceMatcher)
         {
-            if(exceptionType!=null && !exceptionType.Implements<Exception>()) throw new ArgumentException("The type must be an exception. It was: " + exceptionType, "exceptionType");
+            if(exceptionType!=null && !exceptionType.Implements<Exception>()) throw new ArgumentException($"The type must be an exception. It was: {exceptionType}", nameof(exceptionType));
             _exceptionType = exceptionType;
             _recurseInnerExceptions = recurseInnerExceptions;
         }

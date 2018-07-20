@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,7 +35,23 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// <summary>
     /// Message type for indicating that the current spec has ended.
     /// </summary>
-    public class EndSpec { }
+    public class EndSpec
+    {
+        public EndSpec()
+        {
+            ClassName = null;
+            MethodName = null;
+        }
+
+        public EndSpec(string className, string methodName)
+        {
+            ClassName = className;
+            MethodName = methodName;
+        }
+        
+        public string ClassName { get; private set; }
+        public string MethodName { get; private set; }
+    }
 
     /// <summary>
     /// Message type for signaling that a node has completed a spec successfully
@@ -98,40 +114,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public override string ToString()
         {
             return string.Format("[NODE{1}:{2}][{0}]: {3}", When, NodeIndex, NodeRole, Message);
-        }
-    }
-
-    /// <summary>
-    /// Message for an individual node participating in a spec
-    /// </summary>
-    public class LogMessageForNode
-    {
-        public LogMessageForNode(int nodeIndex, string nodeRole, string message, LogLevel level, DateTime when, string logSource)
-        {
-            LogSource = logSource;
-            When = when;
-            Level = level;
-            Message = message;
-            NodeIndex = nodeIndex;
-            NodeRole = nodeRole;
-        }
-
-        public int NodeIndex { get; private set; }
-        public string NodeRole { get; private set; }
-
-        public DateTime When { get; private set; }
-
-        public string Message { get; private set; }
-
-        public string LogSource { get; private set; }
-
-        public LogLevel Level { get; private set; }
-
-        public override string ToString()
-        {
-            return string.Format("[NODE{1}:{2}][{0}][{3}][{4}]: {5}", When, NodeIndex, NodeRole,
-                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
-                Message);
         }
     }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteReDeploymentSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,11 +48,11 @@ namespace Akka.Remote.Tests.MultiNode
         private readonly RemoteReDeploymentSpecConfig _config;
         private readonly Func<RoleName, string, IActorRef> _identify;
 
-        protected RemoteReDeploymentSpec() : this(new RemoteReDeploymentSpecConfig())
+        protected RemoteReDeploymentSpec(Type type) : this(new RemoteReDeploymentSpecConfig(), type)
         {
         }
 
-        protected RemoteReDeploymentSpec(RemoteReDeploymentSpecConfig config) : base(config)
+        protected RemoteReDeploymentSpec(RemoteReDeploymentSpecConfig config, Type type) : base(config, type)
         {
             _config = config;
         }
@@ -232,7 +232,10 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteReDeploymentFastMultiNetSpec : RemoteReDeploymentSpec
     {
-        // new association will come in while old is still “healthy”
+        public RemoteReDeploymentFastMultiNetSpec() : base(typeof(RemoteReDeploymentFastMultiNetSpec))
+        { }
+
+        // new association will come in while old is still "healthy"
         protected override bool ExpectQuarantine
         {
             get { return false; }
@@ -246,6 +249,9 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteReDeploymentMediumMultiNetSpec : RemoteReDeploymentSpec
     {
+        public RemoteReDeploymentMediumMultiNetSpec():base(typeof(RemoteReDeploymentMediumMultiNetSpec))
+        { }
+
         // new association will come in while old is gated in ReliableDeliverySupervisor
         protected override bool ExpectQuarantine
         {
@@ -260,6 +266,9 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteReDeploymentSlowMultiNetSpec : RemoteReDeploymentSpec
     {
+        public RemoteReDeploymentSlowMultiNetSpec():base(typeof(RemoteReDeploymentSlowMultiNetSpec))
+        { }
+
         // new association will come in after old has been quarantined
         protected override bool ExpectQuarantine
         {

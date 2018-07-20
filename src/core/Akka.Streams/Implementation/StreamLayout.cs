@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayout.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
@@ -176,8 +177,7 @@ namespace Akka.Streams.Implementation
             Func<int> ids = () => currentId++;
             Func<object, int> id = obj =>
             {
-                int x;
-                if (!idMap.TryGetValue(obj, out x))
+                if (!idMap.TryGetValue(obj, out int x))
                 {
                     x = ids();
                     idMap.Add(obj, x);
@@ -877,11 +877,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public abstract IModule WithAttributes(Attributes attributes);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(IModule other) => GetHashCode().CompareTo(other.GetHashCode());
     }
 
@@ -1090,11 +1086,8 @@ namespace Akka.Streams.Implementation
                 return new CopiedModule(Shape, attributes, CopyOf);
             return this;
         }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public override string ToString() => $"{GetHashCode()} copy of {CopyOf}";
     }
 
@@ -1209,10 +1202,7 @@ namespace Akka.Streams.Implementation
                 );
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  CompositeModule [{GetHashCode()}%08x]" +
@@ -1226,15 +1216,134 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// When fusing a <see cref="IGraph{TShape}"/> a part of the internal stage wirings are hidden within
+    /// <see cref="GraphAssembly"/> objects that are
+    /// optimized for high-speed execution. This structural information bundle contains
+    /// the wirings in a more accessible form, allowing traversal from port to upstream
+    /// or downstream port and from there to the owning module (or graph vertex).
     /// </summary>
-    public sealed class FusedModule : Module
+    public sealed class StructuralInfoModule : Module
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Streams.Fusing.StructuralInfo Info;
+        /// <param name="subModules">TBD</param>
+        /// <param name="shape">TBD</param>
+        /// <param name="downstreams">TBD</param>
+        /// <param name="upstreams">TBD</param>
+        /// <param name="inOwners">TBD</param>
+        /// <param name="outOwners">TBD</param>
+        /// <param name="materializedValues">TBD</param>
+        /// <param name="materializedValueComputation">TBD</param>
+        /// <param name="attributes">TBD</param>
+        public StructuralInfoModule(ImmutableArray<IModule> subModules,
+            Shape shape,
+            IImmutableDictionary<OutPort, InPort> downstreams,
+            IImmutableDictionary<InPort, OutPort> upstreams,
+            IImmutableDictionary<InPort, IModule> inOwners, 
+            IImmutableDictionary<OutPort, IModule> outOwners,
+            IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> materializedValues,
+            StreamLayout.IMaterializedValueNode materializedValueComputation,
+            Attributes attributes)
+        {
+            InOwners = inOwners;
+            OutOwners = outOwners;
+            MaterializedValues = materializedValues;
 
+            SubModules = subModules;
+            Shape = shape;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
+            MaterializedValueComputation = materializedValueComputation;
+            Attributes = attributes;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override bool IsFused { get; } = false;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Shape Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override ImmutableArray<IModule> SubModules { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Attributes Attributes { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<InPort, IModule> InOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<OutPort, IModule> OutOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule ReplaceShape(Shape shape)
+        {
+            if (!ReferenceEquals(Shape, shape))
+            {
+                if(!Shape.HasSamePortsAs(shape))
+                    throw new ArgumentException("StructuralInfoModule requires shape with same ports to replace", nameof(shape));
+                return new StructuralInfoModule(SubModules, shape, Downstreams, Upstreams, InOwners, OutOwners,
+                    MaterializedValues, MaterializedValueComputation, Attributes);
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule WithAttributes(Attributes attributes)
+        {
+            return new StructuralInfoModule(SubModules, Shape, Downstreams, Upstreams, InOwners, OutOwners,
+                MaterializedValues, MaterializedValueComputation, attributes);
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class FusedModule : Module
+    {
         /// <summary>
         /// TBD
         /// </summary>
@@ -1252,7 +1361,7 @@ namespace Akka.Streams.Implementation
             IImmutableDictionary<InPort, OutPort> upstreams,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes,
-            Streams.Fusing.StructuralInfo info)
+            StructuralInfoModule info)
         {
             SubModules = subModules;
             Shape = shape;
@@ -1262,6 +1371,12 @@ namespace Akka.Streams.Implementation
             Attributes = attributes;
             Info = info;
         }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public StructuralInfoModule Info { get; }
 
         /// <summary>
         /// TBD
@@ -1333,10 +1448,7 @@ namespace Akka.Streams.Implementation
                 new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
                     Info);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
@@ -1369,61 +1481,58 @@ namespace Akka.Streams.Implementation
         public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
-    /**
-     * INTERNAL API
-     *
-     * This is a transparent processor that shall consume as little resources as
-     * possible. Due to the possibility of receiving uncoordinated inputs from both
-     * downstream and upstream, this needs an atomic state machine which looks a
-     * little like this:
-     *
-     * <![CDATA[
-     *            +--------------+      (2)    +------------+
-     *            |     null     | ----------> | Subscriber |
-     *            +--------------+             +------------+
-     *                   |                           |
-     *               (1) |                           | (1)
-     *                  \|/                         \|/
-     *            +--------------+      (2)    +------------+ --\
-     *            | Subscription | ----------> |    Both    |    | (4)
-     *            +--------------+             +------------+ <-/
-     *                   |                           |
-     *               (3) |                           | (3)
-     *                  \|/                         \|/
-     *            +--------------+      (2)    +------------+ --\
-     *            |   Publisher  | ----------> |   Inert    |    | (4, *)
-     *            +--------------+             +------------+ <-/
-     * ]]>
-     * The idea is to keep the major state in only one atomic reference. The actions
-     * that can happen are:
-     *
-     *  (1) onSubscribe
-     *  (2) subscribe
-     *  (3) onError / onComplete
-     *  (4) onNext
-     *      (*) Inert can be reached also by cancellation after which onNext is still fine
-     *          so we just silently ignore possible spec violations here
-     *
-     * Any event that occurs in a state where no matching outgoing arrow can be found
-     * is a spec violation, leading to the shutdown of this processor (meaning that
-     * the state is updated such that all following actions match that of a failed
-     * Publisher or a cancelling Subscriber, and the non-guilty party is informed if
-     * already connected).
-     *
-     * request() can only be called after the Subscriber has received the Subscription
-     * and that also means that onNext() will only happen after having transitioned into
-     * the Both state as well. The Publisher state means that if the real
-     * Publisher terminates before we get the Subscriber, we can just forget about the
-     * real one and keep an already finished one around for the Subscriber.
-     *
-     * The Subscription that is offered to the Subscriber must cancel the original
-     * Publisher if things go wrong (like `request(0)` coming in from downstream) and
-     * it must ensure that we drop the Subscriber reference when `cancel` is invoked.
-     */
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// This is a transparent processor that shall consume as little resources as
+    /// possible. Due to the possibility of receiving uncoordinated inputs from both
+    /// downstream and upstream, this needs an atomic state machine which looks a
+    /// little like this:
+    /// 
+    /// <![CDATA[
+    ///            +--------------+      (2)    +------------+
+    ///            |     null     | ----------> | Subscriber |
+    ///            +--------------+             +------------+
+    ///                   |                           |
+    ///               (1) |                           | (1)
+    ///                  \|/                         \|/
+    ///            +--------------+      (2)    +------------+ --\
+    ///            | Subscription | ----------> |    Both    |    | (4)
+    ///            +--------------+             +------------+ <-/
+    ///                   |                           |
+    ///               (3) |                           | (3)
+    ///                  \|/                         \|/
+    ///            +--------------+      (2)    +------------+ --\
+    ///            |   Publisher  | ----------> |   Inert    |    | (4, *)
+    ///            +--------------+             +------------+ <-/
+    /// ]]>
+    /// The idea is to keep the major state in only one atomic reference. The actions
+    /// that can happen are:
+    /// 
+    ///  (1) onSubscribe
+    ///  (2) subscribe
+    ///  (3) onError / onComplete
+    ///  (4) onNext
+    ///      (*) Inert can be reached also by cancellation after which onNext is still fine
+    ///          so we just silently ignore possible spec violations here
+    /// 
+    /// Any event that occurs in a state where no matching outgoing arrow can be found
+    /// is a spec violation, leading to the shutdown of this processor (meaning that
+    /// the state is updated such that all following actions match that of a failed
+    /// Publisher or a cancelling Subscriber, and the non-guilty party is informed if
+    /// already connected).
+    /// 
+    /// request() can only be called after the Subscriber has received the Subscription
+    /// and that also means that onNext() will only happen after having transitioned into
+    /// the Both state as well. The Publisher state means that if the real
+    /// Publisher terminates before we get the Subscriber, we can just forget about the
+    /// real one and keep an already finished one around for the Subscriber.
+    /// 
+    /// The Subscription that is offered to the Subscriber must cancel the original
+    /// Publisher if things go wrong (like `request(0)` coming in from downstream) and
+    /// it must ensure that we drop the Subscriber reference when `cancel` is invoked.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class VirtualProcessor<T> : AtomicReference<object>, IProcessor<T, T>
     {
         private const string NoDemand = "spec violation: OnNext was signaled from upstream without demand";
@@ -1901,28 +2010,24 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    /**
-     * INTERNAL API
-     *
-     * The implementation of `Sink.AsPublisher` needs to offer a `Publisher` that
-     * defers to the upstream that is connected during materialization. This would
-     * be trivial if it were not for materialized value computations that may even
-     * spawn the code that does `pub.subscribe(sub)` in a Future, running concurrently
-     * with the actual materialization. Therefore we implement a minimial shell here
-     * that plugs the downstream and the upstream together as soon as both are known.
-     * Using a VirtualProcessor would technically also work, but it would defeat the
-     * purpose of subscription timeouts�the subscription would always already be
-     * established from the Actor�s perspective, regardless of whether a downstream
-     * will ever be connected.
-     *
-     * One important consideration is that this `Publisher` must not retain a reference
-     * to the `Subscriber` after having hooked it up with the real `Publisher`, hence
-     * the use of `Inert.subscriber` as a tombstone.
-     */
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// The implementation of <see cref="Sink.AsPublisher{T}"/> needs to offer a <see cref="IPublisher{T}"/> that
+    /// defers to the upstream that is connected during materialization. This would
+    /// be trivial if it were not for materialized value computations that may even
+    /// spawn the code that does <see cref="IPublisher{T}.Subscribe"/> in a Future, running concurrently
+    /// with the actual materialization. Therefore we implement a minimal shell here
+    /// that plugs the downstream and the upstream together as soon as both are known.
+    /// Using a VirtualProcessor would technically also work, but it would defeat the
+    /// purpose of subscription timeoutsï¿½the subscription would always already be
+    /// established from the Actorï¿½s perspective, regardless of whether a downstream
+    /// will ever be connected.
+    /// 
+    /// One important consideration is that this <see cref="IPublisher{T}"/> must not retain a reference
+    /// to the <see cref="ISubscriber{T}"/> after having hooked it up with the real <see cref="IPublisher{T}"/>, hence
+    /// the use of `Inert.subscriber` as a tombstone.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
     internal sealed class VirtualPublisher<T> : AtomicReference<object>, IPublisher<T>, IUntypedVirtualPublisher
     {
         #region internal classes
@@ -2015,6 +2120,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public abstract class MaterializerSession
     {
         /// <summary>
@@ -2028,23 +2134,25 @@ namespace Akka.Streams.Implementation
         public class MaterializationPanicException : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MaterializationPanicException"/> class.
             /// </summary>
-            /// <param name="innerException">TBD</param>
+            /// <param name="innerException">The exception that is the cause of the current exception.</param>
             public MaterializationPanicException(Exception innerException)
                 : base("Materialization aborted.", innerException)
             {
             }
 
+#if SERIALIZATION
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MaterializationPanicException" /> class.
             /// </summary>
-            /// <param name="info">TBD</param>
-            /// <param name="context">TBD</param>
+            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
             protected MaterializationPanicException(SerializationInfo info, StreamingContext context)
                 : base(info, context)
             {
             }
+#endif
         }
 
         /// <summary>
@@ -2228,8 +2336,8 @@ namespace Akka.Streams.Implementation
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
 
-            if (MaterializedValueSource.ContainsKey(materializedSource.Computation))
-                MaterializedValueSource[materializedSource.Computation].AddFirst(materializedSource);
+            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out var list))
+                list.AddFirst(materializedSource);
             else
                 MaterializedValueSource.Add(materializedSource.Computation,
                     new LinkedList<IMaterializedValueSource>(new[] {materializedSource}));
@@ -2311,7 +2419,8 @@ namespace Akka.Streams.Implementation
             int spaces)
         {
             var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
-            if (IsDebug) Console.WriteLine($"{indent}{node}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
             {
@@ -2329,14 +2438,16 @@ namespace Akka.Streams.Implementation
                 var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = NotUsed.Instance;
+            else
+                result = NotUsed.Instance;
 
-            if (IsDebug) Console.WriteLine($"{indent}result = {result}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}result = {result}");
 
-            if (MaterializedValueSource.ContainsKey(node))
+            if (MaterializedValueSource.TryGetValue(node, out var sources))
             {
-                var sources = MaterializedValueSource[node];
-                if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
+                if (IsDebug)
+                    Console.WriteLine($"{indent}triggering sources {sources}");
                 MaterializedValueSource.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);
@@ -2355,12 +2466,9 @@ namespace Akka.Streams.Implementation
             Subscribers[inPort] = subscriberOrVirtual;
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Upstreams.ContainsKey(inPort))
-            {
-                IUntypedPublisher publisher;
-                if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
+            if (CurrentLayout.Upstreams.TryGetValue(inPort, out var outPort))
+                if (Publishers.TryGetValue(outPort, out var publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
-            }
         }
 
 
@@ -2373,12 +2481,9 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Downstreams.ContainsKey(outPort))
-            {
-                object subscriber;
-                if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
+            if (CurrentLayout.Downstreams.TryGetValue(outPort, out var inPort))
+                if (Subscribers.TryGetValue(inPort, out var subscriber))
                     DoSubscribe(publisher, subscriber);
-            }
         }
 
         private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)
@@ -2428,6 +2533,7 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    [InternalApi]
     public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
         private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;

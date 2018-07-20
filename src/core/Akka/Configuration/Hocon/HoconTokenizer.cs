@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconTokenizer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,6 +72,24 @@ namespace Akka.Configuration.Hocon
                 return true;
 
             return false;
+        }
+
+        protected string PickErrorLine(out int index)
+        {
+            index = _index;
+            var from = _text.LastIndexOf(Environment.NewLine, _index);
+            if (from == -1) from = 0; else from += Environment.NewLine.Length;
+            var to = _text.IndexOf(Environment.NewLine, _index);
+            if (to == -1) to = _text.Length;
+
+            var sb = new StringBuilder((to - from) * 2 + 4).AppendLine(_text.Substring(from, to - from));
+            for (int i = from; i < to; i++)
+            {
+                if (i == index) sb.Append('^');
+                else sb.Append(' ');
+            }
+
+            return sb.AppendLine().ToString();
         }
 
         /// <summary>
@@ -252,7 +270,8 @@ namespace Akka.Configuration.Hocon
             {
                 return new Token(TokenType.EoF);
             }
-            throw new FormatException("unknown token");
+            var line = PickErrorLine(out var index);
+            throw new FormatException($"Unknown token at position {index}: \n{line}");
         }
 
         private bool IsStartOfQuotedKey()
@@ -578,7 +597,7 @@ namespace Akka.Configuration.Hocon
                 case 'u':
                     string hex = "0x" + Take(4);
                     int j = Convert.ToInt32(hex, 16);
-                    return ((char) j).ToString(CultureInfo.InvariantCulture);
+                    return ((char) j).ToString();
                 default:
                     throw new FormatException($"Unknown escape code: {escaped}");
             }
@@ -742,6 +761,14 @@ namespace Akka.Configuration.Hocon
             {
                 sb.Append(Take());
             }
+
+            // Unquoted text does not support assignment character.
+            if (IsAssignment())
+                throw new ConfigurationException(
+                    @"Could not parse an unquoted text value containing assignment character '=' or ':'.
+- If you want to declare a new object, please enclose the item with curly brackets.
+- If you want to declare a URI address, please enclose the item with double quotes."
+                );
 
             return Token.LiteralValue(sb.ToString());
         }

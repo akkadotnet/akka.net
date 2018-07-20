@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadlineFailureDetectorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,6 +95,16 @@ namespace Akka.Remote.Tests
             fd.IsAvailable.Should().BeTrue();
             fd.HeartBeat();
             fd.IsAvailable.Should().BeFalse();
+        }
+
+        [Fact]
+        public void DeadlineFailureDetector_must_work_with_MonotonicClock()
+        {
+            var fd = CreateFailureDetector(4.Seconds());
+
+            fd.IsAvailable.Should().BeTrue();
+            fd.HeartBeat();
+            fd.IsAvailable.Should().BeTrue();
         }
 
         private DeadlineFailureDetector CreateFailureDetector(TimeSpan acceptableLostDuration, Clock clock = null)

@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Event;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
@@ -20,7 +22,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -31,11 +33,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Put other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -43,32 +41,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Ref, other.Ref);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Put);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Ref != null ? Ref.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Put<ref:{0}>", Ref);
+            return $"Put<ref:{Ref}>";
         }
     }
 
@@ -81,7 +69,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
 
         /// <summary>
         /// TBD
@@ -92,11 +80,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Path = path;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Remove other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -104,32 +88,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Path, other.Path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Remove);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Path != null ? Path.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Remove<path:{0}>", Path);
+            return $"Remove<path:{Path}>";
         }
     }
 
@@ -142,15 +116,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Group;
+        public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -158,7 +134,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="topic">TBD</param>
         /// <param name="ref">TBD</param>
         /// <param name="group">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="topic"/> is undefined.
+        /// </exception>
         public Subscribe(string topic, IActorRef @ref, string @group = null)
         {
             if (string.IsNullOrEmpty(topic)) throw new ArgumentException("topic must be defined");
@@ -168,11 +146,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Subscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -182,20 +156,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Ref, other.Ref);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Subscribe);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -207,13 +174,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Subscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            return $"Subscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
         }
     }
 
@@ -226,15 +190,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Group;
+        public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -242,7 +208,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="topic">TBD</param>
         /// <param name="ref">TBD</param>
         /// <param name="group">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="topic"/> is undefined.
+        /// </exception>
         public Unsubscribe(string topic, IActorRef @ref, string @group = null)
         {
             if (string.IsNullOrEmpty(topic)) throw new ArgumentException("topic must be defined");
@@ -252,11 +220,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Ref = @ref;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Unsubscribe other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -266,20 +230,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Ref, other.Ref);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Unsubscribe);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -291,13 +248,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Unsubscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            return $"Unsubscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
         }
     }
 
@@ -310,7 +264,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Subscribe Subscribe;
+        public Subscribe Subscribe { get; }
 
         /// <summary>
         /// TBD
@@ -322,11 +276,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Subscribe = subscribe;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(SubscribeAck other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -334,32 +284,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Subscribe, other.Subscribe);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as SubscribeAck);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Subscribe != null ? Subscribe.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("SubscribeAck<{0}>", Subscribe);
+            return $"SubscribeAck<{Subscribe}>";
         }
     }
 
@@ -372,7 +312,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Unsubscribe Unsubscribe;
+        public Unsubscribe Unsubscribe { get; }
 
         /// <summary>
         /// TBD
@@ -382,11 +322,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Unsubscribe = unsubscribe;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(UnsubscribeAck other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -394,32 +330,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return Equals(Unsubscribe, other.Unsubscribe);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as UnsubscribeAck);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Unsubscribe != null ? Unsubscribe.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("UnsubscribeAck<{0}>", Unsubscribe);
+            return $"UnsubscribeAck<{Unsubscribe}>";
         }
     }
 
@@ -432,15 +358,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool SendOneMessageToEachGroup;
+        public bool SendOneMessageToEachGroup { get; }
 
         /// <summary>
         /// TBD
@@ -455,11 +381,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             SendOneMessageToEachGroup = sendOneMessageToEachGroup;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Publish other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -469,20 +391,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Publish);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -494,13 +409,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Publish<topic:{0}, sendOneToEachGroup:{1}, message:{2}>", Topic, SendOneMessageToEachGroup, Message);
+            return $"Publish<topic:{Topic}, sendOneToEachGroup:{SendOneMessageToEachGroup}, message:{Message}>";
         }
     }
 
@@ -513,15 +425,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool LocalAffinity;
+        public bool LocalAffinity { get; }
 
         /// <summary>
         /// TBD
@@ -536,11 +448,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             LocalAffinity = localAffinity;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Send other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -550,20 +458,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Send);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -575,13 +476,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Send<path:{0}, localAffinity:{1}, message:{2}>", Path, LocalAffinity, Message);
+            return $"Send<path:{Path}, localAffinity:{LocalAffinity}, message:{Message}>";
         }
     }
 
@@ -594,15 +492,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool ExcludeSelf;
+        public bool ExcludeSelf { get; }
 
         /// <summary>
         /// TBD
@@ -617,11 +517,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             ExcludeSelf = excludeSelf;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(SendToAll other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -631,19 +527,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                    Equals(Message, other.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as SendToAll);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -655,13 +545,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("SendToAll<path:{0}, excludeSelf:{1}, message:{2}>", Path, ExcludeSelf, Message);
+            return $"SendToAll<path:{Path}, excludeSelf:{ExcludeSelf}, message:{Message}>";
         }
     }
 
@@ -669,43 +556,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class GetTopics : IEquatable<GetTopics>
+    public sealed class GetTopics
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetTopics Instance = new GetTopics();
+        public static GetTopics Instance { get; } = new GetTopics();
         private GetTopics() { }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        public bool Equals(GetTopics other)
-        {
-            if (other == null) return false;
-            return true;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetTopics);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "GetTopics<>";
-        }
     }
 
     /// <summary>
@@ -717,56 +574,42 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string[] Topics;
+        public IImmutableSet<string> Topics { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="topics">TBD</param>
-        public CurrentTopics(string[] topics)
+        public CurrentTopics(IImmutableSet<string> topics)
         {
-            Topics = topics ?? new string[0];
+            Topics = topics ?? ImmutableHashSet<string>.Empty;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(CurrentTopics other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(other, this)) return true;
 
-            return Equals(Topics, other.Topics);
+            return Topics.SequenceEqual(other.Topics);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as CurrentTopics);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Topics != null ? Topics.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("CurrentTopics<{0}>", string.Join(",", Topics));
+            return $"CurrentTopics<{string.Join(",", Topics)}>";
         }
     }
 }

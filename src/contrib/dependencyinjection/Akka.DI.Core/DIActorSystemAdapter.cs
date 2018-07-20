@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DIActorSystemAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,11 +24,11 @@ namespace Akka.DI.Core
         /// </summary>
         /// <param name="system">The actor system that contains the DI extension.</param>
         /// <exception cref="ArgumentNullException">
-        /// The <paramref name="system"/> was null.
+        /// This exception is thrown when the specified <paramref name="system"/> is undefined.
         /// </exception>
         public DIActorSystemAdapter(ActorSystem system)
         {
-            if (system == null) throw new ArgumentNullException("system");
+            if (system == null) throw new ArgumentNullException(nameof(system), $"DIActorSystemAdapter requires {nameof(system)} to be provided");
             this.system = system;
             this.producer = system.GetExtension<DIExt>();
         }

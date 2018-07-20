@@ -1,9 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Result.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 
@@ -52,11 +53,7 @@ namespace Akka.Util
             Exception = exception;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Result<T> other)
         {
             if (IsSuccess ^ other.IsSuccess) return false;
@@ -65,21 +62,14 @@ namespace Akka.Util
                 : Equals(Exception, other.Exception);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (obj is Result<T>) return Equals((Result<T>) obj);
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return IsSuccess
@@ -88,26 +78,28 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="Result{T}"/> for equality.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator ==(Result<T> x, Result<T> y)
+        /// <param name="left">The first <see cref="Result{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Result{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Result{T}"/> are equal; otherwise <c>false</c></returns>
+        public static bool operator ==(Result<T> left, Result<T> right)
         {
-            return x.Equals(y);
+            return left.Equals(right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="Result{T}"/> for inequality.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator !=(Result<T> x, Result<T> y)
+        /// <param name="left">The first <see cref="Result{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Result{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Result{T}"/> are not equal; otherwise <c>false</c></returns>
+        public static bool operator !=(Result<T> left, Result<T> right)
         {
-            return !(x == y);
+            return !(left == right);
         }
+
+        public override string ToString() => IsSuccess ? $"Success ({Value})" : $"Failure ({Exception})";
     }
 
     /// <summary>
@@ -166,6 +158,8 @@ namespace Akka.Util
                 return new Result<T>(e);
             }
         }
+        
+        
 
     }
 }

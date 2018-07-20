@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IMessageSink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// Report that the test runner is terminating the current test in the suite.
         /// </summary>
-        void EndTest();
+        void EndTest(string className, string methodName);
 
         /// <summary>
         /// Report that an individual node has passed its test.
@@ -73,24 +73,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <param name="nodeRole">The Role of the node.</param>
         /// <param name="message">A string message included with the notification.</param>
         void Success(int nodeIndex, string nodeRole, string message);
-
-        /// <summary>
-        /// Report that an individual node has failed its test.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        /// <param name="nodeRole">The Role of the node.</param>
-        /// <param name="message">A string message included with the notification.</param>
-        void Fail(int nodeIndex, string nodeRole, string message);
-
-        /// <summary>
-        /// Report a log message for an individual node.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        /// <param name="nodeRole">The Role of the node.</param>
-        /// <param name="message">A string message included with the notification.</param>
-        /// <param name="logSource">The source of a log message.</param>
-        /// <param name="level">The <see cref="LogLevel"/> of this message.</param>
-        void Log(int nodeIndex, string nodeRole, string message,  string logSource, LogLevel level);
 
         /// <summary>
         /// Report a log message from the MultiNodeTestRunner itself.

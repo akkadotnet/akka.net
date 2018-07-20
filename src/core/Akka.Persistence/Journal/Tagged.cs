@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tagged.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,15 +24,6 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Payload;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IImmutableSet<string> Tags;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="payload">TBD</param>
         /// <param name="tags">TBD</param>
         public Tagged(object payload, IEnumerable<string> tags)
@@ -51,5 +42,15 @@ namespace Akka.Persistence.Journal
             Payload = payload;
             Tags = tags;
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public object Payload { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableSet<string> Tags { get; }
     }
 }

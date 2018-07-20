@@ -1,13 +1,14 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamOfStreams.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -33,13 +34,15 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly FlattenMerge<TGraph, T, TMat> _stage;
+            private readonly Attributes _enclosingAttributes;
             private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
             private IBuffer<SubSinkInlet<T>> _q;
             private readonly Action _outHandler;
 
-            public Logic(FlattenMerge<TGraph, T, TMat> stage) : base(stage.Shape)
+            public Logic(FlattenMerge<TGraph, T, TMat> stage, Attributes enclosingAttributes) : base(stage.Shape)
             {
                 _stage = stage;
+                _enclosingAttributes = enclosingAttributes;
                 _outHandler = () =>
                 {
                     // could be unavailable due to async input having been executed before this notification
@@ -47,8 +50,7 @@ namespace Akka.Streams.Implementation.Fusing
                         PushOut();
                 };
 
-                SetHandler(_stage._in, this);
-                SetHandler(_stage._out, this);
+                SetHandler(stage._in, stage._out, this);
             }
             public override void OnPush()
             {
@@ -120,7 +122,10 @@ namespace Akka.Streams.Implementation.Fusing
 
                 sinkIn.Pull();
                 _sources.Add(sinkIn);
-                Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
+
+                var graph = Source.FromGraph(source).To(sinkIn.Sink);
+                var attributes = _stage.InitialAttributes.And(_enclosingAttributes);
+                Interpreter.SubFusingMaterializer.Materialize(graph, attributes);
             }
 
             public override string ToString() => $"FlattenMerge({_stage._breadth})";
@@ -158,9 +163,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
+        /// <param name="enclosingAttributes">TBD</param>
         /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        protected override GraphStageLogic CreateLogic(Attributes enclosingAttributes) => new Logic(this, enclosingAttributes);
 
         /// <summary>
         /// TBD
@@ -378,7 +383,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = new Lazy<Decider>(() =>
                 {
                     var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                    return attribute != null ? attribute.Decider : Deciders.StoppingDecider; ;
+                    return attribute != null ? attribute.Decider : Deciders.StoppingDecider;
                 }); 
 
                 SetHandler(_stage.In, this);
@@ -394,9 +399,8 @@ namespace Akka.Streams.Implementation.Fusing
                     if (key == null)
                         throw new ArgumentNullException(nameof(key), "Key cannot be null");
 
-                    if (_activeSubstreams.ContainsKey(key))
+                    if (_activeSubstreams.TryGetValue(key, out var substreamSource))
                     {
-                        var substreamSource = _activeSubstreams[key];
                         if (substreamSource.IsAvailable)
                             substreamSource.Push(element);
                         else
@@ -507,9 +511,8 @@ namespace Akka.Streams.Implementation.Fusing
             protected internal override void OnTimer(object timerKey)
             {
                 var key = (TKey) timerKey;
-                if (_activeSubstreams.ContainsKey(key))
+                if (_activeSubstreams.TryGetValue(key, out var substreamSource))
                 {
-                    var substreamSource = _activeSubstreams[key];
                     substreamSource.Timeout(_timeout);
                     _closedSubstreams.Add(key);
                     _activeSubstreams.Remove(key);
@@ -713,21 +716,25 @@ namespace Akka.Streams.Implementation.Fusing
             private sealed class SubstreamHandler : InAndOutHandler
             {
                 private readonly Logic _logic;
+                private readonly Inlet<T> _inlet;
+                private readonly Split.SplitDecision _decision;
                 private bool _willCompleteAfterInitialElement;
 
                 public SubstreamHandler(Logic logic)
                 {
                     _logic = logic;
+                    _inlet = logic._stage._in;
+                    _decision = _logic._stage._decision;
                 }
 
                 public bool HasInitialElement => FirstElement.HasValue;
 
                 public Option<T> FirstElement { private get; set; }
 
+                // Substreams are always assumed to be pushable position when we enter this method
                 private void CloseThis(SubstreamHandler handler, T currentElem)
                 {
-                    var decision = _logic._stage._decision;
-                    if (decision == Split.SplitDecision.SplitAfter)
+                    if (_decision == Split.SplitDecision.SplitAfter)
                     {
                         if (!_logic._substreamCancelled)
                         {
@@ -735,7 +742,7 @@ namespace Akka.Streams.Implementation.Fusing
                             _logic._substreamSource.Complete();
                         }
                     }
-                    else if (decision == Split.SplitDecision.SplitBefore)
+                    else if (_decision == Split.SplitDecision.SplitBefore)
                     {
                         handler.FirstElement = currentElem;
                         if (!_logic._substreamCancelled)
@@ -745,6 +752,8 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override void OnPull()
                 {
+                    _logic.CancelTimer(SubscriptionTimer);
+
                     if (HasInitialElement)
                     {
                         _logic._substreamSource.Push(FirstElement.Value);
@@ -758,36 +767,43 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
                     else
-                        _logic.Pull(_logic._stage._in);
+                        _logic.Pull(_inlet);
                 }
 
                 public override void OnDownstreamFinish()
                 {
                     _logic._substreamCancelled = true;
-                    if (_logic.IsClosed(_logic._stage._in) || _logic._stage._propagateSubstreamCancel)
+                    if (_logic.IsClosed(_inlet) || _logic._stage._propagateSubstreamCancel)
                         _logic.CompleteStage();
                     else
-                    // Start draining
-                        if (!_logic.HasBeenPulled(_logic._stage._in))
-                            _logic.Pull(_logic._stage._in);
+                        // Start draining
+                        if (!_logic.HasBeenPulled(_inlet))
+                            _logic.Pull(_inlet);
                 }
 
                 public override void OnPush()
                 {
-                    var elem = _logic.Grab(_logic._stage._in);
+                    var elem = _logic.Grab(_inlet);
                     try
                     {
                         if (_logic._stage._predicate(elem))
                         {
                             var handler = new SubstreamHandler(_logic);
                             CloseThis(handler, elem);
-                            _logic.HandOver(handler);
+                            if(_decision == Split.SplitDecision.SplitBefore)
+                                _logic.HandOver(handler);
+                            else
+                            {
+                                _logic._substreamSource = null;
+                                _logic.SetHandler(_inlet, _logic);
+                                _logic.Pull(_inlet);
+                            }
                         }
                         else
                         {
                             // Drain into the void
                             if (_logic._substreamCancelled)
-                                _logic.Pull(_logic._stage._in);
+                                _logic.Pull(_inlet);
                             else
                                 _logic._substreamSource.Push(elem);
                         }
@@ -855,19 +871,19 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnPull()
             {
                 if (_substreamSource == null)
-                    Pull(_stage._in);
-                else if (!_substreamWaitingToBePushed)
                 {
-                    Push(_stage._out, Source.FromGraph(_substreamSource.Source));
-                    ScheduleOnce(SubscriptionTimer, _timeout);
-                    _substreamWaitingToBePushed = true;
+                    //can be already pulled from substream in case split after
+                    if (!HasBeenPulled(_stage._in))
+                        Pull(_stage._in);
                 }
+                else if (_substreamWaitingToBePushed)
+                    PushSubstreamSource();
             }
 
             public void OnDownstreamFinish()
             {
                 // If the substream is already cancelled or it has not been handed out, we can go away
-                if (!_substreamWaitingToBePushed || _substreamCancelled)
+                if (_substreamSource == null || _substreamWaitingToBePushed || _substreamCancelled)
                     CompleteStage();
             }
 
@@ -891,13 +907,21 @@ namespace Akka.Streams.Implementation.Fusing
 
                     if (IsAvailable(_stage._out))
                     {
-                        Push(_stage._out, Source.FromGraph(_substreamSource.Source));
-                        ScheduleOnce(SubscriptionTimer, _timeout);
-                        _substreamWaitingToBePushed = true;
+                        if(_stage._decision == Split.SplitDecision.SplitBefore || handler.HasInitialElement)
+                            PushSubstreamSource();
+                        else
+                            Pull(_stage._in);
                     }
                     else
-                        _substreamWaitingToBePushed = false;
+                        _substreamWaitingToBePushed = true;
                 }
+            }
+
+            private void PushSubstreamSource()
+            {
+                Push(_stage._out, Source.FromGraph(_substreamSource.Source));
+                ScheduleOnce(SubscriptionTimer, _timeout);
+                _substreamWaitingToBePushed = false;
             }
 
             protected internal override void OnTimer(object timerKey) => _substreamSource.Timeout(_timeout);
@@ -951,36 +975,80 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal static class SubSink
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal interface ICommand
+        internal interface IState
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Not yet materialized and no command has been scheduled
         /// </summary>
+        internal class Uninitialized : IState
+        {
+            public static readonly Uninitialized Instance = new Uninitialized();
+
+            private Uninitialized()
+            {
+            }
+        }
+
+        /// <summary>
+        /// A command was scheduled before materialization
+        /// </summary>
+        internal abstract class CommandScheduledBeforeMaterialization : IState
+        {
+            protected CommandScheduledBeforeMaterialization(ICommand command)
+            {
+                Command = command;
+            }
+
+            public ICommand Command { get; }
+        }
+
+        /// <summary>
+        /// A RequestOne command was scheduled before materialization
+        /// </summary>
+        internal class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
+        {
+            public static readonly RequestOneScheduledBeforeMaterialization Instance = new RequestOneScheduledBeforeMaterialization(RequestOne.Instance);
+            
+            private RequestOneScheduledBeforeMaterialization(ICommand command) : base(command)
+            {
+            }
+        }
+
+        /// <summary>
+        /// A Cancel command was scheduled before materialization
+        /// </summary>
+        internal sealed class CancelScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
+        {
+            public static readonly CancelScheduledBeforeMaterialization Instance = new CancelScheduledBeforeMaterialization(Cancel.Instance);
+
+            private CancelScheduledBeforeMaterialization(ICommand command) : base(command)
+            {
+            }
+        }
+
+        /*
+         Steady state: sink has been materialized, commands can be delivered through the callback 
+         Represented in unwrapped form as AsyncCallback[Command] directly to prevent a level of indirection
+         case class Materialized(callback: AsyncCallback[Command]) extends State
+        */
+
+        internal interface ICommand
+        {
+        }
+
         internal class RequestOne : ICommand
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly RequestOne Instance = new RequestOne();
 
             private RequestOne()
             {
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         internal class Cancel : ICommand
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly Cancel Instance = new Cancel();
 
             private Cancel()
@@ -992,7 +1060,6 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
     internal sealed class SubSink<T> : GraphStage<SinkShape<T>>
     {
         #region internal classes
@@ -1014,49 +1081,47 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFailure(Exception e) => _stage._externalCallback(new OnError(e));
 
-            private void SetCallback(Action<SubSink.ICommand> cb)
+            private void SetCallback(Action<SubSink.ICommand> callback)
             {
-                var status = _stage._status.Value;
-                if (status == null)
+                var status = _stage._status;
+                switch (status.Value)
                 {
-                    if (!_stage._status.CompareAndSet(null, cb))
-                        SetCallback(cb);
+                    case SubSink.Uninitialized _:
+                        if(!status.CompareAndSet(SubSink.Uninitialized.Instance, /* Materialized */ GetAsyncCallback(callback)))
+                            SetCallback(callback);
+                        break;
+                    case SubSink.CommandScheduledBeforeMaterialization command:
+                        if (status.CompareAndSet(command, /* Materialized */ GetAsyncCallback(callback)))
+                        {
+                            // between those two lines a new command might have been scheduled, but that will go through the
+                            // async interface, so that the ordering is still kept
+                            callback(command.Command);
+                        }
+                        else
+                            SetCallback(callback);
+                        break;
+                    case Action<SubSink.ICommand> _: /* Materialized */
+                        FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
+                        break;
                 }
-                else if (status is SubSink.RequestOne)
-                {
-                    Pull(_stage._in);
-                    if (!_stage._status.CompareAndSet(SubSink.RequestOne.Instance, cb))
-                        SetCallback(cb);
-                }
-                else if (status is SubSink.Cancel)
-                {
-                    CompleteStage();
-                    if (!_stage._status.CompareAndSet(SubSink.Cancel.Instance, cb))
-                        SetCallback(cb);
-                }
-                else if (status is Action)
-                    FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
             }
 
             public override void PreStart()
             {
-                var ourOwnCallback = GetAsyncCallback<SubSink.ICommand>(cmd =>
+                SetCallback(command =>
                 {
-                    if (cmd is SubSink.RequestOne)
+                    if (command is SubSink.RequestOne)
                         TryPull(_stage._in);
-                    else if (cmd is SubSink.Cancel)
+                    else if (command is SubSink.Cancel)
                         CompleteStage();
-                    else
-                        throw new IllegalStateException("Bug");
                 });
-                SetCallback(ourOwnCallback);
             }
         }
 
         #endregion
 
         private readonly Inlet<T> _in = new Inlet<T>("SubSink.in");
-        private readonly AtomicReference<object> _status = new AtomicReference<object>();
+        private readonly AtomicReference<object> _status = new AtomicReference<object>(SubSink.Uninitialized.Instance);
         private readonly string _name;
         private readonly Action<IActorSubscriberMessage> _externalCallback;
 
@@ -1087,32 +1152,30 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public void PullSubstream()
-        {
-            var s = _status.Value;
-            var f = s as Action<SubSink.ICommand>;
-
-            if (f != null)
-                f(SubSink.RequestOne.Instance);
-            else
-            {
-                if (!_status.CompareAndSet(null, SubSink.RequestOne.Instance))
-                    ((Action<SubSink.ICommand>) _status.Value)(SubSink.RequestOne.Instance);
-            }
-        }
+        public void PullSubstream() => DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public void CancelSubstream()
-        {
-            var s = _status.Value;
-            var f = s as Action<SubSink.ICommand>;
+        public void CancelSubstream() => DispatchCommand(SubSink.CancelScheduledBeforeMaterialization.Instance);
 
-            if (f != null)
-                f(SubSink.Cancel.Instance);
-            else if (!_status.CompareAndSet(s, SubSink.Cancel.Instance)) // a potential RequestOne is overwritten
-                ((Action<SubSink.ICommand>) _status.Value)(SubSink.Cancel.Instance);
+        private void DispatchCommand(SubSink.CommandScheduledBeforeMaterialization newState)
+        {
+            switch (_status.Value)
+            {
+                case Action<SubSink.ICommand> callback: callback(newState.Command); break;
+                case SubSink.Uninitialized _:
+                    if(!_status.CompareAndSet(SubSink.Uninitialized.Instance, newState))
+                        DispatchCommand(newState); // changed to materialized in the meantime
+                    break;
+                case SubSink.RequestOneScheduledBeforeMaterialization _ when newState == SubSink.CancelScheduledBeforeMaterialization.Instance:
+                    // cancellation is allowed to replace pull
+                    if(!_status.CompareAndSet(SubSink.RequestOneScheduledBeforeMaterialization.Instance, newState))
+                        DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
+                    break;
+                case SubSink.CommandScheduledBeforeMaterialization command:
+                    throw new IllegalStateException($"{newState.Command} on subsink is illegal when {command.Command} is still pending");
+            }
         }
 
         /// <summary>
@@ -1145,6 +1208,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="s">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
+        [InternalApi]
         public static void Kill<T, TMat>(Source<T, TMat> s)
         {
             var module = s.Module as GraphStageModule;

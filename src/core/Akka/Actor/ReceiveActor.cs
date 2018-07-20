@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,20 +103,6 @@ namespace Akka.Actor
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configure">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(Action configure, bool discardOld = true)
-        {
-            if(discardOld)
-                Become(configure);
-            else
-                BecomeStacked(configure);
-        }
-
         private PartialAction<object> CreateNewHandler(Action configure)
         {
             PrepareConfigureMessageHandlers();
@@ -125,23 +111,12 @@ namespace Akka.Actor
             return newHandler;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use ReceiveAsync instead. This method will be removed in future versions")]
-        protected void Receive<T>(Func<T, Task> handler)
-        {
-            ReceiveAsync(handler);
-        }
-
         private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
         {
             return m =>
             {
-                Func<Task> wrap = () => asyncHandler(m);
-                ActorTaskScheduler.RunTask(wrap);
+                Task Wrap() => asyncHandler(m);
+                ActorTaskScheduler.RunTask(Wrap);
             };
         }
 
@@ -255,7 +230,6 @@ namespace Akka.Actor
             Receive<T>(handler, shouldHandle);
         }
 
-
         /// <summary>
         /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.
         /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
@@ -272,7 +246,6 @@ namespace Akka.Actor
             EnsureMayConfigureMessageHandlers();
             _matchHandlerBuilders.Peek().Match(messageType, handler, shouldHandle);
         }
-
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.

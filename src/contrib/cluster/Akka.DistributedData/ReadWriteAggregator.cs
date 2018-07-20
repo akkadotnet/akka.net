@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReadWriteAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using Akka.Actor;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Event;
 using Akka.Util;
 
 namespace Akka.DistributedData
@@ -25,23 +26,35 @@ namespace Akka.DistributedData
 
         protected TimeSpan Timeout { get; }
         protected IImmutableSet<Address> Nodes { get; }
+        protected IImmutableSet<Address> Unreachable { get; }
+        protected IImmutableSet<Address> Reachable { get; }
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
+
+        private ILoggingAdapter _log;
+
+        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+
         protected abstract int DoneWhenRemainingSize { get; }
 
-        protected Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> PrimaryAndSecondaryNodes;
+        private readonly Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> _primaryAndSecondaryNodes;
+
+        protected IImmutableSet<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
+        protected IImmutableSet<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
 
         protected IImmutableSet<Address> Remaining;
 
-        protected ReadWriteAggregator(IImmutableSet<Address> nodes, TimeSpan timeout)
+        protected ReadWriteAggregator(IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout)
         {
             Timeout = timeout;
             Nodes = nodes;
+            Unreachable = unreachable;
+            Reachable = nodes.Except(unreachable);
             Remaining = Nodes;
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
-            PrimaryAndSecondaryNodes = new Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>>(() =>
+            _primaryAndSecondaryNodes = new Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>>(() =>
             {
                 var primarySize = Nodes.Count - DoneWhenRemainingSize;
                 if(primarySize >= nodes.Count)
@@ -56,6 +69,13 @@ namespace Akka.DistributedData
                     return Tuple.Create((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
                 }
             });
+        }
+
+        public static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
+        {
+            if (numberOfNodes <= minCapacity) return numberOfNodes;
+            
+            return Math.Max(minCapacity, numberOfNodes / 2 + 1);
         }
 
         protected override void PostStop()

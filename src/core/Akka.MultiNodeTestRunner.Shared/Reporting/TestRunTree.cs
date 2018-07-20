@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestRunTree.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -90,6 +90,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(TestRunTree other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -101,6 +102,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -109,6 +111,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((TestRunTree) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -240,6 +243,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(FactData other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -252,6 +256,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -260,6 +265,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((FactData) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -354,7 +360,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         /// <summary>
-        /// Push a new message onto the <see cref="EventStream"/> for this node.
+        /// Pushes a new message onto the <see cref="EventStream"/> for this node.
         /// </summary>
         public void Put(MultiNodeMessage message)
         {
@@ -370,7 +376,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         /// <summary>
-        /// Does a deep copy of the current <see cref="NodeData"/> object
+        /// Creates a deep copy of the current <see cref="NodeData"/> object
         /// </summary>
         public NodeData Copy()
         {
@@ -382,6 +388,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public bool Equals(NodeData other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -394,6 +401,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 && Passed.Equals(other.Passed);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -402,6 +410,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return Equals((NodeData) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -411,7 +420,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         #endregion
-
    
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -46,14 +45,14 @@ namespace Akka.Remote
     internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
     {
         //this is why this extension is called "RARP"
-        private readonly RemoteActorRefProvider _provider;
+        private readonly IRemoteActorRefProvider _provider;
 
         /// <summary>
         /// Used as part of the <see cref="ExtensionIdProvider{RARP}"/>
         /// </summary>
         public RARP() { }
 
-        private RARP(RemoteActorRefProvider provider)
+        private RARP(IRemoteActorRefProvider provider)
         {
             _provider = provider;
         }
@@ -75,13 +74,13 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
-            return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+            return new RARP((IRemoteActorRefProvider)system.Provider);
         }
 
         /// <summary>
-        /// TBD
+        /// The underlying remote actor reference provider.
         /// </summary>
-        public RemoteActorRefProvider Provider
+        public IRemoteActorRefProvider Provider
         {
             get { return _provider; }
         }
@@ -163,10 +162,18 @@ namespace Akka.Remote
         /// <summary>
         /// Start assumes that it cannot be followed by another Start() without having a Shutdown() first
         /// </summary>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <exception cref="TaskCanceledException">TBD</exception>
-        /// <exception cref="TimeoutException">TBD</exception>
-        /// <exception cref="Exception">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when no transports are enabled under the "akka.remote.enabled-transports" configuration setting.
+        /// </exception>
+        /// <exception cref="TaskCanceledException">
+        /// This exception is thrown when startup is canceled due to a timeout.
+        /// </exception>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when startup times out.
+        /// </exception>
+        /// <exception cref="Exception">
+        /// This exception is thrown when a general error occurs during startup.
+        /// </exception>
         public override void Start()
         {
             if (_endpointManager == null)
@@ -211,7 +218,7 @@ namespace Akka.Remote
                 }
                 catch (TaskCanceledException ex)
                 {
-                    NotifyError("Startup was cancelled due to timeout", ex);
+                    NotifyError("Startup was canceled due to timeout", ex);
                     throw;
                 }
                 catch (TimeoutException ex)
@@ -245,18 +252,19 @@ namespace Akka.Remote
             else
             {
                 var timeout = Provider.RemoteSettings.ShutdownTimeout;
-                Action finalize = () =>
+
+                void Action()
                 {
                     _eventPublisher.NotifyListeners(new RemotingShutdownEvent());
                     _endpointManager = null;
-                };
+                }
 
                 return _endpointManager.Ask<bool>(new EndpointManager.ShutdownAndFlush(), timeout).ContinueWith(result =>
                 {
                     if (result.IsFaulted || result.IsCanceled) //Shutdown was not successful
                     {
                         NotifyError("Failure during shutdown of remoting", result.Exception);
-                        finalize();
+                        Action();
                     }
                     else
                     {
@@ -265,7 +273,7 @@ namespace Akka.Remote
                             _log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
-                        finalize();
+                        Action();
                     }
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
@@ -323,17 +331,19 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <exception cref="RemoteTransportException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="address">The address of the remote system to be quarantined</param>
+        /// <param name="uid">The UID of the remote system; if the uid is not defined it will not be a strong quarantine but the current
+        /// endpoint writer will be stopped (dropping system messages) and the address will be gated.</param>
+        /// <exception cref="RemoteTransportException">
+        /// This exception is thrown when trying to quarantine a system but remoting is not running.
+        /// </exception>
         public override void Quarantine(Address address, int? uid)
         {
             if (_endpointManager == null)
             {
-                throw new RemoteTransportException(string.Format("Attempted to quarantine address {0} with uid {1} but Remoting is not running", address, uid), null);
+                throw new RemoteTransportException($"Attempted to quarantine address {address} with uid {uid} but Remoting is not running");
             }
 
             _endpointManager.Tell(new EndpointManager.Quarantine(address, uid));
@@ -367,24 +377,20 @@ namespace Akka.Remote
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            HashSet<ProtocolTransportAddressPair> transports;
-
-            if (transportMapping.TryGetValue(remote.Protocol, out transports))
+            if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
                     transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
-                {
                     throw new RemoteTransportException(
                         "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol +
                         "] is available." +
                         " Make sure at least one transport is configured to be responsible for the address.",
                         null);
-                }
+
                 if (responsibleTransports.Length == 1)
-                {
                     return responsibleTransports.First().Address;
-                }
+
                 throw new RemoteTransportException(
                     "Multiple transports are available for [" + remote + ": " +
                     string.Join(",", responsibleTransports.Select(t => t.ToString())) + "] " +

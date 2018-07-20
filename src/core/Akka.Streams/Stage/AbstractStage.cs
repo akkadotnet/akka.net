@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -158,7 +158,9 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the <see cref="FlowShape{TIn,TOut}.Outlet"/> is closed.
+        /// </exception>
         /// <returns>TBD</returns>
         public ITerminationDirective AbsorbTermination()
         {
@@ -378,7 +380,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut> : IStage<TIn, TOut>
     {
         /// <summary>
@@ -437,7 +439,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>
@@ -517,7 +519,7 @@ namespace Akka.Streams.Stage
     /// <typeparam name="TPushDirective">TBD</typeparam>
     /// <typeparam name="TPullDirective">TBD</typeparam>
     /// <typeparam name="TContext">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext
     {
         /// <summary>
@@ -591,7 +593,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>
@@ -611,7 +613,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>

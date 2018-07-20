@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -171,10 +171,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Receives the next message from the mailbox and feeds it to the underlying actor instance.
         /// </summary>
-        /// <param name="message">TBD</param>
-        internal void ReceiveMessage(object message)
+        /// <param name="message">The message that will be sent to the actor.</param>
+        protected virtual void ReceiveMessage(object message)
         {
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 

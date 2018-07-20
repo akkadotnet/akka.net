@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TestGraphStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,21 +15,21 @@ namespace Akka.Streams.TestKit
 {
     public static class GraphStageMessages
     {
-        public class Push
+        public class Push : INoSerializationVerificationNeeded
         {
             public static Push Instance { get; } = new Push();
 
             private Push() { }
         }
 
-        public class UpstreamFinish
+        public class UpstreamFinish : INoSerializationVerificationNeeded
         {
             public static UpstreamFinish Instance { get; } = new UpstreamFinish();
 
             private UpstreamFinish() { }
         }
 
-        public class Failure
+        public class Failure : INoSerializationVerificationNeeded
         {
             public Failure(Exception ex)
             {
@@ -39,14 +39,14 @@ namespace Akka.Streams.TestKit
             public Exception Ex { get; }
         }
 
-        public class Pull
+        public class Pull : INoSerializationVerificationNeeded
         {
             public static Pull Instance { get; } = new Pull();
 
             private Pull() { }
         }
 
-        public class DownstreamFinish
+        public class DownstreamFinish : INoSerializationVerificationNeeded
         {
             public static DownstreamFinish Instance { get; } = new DownstreamFinish();
 

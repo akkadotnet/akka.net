@@ -1,15 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ParsingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
-using Akka.NodeTestRunner;
 using Akka.TestKit;
 using Xunit;
 
@@ -42,39 +42,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         }
 
         #endregion
-
-        [Fact]
-        public void MessageSink_should_parse_Node_log_message_correctly()
-        {
-            var loggingActor = Sys.ActorOf<LoggingActor>();
-            Sys.EventStream.Subscribe(TestActor, typeof(Debug));
-            loggingActor.Tell("LOG ME!");
-
-            //capture the logged message
-            var foundMessage = ExpectMsg<Debug>();
-
-            //format the string as it would appear when reported by multinode test runner
-            var foundMessageStr = "[NODE1]" + foundMessage; 
-            LogMessageForNode nodeMessage;
-            MessageSink.TryParseLogMessage(foundMessageStr, out nodeMessage).ShouldBeTrue("should have been able to parse log message");
-
-            Assert.NotNull(nodeMessage);
-            Assert.Equal(foundMessage.LogLevel(), nodeMessage.Level);
-            Assert.Equal(foundMessage.LogSource, nodeMessage.LogSource);
-        }
-
-        [Fact]
-        public void MessageSink_should_parse_NonUS_culture_Node_log_message_correctly()
-        {
-            //format the string as it would appear when reported by multinode test runner
-            var foundMessageStr = "[NODE1][DEBUG][2015-02-09 23:05:08][Thread 0008][[akka://ParsingSpec-1/user/$b]] Received message LOG ME!";
-            LogMessageForNode nodeMessage;
-            MessageSink.TryParseLogMessage(foundMessageStr, out nodeMessage).ShouldBeTrue("should have been able to parse log message");
-
-            Assert.NotNull(nodeMessage);
-            Assert.Equal(LogLevel.DebugLevel, nodeMessage.Level);
-            Assert.Equal("[akka://ParsingSpec-1/user/$b]", nodeMessage.LogSource);
-        }
 
         [Fact]
         public void MessageSink_should_parse_Node_log_message_fragment_correctly()
@@ -111,7 +78,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_SpecPass_message_correctly()
         {
-            var specPass = new SpecPass(1, "super_role_1", GetType().Assembly.GetName().Name);
+            var specPass = new SpecPass(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
             NodeCompletedSpecWithSuccess nodeCompletedSpecWithSuccess;
             MessageSink.TryParseSuccessMessage(specPass.ToString(), out nodeCompletedSpecWithSuccess)
                 .ShouldBeTrue("should have been able to parse node success message");
@@ -123,7 +90,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_SpecFail_message_correctly()
         {
-            var specFail = new SpecFail(1, "super_role_1", GetType().Assembly.GetName().Name);
+            var specFail = new SpecFail(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
             NodeCompletedSpecWithFail nodeCompletedSpecWithFail;
             MessageSink.TryParseFailureMessage(specFail.ToString(), out nodeCompletedSpecWithFail)
                 .ShouldBeTrue("should have been able to parse node failure message");
@@ -135,8 +102,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_be_able_to_infer_message_type()
         {
-            var specPass = new SpecPass(1, "super_role_1", GetType().Assembly.GetName().Name);
-            var specFail = new SpecFail(1, "super_role_1", GetType().Assembly.GetName().Name);
+            var specPass = new SpecPass(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
+            var specFail = new SpecFail(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
 
             var loggingActor = Sys.ActorOf<LoggingActor>();
             Sys.EventStream.Subscribe(TestActor, typeof(Debug));
@@ -146,11 +113,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var foundMessage = ExpectMsg<Debug>();
 
             //format the string as it would appear when reported by multinode test runner
-            var nodeMessageStr = "[NODE1:super_role_1]" + foundMessage;
             var nodeMessageFragment = "[NODE1:super_role_1]      Only part of a message!";
             var runnerMessageStr = foundMessage.ToString();
-
-            MessageSink.DetermineMessageType(nodeMessageStr).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeLogMessage);
+            
             MessageSink.DetermineMessageType(runnerMessageStr).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.RunnerLogMessage);
             MessageSink.DetermineMessageType(specPass.ToString()).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodePassMessage);
             MessageSink.DetermineMessageType(specFail.ToString()).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeFailMessage);

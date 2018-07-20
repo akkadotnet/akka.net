@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeLeavingAndExitingAndBeingRemovedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,6 @@ namespace Akka.Cluster.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString("akka.cluster.auto-down-unreachable-after = 0s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
     }
@@ -40,7 +39,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeLeavingAndExitingAndBeingRemovedSpec(NodeLeavingAndExitingAndBeingRemovedSpecConfig config) : base(config)
+        protected NodeLeavingAndExitingAndBeingRemovedSpec(NodeLeavingAndExitingAndBeingRemovedSpecConfig config) : base(config, typeof(NodeLeavingAndExitingAndBeingRemovedSpec))
         {
             _config = config;
         }
@@ -55,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
@@ -66,7 +65,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 RunOn(() =>
                 {
                     EnterBarrier("second-shutdown");
-                    MarkNodeAsUnavailable(GetAddress(_config.Second));
+                    // this test verifies that the removal is performed via the ExitingCompleted message,
+                    // otherwise we would have `MarkNodeAsUnavailable(second)` to trigger the FailureDetectorPuppet
 
                     // verify that the 'second' node is no longer part of the 'members'/'unreachable' set
                     AwaitAssert(() =>

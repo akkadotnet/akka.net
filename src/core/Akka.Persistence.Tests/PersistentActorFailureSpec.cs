@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -326,10 +326,13 @@ namespace Akka.Persistence.Tests
             ExpectMsg(new object[] {"corrupt"});
 
             // recover by creating another with same name
-            var sup = Sys.ActorOf(Props.Create(() => new Supervisor(TestActor)));
-            sup.Tell(props);
+            // note that if we used testActor as failure detector passed in
+            // the props we'd have a race on our hands
+            var failProbe = CreateTestProbe();
+            var sameNameProps = Props.Create(() => new OnRecoveryFailurePersistentActor(Name, failProbe.Ref));
+            Sys.ActorOf(Props.Create(() => new Supervisor(TestActor))).Tell(sameNameProps);
             var newPref = ExpectMsg<IActorRef>();
-            ExpectMsg("recovery-failure:blahonga 1 1");
+            failProbe.ExpectMsg("recovery-failure:blahonga 1 1");
             Watch(newPref);
             ExpectTerminated(newPref);
         }

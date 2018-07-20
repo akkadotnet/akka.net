@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.IO;
@@ -36,7 +37,7 @@ namespace Akka.Streams.Dsl
             private readonly Func<Task> _unbindAction;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ServerBinding"/> class.
             /// </summary>
             /// <param name="localAddress">TBD</param>
             /// <param name="unbindAction">TBD</param>
@@ -64,7 +65,7 @@ namespace Akka.Streams.Dsl
         public struct IncomingConnection
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
             /// </summary>
             /// <param name="localAddress">TBD</param>
             /// <param name="remoteAddress">TBD</param>
@@ -111,7 +112,7 @@ namespace Akka.Streams.Dsl
         public struct OutgoingConnection
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.
             /// </summary>
             /// <param name="remoteAddress">TBD</param>
             /// <param name="localAddress">TBD</param>
@@ -141,9 +142,10 @@ namespace Akka.Streams.Dsl
         private readonly ExtendedActorSystem _system;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TcpExt"/> class.
         /// </summary>
         /// <param name="system">TBD</param>
+        [InternalApi]
         public TcpExt(ExtendedActorSystem system)
         {
             _system = system;
@@ -180,7 +182,7 @@ namespace Akka.Streams.Dsl
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
-            // DnsEnpoint isn't allowed
+            // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
                 throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
@@ -223,6 +225,11 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
+        /// <para>
+        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// to achieve application level chunks you have to introduce explicit framing in your streams,
+        /// for example using the <see cref="Framing"/> stages.
+        /// </para>
         /// </summary>
         /// <param name="remoteAddress"> The remote address to connect to</param>
         /// <param name="localAddress">Optional local address for the connection</param>
@@ -240,7 +247,7 @@ namespace Akka.Streams.Dsl
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
-            connectionTimeout = connectionTimeout ?? TimeSpan.MaxValue;
+            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
 
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
@@ -255,12 +262,25 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Creates an <see cref="Tcp.OutgoingConnection"/> without specifying options.
         /// It represents a prospective TCP client connection to the given endpoint.
+        /// <para>
+        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// to achieve application level chunks you have to introduce explicit framing in your streams,
+        /// for example using the <see cref="Framing"/> stages.
+        /// </para>
         /// </summary>
         /// <param name="host">TBD</param>
         /// <param name="port">TBD</param>
         /// <returns>TBD</returns>
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
-            => OutgoingConnection(new DnsEndPoint(host, port));
+            => OutgoingConnection(CreateEndpoint(host, port));
+
+        internal static EndPoint CreateEndpoint(string host, int port)
+        {
+            IPAddress address;
+            return IPAddress.TryParse(host, out address)
+                ? (EndPoint) new IPEndPoint(address, port)
+                : new DnsEndPoint(host, port);
+        }
     }
 
     /// <summary>
@@ -274,5 +294,15 @@ namespace Akka.Streams.Dsl
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
+    }
+
+    public sealed class TcpIdleTimeoutException : TimeoutException
+    {
+        public TcpIdleTimeoutException(string message, TimeSpan duration) : base(message)
+        {
+            Duration = duration;
+        }
+
+        public TimeSpan Duration { get; }
     }
 }

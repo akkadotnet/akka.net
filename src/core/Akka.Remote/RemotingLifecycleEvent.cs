@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingLifecycleEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -105,38 +105,31 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is fired when a remote association to another <see cref="ActorSystem"/> is terminated.
     /// </summary>
     public sealed class DisassociatedEvent : AssociationEvent
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.DebugLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override Address LocalAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override Address RemoteAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="DisassociatedEvent"/> instance.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="inbound">TBD</param>
+        /// <param name="localAddress">The address of the current actor system.</param>
+        /// <param name="remoteAddress">The address of the remote actor system.</param>
+        /// <param name="inbound"><c>true</c> if this side of the connection as inbound, <c>false</c> if it was outbound.</param>
         public DisassociatedEvent(Address localAddress, Address remoteAddress, bool inbound)
         {
             LocalAddress = localAddress;
@@ -247,23 +240,17 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when the remoting system terminates.
     /// </summary>
     public sealed class RemotingShutdownEvent : RemotingLifecycleEvent
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.InfoLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "Remoting shut down";

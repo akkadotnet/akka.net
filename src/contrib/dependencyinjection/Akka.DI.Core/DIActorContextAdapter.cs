@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DIActorContextAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,11 +24,11 @@ namespace Akka.DI.Core
         /// </summary>
         /// <param name="context">The actor context associated with a system that contains the DI extension.</param>
         /// <exception cref="ArgumentNullException">
-        /// The <paramref name="context"/> was null.
+        /// This exception is thrown when the specified <paramref name="context"/> is undefined.
         /// </exception>
         public DIActorContextAdapter(IActorContext context)
         {
-            if (context == null) throw new ArgumentNullException("context");
+            if (context == null) throw new ArgumentNullException(nameof(context), $"DIActorContextAdapter requires {nameof(context)} to be provided");
             this.context = context;
             this.producer = context.System.GetExtension<DIExt>();
         }

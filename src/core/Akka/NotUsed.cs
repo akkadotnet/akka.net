@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------
 // <copyright file="NotUsed.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ namespace Akka
 {
     /// <summary>
     /// This type is used in generic type signatures wherever the actual value is of no importance.
-    /// It is a combination of F#’s 'unit' and C#’s 'void', which both have different issues when
+    /// It is a combination of F#â€™s 'unit' and C#â€™s 'void', which both have different issues when
     /// used from the other language. An example use-case is the materialized value of an Akka Stream for cases
     /// where no result shall be returned from materialization.
     /// </summary>
@@ -19,7 +19,7 @@ namespace Akka
     public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="NotUsed"/>.
         /// </summary>
         public static readonly NotUsed Instance = new NotUsed();
 
@@ -27,49 +27,31 @@ namespace Akka
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return 0;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj is NotUsed;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "()";
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(NotUsed other)
         {
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(NotUsed other)
         {
             return 0;

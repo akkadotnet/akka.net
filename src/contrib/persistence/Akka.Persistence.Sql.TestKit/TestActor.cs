@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -32,12 +32,17 @@ namespace Akka.Persistence.Sql.TestKit
 
         public override string PersistenceId { get; }
         protected override bool ReceiveRecover(object message) => true;
+        private IActorRef _parentTestActor;
 
         protected override bool ReceiveCommand(object message) => message.Match()
             .With<DeleteCommand>(delete =>
             {
+                _parentTestActor = Sender;
                 DeleteMessages(delete.ToSequenceNr);
-                Sender.Tell(delete.ToSequenceNr.ToString() + "-deleted");
+            })
+            .With<DeleteMessagesSuccess>(deleteSuccess =>
+            {
+                _parentTestActor.Tell(deleteSuccess.ToSequenceNr.ToString() + "-deleted");
             })
             .With<string>(cmd =>
             {

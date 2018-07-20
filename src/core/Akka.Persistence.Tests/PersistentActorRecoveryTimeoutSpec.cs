@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorRecoveryTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Persistence.Tests.Journal;
 using Akka.TestKit;
 using Xunit;
@@ -52,6 +53,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly TimeSpan _receiveTimeout;
             private readonly IActorRef _probe;
+            private readonly ILoggingAdapter log = Context.GetLogger();
 
             public ReceiveTimeoutActor(TimeSpan receiveTimeout, IActorRef probe) : base("recovery-timeout-actor-2")
             {
@@ -80,6 +82,7 @@ namespace Akka.Persistence.Tests
 
             protected override void OnRecoveryFailure(Exception reason, object message = null)
             {
+                log.Error("Recovery of ReceiveTimeoutActor failed");
                 _probe.Tell(new Status.Failure(reason));
             }
         }
@@ -89,9 +92,9 @@ namespace Akka.Persistence.Tests
         public PersistentActorRecoveryTimeoutSpec()
             : base(SteppingMemoryJournal.Config(JournalId).WithFallback(
                 ConfigurationFactory.ParseString(
-                    @"akka.persistence.journal.stepping-inmem.recovery-event-timeout = 100ms
+                    @"akka.persistence.journal.stepping-inmem.recovery-event-timeout = 1s
                     akka.actor.serialize-messages = off"))
-                  .WithFallback(Configuration("PersistentActoryRecoveryTimeoutSpec")))
+                  .WithFallback(Configuration("PersistentActorRecoveryTimeoutSpec")))
         {
             // initialize journal early
             Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.stepping-inmem");

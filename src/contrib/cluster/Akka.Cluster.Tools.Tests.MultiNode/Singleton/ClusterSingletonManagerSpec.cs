@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -323,7 +323,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config)
+        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config, typeof(ClusterSingletonManagerSpec))
         {
             _controller = config.Controller;
             _observer = config.Observer;
@@ -404,12 +404,18 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 // make sure that the proxy has received membership changes
                 // and points to the current singleton
                 var p = CreateTestProbe();
-                Within(TimeSpan.FromSeconds(5), () =>
+                var oldestAddress = Node(oldest).Address;
+                Within(TimeSpan.FromSeconds(10), () =>
                 {
                     AwaitAssert(() =>
                     {
                         Sys.ActorSelection("/user/consumerProxy").Tell(Consumer.Ping.Instance, p.Ref);
                         p.ExpectMsg<Consumer.Pong>(TimeSpan.FromSeconds(1));
+                        var replyFromAddress = p.LastSender.Path.Address;
+                        if (oldest.Equals(proxyNode))
+                            replyFromAddress.HasLocalScope.Should().BeTrue();
+                        else
+                            replyFromAddress.Should().Be(oldestAddress);
                     });
                 });
 
@@ -417,10 +423,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Sys.ActorSelection("/user/consumerProxy").Tell(msg);
             }, proxyNode);
 
+            EnterBarrier($"sent-msg-{msg}");
+
             // expect a message on the oldest node
             RunOn(() =>
             {
-                ExpectMsg(msg, TimeSpan.FromSeconds(5));
+                ExpectMsg(msg);
             }, oldest);
 
             EnterBarrier("after-" + msg + "-proxy-verified");
@@ -458,7 +466,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                ExpectMsg(msg, TimeSpan.FromSeconds(1));
+                ExpectMsg(msg, TimeSpan.FromSeconds(5));
             }, oldest);
 
             RunOn(() =>

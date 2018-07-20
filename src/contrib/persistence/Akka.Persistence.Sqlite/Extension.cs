@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ namespace Akka.Persistence.Sqlite
         /// <returns>TBD</returns>
         public static SqlitePersistence Get(ActorSystem system)
         {
-            return system.WithExtension<SqlitePersistence, SqlitePersistenceProvder>();
+            return system.WithExtension<SqlitePersistence, SqlitePersistenceProvider>();
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Akka.Persistence.Sqlite
     /// <summary>
     /// TBD
     /// </summary>
-    public class SqlitePersistenceProvder : ExtensionIdProvider<SqlitePersistence>
+    public class SqlitePersistenceProvider : ExtensionIdProvider<SqlitePersistence>
     {
         /// <summary>
         /// TBD

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,9 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IAdapterToStageMessage { }
+        internal interface IAdapterToStageMessage
+        {
+        }
 
         /// <summary>
         /// TBD
@@ -56,14 +58,16 @@ namespace Akka.Streams.Implementation.IO
 
             private Close()
             {
-                
+
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IStreamToAdapterMessage { }
+        internal interface IStreamToAdapterMessage
+        {
+        }
 
         /// <summary>
         /// TBD
@@ -153,15 +157,16 @@ namespace Akka.Streams.Implementation.IO
         {
             private readonly InputStreamSinkStage _stage;
             private readonly Action<IAdapterToStageMessage> _callback;
+            private bool _completionSignalled;
 
             public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _callback = GetAsyncCallback((IAdapterToStageMessage messagae) =>
+                _callback = GetAsyncCallback((IAdapterToStageMessage message) =>
                 {
-                    if(messagae is ReadElementAcknowledgement)
+                    if (message is ReadElementAcknowledgement)
                         SendPullIfAllowed();
-                    else if (messagae is Close)
+                    else if (message is Close)
                         CompleteStage();
                 });
 
@@ -173,7 +178,7 @@ namespace Akka.Streams.Implementation.IO
                 //1 is buffer for Finished or Failed callback
                 if (_stage._dataQueue.Count + 1 == _stage._dataQueue.BoundedCapacity)
                     throw new BufferOverflowException("Queue is full");
-                
+
                 _stage._dataQueue.Add(new Data(Grab(_stage._in)));
                 if (_stage._dataQueue.BoundedCapacity - _stage._dataQueue.Count > 1)
                     SendPullIfAllowed();
@@ -182,12 +187,14 @@ namespace Akka.Streams.Implementation.IO
             public override void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(Finished.Instance);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._dataQueue.Add(new Failed(ex));
+                _completionSignalled = true;
                 FailStage(ex);
             }
 
@@ -195,6 +202,12 @@ namespace Akka.Streams.Implementation.IO
             {
                 _stage._dataQueue.Add(Initialized.Instance);
                 Pull(_stage._in);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _stage._dataQueue.Add(new Failed(new AbruptStageTerminationException(this)));
             }
 
             public void WakeUp(IAdapterToStageMessage msg) => _callback(msg);
@@ -236,9 +249,12 @@ namespace Akka.Streams.Implementation.IO
         /// TBD
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the maximum size of the input buffer is less than or equal to zero.
+        /// </exception>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
@@ -247,7 +263,8 @@ namespace Akka.Streams.Implementation.IO
             _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 2);
 
             var logic = new Logic(this);
-            return new LogicAndMaterializedValue<Stream>(logic, new InputStreamAdapter(_dataQueue, logic, _readTimeout));
+            return new LogicAndMaterializedValue<Stream>(logic,
+                new InputStreamAdapter(_dataQueue, logic, _readTimeout));
         }
     }
 
@@ -257,16 +274,13 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <exception cref="NotSupportedException">TBD</exception>
-        public override void Flush()
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void Flush() => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -275,10 +289,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="origin">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException(
+            "This stream can only read");
 
         /// <summary>
         /// TBD
@@ -286,10 +298,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="value">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void SetLength(long value) => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -299,22 +308,14 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="count">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException(
+            "This stream can only read");
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <exception cref="NotSupportedException">TBD</exception>
-        public override long Length
-        {
-            get
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
-        }
+        public override long Length => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -322,18 +323,14 @@ namespace Akka.Streams.Implementation.IO
         /// <exception cref="NotSupportedException">TBD</exception>
         public override long Position
         {
-            get
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
-            set
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
+            get => throw new NotSupportedException("This stream can only read");
+            set => throw new NotSupportedException("This stream can only read");
         }
-        #endregion
 
-        private static readonly Exception SubscriberClosedException = new IOException("Reactive stream is terminated, no reads are possible");
+#endregion
+        
+        private static readonly Exception SubscriberClosedException =
+            new IOException("Reactive stream is terminated, no reads are possible");
 
         private readonly BlockingCollection<IStreamToAdapterMessage> _sharedBuffer;
         private readonly IStageWithCallback _sendToStage;
@@ -349,7 +346,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="sharedBuffer">TBD</param>
         /// <param name="sendToStage">TBD</param>
         /// <param name="readTimeout">TBD</param>
-        public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer, IStageWithCallback sendToStage, TimeSpan readTimeout)
+        public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer,
+            IStageWithCallback sendToStage, TimeSpan readTimeout)
         {
             _sharedBuffer = sharedBuffer;
             _sendToStage = sendToStage;
@@ -363,6 +361,7 @@ namespace Akka.Streams.Implementation.IO
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
+
             ExecuteIfNotClosed(() =>
             {
                 // at this point Subscriber may be already terminated
@@ -377,11 +376,17 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
+        /// </exception>
+        /// <exception cref="IOException">
+        /// This exception is thrown when a timeout occurs waiting on new data.
+        /// </exception>
         /// <returns>TBD</returns>
         public sealed override int ReadByte()
         {
             var a = new byte[1];
-            return Read(a, 0, 1) != 0 ? a[0] : -1;
+            return Read(a, 0, 1) != 0 ? a[0] & 0xff : -1;
         }
 
         /// <summary>
@@ -390,16 +395,29 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="buffer">TBD</param>
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <exception cref="IOException">TBD</exception>
+        /// <exception cref="ArgumentException">TBD
+        /// This exception is thrown for a number of reasons. These include:
+        /// <ul>
+        /// <li>the specified <paramref name="buffer"/> size is less than or equal to zero</li>
+        /// <li>the specified <paramref name="buffer"/> size is less than the combination of <paramref name="offset"/> and <paramref name="count"/></li>
+        /// <li>the specified <paramref name="offset"/> is less than zero</li>
+        /// <li>the specified <paramref name="count"/> is less than or equal to zero</li>
+        /// </ul>
+        /// </exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
+        /// </exception>
+        /// <exception cref="IOException">
+        /// This exception is thrown when a timeout occurs waiting on new data.
+        /// </exception>
         /// <returns>TBD</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0");
-            if (offset < 0) throw new ArgumentException("offset must be >= 0");
-            if (count <= 0) throw new ArgumentException("count must be > 0");
-            if (offset + count > buffer.Length) throw new ArgumentException("offset + count must be smaller or equal to the array length");
+            if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0", nameof(buffer));
+            if (offset < 0) throw new ArgumentException("offset must be >= 0", nameof(offset));
+            if (count <= 0) throw new ArgumentException("count must be > 0", nameof(count));
+            if (offset + count > buffer.Length)
+                throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
             return ExecuteIfNotClosed(() =>
             {
@@ -409,14 +427,13 @@ namespace Akka.Streams.Implementation.IO
                 if (_detachedChunk != null)
                     return ReadBytes(buffer, offset, count);
 
-                IStreamToAdapterMessage msg;
-                var success = _sharedBuffer.TryTake(out msg, _readTimeout);
+                var success = _sharedBuffer.TryTake(out var msg, _readTimeout);
                 if (!success)
                     throw new IOException("Timeout on waiting for new data");
 
-                if (msg is Data)
+                if (msg is Data data)
                 {
-                    _detachedChunk = ((Data) msg).Bytes;
+                    _detachedChunk = data.Bytes;
                     return ReadBytes(buffer, offset, count);
                 }
                 if (msg is Finished)
@@ -424,10 +441,10 @@ namespace Akka.Streams.Implementation.IO
                     _isStageAlive = false;
                     return 0;
                 }
-                if (msg is Failed)
+                if (msg is Failed failed)
                 {
                     _isStageAlive = false;
-                    throw ((Failed) msg).Cause;
+                    throw failed.Cause;
                 }
 
                 throw new IllegalStateException("message 'Initialized' must come first");
@@ -446,20 +463,23 @@ namespace Akka.Streams.Implementation.IO
 
         private void WaitIfNotInitialized()
         {
-            if (!_isInitialized)
+            if (_isInitialized)
+                return;
+
+            if (_sharedBuffer.TryTake(out var message, _readTimeout))
             {
-                IStreamToAdapterMessage message;
-                _sharedBuffer.TryTake(out message, _readTimeout);
                 if (message is Initialized)
                     _isInitialized = true;
                 else
                     throw new IllegalStateException("First message must be Initialized notification");
             }
+            else
+                throw new IOException($"Timeout after {_readTimeout} waiting  Initialized message from stage");
         }
 
         private int ReadBytes(byte[] buffer, int offset, int count)
         {
-            if(_detachedChunk == null || _detachedChunk.IsEmpty)
+            if (_detachedChunk == null || _detachedChunk.IsEmpty)
                 throw new InvalidOperationException("Chunk must be pulled from shared buffer");
 
             var availableInChunk = _detachedChunk.Count;
@@ -489,7 +509,7 @@ namespace Akka.Streams.Implementation.IO
             }
 
             Array.Copy(chunk.ToArray(), 0, buffer, offset, count);
-            _detachedChunk = chunk.Drop(count);
+            _detachedChunk = chunk.Slice(count);
             return gotBytes + count;
         }
 
@@ -499,9 +519,9 @@ namespace Akka.Streams.Implementation.IO
                 return _detachedChunk;
 
             var chunk = _sharedBuffer.Take();
-            if (chunk is Data)
+            if (chunk is Data data)
             {
-                _detachedChunk = ((Data) chunk).Bytes;
+                _detachedChunk = data.Bytes;
                 return _detachedChunk;
             }
             if (chunk is Finished)
@@ -514,10 +534,12 @@ namespace Akka.Streams.Implementation.IO
         /// TBD
         /// </summary>
         public override bool CanRead => true;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override bool CanSeek => false;
+
         /// <summary>
         /// TBD
         /// </summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiValueDictionaryExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,8 +25,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public static void AddItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TKey key, TVal item)
         {
-            HashSet<TVal> bucket;
-            if (!dictionary.TryGetValue(key, out bucket))
+            if (!dictionary.TryGetValue(key, out var bucket))
             {
                 bucket = new HashSet<TVal>();
                 dictionary.Add(key, bucket);
@@ -46,14 +45,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public static void RemoveItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TKey key, TVal item)
         {
-            HashSet<TVal> bucket;
-            if (dictionary.TryGetValue(key, out bucket))
-            {
+            if (dictionary.TryGetValue(key, out var bucket))
                 if (bucket.Remove(item) && bucket.Count == 0)
-                {
                     dictionary.Remove(key);
-                }
-            }
         }
 
         /// <summary>

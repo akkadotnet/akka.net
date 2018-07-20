@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
@@ -17,7 +16,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
-using Akka.Persistence.Sql.Common.Queries;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -122,7 +120,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     Context.Watch(Sender);
                 })
                 .With<Terminated>(terminated => RemoveSubscriber(terminated.ActorRef))
-                .With<Query>(query => HandleEventQuery(query))
                 .WasHandled;
         }
 
@@ -282,19 +279,26 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .WasHandled;
         }
 
-        private async Task<AllPersistenceIds> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync();
-
-                if (_settings.AutoInitialize)
+                using (var connection = CreateDbConnection())
                 {
-                    await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
-                }
+                    await connection.OpenAsync();
 
-                var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
-                return new AllPersistenceIds(ids);
+                    if (_settings.AutoInitialize)
+                    {
+                        await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
+                    }
+
+                    var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
+                    return new AllPersistenceIds(ids);
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
@@ -332,8 +336,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tag">TBD</param>
         public void AddTagSubscriber(IActorRef subscriber, string tag)
         {
-            ISet<IActorRef> subscriptions;
-            if (!_tagSubscribers.TryGetValue(tag, out subscriptions))
+            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
             {
                 subscriptions = new HashSet<IActorRef>();
                 _tagSubscribers.Add(tag, subscriptions);
@@ -359,8 +362,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         public void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
         {
-            ISet<IActorRef> subscriptions;
-            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out subscriptions))
+            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
             {
                 subscriptions = new HashSet<IActorRef>();
                 _persistenceIdSubscribers.Add(persistenceId, subscriptions);
@@ -371,11 +373,9 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private async Task<long> NextTagSequenceNr(string tag)
         {
-            long value;
-            if (!_tagSequenceNr.TryGetValue(tag, out value))
-            {
+            if (!_tagSequenceNr.TryGetValue(tag, out long value))
                 value = await ReadHighestSequenceNrAsync(TagId(tag), 0L);
-            }
+
             value++;
             _tagSequenceNr = _tagSequenceNr.SetItem(tag, value);
             return value;
@@ -428,8 +428,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyPersistenceIdChange(string persistenceId)
         {
-            ISet<IActorRef> subscribers;
-            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out subscribers))
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscribers))
             {
                 var changed = new EventAppended(persistenceId);
                 foreach (var subscriber in subscribers)
@@ -439,8 +438,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyTagChange(string tag)
         {
-            ISet<IActorRef> subscribers;
-            if (_tagSubscribers.TryGetValue(tag, out subscribers))
+            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
             {
                 var changed = new TaggedEventAppended(tag);
                 foreach (var subscriber in subscribers)
@@ -488,10 +486,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
+
+#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
+#endif
 
             return connectionString;
         }
@@ -515,38 +516,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                 return (ITimestampProvider)Activator.CreateInstance(type);
             }
         }
-
-        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
-        private void HandleEventQuery(Query query)
-        {
-            var queryId = query.QueryId;
-            var sender = Context.Sender;
-            ReadEvents(queryId, query.Hints, Context.Sender, reply =>
-            {
-                foreach (var adapted in AdaptFromJournal(reply))
-                {
-                    sender.Tell(new QueryResponse(queryId, adapted));
-                }
-            })
-            .ContinueWith(task =>
-                task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId),
-                TaskContinuationOptions.ExecuteSynchronously)
-            .PipeTo(Context.Sender);
-        }
-
-        /// <summary>
-        /// Performs
-        /// </summary>
-        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
-        private async Task ReadEvents(object queryId, IEnumerable<IHint> hints, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
-        {
-            using (var connection = CreateDbConnection())
-            {
-                await connection.OpenAsync();
-                await QueryExecutor.SelectEventsAsync(connection, _pendingRequestsCancellation.Token, hints, replayCallback);
-            }
-        }
-
         #endregion
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MonotonicClock.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,21 +13,21 @@ using System.Runtime.InteropServices;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// A Monotonic clock implementation based on total uptime.
+    /// Used for keeping accurate time internally.
     /// </summary>
     internal static class MonotonicClock
     {
         private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
-
-        [DllImport("kernel32")]
-        private static extern ulong GetTickCount64();
 
         private const int TicksInMillisecond = 10000;
 
         private const long NanosPerTick = 100;
 
         /// <summary>
-        /// TBD
+        /// Time as measured by the current system up-time.
         /// </summary>
         public static TimeSpan Elapsed
         {
@@ -38,7 +38,8 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// High resolution elapsed time as determined by a <see cref="Stopwatch"/>
+        /// running continuously in the background.
         /// </summary>
         public static TimeSpan ElapsedHighRes
         {
@@ -52,9 +53,7 @@ namespace Akka.Util
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetMilliseconds()
         {
-            return RuntimeDetector.IsMono
-                ? Stopwatch.ElapsedMilliseconds
-                : (long)GetTickCount64();
+            return Stopwatch.ElapsedMilliseconds;
         }
 
         /// <summary>

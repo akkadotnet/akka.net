@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UseRoleIgnoredSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected UseRoleIgnoredSpec(UseRoleIgnoredSpecConfig config)
-            : base(config)
+            : base(config, typeof(UseRoleIgnoredSpec))
         {
             _config = config;
         }
@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             A_cluster_must_start_cluster();
             A_cluster_must_pool_local_off_roles_off();
             A_cluster_must_group_local_off_roles_off();
-            //A_cluster_must_pool_local_on_role_b();
+            A_cluster_must_pool_local_on_role_b();
             A_cluster_must_group_local_on_role_b();
             A_cluster_must_pool_local_on_role_a();
             A_cluster_must_group_local_on_role_a();
@@ -272,7 +272,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 var router = Sys.ActorOf(
                     new ClusterRouterGroup(
                         new RoundRobinGroup(paths: null),
-                        new ClusterRouterGroupSettings(6, ImmutableHashSet.Create("/user/foo", "/user/bar"), allowLocalRoutees: false, useRole: role)).Props(),
+                        new ClusterRouterGroupSettings(6, ImmutableHashSet.Create("/user/foo", "/user/bar"), allowLocalRoutees: true, useRole: role)).Props(),
                     "router-3b");
 
                 AwaitAssert(() => CurrentRoutees(router).Count().Should().Be(4));

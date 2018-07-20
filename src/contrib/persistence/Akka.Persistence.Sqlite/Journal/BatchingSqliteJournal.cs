@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,8 +10,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using Akka.Configuration;
+using Akka.Pattern;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
@@ -22,9 +23,9 @@ namespace Akka.Persistence.Sqlite.Journal
     public sealed class BatchingSqliteJournalSetup : BatchingSqlJournalSetup
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BatchingSqliteJournalSetup" /> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">Config object used to obtain Journal settings</param>
         public BatchingSqliteJournalSetup(Config config) : base(config, new QueryConfiguration(
                     schemaName: null,
                     journalEventsTableName: config.GetString("table-name"),
@@ -37,26 +38,36 @@ namespace Akka.Persistence.Sqlite.Journal
                     isDeletedColumnName: "is_deleted",
                     tagsColumnName: "tags",
                     orderingColumnName: "ordering",
-                    timeout: config.GetTimeSpan("connection-timeout")))
+                    serializerIdColumnName: "serializer_id",
+                    timeout: config.GetTimeSpan("connection-timeout"),
+                    defaultSerializer: config.GetString("serializer"),
+                    useSequentialAccess: config.GetBoolean("use-sequential-access")))
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BatchingSqliteJournalSetup" /> class.
         /// </summary>
-        /// <param name="connectionString">TBD</param>
-        /// <param name="maxConcurrentOperations">TBD</param>
-        /// <param name="maxBatchSize">TBD</param>
-        /// <param name="maxBufferSize">TBD</param>
-        /// <param name="autoInitialize">TBD</param>
-        /// <param name="connectionTimeout">TBD</param>
-        /// <param name="isolationLevel">TBD</param>
-        /// <param name="circuitBreakerSettings">TBD</param>
-        /// <param name="replayFilterSettings">TBD</param>
-        /// <param name="namingConventions">TBD</param>
+        /// <param name="connectionString">The connection string used to connect to the database.</param>
+        /// <param name="maxConcurrentOperations">The maximum number of batch operations allowed to be executed at the same time.</param>
+        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.</param>
+        /// <param name="maxBufferSize">The maximum size of requests stored in journal buffer.</param>
+        /// <param name="autoInitialize">
+        /// If set to <c>true</c>, the journal executes all SQL scripts stored under the
+        /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection prior
+        /// to starting executing any requests.
+        /// </param>
+        /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
+        /// <param name="isolationLevel">The isolation level of transactions used during query execution.</param>
+        /// <param name="circuitBreakerSettings">
+        /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
+        /// </param>
+        /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
+        /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
+        /// <param name="defaultSerializer">The serializer used when no specific type matching can be found.</param>
         public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
-            TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions) 
-            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, circuitBreakerSettings, replayFilterSettings, namingConventions)
+            TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions, string defaultSerializer) 
+            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, circuitBreakerSettings, replayFilterSettings, namingConventions, defaultSerializer)
         {
         }
     }
@@ -64,7 +75,7 @@ namespace Akka.Persistence.Sqlite.Journal
     /// <summary>
     /// TBD
     /// </summary>
-    public class BatchingSqliteJournal : BatchingSqlJournal<SQLiteConnection, SQLiteCommand>
+    public class BatchingSqliteJournal : BatchingSqlJournal<SqliteConnection, SqliteCommand>
     {
         private DbConnection _anchor;
 
@@ -95,6 +106,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     {conventions.TimestampColumnName} INTEGER NOT NULL,
                     {conventions.PayloadColumnName} BLOB NOT NULL,
                     {conventions.TagsColumnName} VARCHAR(2000) NULL,
+                    {conventions.SerializerIdColumnName} INTEGER(4),
                     UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
                 );"),
                 new KeyValuePair<string, string>("CreateMetadataSql", $@"
@@ -135,6 +147,6 @@ namespace Akka.Persistence.Sqlite.Journal
         /// </summary>
         /// <param name="connectionString">TBD</param>
         /// <returns>TBD</returns>
-        protected override SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
+        protected override SqliteConnection CreateConnection(string connectionString) => new SqliteConnection(connectionString);
     }
 }

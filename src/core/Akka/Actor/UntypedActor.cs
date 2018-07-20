@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UntypedActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,20 +53,6 @@ namespace Akka.Actor
         protected abstract void OnReceive(object message);
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(UntypedReceive receive, bool discardOld = true)
-        {
-            if (discardOld)
-                Context.Become(receive);
-            else
-                Context.BecomeStacked(receive);
-        }
-
-        /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>
@@ -90,7 +76,6 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected static new IUntypedActorContext Context { get { return (IUntypedActorContext) ActorBase.Context; } }
+        protected new static IUntypedActorContext Context => (IUntypedActorContext) ActorBase.Context;
     }
 }
-

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ILoggingAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,14 +54,6 @@ namespace Akka.Event
         /// <param name="format">The message that is being logged.</param>
         /// <param name="args">An optional list of items used to format the message.</param>
         void Info(string format, params object[] args);
-
-        /// <summary>
-        /// Obsolete. Use <see cref="Warning"/> instead!
-        /// </summary>
-        /// <param name="format">N/A</param>
-        /// <param name="args">N/A</param>
-        [Obsolete("Use Warning instead!")]
-        void Warn(string format, params object[] args);
 
         /// <summary>
         /// Logs a <see cref="LogLevel.WarningLevel"/> message.

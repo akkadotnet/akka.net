@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterPoolActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -35,8 +34,7 @@ namespace Akka.Routing
         {
             _supervisorStrategy = supervisorStrategy;
 
-            var pool = Cell.RouterConfig as Pool;
-            if (pool != null)
+            if (Cell.RouterConfig is Pool pool)
             {
                 Pool = pool;
             }
@@ -61,8 +59,7 @@ namespace Akka.Routing
         /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
         {
-            var poolSize = message as AdjustPoolSize;
-            if (poolSize != null)
+            if (message is AdjustPoolSize poolSize)
             {
                 if (poolSize.Change > 0)
                 {
@@ -85,8 +82,5 @@ namespace Akka.Routing
                 base.OnReceive(message);
             }
         }
-
-
     }
 }
-

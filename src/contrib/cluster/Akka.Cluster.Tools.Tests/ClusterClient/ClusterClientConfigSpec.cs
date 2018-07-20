@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient
 {
@@ -55,8 +56,19 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
         public void ClusterClientSettings_must_throw_exception_on_empty_initial_contacts()
         {
             var clusterClientSettings = ClusterClientSettings.Create(Sys);
-            var exception = Assert.Throws<ArgumentException>(() => clusterClientSettings.WithInitialContacts(Enumerable.Empty<ActorPath>()));
+            var exception = Assert.Throws<ArgumentException>(() => clusterClientSettings.WithInitialContacts(ImmutableHashSet<ActorPath>.Empty));
             exception.Message.Should().Be("InitialContacts must be defined");
+        }
+
+        /// <summary>
+        /// Addresses the bug discussed here: https://github.com/akkadotnet/akka.net/issues/3417#issuecomment-397443227
+        /// </summary>
+        [Fact]
+        public void ClusterClientSettings_must_copy_initial_contacts_via_fluent_interface()
+        {
+            var initialContacts = ImmutableHashSet<ActorPath>.Empty.Add(new RootActorPath(Address.AllSystems) / "user" / "foo");
+            var clusterClientSettings = ClusterClientSettings.Create(Sys).WithInitialContacts(initialContacts).WithBufferSize(2000);
+            clusterClientSettings.InitialContacts.Should().BeEquivalentTo(initialContacts);
         }
 
         [Fact]

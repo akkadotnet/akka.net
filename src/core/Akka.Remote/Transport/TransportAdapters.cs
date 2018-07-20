@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransportAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,35 +13,32 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 
+
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// TBD
+    /// Interface for producing adapters that can wrap an underlying transport and augment it with additional behavior.
     /// </summary>
     public interface ITransportAdapterProvider
     {
         /// <summary>
         /// Create a transport adapter that wraps the underlying transport
         /// </summary>
-        /// <param name="wrappedTransport">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="wrappedTransport">The transport that will be wrapped.</param>
+        /// <param name="system">The actor system to which this transport belongs.</param>
+        /// <returns>A transport wrapped with the new adapter.</returns>
         Transport Create(Transport wrappedTransport, ExtendedActorSystem system);
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
         {
-            return new TransportAdapters((ActorSystemImpl) system);
+            return new TransportAdapters((ActorSystemImpl)system);
         }
 
         #region Static methods
@@ -73,16 +70,16 @@ namespace Akka.Remote.Transport
         public TransportAdapters(ExtendedActorSystem system)
         {
             System = system;
-            Settings = ((RemoteActorRefProvider)system.Provider).RemoteSettings;
+            Settings = ((IRemoteActorRefProvider)system.Provider).RemoteSettings;
         }
 
         /// <summary>
-        /// TBD
+        /// The ActorSystem
         /// </summary>
         public ActorSystem System { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The Akka.Remote settings
         /// </summary>
         protected RemoteSettings Settings;
 
@@ -103,7 +100,7 @@ namespace Akka.Remote.Transport
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentException(string.Format("Cannot initiate transport adapter {0}", adapter.Value), ex);
+                    throw new ArgumentException($"Cannot initiate transport adapter {adapter.Value}", ex);
                 }
             }
 
@@ -118,31 +115,32 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
-            if (AdaptersTable().ContainsKey(name))
-            {
-                return _adaptersTable[name];
-            }
+            if (AdaptersTable().TryGetValue(name, out var provider))
+                return provider;
 
-            throw new ArgumentException(string.Format("There is no registered transport adapter provider with name {0}", name));
+            throw new ArgumentException($"There is no registered transport adapter provider with name {name}");
         }
     }
 
     /// <summary>
-    /// TBD
+    /// Used to augment the protocol scheme of transports when enabled.
     /// </summary>
     public class SchemeAugmenter
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="SchemeAugmenter"/> instance.
         /// </summary>
-        /// <param name="addedSchemeIdentifier">TBD</param>
+        /// <param name="addedSchemeIdentifier">The new identifier that will be added to the front of the pipeline.</param>
         public SchemeAugmenter(string addedSchemeIdentifier)
         {
             AddedSchemeIdentifier = addedSchemeIdentifier;
         }
 
         /// <summary>
-        /// TBD
+        /// The scheme that will be added to the front of the protocol.
+        /// I.E. if using a TLS augmentor, the this field might read "ssl"
+        /// and the full scheme of addresses generated using this transport
+        /// might read "akka.tcp.ssl", the latter part being added by this augmenter.
         /// </summary>
         public readonly string AddedSchemeIdentifier;
 
@@ -275,7 +273,7 @@ namespace Akka.Remote.Transport
             {
                 var listenAddress = listenerTask.Result.Item1;
                 var listenerPromise = listenerTask.Result.Item2;
-                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task));
+                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task).ConfigureAwait(false));
                 return
                     new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
                         SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
@@ -364,23 +362,16 @@ namespace Akka.Remote.Transport
             return Equals(OriginalLocalAddress, other.OriginalLocalAddress) && Equals(OriginalRemoteAddress, other.OriginalRemoteAddress) && Equals(WrappedHandle, other.WrappedHandle);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((AbstractTransportAdapterHandle) obj);
+            return Equals((AbstractTransportAdapterHandle)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -499,7 +490,7 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    ///  Actor-based transport adapter
     /// </summary>
     public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
@@ -538,12 +529,7 @@ namespace Akka.Remote.Transport
             return System.ActorSelection("/system/transports").Ask<IActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="listenAddress">TBD</param>
-        /// <param name="listenerTask">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
         {
             return RegisterManager().ContinueWith(mgrTask =>
@@ -554,20 +540,13 @@ namespace Akka.Remote.Transport
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="statusPromise">TBD</param>
+        /// <inheritdoc/>
         protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             manager.Tell(new AssociateUnderlying(remoteAddress, statusPromise));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override Task<bool> Shutdown()
         {
             var stopTask = manager.GracefulStop((RARP.For(System).Provider).RemoteSettings.FlushWait);
@@ -643,4 +622,3 @@ namespace Akka.Remote.Transport
         protected abstract void Ready(object message);
     }
 }
-

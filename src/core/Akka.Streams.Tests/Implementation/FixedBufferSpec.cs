@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FixedBufferSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Implementation
 
         [Theory]
         [MemberData(nameof(Sizes))]
-        public void FixedSizeBuffer_must_become_nonempty_after_enqueueing(int size)
+        public void FixedSizeBuffer_must_become_nonempty_after_enqueuing(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
             buf.Enqueue("test");
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Implementation
 
         [Theory]
         [MemberData(nameof(Sizes))]
-        public void FixedSizeBuffer_must_become_empty_after_enqueueing_and_tail_drop(int size)
+        public void FixedSizeBuffer_must_become_empty_after_enqueuing_and_tail_drop(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
             buf.Enqueue("test");
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Implementation
 
         [Theory]
         [MemberData(nameof(Sizes))]
-        public void FixedSizeBuffer_must_become_empty_after_enqueueing_and_head_drop(int size)
+        public void FixedSizeBuffer_must_become_empty_after_enqueuing_and_head_drop(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
             buf.Enqueue("test");
@@ -202,7 +202,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void Buffer_factory_must_produce_BoundedBuffers_when_capacity_greather_than_MaxFixedBufferSize()
+        public void Buffer_factory_must_produce_BoundedBuffers_when_capacity_greater_than_MaxFixedBufferSize()
         {
             Buffer.Create<int>(int.MaxValue, Default).Should().BeOfType<BoundedBuffer<int>>();
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="TItem">TBD</typeparam>
-    public class MatchBuilder<TItem>
+    internal class MatchBuilder<TItem>
     {
         //This class works by collecting all handlers.
         //By creating a signature, made up of all types [Type], and types-of-handlers [HandlerKind], we can use the same code
@@ -171,6 +171,7 @@ namespace Akka.Tools.MatchHandler
             return partialAction;
         }
 
+#if !CORECLR
         /// <summary>
         /// TBD
         /// </summary>
@@ -182,8 +183,8 @@ namespace Akka.Tools.MatchHandler
         {
             _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
             _state = State.Built;
-
         }
+#endif
 
         private static void EnsureCanHandleType(Type handlesType)
         {
@@ -261,7 +262,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class MatchBuilder : MatchBuilder<object>
+    internal class MatchBuilder : MatchBuilder<object>
     {
         /// <summary>
         /// TBD

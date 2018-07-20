@@ -1,27 +1,29 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public interface ICell
     {
-        /// <summary>Gets the “self” reference which this Cell is attached to.</summary>
+        /// <summary>Gets the "self" reference which this Cell is attached to.</summary>
         IActorRef Self { get; }
 
         /// <summary>The system within which this Cell lives.</summary>
-        ActorSystem System { get; }        
+        ActorSystem System { get; }
         
         /// <summary>The system internals within which this Cell lives.</summary>
         ActorSystemImpl SystemImpl{ get; }
@@ -87,7 +89,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        [Obsolete("Used ChildrenRefs instead")]
+        [Obsolete("Used ChildrenRefs instead [1.1.0]")]
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
         /// <summary>

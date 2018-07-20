@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Util.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -98,19 +98,6 @@ namespace Akka.Cluster
                 }
                 return max;
             }
-        }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="this">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use GetTimeSpanWithOffSwitch instead")]
-        public static TimeSpan? GetMillisDurationWithOffSwitch(this Config @this, string key)
-        {
-            return GetTimeSpanWithOffSwitch(@this, key);
         }
 
         /// <summary>

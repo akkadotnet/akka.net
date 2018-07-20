@@ -2,7 +2,28 @@
 
 Akka Persistence journal and snapshot store backed by SQLite database.
 
-**WARNING: Akka.Persistence.Sqlite plugin is still in beta and it's mechanics described bellow may be still subject to change**.
+**WARNING: Akka.Persistence.Sqlite v1.3 introduces a breaking change making users unable to read from < v1.3 database schema**.
+
+A column has been added for `serializer_id` which needs to be added to your existing journal and snapshot schema:
+
+**EventJournal table**:
+
+|  ordering  | persistence_id | sequence_nr  | is_deleted |   manifest   | timestamp  | payload | serializer_id |
+| :--------: | :------------: | :----------: | :--------: | :----------: | :--------: | :-----: | :-----------: |
+| integer(8) |  varchar(255)  | varchar(255) | integer(1) | varchar(255) | integer(8) |  blob   |  integer(4)   |
+
+**SnapshotStore table**:
+
+| persistence_id | sequence_nr | created_at |   manifest   | snapshot | serializer_id |
+| :------------: | :---------: | :--------: | :----------: | :------: | :-----------: |
+|  varchar(255)  | integer(8)  | integer(8) | varchar(255) |   blob   |  integer(4)   |
+
+To migrate your v1.2.* Sqlite schema to support v1.3.* event reads/writes, run the following `ALTER` statements:
+
+```
+ALTER TABLE {your_event_journal_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+ALTER TABLE {your_snapshot_table_name} ADD COLUMN `serializer_id` INTEGER ( 4 )
+```
 
 ### Setup
 
@@ -41,8 +62,8 @@ In addition, journal configuration specifies additional field:
 
 Akka.Persistence.Sqlite plugin allows to use in-memory databases, however requires to use them in shared mode in order to work correctly. Example connection strings for such configurations are described below:
 
-- `FullUri=file::memory:?cache=shared;` for anonymous in-memory database instances.
-- `FullUri=file:<database-name>.db?mode=memory&cache=shared;` for named in-memory database instances. This way you can provide many separate databases residing in memory.
+- `Datasource=file;Mode=Memory` for anonymous in-memory database instances.
+- `Datasource=file;Mode=Memory;Cache=Shared` for named in-memory database instances. This way you can provide many separate databases residing in memory.
 
 ### Custom SQL data queries
 
@@ -50,19 +71,15 @@ SQLite persistence plugin defines a default table schema used for both journal a
 
 **EventJournal table**:
 
-    +------------+----------------+-------------+------------+----------------+------------+---------+
-    |  ordering  | persistence_id | sequence_nr | is_deleted |    manifest    | timestamp  | payload |
-    +------------+----------------+-------------+------------+----------------+------------+---------+
-    | integer(8) |  varchar(255)  | integer(8)  | integer(1) |  varchar(255)  | integer(8) |   blob  |
-    +------------+----------------+-------------+------------+----------------+------------+---------+
+|  ordering  | persistence_id | sequence_nr  | is_deleted |   manifest   | timestamp  | payload | serializer_id |
+| :--------: | :------------: | :----------: | :--------: | :----------: | :--------: | :-----: | :-----------: |
+| integer(8) |  varchar(255)  | varchar(255) | integer(1) | varchar(255) | integer(8) |  blob   |  integer(4)   |
 
 **SnapshotStore table**:
 
-    +----------------+-------------+------------+----------------+----------+
-    | persistence_id | sequence_nr | created_at |    manifest    | snapshot |
-    +----------------+-------------+------------+----------------+----------+
-    |  varchar(255)  | integer(8)  | integer(8) |  varchar(255)  |   blob   |
-    +----------------+-------------+------------+----------------+----------+
+| persistence_id | sequence_nr | created_at |   manifest   | snapshot | serializer_id |
+| :------------: | :---------: | :--------: | :----------: | :------: | :-----------: |
+|  varchar(255)  | integer(8)  | integer(8) | varchar(255) |   blob   |  integer(4)   |
 
 `created_at` column maps to `System.DateTime` value represented by it's ticks, to achieve 1 to 1 precision of dates between SQLite and .NET environment.
 

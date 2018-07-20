@@ -1,13 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TailChopping.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -123,13 +122,13 @@ namespace Akka.Routing
                     try
                     {
 
-                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)));
+                        completion.TrySetResult(await (_routees[currentIndex].Ask(message, _within)).ConfigureAwait(false));
                     }
                     catch (TaskCanceledException)
                     {
                         completion.TrySetResult(
                             new Status.Failure(
-                                new AskTimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within))));
+                                new AskTimeoutException($"Ask timed out on {sender} after {_within}")));
                     }
                 }, cancelable);
             }
@@ -277,38 +276,28 @@ namespace Akka.Routing
 
         private RouterConfig OverrideUnsetConfig(RouterConfig other)
         {
-            if (other is NoRouter)
+            if (other is Pool pool)
             {
-                return this;
-            }
-            else
-            {
-                var pool = other as Pool;
-                if (pool != null)
+                TailChoppingPool wssConf;
+
+                if (SupervisorStrategy != null
+                    && SupervisorStrategy.Equals(DefaultSupervisorStrategy)
+                    && !pool.SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 {
-                    TailChoppingPool wssConf;
-
-                    if (SupervisorStrategy != null
-                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
-                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
-                    {
-                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
-                    }
-                    else
-                    {
-                        wssConf = this;
-                    }
-
-                    if (wssConf.Resizer == null && pool.Resizer != null)
-                        return wssConf.WithResizer(pool.Resizer);
-
-                    return wssConf;
+                    wssConf = WithSupervisorStrategy(pool.SupervisorStrategy);
                 }
                 else
                 {
-                    return this;
+                    wssConf = this;
                 }
+
+                if (wssConf.Resizer == null && pool.Resizer != null)
+                    return wssConf.WithResizer(pool.Resizer);
+
+                return wssConf;
             }
+
+            return this;
         }
 
         /// <summary>
@@ -467,7 +456,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -480,7 +469,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public TailChoppingGroup WithDispatcher(string dispatcher)
         {
-            return new TailChoppingGroup(Paths, Within, Interval, dispatcher);
+            return new TailChoppingGroup(InternalPaths, Within, Interval, dispatcher);
         }
 
         /// <summary>
@@ -492,7 +481,7 @@ namespace Akka.Routing
         {
             return new TailChoppingGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 Within = Within,
                 Interval = Interval,
                 RouterDispatcher = RouterDispatcher

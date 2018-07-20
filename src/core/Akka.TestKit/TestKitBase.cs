@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -102,8 +102,8 @@ namespace Akka.TestKit
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
         /// <param name="system">The actor system this test will use. Can be null.</param>
-        /// <param name="config">The configuration that <see cref="system"/> will use if it's null.</param>
-        /// <param name="actorSystemName">The name that <see cref="system"/> will use if it's null.</param>
+        /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
         /// <param name="testActorName">The name of the test actor. Can be null.</param>
         protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
@@ -248,7 +248,28 @@ namespace Akka.TestKit
         {
             _testState.TestActor.Tell(new TestActor.SetIgnore(m => shouldIgnoreMessage(m)));
         }
+        
+        /// <summary>
+        /// Ignore all messages in the test actor of the given TMsg type for which the given function 
+        /// returns <c>true</c>.
+        /// </summary>
+        /// <typeparam name="TMsg">The type of the message to ignore.</typeparam>
+        /// <param name="shouldIgnoreMessage">Given a message, if the function returns 
+        /// <c>true</c> the message will be ignored by <see cref="TestActor"/>.</param>
+        public void IgnoreMessages<TMsg>(Func<TMsg, bool> shouldIgnoreMessage)
+        {
+            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg && shouldIgnoreMessage((TMsg)m)));
+        }
 
+        /// <summary>
+        /// Ignore all messages in the test actor of the given TMsg type.
+        /// </summary>
+        /// <typeparam name="TMsg">The type of the message to ignore.</typeparam>
+        public void IgnoreMessages<TMsg>()
+        {
+            IgnoreMessages<TMsg>(_ => true);
+        }
+        
         /// <summary>Stop ignoring messages in the test actor.</summary>
         public void IgnoreNoMessages()
         {
@@ -446,7 +467,7 @@ namespace Akka.TestKit
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
-            var testActor = system.ActorOf(testActorProps, name);
+            var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
 

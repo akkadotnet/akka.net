@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -145,13 +145,13 @@ namespace Akka.DistributedData.Serialization
                 surrogates: new[] { akkaSurrogate },
                 knownTypes: new []
                 {
-                    typeof(Replicator.Get),
-                    typeof(Replicator.GetSuccess),
-                    typeof(Replicator.GetFailure),
-                    typeof(Replicator.NotFound),
-                    typeof(Replicator.Subscribe),
-                    typeof(Replicator.Unsubscribe),
-                    typeof(Replicator.Changed),
+                    typeof(Get),
+                    typeof(GetSuccess),
+                    typeof(GetFailure),
+                    typeof(NotFound),
+                    typeof(Subscribe),
+                    typeof(Unsubscribe),
+                    typeof(Changed),
                     typeof(DataEnvelope),
                     typeof(Write),
                     typeof(WriteAck),
@@ -181,7 +181,7 @@ namespace Akka.DistributedData.Serialization
             if (obj is Write) return writeCache.GetOrAdd((Write) obj);
             if (obj is Read) return readCache.GetOrAdd((Read)obj);
             if (obj is WriteAck) return writeAckBytes;
-
+            
             return Serialize(obj);
         }
 

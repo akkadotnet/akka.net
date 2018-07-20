@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -150,7 +150,7 @@ namespace Akka.Streams.Actors
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (message is OnNext)
             {
@@ -274,7 +274,7 @@ namespace Akka.Streams.Actors
         /// No more elements will be delivered after cancel.
         /// </para>
         /// <para>
-        /// The <see cref="ActorSubscriber"/> will be stopped immediatly after signalling cancelation.
+        /// The <see cref="ActorSubscriber"/> will be stopped immediately after signaling cancellation.
         /// In case the upstream subscription has not yet arrived the Actor will stay alive
         /// until a subscription arrives, cancel it and then stop itself.
         /// </para>
@@ -317,7 +317,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="impl">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="impl"/> is undefined.
+        /// </exception>
         public ActorSubscriberImpl(IActorRef impl)
         {
             if (impl == null) throw new ArgumentNullException(nameof(impl), "ActorSubscriberImpl requires actor impl to be defined");
@@ -328,7 +330,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="subscription">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
+        /// </exception>
         public void OnSubscribe(ISubscription subscription)
         {
             if (subscription == null) throw new ArgumentNullException(nameof(subscription), "OnSubscribe requires subscription to be defined");
@@ -345,7 +349,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="element">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="element"/> is undefined.
+        /// </exception>
         public void OnNext(object element)
         {
             if (element == null) throw new ArgumentNullException(nameof(element), "OnNext requires provided element not to be null");
@@ -356,7 +362,9 @@ namespace Akka.Streams.Actors
         /// TBD
         /// </summary>
         /// <param name="cause">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+        /// </exception>
         public void OnError(Exception cause)
         {
             if (cause == null) throw new ArgumentNullException(nameof(cause), "OnError has no cause defined");
@@ -423,8 +431,8 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Get(IActorRef actorRef)
         {
-            State state;
-            return _state.TryGetValue(actorRef, out state) ? state : null;
+            _state.TryGetValue(actorRef, out var state);
+            return state;
         }
 
         /// <summary>

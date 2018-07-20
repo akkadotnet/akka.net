@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ControllerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Akka.Actor;
@@ -40,7 +41,12 @@ namespace Akka.Remote.TestKit.Tests
             ExpectMsg<ToClient<Done>>();
             c.Tell(Controller.GetNodes.Instance);
             ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
-            c.Tell(PoisonPill.Instance);
+            AwaitAssert(() =>
+            {
+                Watch(c);
+                c.Tell(PoisonPill.Instance);
+                ExpectMsg<Terminated>();
+            }, TimeSpan.FromSeconds(20));
         }
     }
 }

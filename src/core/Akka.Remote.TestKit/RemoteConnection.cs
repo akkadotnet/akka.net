@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,15 +13,15 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.DotNetty;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Channels.Bootstrap;
-using Helios.Channels.Sockets;
-using Helios.Codecs;
-using Helios.Exceptions;
-using Helios.Logging;
-using Helios.Util.Concurrency;
-using LengthFieldPrepender = Helios.Codecs.LengthFieldPrepender;
+using DotNetty.Buffers;
+using DotNetty.Codecs;
+using DotNetty.Codecs.Protobuf;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Common.Utilities;
+using DotNetty.Transport.Bootstrapping;
+using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Sockets;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit
 {
@@ -41,18 +41,22 @@ namespace Akka.Remote.TestKit
     {
         static RemoteConnection()
         {
-            LoggingFactory.DefaultFactory = new StandardOutLoggerFactory();
+            var f = new LoggerFactory();
+            f.AddProvider(new ConsoleLoggerProvider());
+            f.CreateLogger("Akka.Remote.TestKit").LogDebug("Using StandardOut as the default logging system.");
+            InternalLoggerFactory.DefaultFactory = f;
         }
 
         private static void ApplyChannelPipeline(IChannel channel, IChannelHandler handler)
         {
             var encoders = new IChannelHandler[]
-            {new LengthFieldPrepender(4, false), new LengthFieldBasedFrameDecoder(10000, 0, 4, 0, 4)};
-            var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(TCP.Wrapper.DefaultInstance) };
+                {new LengthFieldPrepender(ByteOrder.LittleEndian, 4, 0, false), new LengthFieldBasedFrameDecoder(ByteOrder.LittleEndian, 10000, 0, 4, 0, 4, true)};
+            var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(Proto.Msg.Wrapper.Parser) };
             var msg = new IChannelHandler[] { new MsgEncoder(), new MsgDecoder() };
-            var pipeline = encoders.Concat(protobuf).Concat(msg).Concat(new IChannelHandler[] { handler });
+            var pipeline = encoders.Concat(protobuf).Concat(msg);
             foreach (var h in pipeline)
                 channel.Pipeline.AddLast(h);
+            channel.Pipeline.AddLast("TestKitHandler", handler);
         }
 
 
@@ -93,7 +97,7 @@ namespace Akka.Remote.TestKit
         {
             if (role == Role.Client)
             {
-                var connection = new ClientBootstrap()
+                var connection = new Bootstrap()
                     .ChannelFactory(() => new TcpSocketChannel(socketAddress.AddressFamily))
                     .Option(ChannelOption.TcpNodelay, true)
                     .Group(GetClientWorkerPool(poolSize))
@@ -123,19 +127,18 @@ namespace Akka.Remote.TestKit
             var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
             if (!connection.CloseAsync().Wait(disconnectTimeout))
             {
-                LoggingFactory.GetLogger<RemoteConnection>().Warning("Failed to shutdown remote connection within {0}", disconnectTimeout);
+                // LoggingFactory.GetLogger<RemoteConnection>().Warning("Failed to shutdown remote connection within {0}", disconnectTimeout);
             }
-            
+
         }
 
         public static async Task ReleaseAll()
         {
             Task tc = _clientPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
             Task ts = _serverPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
-            await Task.WhenAll(tc, ts);
+            await Task.WhenAll(tc, ts).ConfigureAwait(false);
         }
 
         #endregion
     }
 }
-

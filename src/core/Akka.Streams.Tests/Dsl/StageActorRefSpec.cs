@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StageActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -182,17 +182,33 @@ namespace Akka.Streams.Tests.Dsl
 
             stageRef.Tell(PoisonPill.Instance);
             var warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
+
+#if CORECLR
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<PoisonPill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-
+                    "<PoisonPill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+#else
+            warn.Message.ToString()
+                .Should()
+                .MatchRegex(
+                    "<PoisonPill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+#endif
             stageRef.Tell(Kill.Instance);
             warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
+
+#if CORECLR
+ warn.Message.ToString()
+                .Should()
+                .MatchRegex(
+                    "<Kill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+#else
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<Kill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<Kill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+#endif
+
             source.SetResult(2);
             res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             res.Result.Should().Be(42);
@@ -278,7 +294,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             private readonly IActorRef _probe;
 
-            #region internal classes
+#region internal classes
 
             private class Logic : GraphStageLogic
             {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StashOverflowException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ namespace Akka.Actor
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public StashOverflowException(string message, Exception cause = null) : base(message, cause) { }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="StashOverflowException"/> class.
         /// </summary>
@@ -31,5 +32,6 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+#endif
     }
 }

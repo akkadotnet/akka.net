@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FileSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -85,24 +85,24 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_by_default_write_into_existing_file()
+        public void SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
         {
             this.AssertAllStagesStopped(() =>
             {
                 TargetFile(f =>
                 {
-                    Func<IEnumerable<string>, Task<IOResult>> write = lines => Source.From(lines)
+                    Task<IOResult> Write(IEnumerable<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
-                        .RunWith(FileIO.ToFile(f), _materializer);
+                        .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
-                    var completion1 = write(_testLines);
+                    var completion1 = Write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
                         lastWrite[i] = "x";
 
-                    var completion2 = write(lastWrite);
+                    var completion2 = Write(lastWrite);
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion2.Result;
 
@@ -115,17 +115,39 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void SynchronousFileSink_should_by_default_replace_the_existing_file()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                TargetFile(f =>
+                {
+                    Task<IOResult> Write(List<string> lines) =>
+                        Source.From(lines).Select(ByteString.FromString)
+                            .RunWith(FileIO.ToFile(f), _materializer);
+
+                    Write(_testLines).AwaitResult();
+
+                    var lastWrite = Enumerable.Range(0, 100).Select(_ => "x").ToList();
+                    var result = Write(lastWrite).AwaitResult();
+
+                    result.Count.Should().Be(lastWrite.Count);
+                    CheckFileContent(f, string.Join("", lastWrite));
+                });
+            }, _materializer);
+        }
+
+        [Fact]
         public void SynchronousFileSink_should_allow_appending_to_file()
         {
             this.AssertAllStagesStopped(() =>
             {
                 TargetFile(f =>
                 {
-                    Func<List<string>, Task<IOResult>> write = lines => Source.From(lines)
+                    Task<IOResult> Write(List<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
-                    var completion1 = write(_testLines);
+                    var completion1 = Write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result1 = completion1.Result;
 
@@ -133,7 +155,7 @@ namespace Akka.Streams.Tests.IO
                     for (var i = 0; i < 100; i++)
                         lastWrite.Add("x");
 
-                    var completion2 = write(lastWrite);
+                    var completion2 = Write(lastWrite);
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result2 = completion2.Result;
 
@@ -144,6 +166,46 @@ namespace Akka.Streams.Tests.IO
 
                     //NOTE: no new line at the end of the file - does JVM/linux appends new line at the end of the file in append mode?
                     CheckFileContent(f, testLinesString + lastWriteString);
+                });
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f => 
+                {
+                    var testLinesCommon = new List<string>
+                    {
+                        new string('a', 1000) + "\n",
+                        new string('b', 1000) + "\n",
+                        new string('c', 1000) + "\n",
+                        new string('d', 1000) + "\n",
+                    };
+
+                    var commonByteString = ByteString.FromString(testLinesCommon.Join("")).Compact();
+                    var startPosition = commonByteString.Count;
+
+                    var testLinesPart2 = new List<string>()
+                    {
+                        new string('x', 1000) + "\n",
+                        new string('x', 1000) + "\n",
+                    };
+
+                    Task<IOResult> Write(List<string> lines, long pos) => Source.From(lines)
+                        .Select(ByteString.FromString)
+                        .RunWith(FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: pos), _materializer);
+
+                    var completion1 = Write(_testLines, 0);
+                    var result1 = completion1.AwaitResult();
+
+                    var completion2 = Write(testLinesPart2, startPosition);
+                    var result2 = completion2.AwaitResult();
+
+                    f.Length.ShouldBe(startPosition + result2.Count);
+                    CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join(""));
                 });
             }, _materializer);
         }
@@ -205,6 +267,27 @@ namespace Akka.Streams.Tests.IO
                     {
                         Shutdown(sys);
                     }
+                });
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f => 
+                {
+                    var lazySink = Sink.LazySink(
+                        (ByteString _) => Task.FromResult(FileIO.ToFile(f)),
+                            () => Task.FromResult(IOResult.Success(0)))
+                            .MapMaterializedValue(t => t.AwaitResult());
+
+                    var completion = Source.From(new []{_testByteStrings.Head()})
+                        .RunWith(lazySink, _materializer);
+
+                    completion.AwaitResult();
+                    CheckFileContent(f, _testLines.Head());
                 });
             }, _materializer);
         }

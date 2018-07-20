@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProcessor.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -120,11 +120,13 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="count">TBD</param>
         /// <param name="pump">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="count"/> is either less than or equal to zero or is not a power of two.
+        /// </exception>
         protected BatchingInputBuffer(int count, IPump pump)
         {
-            if (count <= 0) throw new ArgumentException("Buffer Count must be > 0");
-            if ((count & (count - 1)) != 0) throw new ArgumentException("Buffer Count must be power of two");
+            if (count <= 0) throw new ArgumentException("Buffer Count must be > 0", nameof(count));
+            if ((count & (count - 1)) != 0) throw new ArgumentException("Buffer Count must be power of two", nameof(count));
             // TODO: buffer and batch sizing heuristics
 
             Count = count;
@@ -252,10 +254,12 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="subscription">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
+        /// </exception>
         protected virtual void OnSubscribe(ISubscription subscription)
         {
-            if (subscription == null) throw new ArgumentException("OnSubscribe require subscription not to be null");
+            if (subscription == null) throw new ArgumentNullException(nameof(subscription), "OnSubscribe require subscription not to be null");
 
             if (_isUpstreamCompleted)
                 subscription.Cancel();

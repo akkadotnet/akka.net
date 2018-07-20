@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GenericTransportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,9 +9,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport
@@ -47,7 +48,7 @@ namespace Akka.Remote.Tests.Transport
             if (withAkkaProtocol) {
                 var provider = (RemoteActorRefProvider)((ExtendedActorSystem)Sys).Provider;
 
-                return new AkkaProtocolTransport(transport, Sys, new AkkaProtocolSettings(provider.RemoteSettings.Config), new AkkaPduProtobuffCodec());
+                return new AkkaProtocolTransport(transport, Sys, new AkkaProtocolSettings(provider.RemoteSettings.Config), new AkkaPduProtobuffCodec(Sys));
             }
 
             return transport;
@@ -74,9 +75,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.Equal(addressA, result.Item1);
             Assert.NotNull(result.Item2);
 
-            Assert.True(
-                registry.LogSnapshot().OfType<ListenAttempt>().Any(x => x.BoundAddress == addressATest)
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<ListenAttempt>(), x => x.BoundAddress == addressATest);
         }
 
         [Fact]
@@ -103,9 +102,7 @@ namespace Akka.Remote.Tests.Transport
                 return null;
             });
 
-            Assert.True(
-                registry.LogSnapshot().OfType<AssociateAttempt>().Any(x => x.LocalAddress == addressATest && x.RemoteAddress == addressBTest)
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<AssociateAttempt>(), x => x.LocalAddress == addressATest && x.RemoteAddress == addressBTest);
             AwaitCondition(() => registry.ExistsAssociation(addressATest, addressBTest));
         }
 
@@ -153,7 +150,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             var payload = ByteString.CopyFromUtf8("PDU");
-            var pdu = withAkkaProtocol ? new AkkaPduProtobuffCodec().ConstructPayload(payload) : payload;
+            var pdu = withAkkaProtocol ? new AkkaPduProtobuffCodec(Sys).ConstructPayload(payload) : payload;
             
             AwaitCondition(() => registry.ExistsAssociation(addressATest, addressBTest));
 
@@ -168,9 +165,7 @@ namespace Akka.Remote.Tests.Transport
                 return null;
             });
 
-            Assert.True(
-                registry.LogSnapshot().OfType<WriteAttempt>().Any(x => x.Sender == addressATest && x.Recipient == addressBTest && x.Payload.Equals(pdu))
-            );
+            Assert.Contains(registry.LogSnapshot().OfType<WriteAttempt>(), x => x.Sender == addressATest && x.Recipient == addressBTest && x.Payload.Equals(pdu));
         }
 
         [Fact]

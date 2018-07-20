@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldResourceSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happend()
+        public void A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     return s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Take(s)
+                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
                         : Option<ByteString>.None;
                 }, reader => reader.Dispose())
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(0, 122).ForEach(i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().DecodeString().Should().Be(nextChunk());
+                    c.ExpectNext().ToString().Should().Be(nextChunk());
                 });
                 sub.Request(1);
                 c.ExpectComplete();

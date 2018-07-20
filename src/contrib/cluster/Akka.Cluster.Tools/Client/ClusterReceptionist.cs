@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionist.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscribeClusterClients Instance = new SubscribeClusterClients();
+        public static SubscribeClusterClients Instance { get; } = new SubscribeClusterClients();
         private SubscribeClusterClients() { }
     }
 
@@ -104,7 +104,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly UnsubscribeClusterClients Instance = new UnsubscribeClusterClients();
+        public static UnsubscribeClusterClients Instance { get; } = new UnsubscribeClusterClients();
         private UnsubscribeClusterClients() { }
     }
 
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetClusterClients Instance = new GetClusterClients();
+        public static GetClusterClients Instance { get; } = new GetClusterClients();
         private GetClusterClients() { }
     }
 
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Tools.Client
         /// The reply to <see cref="GetClusterClients"/>
         /// </summary>
         /// <param name="clusterClientsList">The presently known list of cluster clients.</param>
-        public ClusterClients(ImmutableHashSet<IActorRef> clusterClientsList)
+        public ClusterClients(IImmutableSet<IActorRef> clusterClientsList)
         {
             ClusterClientsList = clusterClientsList;
         }
@@ -138,7 +138,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public ImmutableHashSet<IActorRef> ClusterClientsList { get; }
+        public IImmutableSet<IActorRef> ClusterClientsList { get; }
     }
 
     /// <summary>
@@ -176,7 +176,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetContacts Instance = new GetContacts();
+            public static GetContacts Instance { get; } = new GetContacts();
             private GetContacts() { }
         }
 
@@ -189,7 +189,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ImmutableList<string> ContactPoints;
+            public ImmutableList<string> ContactPoints { get; }
 
             /// <summary>
             /// TBD
@@ -200,11 +200,7 @@ namespace Akka.Cluster.Tools.Client
                 ContactPoints = contactPoints;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -216,10 +212,7 @@ namespace Akka.Cluster.Tools.Client
                 return ContactPoints.SequenceEqual(other.ContactPoints);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -243,7 +236,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Heartbeat Instance = new Heartbeat();
+            public static Heartbeat Instance { get; } = new Heartbeat();
             private Heartbeat() { }
         }
 
@@ -256,7 +249,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly HeartbeatRsp Instance = new HeartbeatRsp();
+            public static HeartbeatRsp Instance { get; } = new HeartbeatRsp();
             private HeartbeatRsp() { }
         }
 
@@ -269,7 +262,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ping Instance = new Ping();
+            public static Ping Instance { get; } = new Ping();
             private Ping() { }
         }
 
@@ -281,7 +274,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly CheckDeadlines Instance = new CheckDeadlines();
+            public static CheckDeadlines Instance { get; } = new CheckDeadlines();
             private CheckDeadlines() { }
         }
         #endregion
@@ -307,16 +300,18 @@ namespace Akka.Cluster.Tools.Client
         internal class RingOrdering : IComparer<Address>
         {
             /// <summary>
-            /// TBD
+            /// The singleton instance of this comparer
             /// </summary>
-            public static readonly RingOrdering Instance = new RingOrdering();
+            public static RingOrdering Instance { get; } = new RingOrdering();
             private RingOrdering() { }
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="node">TBD</param>
-            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <exception cref="IllegalStateException">
+            /// This exception is thrown when the specified <paramref name="node"/> has a host/port that is undefined.
+            /// </exception>
             /// <returns>TBD</returns>
             public static int HashFor(Address node)
             {
@@ -327,19 +322,14 @@ namespace Akka.Cluster.Tools.Client
                     throw new IllegalStateException("Unexpected address without host/port: " + node);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="a">TBD</param>
-            /// <param name="b">TBD</param>
-            /// <returns>TBD</returns>
-            public int Compare(Address a, Address b)
+            /// <inheritdoc/>
+            public int Compare(Address x, Address y)
             {
-                var ha = HashFor(a);
-                var hb = HashFor(b);
+                var ha = HashFor(x);
+                var hb = HashFor(y);
 
                 if (ha == hb) return 0;
-                return ha < hb || Member.AddressOrdering.Compare(a, b) < 0 ? -1 : 1;
+                return ha < hb || Member.AddressOrdering.Compare(x, y) < 0 ? -1 : 1;
             }
         }
         #endregion
@@ -556,14 +546,11 @@ namespace Akka.Cluster.Tools.Client
 
         private void UpdateClientInteractions(IActorRef client)
         {
-            if (_clientInteractions.ContainsKey(client))
-            {
-                var failureDetector = _clientInteractions[client];
+            if (_clientInteractions.TryGetValue(client, out var failureDetector))
                 failureDetector.HeartBeat();
-            }
             else
             {
-                var failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
+                failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
                 failureDetector.HeartBeat();
                 _clientInteractions = _clientInteractions.Add(client, failureDetector);
                 _log.Debug($"Received new contact from [{client.Path}]");
@@ -625,9 +612,20 @@ namespace Akka.Cluster.Tools.Client
                 _log.Debug("ClientResponseTunnel for client [{0}] stopped due to inactivity", _client.Path);
                 Context.Stop(Self);
             }
-            else _client.Tell(message, ActorRefs.NoSender);
+            else
+            {
+                _client.Tell(message, ActorRefs.NoSender);
+                if (IsAsk())
+                    Context.Stop(Self);
+            }
 
             return true;
+        }
+
+        private bool IsAsk()
+        {
+            var pathElements = _client.Path.Elements;
+            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith("$");
         }
     }
 }

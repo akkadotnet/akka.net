@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConnectionContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Data;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 
 namespace Akka.Persistence.Sqlite
 {
@@ -17,19 +17,21 @@ namespace Akka.Persistence.Sqlite
     /// </summary>
     internal static class ConnectionContext
     {
-        private static readonly ConcurrentDictionary<string, SQLiteConnection> Remembered = new ConcurrentDictionary<string, SQLiteConnection>();
+        private static readonly ConcurrentDictionary<string, SqliteConnection> Remembered = new ConcurrentDictionary<string, SqliteConnection>();
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="connectionString">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="connectionString"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
-        public static SQLiteConnection Remember(string connectionString)
+        public static SqliteConnection Remember(string connectionString)
         {
-            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException("connectionString", "No connection string with connection to remember");
+            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
 
-            var conn = Remembered.GetOrAdd(connectionString, s => new SQLiteConnection(connectionString));
+            var conn = Remembered.GetOrAdd(connectionString, s => new SqliteConnection(connectionString));
 
             if (conn.State != ConnectionState.Open)
                 conn.Open();
@@ -43,7 +45,7 @@ namespace Akka.Persistence.Sqlite
         /// <param name="connectionString">TBD</param>
         public static void Forget(string connectionString)
         {
-            SQLiteConnection conn;
+            SqliteConnection conn;
             if (Remembered.TryRemove(connectionString, out conn))
             {
                 conn.Dispose();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureDetectorPuppet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -141,21 +141,23 @@ namespace Akka.Cluster.Tests.MultiNode
             #region Conversion operators
 
             /// <summary>
-            /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
+            /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <typeparamref name="T"/>.
             /// </summary>
-            public static implicit operator T(AtomicReference<T> aRef)
+            /// <param name="atomicReference">The reference to convert</param>
+            /// <returns>The result of the conversion</returns>
+            public static implicit operator T(AtomicReference<T> atomicReference)
             {
-                return aRef.Value;
+                return atomicReference.Value;
             }
 
             /// <summary>
-            /// Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}"/> instance.
+            /// Performs an implicit conversion from <typeparamref name="T"/> to <see cref="AtomicReference{T}"/>.
             /// </summary>
-            /// <param name="newValue"></param>
-            /// <returns></returns>
-            public static implicit operator AtomicReference<T>(T newValue)
+            /// <param name="value">The reference to convert</param>
+            /// <returns>The result of the conversion</returns>
+            public static implicit operator AtomicReference<T>(T value)
             {
-                return new AtomicReference<T>(newValue);
+                return new AtomicReference<T>(value);
             }
 
             #endregion

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LWWRegisterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_LWWRegister_should_use_latests_of_successive_assignments()
+        public void LWWRegister_must_use_latests_of_successive_assignments()
         {
             var register = Enumerable.Range(1, 100).Aggregate(new LWWRegister<int>(_node1, 0), (r, n) =>
             {
@@ -39,7 +39,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_LWWRegister_should_merge_by_picking_max_timestamp()
+        public void LWWRegister_must_merge_by_picking_max_timestamp()
         {
             var i = From(100).GetEnumerator();
             Clock<string> clock = (timestamp, value) =>
@@ -64,7 +64,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_LWWRegister_should_merge_by_picking_least_address_when_same_timestamp()
+        public void LWWRegister_must_merge_by_picking_least_address_when_same_timestamp()
         {
             Clock<string> clock = (timestamp, value) => 100;
 
@@ -79,7 +79,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_LWWRegister_should_use_monotonically_increasing_default_clock()
+        public void LWWRegister_must_use_monotonically_increasing_default_clock()
         {
             Enumerable.Range(1, 100).Aggregate(new LWWRegister<int>(_node1, 0), (r, n) =>
             {
@@ -91,7 +91,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_LWWRegister_can_be_used_as_first_write_wins_register()
+        public void LWWRegister_can_be_used_as_first_write_wins_register()
         {
             var clock = LWWRegister<int>.ReverseClock;
             Enumerable.Range(1, 100).Aggregate(new LWWRegister<int>(_node1, 0, clock), (r, n) =>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -139,11 +139,15 @@ namespace Akka.Actor
 
             while (_startTime == 0)
             {
+#if UNSAFE_THREADING
                 try
                 {
                     _workerInitialized.Wait();
                 }
                 catch (ThreadInterruptedException) { }
+#else
+                _workerInitialized.Wait();
+#endif
             }
         }
 
@@ -222,6 +226,7 @@ namespace Akka.Actor
 
                     }
 
+#if UNSAFE_THREADING
                     try
                     {
                         Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
@@ -231,6 +236,9 @@ namespace Akka.Actor
                         if (_workerState == WORKER_STATE_SHUTDOWN)
                             return long.MinValue;
                     }
+#else
+                    Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+#endif
                 }
             }
         }
@@ -369,9 +377,7 @@ namespace Akka.Actor
             return Completed;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             var stopped = Stop();

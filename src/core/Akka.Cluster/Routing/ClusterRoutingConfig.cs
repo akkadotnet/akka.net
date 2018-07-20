@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoutingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,12 +23,12 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterGroupSettings : ClusterRouterSettingsBase
     {
         /// <summary>
-        /// TBD
+        /// Obsolete. This constructor is no longer applicable.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="routeesPaths">TBD</param>
-        [Obsolete]
+        /// <param name="totalInstances">N/A</param>
+        /// <param name="allowLocalRoutees">N/A</param>
+        /// <param name="routeesPaths">N/A</param>
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, IEnumerable<string> routeesPaths)
             : this(totalInstances, routeesPaths, allowLocalRoutees, null)
         {
@@ -36,13 +36,13 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. This constructor is no longer applicable.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="useRole">TBD</param>
-        /// <param name="routeesPaths">TBD</param>
-        [Obsolete]
+        /// <param name="totalInstances">N/A</param>
+        /// <param name="allowLocalRoutees">N/A</param>
+        /// <param name="useRole">N/A</param>
+        /// <param name="routeesPaths">N/A</param>
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths)
             : this(totalInstances, routeesPaths, allowLocalRoutees, useRole)
         {
@@ -50,12 +50,18 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterGroupSettings"/> class.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="routeesPaths">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="useRole">TBD</param>
+        /// <param name="totalInstances">The total number of routees. Defaults to 10000.</param>
+        /// <param name="routeesPaths">The actor selection paths to use for each routee.</param>
+        /// <param name="allowLocalRoutees">When <c>true</c>, allows routees to be deployed locally 
+        /// on the node doing the deploying so long as that node also 
+        /// satisfies the useRole setting when used.</param>
+        /// <param name="useRole">The role of the node upon which we are able to create routees.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="routeesPaths"/> is undefined
+        /// or a path defined in the specified <paramref name="routeesPaths"/> is an invalid relative actor path.
+        /// </exception>
         public ClusterRouterGroupSettings(int totalInstances, IEnumerable<string> routeesPaths, bool allowLocalRoutees, string useRole = null) 
             : base(totalInstances, allowLocalRoutees, useRole)
         {
@@ -75,15 +81,15 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The paths of the routees to use on each qualified node.
         /// </summary>
         public IEnumerable<string> RouteesPaths { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ClusterRouterGroupSettings"/> from the specified configuration.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">The configuration used to configure the settings.</param>
+        /// <returns>New settings based on the specified <paramref name="config"/></returns>
         public static ClusterRouterGroupSettings FromConfig(Config config)
         {
             return new ClusterRouterGroupSettings(
@@ -102,56 +108,59 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterPoolSettings : ClusterRouterSettingsBase
     {
         /// <summary>
-        /// TBD
+        /// Obsolete. This constructor is no longer applicable.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="maxInstancesPerNode">TBD</param>
-        [Obsolete]
+        /// <param name="totalInstances">N/A</param>
+        /// <param name="allowLocalRoutees">N/A</param>
+        /// <param name="maxInstancesPerNode">N/A</param>
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode)
             : this(totalInstances, maxInstancesPerNode, allowLocalRoutees)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. This constructor is no longer applicable.
         /// </summary>
-        /// <param name="totalInstances">TBD</param>
-        /// <param name="allowLocalRoutees">TBD</param>
-        /// <param name="useRole">TBD</param>
-        /// <param name="maxInstancesPerNode">TBD</param>
-        [Obsolete]
+        /// <param name="totalInstances">N/A</param>
+        /// <param name="allowLocalRoutees">N/A</param>
+        /// <param name="useRole">N/A</param>
+        /// <param name="maxInstancesPerNode">N/A</param>
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) 
             : this(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRole)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterPoolSettings"/> class.
         /// </summary>
         /// <param name="totalInstances">TBD</param>
         /// <param name="maxInstancesPerNode">TBD</param>
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="useRole">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown when the specified <paramref name="maxInstancesPerNode"/> is less than or equal to zero.
+        /// </exception>
         public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null)
             : base(totalInstances, allowLocalRoutees, useRole)
         {
             MaxInstancesPerNode = maxInstancesPerNode;
 
-            if (MaxInstancesPerNode <= 0) throw new ArgumentOutOfRangeException(nameof(maxInstancesPerNode), "maxInstancesPerNode of cluster pool router must be > 0");
+            if (MaxInstancesPerNode <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxInstancesPerNode), "maxInstancesPerNode of cluster pool router must be > 0");
         }
 
         /// <summary>
-        /// TBD
+        /// The maximum number of routee actors that can be deployed per valid node.
         /// </summary>
-        public int MaxInstancesPerNode { get; private set; }
+        public int MaxInstancesPerNode { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ClusterRouterPoolSettings"/> from the specified configuration.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">The configuration used to configure the settings.</param>
+        /// <returns>New settings based on the specified <paramref name="config"/></returns>
         public static ClusterRouterPoolSettings FromConfig(Config config)
         {
             return new ClusterRouterPoolSettings(
@@ -159,6 +168,34 @@ namespace Akka.Cluster.Routing
                 config.GetInt("cluster.max-nr-of-instances-per-node"),
                 config.GetBoolean("cluster.allow-local-routees"),
                 UseRoleOption(config.GetString("cluster.use-role")));
+        }
+
+        private bool Equals(ClusterRouterPoolSettings other)
+        {
+            return MaxInstancesPerNode == other.MaxInstancesPerNode
+                && TotalInstances == other.TotalInstances 
+                && AllowLocalRoutees == other.AllowLocalRoutees 
+                && string.Equals(UseRole, other.UseRole);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((ClusterRouterPoolSettings)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = MaxInstancesPerNode;
+                hashCode = (hashCode * 397) ^ TotalInstances.GetHashCode();
+                hashCode = (hashCode * 397) ^ AllowLocalRoutees.GetHashCode();
+                hashCode = (hashCode * 397) ^ (UseRole?.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
     }
 
@@ -168,11 +205,15 @@ namespace Akka.Cluster.Routing
     public abstract class ClusterRouterSettingsBase
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterSettingsBase"/> class.
         /// </summary>
         /// <param name="totalInstances">TBD</param>
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="useRole">TBD</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown when the specified <paramref name="useRole"/> is undefined
+        /// or the specified <paramref name="totalInstances"/> is less than or equal to zero.
+        /// </exception>
         protected ClusterRouterSettingsBase(int totalInstances, bool allowLocalRoutees, string useRole)
         {
             UseRole = useRole;
@@ -242,10 +283,14 @@ namespace Akka.Cluster.Routing
         private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterPool"/> class.
         /// </summary>
         /// <param name="local">TBD</param>
         /// <param name="settings">TBD</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the resizer in the specified pool <paramref name="local"/> is defined.
+        /// A resizer cannot be used in conjunction with a cluster router.
+        /// </exception>
         public ClusterRouterPool(Pool local, ClusterRouterPoolSettings settings)
             : base(settings.AllowLocalRoutees ? settings.MaxInstancesPerNode : 0,
             local.Resizer,
@@ -313,7 +358,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieve the strategy to use when supervising the pool.
         /// </summary>
         public override SupervisorStrategy SupervisorStrategy
         {
@@ -324,11 +369,14 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
-        /// <param name="routerConfig">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the specified router is another <see cref="ClusterRouterPool"/>.
+        /// This configuration is not allowed.
+        /// </exception>
+        /// <returns>The router configured with the auxiliary information.</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             var otherClusterRouterPool = routerConfig as ClusterRouterPool;
@@ -347,17 +395,17 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The ActorSystem this router belongs to.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return Local.CreateRouter(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public override string RouterDispatcher
         {
@@ -368,7 +416,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Specify that this router should stop itself when all routees have terminated (been removed).
         /// </summary>
         public override bool StopRouterWhenAllRouteesRemoved
         {
@@ -389,10 +437,10 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether a provided message is handled by the router.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to inspect.</param>
+        /// <returns><c>true</c> if this message is handled by the router; otherwise <c>false</c>.</returns>
         public override bool IsManagementMessage(object message)
         {
             return message is ClusterEvent.IClusterDomainEvent
@@ -401,10 +449,13 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">N/A</param>
+        /// <exception cref="NotImplementedException">
+        /// This exception is thrown automatically since surrogates aren't supported by this router.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             throw new NotImplementedException();
@@ -453,10 +504,10 @@ namespace Akka.Cluster.Routing
         public Group Local { get; }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             if (Settings.AllowLocalRoutees && !string.IsNullOrEmpty(Settings.UseRole))
@@ -487,17 +538,17 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The ActorSystem this router belongs to.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return Local.CreateRouter(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public override string RouterDispatcher
         {
@@ -508,7 +559,8 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Specify that this router should stop itself when all routees have terminated (been removed).
+        /// By Default it is `true`, unless a `resizer` is used.
         /// </summary>
         public override bool StopRouterWhenAllRouteesRemoved
         {
@@ -529,10 +581,10 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether a provided message is handled by the router.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to inspect.</param>
+        /// <returns><c>true</c> if this message is handled by the router; otherwise <c>false</c>.</returns>
         public override bool IsManagementMessage(object message)
         {
             return message is ClusterEvent.IClusterDomainEvent
@@ -541,23 +593,27 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current router.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current router.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return Local.ToSurrogate(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        public override RouterConfig WithFallback(RouterConfig other)
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the specified router is another <see cref="ClusterRouterGroup"/>.
+        /// This configuration is not allowed.
+        /// </exception>
+        /// <returns>The router configured with the auxiliary information.</returns>
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            var localFallback = other as ClusterRouterGroup;
+            var localFallback = routerConfig as ClusterRouterGroup;
             if (localFallback != null && (localFallback.Local is ClusterRouterGroup))
             {
                 throw new ConfigurationException("ClusterRouterGroup is not allowed to wrap a ClusterRouterGroup");
@@ -568,7 +624,7 @@ namespace Akka.Cluster.Routing
                 return Copy(Local.WithFallback(localFallback.Local).AsInstanceOf<Group>());
             }
 
-            return Copy(Local.WithFallback(other).AsInstanceOf<Group>());
+            return Copy(Local.WithFallback(routerConfig).AsInstanceOf<Group>());
         }
 
         /// <summary>
@@ -591,16 +647,20 @@ namespace Akka.Cluster.Routing
     internal abstract class ClusterRouterActor : RouterActor
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterActor"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the router.</param>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when this actor is configured as something other than a <see cref="Pool"/> router or <see cref="Group"/> router.
+        /// </exception>
         protected ClusterRouterActor(ClusterRouterSettingsBase settings)
         {
             Settings = settings;
 
             if (!(Cell.RouterConfig is Pool) && !(Cell.RouterConfig is Group))
             {
-                throw new ActorInitializationException(string.Format("Cluster router actor can only be used with Pool or Group, not with {0}", Cell.RouterConfig.GetType()));
+                throw new ActorInitializationException(
+                    $"Cluster router actor can only be used with Pool or Group, not with {Cell.RouterConfig.GetType()}");
             }
 
             Cluster = Cluster.Get(Context.System);
@@ -646,12 +706,13 @@ namespace Akka.Cluster.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="m">TBD</param>
+        /// <param name="member">TBD</param>
         /// <returns>TBD</returns>
-        public bool IsAvailable(Member m)
+        public bool IsAvailable(Member member)
         {
-            return m.Status == MemberStatus.Up && SatisfiesRole(m.Roles) &&
-                   (Settings.AllowLocalRoutees || m.Address != Cluster.SelfAddress);
+            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && 
+                   SatisfiesRole(member.Roles) &&
+                   (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }
 
         private bool SatisfiesRole(ImmutableHashSet<string> memberRoles)
@@ -785,10 +846,12 @@ namespace Akka.Cluster.Routing
         private readonly Group _group;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterGroupActor"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <param name="settings">The settings used to configure the router.</param>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when this actor is configured as something other than a <see cref="Group"/> router.
+        /// </exception>
         public ClusterRouterGroupActor(ClusterRouterGroupSettings settings) : base(settings)
         {
             Settings = settings;
@@ -799,7 +862,8 @@ namespace Akka.Cluster.Routing
             }
             else
             {
-                throw new ActorInitializationException(string.Format("ClusterRouterGroupActor can only be used with group, not {0}", Cell.RouterConfig.GetType()));
+                throw new ActorInitializationException(
+                    $"ClusterRouterGroupActor can only be used with group, not {Cell.RouterConfig.GetType()}");
             }
 
             UsedRouteePaths = Settings.AllowLocalRoutees
@@ -898,11 +962,13 @@ namespace Akka.Cluster.Routing
         private readonly SupervisorStrategy _supervisorStrategy;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterRouterPoolActor"/> class.
         /// </summary>
-        /// <param name="supervisorStrategy">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <param name="supervisorStrategy">The strategy used to supervise the pool.</param>
+        /// <param name="settings">The settings used to configure the router.</param>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when this actor is configured as something other than a <see cref="Akka.Routing.Pool"/> router.
+        /// </exception>
         public ClusterRouterPoolActor(SupervisorStrategy supervisorStrategy, ClusterRouterPoolSettings settings) : base(settings)
         {
             _supervisorStrategy = supervisorStrategy;
@@ -915,15 +981,15 @@ namespace Akka.Cluster.Routing
             }
             else
             {
-                throw new ActorInitializationException("RouterPoolActor can only be used with Pool, not " +
-                                                       Cell.RouterConfig.GetType());
+                throw new ActorInitializationException(
+                    $"RouterPoolActor can only be used with Pool, not {Cell.RouterConfig.GetType()}");
             }
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieve the strategy used when supervising the pool.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The strategy used when supervising the pool</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _supervisorStrategy;

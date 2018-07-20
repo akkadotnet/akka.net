@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ResizablePoolActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,11 +33,8 @@ namespace Akka.Routing
         {
             get
             {
-                var resizablePoolCell = Context as ResizablePoolCell;
-                if (resizablePoolCell != null)
-                    return resizablePoolCell;
-                else 
-                    throw new ActorInitializationException($"Resizable router actor can only be used when resizer is defined, not in {Context.GetType()}");
+                return Context is ResizablePoolCell resizablePoolCell
+                    ? resizablePoolCell : throw new ActorInitializationException($"Resizable router actor can only be used when resizer is defined, not in {Context.GetType()}");
             }
         }
 
@@ -72,7 +69,5 @@ namespace Akka.Routing
     /// </summary>
     public class Resize : RouterManagementMessage
     {
-        
     }
 }
-

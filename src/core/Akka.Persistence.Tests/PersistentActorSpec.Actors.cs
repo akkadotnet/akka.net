@@ -1,17 +1,19 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Akka.Persistence.Internal;
 
 namespace Akka.Persistence.Tests
 {
@@ -121,7 +123,7 @@ namespace Akka.Persistence.Tests
 
         internal abstract class ExamplePersistentActor : NamedPersistentActor
         {
-            protected LinkedList<object> Events = new LinkedList<object>();
+            protected ImmutableArray<object> Events = ImmutableArray<object>.Empty;
             protected IActorRef AskedForDelete;
 
             protected readonly Action<object> UpdateStateHandler;
@@ -140,7 +142,7 @@ namespace Akka.Persistence.Tests
             protected bool UpdateState(object message)
             {
                 if (message is Evt)
-                    Events.AddFirst((message as Evt).Data);
+                    Events = Events.AddFirst((message as Evt).Data);
                 else if (message is IActorRef)
                     AskedForDelete = (IActorRef) message;
                 else
@@ -363,7 +365,7 @@ namespace Akka.Persistence.Tests
                     if (message is SnapshotOffer)
                     {
                         Probe.Tell("offered");
-                        Events = (message as SnapshotOffer).Snapshot as LinkedList<object>;
+                        Events = (message as SnapshotOffer).Snapshot.AsInstanceOf<ImmutableArray<object>>();
                     }
                     else return false;
                 }
@@ -842,6 +844,31 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        internal class RecoverMessageCausedRestart : ExamplePersistentActor
+        {
+            private IActorRef _master;
+            public RecoverMessageCausedRestart(string name) : base(name)
+            {
+
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message.Equals("boom"))
+                {
+                    _master = Sender;
+                    throw new TestException("boom");
+                }
+                return false;
+            }
+
+            protected override void PreRestart(Exception reason, object message)
+            {
+                _master?.Tell($"failed with {reason.GetType().Name} while processing {message}");
+                Context.Stop(Self);
+            }
+        }
+
         internal class MultipleAndNestedPersists : ExamplePersistentActor
         {
             private readonly IActorRef _probe;
@@ -1024,8 +1051,8 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth))
+                    currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;
@@ -1068,8 +1095,8 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth))
+                    currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;
@@ -1091,6 +1118,45 @@ namespace Akka.Persistence.Tests
                     PersistAsync(s + "-1", WeMustGoDeeper);
                     return true;
                 }
+                return false;
+            }
+        }
+
+        internal class PersistInRecovery : ExamplePersistentActor
+        {
+            public PersistInRecovery(string name)
+                : base(name)
+            { }
+
+            protected override bool ReceiveRecover(object message)
+            {
+                switch (message)
+                {
+                    case Evt evt when evt.Data?.ToString() == "invalid":
+                        Persist(new Evt("invalid-recovery"), UpdateStateHandler);
+                        return true;
+                    case Evt evt:
+                        return UpdateState(evt);
+                    case RecoveryCompleted _:
+                        PersistAsync(new Evt("rc-1"), UpdateStateHandler);
+                        Persist(new Evt("rc-2"), UpdateStateHandler);
+                        PersistAsync(new Evt("rc-3"), UpdateStateHandler);
+                        return true;
+                }
+
+                return false;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (CommonBehavior(message)) return true;
+
+                if (message is Cmd cmd)
+                {
+                    Persist(new Evt(cmd.Data), UpdateStateHandler);
+                    return true;
+                }
+
                 return false;
             }
         }

@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Routing;
 using Akka.Configuration;
@@ -19,13 +20,23 @@ using Akka.Routing;
 namespace Akka.Cluster
 {
     /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Marker interface for signifying that this <see cref="IActorRefProvider"/> can be used in combination with the
+    /// <see cref="Cluster"/> ActorSystem extension.
+    /// </summary>
+    [InternalApi]
+    public interface IClusterActorRefProvider : IRemoteActorRefProvider { }
+
+    /// <summary>
     /// INTERNAL API
     /// 
     /// The `ClusterActorRefProvider` will load the <see cref="Cluster"/>
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
-    internal class ClusterActorRefProvider : RemoteActorRefProvider
+    [InternalApi]
+    public class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
     {
         /// <summary>
         /// TBD
@@ -122,22 +133,27 @@ namespace Akka.Cluster
     internal class ClusterDeployer : RemoteDeployer
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterDeployer"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public ClusterDeployer(Settings settings)
             : base(settings)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor deployment to the supplied path, <paramref name="key" />, using the supplied configuration, <paramref name="config" />.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <returns>A configured actor deployment to the given path.</returns>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the deployment has a scope defined in the configuration
+        /// or the router is configured as a <see cref="RemoteRouterConfig"/>.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the router is not configured as either a <see cref="Pool"/> or a <see cref="Group"/>.
+        /// </exception>
         public override Deploy ParseConfig(string key, Config config)
         {
             Config config2 = config;
@@ -193,4 +209,3 @@ namespace Akka.Cluster
         }
     }
 }
-

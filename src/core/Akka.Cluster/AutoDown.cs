@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public static Props Props(TimeSpan autoDownUnreachableAfter)
         {
-            return new Props(typeof(AutoDown), new object[]{autoDownUnreachableAfter});
+            return Actor.Props.Create<AutoDown>(autoDownUnreachableAfter);
         }
 
         /// <summary>
@@ -40,11 +40,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class UnreachableTimeout
         {
-            readonly UniqueAddress _node;
             /// <summary>
             /// TBD
             /// </summary>
-            public UniqueAddress Node { get { return _node; } }
+            public UniqueAddress Node { get; }
 
             /// <summary>
             /// TBD
@@ -52,13 +51,30 @@ namespace Akka.Cluster
             /// <param name="node">TBD</param>
             public UnreachableTimeout(UniqueAddress node)
             {
-                _node = node;
+                Node = node;
             }
 
-            //TODO: Equals etc
+            private bool Equals(UnreachableTimeout other)
+            {
+                return Equals(Node, other.Node);
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is UnreachableTimeout && Equals((UnreachableTimeout)obj);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return (Node != null ? Node.GetHashCode() : 0);
+            }
         }
 
-        readonly Cluster _cluster;
+        private readonly Cluster _cluster;
 
         /// <summary>
         /// TBD
@@ -107,14 +123,15 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="node">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when a non-leader tries to down the specified <paramref name="node"/>.
+        /// </exception>
         public override void Down(Address node)
         {
             if(!_leader) throw new InvalidOperationException("Must be leader to down node");
             _cluster.LogInfo("Leader is auto-downing unreachable node [{0}]", node);
             _cluster.Down(node);
         }
-
     }
 
     /// <summary>
@@ -122,12 +139,13 @@ namespace Akka.Cluster
     /// </summary>
     internal abstract class AutoDownBase : UntypedActor
     {
-        readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
+        private readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
             Gossip.ConvergenceSkipUnreachableWithMemberStatus;
 
-        ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
+        private ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
             ImmutableDictionary.Create<UniqueAddress, ICancelable>();
-        ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+        private ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -174,55 +192,36 @@ namespace Akka.Cluster
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            var state = message as ClusterEvent.CurrentClusterState;
-            if (state != null)
+            switch (message)
             {
-                _leader = state.Leader != null && state.Leader.Equals(SelfAddress);
-                foreach (var m in state.Unreachable) UnreachableMember(m);
-                return;
-            }
-
-            var unreachableMember = message as ClusterEvent.UnreachableMember;
-            if (unreachableMember != null)
-            {
-                UnreachableMember(unreachableMember.Member);
-                return;
-            }
-
-            var reachableMember = message as ClusterEvent.ReachableMember;
-            if (reachableMember != null)
-            {
-                Remove(reachableMember.Member.UniqueAddress);
-                return;
-            }
-            var memberRemoved = message as ClusterEvent.MemberRemoved;
-            if (memberRemoved != null)
-            {
-                Remove(memberRemoved.Member.UniqueAddress);
-                return;
-            }
-
-            var leaderChanged = message as ClusterEvent.LeaderChanged;
-            if (leaderChanged != null)
-            {
-                _leader = leaderChanged.Leader != null && leaderChanged.Leader.Equals(SelfAddress);
-                if (_leader)
-                {
-                    foreach(var node in _pendingUnreachable) Down(node.Address);
-                    _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
-                }
-                return;
-            }
-
-            var unreachableTimeout = message as AutoDown.UnreachableTimeout;
-            if (unreachableTimeout != null)
-            {
-                if (_scheduledUnreachable.ContainsKey(unreachableTimeout.Node))
-                {
-                    _scheduledUnreachable = _scheduledUnreachable.Remove(unreachableTimeout.Node);
-                    DownOrAddPending(unreachableTimeout.Node);
-                }
-                return;
+                case ClusterEvent.CurrentClusterState state:
+                    _leader = state.Leader != null && state.Leader.Equals(SelfAddress);
+                    foreach (var m in state.Unreachable) UnreachableMember(m);
+                    return;
+                case ClusterEvent.UnreachableMember unreachableMember:
+                    UnreachableMember(unreachableMember.Member);
+                    return;
+                case ClusterEvent.ReachableMember reachableMember:
+                    Remove(reachableMember.Member.UniqueAddress);
+                    return;
+                case ClusterEvent.MemberRemoved memberRemoved:
+                    Remove(memberRemoved.Member.UniqueAddress);
+                    return;
+                case ClusterEvent.LeaderChanged leaderChanged:
+                    _leader = leaderChanged.Leader != null && leaderChanged.Leader.Equals(SelfAddress);
+                    if (_leader)
+                    {
+                        foreach(var node in _pendingUnreachable) Down(node.Address);
+                        _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+                    }
+                    return;
+                case AutoDown.UnreachableTimeout unreachableTimeout:
+                    if (_scheduledUnreachable.ContainsKey(unreachableTimeout.Node))
+                    {
+                        _scheduledUnreachable = _scheduledUnreachable.Remove(unreachableTimeout.Node);
+                        DownOrAddPending(unreachableTimeout.Node);
+                    }
+                    return;
             }
         }
 
@@ -261,8 +260,8 @@ namespace Akka.Cluster
 
         private void Remove(UniqueAddress node)
         {
-            ICancelable source;
-            if(_scheduledUnreachable.TryGetValue(node, out source)) source.Cancel();
+            if(_scheduledUnreachable.TryGetValue(node, out var source))
+                source.Cancel();
             _scheduledUnreachable = _scheduledUnreachable.Remove(node);
             _pendingUnreachable = _pendingUnreachable.Remove(node);
         }
@@ -273,7 +272,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
     /// </summary>
-    internal sealed class AutoDowning : IDowningProvider
+    public sealed class AutoDowning : IDowningProvider
     {
         private readonly ClusterSettings _clusterSettings;
 
@@ -294,7 +293,9 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the <c>akka.cluster.auto-down-unreachable-after</c> configuration setting is not set.
+        /// </exception>
         public Props DowningActorProps
         {
             get

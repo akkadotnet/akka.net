@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataTypes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,52 +13,46 @@ using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
-    public sealed class RoleName
+    public sealed class RoleName : IEquatable<RoleName>
     {
-        readonly string _name;
-
         public RoleName(string name)
         {
-            _name = name;
+            Name = name;
         }
 
-        bool Equals(RoleName other)
+        public bool Equals(RoleName other)
         {
-            return string.Equals(_name, other._name);
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return string.Equals(Name, other.Name);
         }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((RoleName)obj);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => obj is RoleName role && Equals(role);
 
-        public override int GetHashCode()
-        {
-            return (_name != null ? _name.GetHashCode() : 0);
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
 
-        public static bool operator ==(RoleName left, RoleName right)
-        {
-            return Equals(left, right);
-        }
+        /// <summary>
+        /// Compares two specified <see cref="RoleName"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
+        /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="RoleName"/> are equal; otherwise <c>false</c></returns>
+        public static bool operator ==(RoleName left, RoleName right) => Equals(left, right);
 
-        public static bool operator !=(RoleName left, RoleName right)
-        {
-            return !Equals(left, right);
-        }
+        /// <summary>
+        /// Compares two specified <see cref="RoleName"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
+        /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="RoleName"/> are not equal; otherwise <c>false</c></returns>
+        public static bool operator !=(RoleName left, RoleName right) => !Equals(left, right);
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public override string ToString()
-        {
-            return string.Format("RoleName({0})", _name);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"RoleName({Name})";
     }
 
     //TODO: This is messy, better way to do this?
@@ -88,11 +82,13 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
+        /// <inheritdoc/>
         protected bool Equals(ToClient<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -101,16 +97,29 @@ namespace Akka.Remote.TestKit
             return Equals((ToClient<T>)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToClient{T}"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToClient{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToClient{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToClient{T}"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ToClient<T> left, ToClient<T> right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToClient{T}"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToClient{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToClient{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToClient{T}"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ToClient<T> left, ToClient<T> right)
         {
             return !Equals(left, right);
@@ -144,11 +153,13 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
+        /// <inheritdoc/>
         protected bool Equals(ToServer<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -157,27 +168,59 @@ namespace Akka.Remote.TestKit
             return Equals((ToServer<T>)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToServer{T}"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToServer{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToServer{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToServer{T}"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ToServer<T> left, ToServer<T> right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToServer{T}"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToServer{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToServer{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToServer{T}"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ToServer<T> left, ToServer<T> right)
         {
             return !Equals(left, right);
         }
     }
 
-    interface IClientOp { } // messages sent to from Conductor to Player
-    interface IServerOp { } // messages sent to from Player to Conductor
-    interface ICommandOp { } // messages sent from TestConductorExt to Conductor
-    interface INetworkOp { } // messages sent over the wire
-    interface IUnconfirmedClientOp : IClientOp { } // unconfirmed messages going to the Player
+    /// <summary>
+    /// messages sent to from Conductor to Player
+    /// </summary>
+    interface IClientOp { } 
+
+    /// <summary>
+    /// messages sent to from Player to Conductor
+    /// </summary>
+    interface IServerOp { }
+
+    /// <summary>
+    /// messages sent from TestConductorExt to Conductor
+    /// </summary>
+    interface ICommandOp { }
+
+    /// <summary>
+    ///  messages sent over the wire
+    /// </summary> 
+    interface INetworkOp { }
+
+    /// <summary>
+    /// unconfirmed messages going to the Player
+    /// </summary>
+    interface IUnconfirmedClientOp : IClientOp { }
     interface IConfirmedClientOp : IClientOp { }
 
     /// <summary>
@@ -193,6 +236,7 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && Equals(_address, other._address);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -200,6 +244,7 @@ namespace Akka.Remote.TestKit
             return obj is Hello && Equals((Hello)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -208,11 +253,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Hello"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Hello"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Hello"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Hello"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Hello left, Hello right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Hello"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Hello"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Hello"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Hello"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Hello left, Hello right)
         {
             return !Equals(left, right);
@@ -251,6 +308,7 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _timeout.Equals(other._timeout);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -258,6 +316,7 @@ namespace Akka.Remote.TestKit
             return obj is EnterBarrier && Equals((EnterBarrier)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -266,11 +325,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="EnterBarrier"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="EnterBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="EnterBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="EnterBarrier"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(EnterBarrier left, EnterBarrier right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="EnterBarrier"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="EnterBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="EnterBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="EnterBarrier"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(EnterBarrier left, EnterBarrier right)
         {
             return !Equals(left, right);
@@ -306,6 +377,7 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -313,16 +385,29 @@ namespace Akka.Remote.TestKit
             return obj is FailBarrier && Equals((FailBarrier)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (_name != null ? _name.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="FailBarrier"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="FailBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="FailBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="FailBarrier"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(FailBarrier left, FailBarrier right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="FailBarrier"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="FailBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="FailBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="FailBarrier"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(FailBarrier left, FailBarrier right)
         {
             return !Equals(left, right);
@@ -355,6 +440,7 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _success.Equals(other._success);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -362,6 +448,7 @@ namespace Akka.Remote.TestKit
             return obj is BarrierResult && Equals((BarrierResult)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -370,11 +457,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="BarrierResult"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="BarrierResult"/> used for comparison</param>
+        /// <param name="right">The second <see cref="BarrierResult"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="BarrierResult"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(BarrierResult left, BarrierResult right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="BarrierResult"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="BarrierResult"/> used for comparison</param>
+        /// <param name="right">The second <see cref="BarrierResult"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="BarrierResult"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(BarrierResult left, BarrierResult right)
         {
             return !Equals(left, right);
@@ -421,6 +520,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -428,6 +528,7 @@ namespace Akka.Remote.TestKit
             return obj is Throttle && Equals((Throttle)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -440,11 +541,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Throttle"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Throttle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Throttle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Throttle"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Throttle left, Throttle right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Throttle"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Throttle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Throttle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Throttle"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Throttle left, Throttle right)
         {
             return !Equals(left, right);
@@ -484,6 +597,7 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -491,6 +605,7 @@ namespace Akka.Remote.TestKit
             return obj is ThrottleMsg && Equals((ThrottleMsg)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -502,11 +617,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ThrottleMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ThrottleMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ThrottleMsg left, ThrottleMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ThrottleMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ThrottleMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ThrottleMsg left, ThrottleMsg right)
         {
             return !Equals(left, right);
@@ -546,6 +673,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -553,6 +681,7 @@ namespace Akka.Remote.TestKit
             return obj is Disconnect && Equals((Disconnect)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -564,11 +693,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Disconnect"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Disconnect"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Disconnect"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Disconnect"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Disconnect left, Disconnect right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Disconnect"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Disconnect"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Disconnect"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Disconnect"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Disconnect left, Disconnect right)
         {
             return !Equals(left, right);
@@ -601,6 +742,7 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -608,6 +750,7 @@ namespace Akka.Remote.TestKit
             return obj is DisconnectMsg && Equals((DisconnectMsg)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -616,11 +759,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="DisconnectMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="DisconnectMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(DisconnectMsg left, DisconnectMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="DisconnectMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="DisconnectMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(DisconnectMsg left, DisconnectMsg right)
         {
             return !Equals(left, right);
@@ -653,6 +808,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -660,6 +816,7 @@ namespace Akka.Remote.TestKit
             return obj is Terminate && Equals((Terminate)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -668,11 +825,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Terminate"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Terminate"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Terminate"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Terminate"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Terminate left, Terminate right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Terminate"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Terminate"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Terminate"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Terminate"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Terminate left, Terminate right)
         {
             return !Equals(left, right);
@@ -698,6 +867,7 @@ namespace Akka.Remote.TestKit
             return Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -705,16 +875,29 @@ namespace Akka.Remote.TestKit
             return obj is TerminateMsg && Equals((TerminateMsg)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TerminateMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TerminateMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TerminateMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TerminateMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TerminateMsg left, TerminateMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TerminateMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TerminateMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TerminateMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TerminateMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TerminateMsg left, TerminateMsg right)
         {
             return !Equals(left, right);
@@ -740,6 +923,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -747,16 +931,29 @@ namespace Akka.Remote.TestKit
             return obj is GetAddress && Equals((GetAddress)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="GetAddress"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="GetAddress"/> used for comparison</param>
+        /// <param name="right">The second <see cref="GetAddress"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="GetAddress"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(GetAddress left, GetAddress right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="GetAddress"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="GetAddress"/> used for comparison</param>
+        /// <param name="right">The second <see cref="GetAddress"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="GetAddress"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(GetAddress left, GetAddress right)
         {
             return !Equals(left, right);
@@ -789,6 +986,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_addr, other._addr);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -796,6 +994,7 @@ namespace Akka.Remote.TestKit
             return obj is AddressReply && Equals((AddressReply)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -804,11 +1003,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="AddressReply"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="AddressReply"/> used for comparison</param>
+        /// <param name="right">The second <see cref="AddressReply"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="AddressReply"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(AddressReply left, AddressReply right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="AddressReply"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="AddressReply"/> used for comparison</param>
+        /// <param name="right">The second <see cref="AddressReply"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="AddressReply"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(AddressReply left, AddressReply right)
         {
             return !Equals(left, right);
@@ -848,6 +1059,7 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -855,16 +1067,29 @@ namespace Akka.Remote.TestKit
             return obj is Remove && Equals((Remove)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Remove"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Remove"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Remove"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Remove"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Remove left, Remove right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Remove"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Remove"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Remove"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Remove"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Remove left, Remove right)
         {
             return !Equals(left, right);

@@ -1,18 +1,20 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TokenBucket.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 
 using System;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [InternalApi]
     public abstract class TokenBucket
     {
         private readonly long _capacity;
@@ -21,18 +23,20 @@ namespace Akka.Util
         private long _availableTokens;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TokenBucket"/> class.
         /// </summary>
         /// <param name="capacity">TBD</param>
         /// <param name="ticksBetweenTokens">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="capacity"/> is less than zero
+        /// or the specified <paramref name="ticksBetweenTokens"/> is less than or equal to zero.
+        /// </exception>
         protected TokenBucket(long capacity, long ticksBetweenTokens)
         {
             if(capacity<0)
                 throw new ArgumentException("Capacity must be non-negative", nameof(capacity));
             if (ticksBetweenTokens <= 0)
-                throw new ArgumentException("Time between tokens must be larger than zero ticks.",
-                    nameof(ticksBetweenTokens));
+                throw new ArgumentException("Time between tokens must be larger than zero ticks.", nameof(ticksBetweenTokens));
             
             _capacity = capacity;
             _ticksBetweenTokens = ticksBetweenTokens;
@@ -64,7 +68,9 @@ namespace Akka.Util
         /// calls. 
         /// </summary>
         /// <param name="cost">How many tokens the element costs. Can be larger than the capacity of the bucket.</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="cost"/> is less than zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public long Offer(long cost)
         {

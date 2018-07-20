@@ -1,10 +1,10 @@
-﻿
-// --- auto generated: 1/12/2017 3:54:04 AM --- //
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ZipWith.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
+//-----------------------------------------------------------------------
+
 //-----------------------------------------------------------------------
 using System;
 using Akka.Streams.Stage;
@@ -153,7 +153,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TOut> stage) : base(shape)
@@ -275,7 +275,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TOut> stage) : base(shape)
@@ -414,7 +414,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> stage) : base(shape)
@@ -570,7 +570,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> stage) : base(shape)
@@ -743,7 +743,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> stage) : base(shape)
@@ -933,7 +933,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> stage) : base(shape)
@@ -1140,7 +1140,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> stage) : base(shape)
@@ -1364,7 +1364,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> stage) : base(shape)

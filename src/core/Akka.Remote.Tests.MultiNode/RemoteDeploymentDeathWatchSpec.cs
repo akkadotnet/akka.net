@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDeploymentDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,15 +21,15 @@ namespace Akka.Remote.Tests.MultiNode
         private readonly RemoteDeploymentDeathWatchSpecConfig _specConfig;
         private readonly ITestKitAssertions _assertions;
 
-        protected RemoteDeploymentDeathWatchSpec()
-            : this(new RemoteDeploymentDeathWatchSpecConfig())
+        protected RemoteDeploymentDeathWatchSpec(Type type)
+            : this(new RemoteDeploymentDeathWatchSpecConfig(), type)
         {
         }
 
         // A test class may only define a single public constructor.
         // https://github.com/xunit/xunit/blob/master/src/xunit.execution/Sdk/Frameworks/Runners/XunitTestClassRunner.cs#L178
-        protected RemoteDeploymentDeathWatchSpec(RemoteDeploymentDeathWatchSpecConfig specConfig)
-            : base(specConfig)
+        protected RemoteDeploymentDeathWatchSpec(RemoteDeploymentDeathWatchSpecConfig specConfig, Type type)
+            : base(specConfig, type)
         {
             _specConfig = specConfig;
             _assertions = new XunitAssertions();
@@ -108,6 +108,9 @@ namespace Akka.Remote.Tests.MultiNode
     
     public class RemoteDeploymentNodeDeathWatchSlowSpec : RemoteDeploymentDeathWatchSpec
     {
+        public RemoteDeploymentNodeDeathWatchSlowSpec():base(typeof(RemoteDeploymentNodeDeathWatchSlowSpec))
+        { }
+
         protected override void Sleep()
         {
             Thread.Sleep(3000);
@@ -121,6 +124,9 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteDeploymentNodeDeathWatchFastSpec : RemoteDeploymentDeathWatchSpec
     {
+        public RemoteDeploymentNodeDeathWatchFastSpec() : base(typeof(RemoteDeploymentNodeDeathWatchFastSpec))
+        { }
+        
         protected override string Scenario
         {
             get { return "fast"; }

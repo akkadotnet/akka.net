@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QuickRestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         }
 
-        protected QuickRestartSpec(QuickRestartSpecConfig config) : base(config)
+        protected QuickRestartSpec(QuickRestartSpecConfig config) : base(config, typeof(QuickRestartSpec))
         {
             _config = config;
             _seedNodes = new Lazy<ImmutableList<Address>>(() => ImmutableList<Address>.Empty
@@ -119,7 +119,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 });
                 EnterBarrier("members-up-"+i);
 
-                // gatting occurred after a while
+                // gating occurred after a while
                 if (i > 1)
                     Thread.Sleep(ThreadLocalRandom.Current.Next(15) * 1000);
 

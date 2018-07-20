@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="FLow.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="Flow.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -96,25 +96,18 @@ namespace Akka.Streams.Dsl
                 if (Keep.IsLeft(combine))
                 {
                     if (IgnorableMaterializedValueComposites.Apply(m))
-                    {
                         materializedValueNode = StreamLayout.Ignore.Instance;
-                    }
                     else
-                    {
                         materializedValueNode = new StreamLayout.Transform(_ => NotUsed.Instance,
                             new StreamLayout.Atomic(m));
-                    }
                 }
                 else
-                {
-                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat) o, (TMat2) o1),
+                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat)o, (TMat2)o1),
                         StreamLayout.Ignore.Instance, new StreamLayout.Atomic(m));
-                }
 
                 return
                     new Flow<TIn, TOut2, TMat3>(new CompositeModule(ImmutableArray<IModule>.Empty.Add(m), m.Shape,
-                        ImmutableDictionary<OutPort, InPort>.Empty, ImmutableDictionary<InPort, OutPort>.Empty,
-                        materializedValueNode, Attributes.None));
+                        m.Downstreams, m.Upstreams, materializedValueNode, m.Attributes));
             }
 
             var copy = flow.Module.CarbonCopy();

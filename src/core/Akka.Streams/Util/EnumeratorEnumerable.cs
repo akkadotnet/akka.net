@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="EnumeratorEnumerable.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,18 +20,15 @@ namespace Akka.Streams.Util
         private readonly Func<IEnumerator<T>> _enumeratorFactory;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EnumeratorEnumerable{T}"/> class.
         /// </summary>
-        /// <param name="enumeratorFactory">TBD</param>
+        /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over this enumerable.</param>
         public EnumeratorEnumerable(Func<IEnumerator<T>> enumeratorFactory)
         {
             _enumeratorFactory = enumeratorFactory;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator() => _enumeratorFactory();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -52,24 +49,21 @@ namespace Akka.Streams.Util
             private IEnumerator<T> _current;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ContinuallyEnumerable{T}.ContinuallyEnumerator" /> class.
             /// </summary>
-            /// <param name="enumeratorFactory">TBD</param>
+            /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over an enumerable.</param>
             public ContinuallyEnumerator(Func<IEnumerator<T>> enumeratorFactory)
             {
                 _enumeratorFactory = enumeratorFactory;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
+            /// <inheritdoc/>
             public void Dispose() => _enumeratorFactory = null;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <exception cref="ArgumentException">TBD</exception>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown when the enumerator has passed the end of an enumerable.
+            /// </exception>
             public bool MoveNext()
             {
                 if (_current == null || !_current.MoveNext())
@@ -82,14 +76,10 @@ namespace Akka.Streams.Util
                 return true;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
+            /// <inheritdoc/>
             public void Reset() => _current = _enumeratorFactory();
 
-            /// <summary>
-            /// TBD
-            /// </summary>
+            /// <inheritdoc/>
             public T Current => _current.Current;
 
             object IEnumerator.Current => Current;
@@ -98,18 +88,15 @@ namespace Akka.Streams.Util
         private readonly ContinuallyEnumerator _continuallyEnumerator;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ContinuallyEnumerable{T}" /> class.
         /// </summary>
-        /// <param name="enumeratorFactory">TBD</param>
+        /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over this enumerable.</param>
         public ContinuallyEnumerable(Func<IEnumerator<T>> enumeratorFactory)
         {
             _continuallyEnumerator = new ContinuallyEnumerator(enumeratorFactory);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator() => _continuallyEnumerator;
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

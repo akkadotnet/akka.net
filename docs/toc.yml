@@ -1,0 +1,13 @@
+- name: Documentation
+  href: articles/
+  homepage: articles/intro/what-is-akka.md
+- name: API Reference
+  href: api/
+  homepage: api/index.md
+- name: Community
+  href: community/
+  homepage: community/building-akka-net.md
+- name: Project Chat
+  href: https://gitter.im/akkadotnet/akka.net
+- name: Source Code
+  href: https://github.com/akkadotnet/akka.net

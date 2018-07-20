@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TypedActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
 
 namespace Akka.Actor
@@ -25,6 +26,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class TypedActor.
     /// </summary>
+    [Obsolete("TypedActor in its current shape will be removed in v1.5")]
     public abstract class TypedActor : ActorBase
     {
         /// <summary>
@@ -32,7 +34,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>TBD</returns>
-        protected override sealed bool Receive(object message)
+        protected sealed override bool Receive(object message)
         {
             MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)

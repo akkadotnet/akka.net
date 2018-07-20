@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMatValueSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -324,6 +324,31 @@ namespace Akka.Streams.Tests.Dsl
             //fails
             var matValue = Source.Single("").Via(nest4).To(Sink.Ignore<Tuple<string, string>>()).Run(mat2);
             matValue.Should().Be(NotUsed.Instance);
+        }
+
+        [Fact]
+        public void A_Graph_must_not_ignore_materialized_value_of_identity_flow_which_is_optimized_away()
+        {
+            var mat = Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithAutoFusing(false));
+            var t = Source.Single(1)
+                .ViaMaterialized(Flow.Identity<int>(), Keep.Both)
+                .To(Sink.Ignore<int>())
+                .Run(mat);
+
+            t.Item1.ShouldBe(NotUsed.Instance);
+            t.Item2.ShouldBe(NotUsed.Instance);
+
+            var m1 = Source.Maybe<int>()
+                .ViaMaterialized(Flow.Identity<int>(), Keep.Left)
+                .To(Sink.Ignore<int>())
+                .Run(mat);
+            m1.SetResult(0);
+
+            var m2 = Source.Single(1)
+                .ViaMaterialized(Flow.Identity<int>(), Keep.Right)
+                .To(Sink.Ignore<int>())
+                .Run(mat);
+            m2.ShouldBe(NotUsed.Instance);
         }
     }
 }

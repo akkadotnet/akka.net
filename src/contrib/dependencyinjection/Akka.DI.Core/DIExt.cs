@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DIExt.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,10 +22,12 @@ namespace Akka.DI.Core
         /// Initializes the extension to use a given DI resolver.
         /// </summary>
         /// <param name="dependencyResolver">The resolver used to resolve types from the DI container.</param>
-        /// <exception cref="ArgumentNullException">The dependency resolver must not be null.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="dependencyResolver"/> is undefined.
+        /// </exception>
         public void Initialize(IDependencyResolver dependencyResolver)
         {
-            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver", "The dependency resolver must not be null.");
+            if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"DIExt requires {nameof(dependencyResolver)} to be provided");
             this.dependencyResolver = dependencyResolver;
         }
 

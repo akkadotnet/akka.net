@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.Create(buffer, offset, count).DecodeString());
+                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
 
             public override bool CanRead { get; }
             public override bool CanSeek { get; }
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.Create(buffer, offset, count).DecodeString());
+                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
 
             protected override void Dispose(bool disposing)
             {
@@ -179,9 +179,9 @@ namespace Akka.Streams.Tests.IO
                 var completion = Source.From(datas)
                     .RunWith(StreamConverters.FromOutputStream(() => new VoidOutputStream(p)), _materializer);
 
-                p.ExpectMsg(datas[0].DecodeString());
-                p.ExpectMsg(datas[1].DecodeString());
-                p.ExpectMsg(datas[2].DecodeString());
+                p.ExpectMsg(datas[0].ToString());
+                p.ExpectMsg(datas[1].ToString());
+                p.ExpectMsg(datas[2].ToString());
                 completion.Wait(TimeSpan.FromSeconds(3));
             }, _materializer);
         }

@@ -1,0 +1,14 @@
+- name: Building Akka.NET
+  href: building-akka-net.md
+- name: Getting Access to Nightly Akka.NET Builds
+  href: getting-access-to-nightly-builds.md
+- name: Approving Public API Changes
+  href: public-api-changes.md
+- name: Contributor guideline
+  href: contributor-guidelines.md
+- name: Documentation Guidelines
+  href: documentation-guidelines.md
+- name: Online resources
+  href: online-resources.md
+- name: Books
+  href: books.md

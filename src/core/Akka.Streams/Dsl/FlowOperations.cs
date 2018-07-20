@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Recover allows to send last element on failure and gracefully complete the stream
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
-        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.        
+        /// <para/>
+        /// Throwing an exception inside Recover will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and pf returns an element
         /// </para>
@@ -58,6 +60,7 @@ namespace Akka.Streams.Dsl
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
         /// </para>
+        /// Throwing an exception inside RecoverWith will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
         /// </para>
@@ -75,7 +78,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="partialFunc">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use RecoverWithRetries instead.")]
+        [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
@@ -90,6 +93,7 @@ namespace Akka.Streams.Dsl
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
         /// </para>
+        /// Throwing an exception inside RecoverWithRetries will be logged on ERROR level automatically.
         /// <para>
         /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
         /// </para>
@@ -116,8 +120,38 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// While similar to <see cref="Recover{TIn,TOut,TMat}"/> this stage can be used to transform an error signal to a different one without logging
+        /// it as an error in the process. So in that sense it is NOT exactly equivalent to Recover(e => throw e2) since Recover
+        /// would log the e2 error. 
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// Similarily to <see cref="Recover{TIn,TOut,TMat}"/> throwing an exception inside SelectError will be logged.
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and <paramref name="selector"/> returns an element
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception returned by the <paramref name="selector"/>
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        /// <param name="flow">TBD</param>
+        /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
+        public static Flow<TIn, TOut, TMat> SelectError<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Exception> selector)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.SelectError(flow, selector);
+        }
+
+        /// <summary>
         /// Transform this stream by applying the given function <paramref name="mapper"/> to each of the elements
         /// as they pass through this processing step.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when the mapping function <paramref name="mapper"/> returns an element
         /// </para>
@@ -183,8 +217,10 @@ namespace Akka.Streams.Dsl
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
-        /// 
         /// <para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// Emits when the mapping function returns an element or there are still remaining elements
         /// from the previously calculated collection
         /// </para>
@@ -259,8 +295,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstream. As many tasks as requested elements by
-        /// downstream may run in parallel and each processed element will be emitted dowstream
+        /// value of that task will be emitted downstream. The number of tasks that shall run in parallel is given as
+        /// the first argument to <see cref="SelectAsyncUnordered{T,TIn,TOut,TMat}"/>. Each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
         /// 
@@ -271,6 +307,9 @@ namespace Akka.Streams.Dsl
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the<see cref="Task"/> is completed
         /// with failure and the supervision decision is <see cref="Directive.Resume"/> or
         /// <see cref="Directive.Restart"/> the element is dropped and the stream continues.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when any of the tasks returned by the provided function complete
         /// </para>
@@ -301,6 +340,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Only pass on those elements that satisfy the given <paramref name="predicate"/>.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the given <paramref name="predicate"/> returns true for the element
         /// </para>
         /// <para>
@@ -325,6 +367,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Only pass on those elements that NOT satisfy the given <paramref name="predicate"/>.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the given <paramref name="predicate"/> returns true for the element
         /// </para>
         /// <para>
@@ -348,30 +393,36 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Terminate processing (and cancel the upstream publisher) after <paramref name="predicate"/>
-        /// returns false for the first time. Due to input buffering some elements may have been
-        /// requested from upstream publishers that will then not be processed downstream
-        /// of this step.
+        /// returns false for the first time, including the first failed element iff inclusive is true
+        /// Due to input buffering some elements may have been requested from upstream publishers
+        /// that will then not be processed downstream of this step.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
         /// <para>
         /// Emits when the <paramref name="predicate"/> is true
         /// </para>
-        /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when <paramref name="predicate"/> returned false or upstream completes
+        /// Backpressures when downstream backpressures
         /// </para>
+        /// <para>
+        /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
+        /// </para>
+        /// <para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{TIn,TOut,TMat}"/> <seealso cref="LimitWeighted{TIn,TOut,TMat}"/> 
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat> TakeWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Flow<TIn, TOut, TMat> TakeWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.TakeWhile(flow, predicate);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.TakeWhile(flow, predicate, inclusive);
         }
 
         /// <summary>
@@ -494,6 +545,9 @@ namespace Akka.Streams.Dsl
         /// The stream will be completed without producing any elements if <paramref name="max"/> is zero
         /// or negative.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the specified number of elements to take has not yet been reached
         /// </para>
         /// Backpressures when downstream backpressures
@@ -555,6 +609,9 @@ namespace Akka.Streams.Dsl
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when the function scanning the element returns a new element
         /// </para>
         /// Backpressures when downstream backpressures
@@ -577,6 +634,44 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Similar to <see cref="Scan{TIn,TOut1,TOut2,TMat}"/> but with a asynchronous function,
+        /// emits its current value which starts at <paramref name="zero"/> and then
+        /// applies the current and next value to the given function <paramref name="scan"/>
+        /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Resume"/> current value starts at the previous
+        /// current value, or zero when it doesn't have one, and the stream will continue.
+        /// <para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes upstream completes and the last task returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="scan">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, TOut2, TMat> ScanAsync<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, Task<TOut2>> scan)
+        {
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.ScanAsync(flow, zero, scan);
+        }
+
+        /// <summary>
         /// Similar to <see cref="Scan{TIn,TOut1,TOut2,TMat}"/> but only emits its result when the upstream completes,
         /// after which it also completes. Applies the given function <paramref name="fold"/> towards its current and next value,
         /// yielding the next current value.
@@ -584,6 +679,9 @@ namespace Akka.Streams.Dsl
         /// If the function <paramref name="fold"/> throws an exception and the supervision decision is
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -615,6 +713,9 @@ namespace Akka.Streams.Dsl
         /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when upstream completes
         /// </para>
         /// Backpressures when downstream backpressures
@@ -644,9 +745,12 @@ namespace Akka.Streams.Dsl
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// 
-        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -692,7 +796,7 @@ namespace Akka.Streams.Dsl
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> Intersperse<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TOut start, TOut inject, TOut end)
         {
@@ -722,7 +826,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="inject">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> Intersperse<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TOut inject)
         {
@@ -906,6 +1010,9 @@ namespace Akka.Streams.Dsl
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is a conflated element available
         /// </para>
         /// Backpressures when never
@@ -938,6 +1045,9 @@ namespace Akka.Streams.Dsl
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is a conflated element available
         /// </para>
         /// Backpressures when never
@@ -964,15 +1074,21 @@ namespace Akka.Streams.Dsl
         ///
         /// This only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
-        ///
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
+        /// <para>
         /// Emits when downstream stops backpressuring and there is an aggregated element available
-        ///
+        /// </para>
+        /// <para>
         /// Backpressures when there are <paramref name="max"/> batched elements and 1 pending element and downstream backpressures
-        ///
+        /// </para>
+        /// <para>
         /// Completes when upstream completes and there is no batched/pending element waiting
-        ///
+        /// </para>
+        /// <para>
         /// Cancels when downstream cancels
-        ///
+        /// </para>
         /// See also <seealso cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>, <seealso cref="BatchWeighted{TIn,TOut,TOut2,TMat}"/>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
@@ -1068,7 +1184,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
-        /// Backpressures when depending on OverflowStrategy
+        /// Backpressures when downstream backpressures or depending on OverflowStrategy:
         /// <para/> * Backpressure - backpressures when buffer is full
         /// <para/> * DropHead, DropTail, DropBuffer - never backpressures
         /// <para/> * Fail - fails the stream if buffer gets full
@@ -1101,7 +1217,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use Via(GraphStage) instead.")]
+        [Obsolete("Use Via(GraphStage) instead. [1.1.2]")]
         public static Flow<TIn, TOut2, TMat> Transform<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Transform(flow, stageFactory);
@@ -1152,6 +1268,9 @@ namespace Akka.Streams.Dsl
         /// the element is dropped and the stream and substreams continue.
         /// 
         /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when an element for which the grouping function returns a group that has not yet been created.
         /// Emits the new group
@@ -1269,10 +1388,10 @@ namespace Akka.Streams.Dsl
         /// false, false, true  // elements go into third substream
         /// }}}
         ///
-        /// The object returned from this method is not a normal [[Source]] or[[Flow]],
+        /// The object returned from this method is not a normal <see cref="Source"/> or <see cref="Flow"/>,
         /// it is a <see cref="SubFlow{TOut,TMat,TClosed}"/>. This means that after this combinator all transformations
-        ///are applied to all encountered substreams in the same fashion.Substream mode
-        /// is exited either by closing the substream(i.e.connecting it to a [[Sink]])
+        /// are applied to all encountered substreams in the same fashion. Substream mode
+        /// is exited either by closing the substream (i.e.connecting it to a <see cref="Sink"/>)
         /// or by merging the substreams back together; see the <see cref="SubFlow{TOut,TMat,TClosed}.To{TMat2}"/> and <see cref="SubFlow{TOut,TMat,TClosed}.MergeSubstreams"/> methods
         /// on <see cref="SubFlow{TOut,TMat,TClosed}"/> for more information.
         ///
@@ -1377,6 +1496,24 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, TOut2, TMat> MergeMany<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
+        }
+        
+        /// <summary>
+        /// Combine the elements of current flow into a stream of tuples consisting
+        /// of all elements paired with their index. Indices start at 0.
+        /// 
+        /// <para/>
+        /// Emits when upstream emits an element and is paired with their index
+        /// <para/>
+        /// Backpressures when downstream backpressures
+        /// <para/>
+        /// Completes when upstream completes
+        /// <para/>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static Flow<TIn, Tuple<TOut, long>, TMat> ZipWithIndex<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
+        {
+            return (Flow<TIn, Tuple<TOut, long>, TMat>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>
@@ -1520,7 +1657,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1534,7 +1671,7 @@ namespace Akka.Streams.Dsl
         /// <param name="per">TBD</param>
         /// <param name="maximumBurst">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
+        /// <exception cref="ArgumentException">Thrown when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
         /// <returns>TBD</returns>
@@ -1563,7 +1700,7 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Emits when upstream emits an element and configured time per each element elapsed
         /// </para>
-        /// Backpressures when downstream backpressures
+        /// Backpressures when downstream backpressures or the incoming rate is higher than the speed limit
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1721,6 +1858,9 @@ namespace Akka.Streams.Dsl
         /// 
         /// By default element and completion signals are logged on debug level, and errors are logged on Error level.
         /// This can be adjusted according to your needs by providing a custom <see cref="Attributes.LogLevels"/> attribute on the given Flow.
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// <para>
         /// Emits when the mapping function returns an element
         /// </para>

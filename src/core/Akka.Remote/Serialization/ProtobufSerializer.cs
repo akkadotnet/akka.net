@@ -1,13 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ProtobufSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
+using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
@@ -16,6 +19,8 @@ namespace Akka.Remote.Serialization
     /// </summary>
     public class ProtobufSerializer : Serializer
     {
+        private static readonly ConcurrentDictionary<string, MessageParser> TypeLookup = new ConcurrentDictionary<string, MessageParser>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtobufSerializer"/> class.
         /// </summary>
@@ -24,57 +29,34 @@ namespace Akka.Remote.Serialization
         {
         }
 
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier
-        {
-            get { return 2; }
-        }
+        /// <inheritdoc />
+        public override bool IncludeManifest => true;
 
-        /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
-        /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return true; }
-        }
-
-        /// <summary>
-        /// N/A
-        /// </summary>
-        /// <param name="obj">N/A</param>
-        /// <exception cref="NotImplementedException">
-        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
-        /// </exception>
-        /// <returns>N/A</returns>
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
-            //using (var stream = new MemoryStream())
-            //{
-            //    global::ProtoBuf.Serializer.Serialize(stream, obj);
-            //    return stream.ToArray();
-            //}
+            var message = obj as IMessage;
+            if (message != null)
+            {
+                return message.ToByteArray();
+            }
+
+            throw new ArgumentException($"Can't serialize a non-protobuf message using protobuf [{obj.GetType().TypeQualifiedName()}]");
         }
 
-        /// <summary>
-        /// N/A
-        /// </summary>
-        /// <param name="bytes">N/A</param>
-        /// <param name="type">N/A</param>
-        /// <exception cref="NotImplementedException">
-        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
-        /// </exception>
-        /// <returns>N/A</returns>
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, Type type)
         {
-            throw new NotImplementedException();
-            //using (var stream = new MemoryStream(bytes))
-            //{
-            //    return global::ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
-            //}
+            if (TypeLookup.TryGetValue(type.FullName, out var parser))
+            {
+                return parser.ParseFrom(bytes);
+            }
+            // MethodParser is not in the cache, look it up with reflection
+            IMessage msg = Activator.CreateInstance(type) as IMessage;
+            if(msg == null) throw new ArgumentException($"Can't deserialize a non-protobuf message using protobuf [{type.TypeQualifiedName()}]");
+            parser = msg.Descriptor.Parser;
+            TypeLookup.TryAdd(type.FullName, parser);
+            return parser.ParseFrom(bytes);
         }
     }
 }

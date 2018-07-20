@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionistSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Client
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
             if (config == null)
-                throw new ArgumentException(string.Format("Actor system [{0}] doesn't have `akka.cluster.client.receptionist` config set up", system.Name));
+                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client.receptionist` config set up");
 
             return Create(config);
         }
@@ -55,22 +55,22 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Start the receptionist on members tagged with this role. All members are used if undefined.
         /// </summary>
-        public readonly string Role;
+        public string Role { get; }
 
         /// <summary>
         /// The receptionist will send this number of contact points to the client.
         /// </summary>
-        public readonly int NumberOfContacts;
+        public int NumberOfContacts { get; }
 
         /// <summary>
         /// The actor that tunnel response messages to the client will be stopped after this time of inactivity.
         /// </summary>
-        public readonly TimeSpan ResponseTunnelReceiveTimeout;
+        public TimeSpan ResponseTunnelReceiveTimeout { get; }
 
         /// <summary>
         /// How often failure detection heartbeat messages should be received for each ClusterClient
         /// </summary>
-        public readonly TimeSpan HeartbeatInterval;
+        public TimeSpan HeartbeatInterval { get; }
 
         /// <summary>
         /// Number of potentially lost/delayed heartbeats that will be
@@ -80,12 +80,12 @@ namespace Akka.Cluster.Tools.Client
         /// heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
         /// the default settings.
         /// </summary>
-        public readonly TimeSpan AcceptableHeartbeatPause;
+        public TimeSpan AcceptableHeartbeatPause { get; }
 
         /// <summary>
         /// Failure detection checking interval for checking all ClusterClients
         /// </summary>
-        public readonly TimeSpan FailureDetectionInterval;
+        public TimeSpan FailureDetectionInterval { get; }
 
         /// <summary>
         /// TBD

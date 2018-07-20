@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DispatcherThroughputSpecBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Tests.Performance.Dispatch
         protected abstract MessageDispatcherConfigurator Configurator();
 
         private const string DispatcherCounterName = "ScheduledActionCompleted";
-        private const long ScheduleCount = 10000;
+        private const long ScheduleCount = 10000000;
 
         private Counter _dispatcherCounter;
 
@@ -45,7 +45,7 @@ namespace Akka.Tests.Performance.Dispatch
         /// Warms up <see cref="dispatcher"/> prior to the benchmark running,
         /// so we can exclude initialization overhead from the results of the benchmark.
         /// </summary>
-        /// <param name="dispatcher">The <see cref="MessageDispatcher"/> implementaiton we'll be testing.</param>
+        /// <param name="dispatcher">The <see cref="MessageDispatcher"/> implementation we'll be testing.</param>
         /// <remarks>Does nothing by default (includes overhead)</remarks>
         protected virtual void Warmup(MessageDispatcher dispatcher)
         {
@@ -71,8 +71,9 @@ namespace Akka.Tests.Performance.Dispatch
             Warmup(_dispatcher);
         }
 
-        [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
+        [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 5, TestMode = TestMode.Measurement)]
         [CounterMeasurement(DispatcherCounterName)]
+        [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         public void Schedule_throughput(BenchmarkContext context)
         {
             for (var i = 0L; i < ScheduleCount;)

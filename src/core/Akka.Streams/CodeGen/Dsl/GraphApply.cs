@@ -1,45 +1,58 @@
-﻿// --- auto generated: 1/12/2017 4:11:40 AM --- //
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphApply.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using Akka.Streams.Dsl.Internal;
 
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// A graph DSL, which defines an API for building complex graphs. Graph definitions 
+    /// are enclosed within a scope of functions defined by user, using a dedicated
+    /// <see cref="Builder{T}"/> helper to connect specific graph stages with each other.
     /// </summary>
     public partial class GraphDsl
     {
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShape">TBD</typeparam>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
-        public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape: Shape
+        /// <typeparam name="TShape">Type describing shape of the returned graph.</typeparam>
+        /// <param name="buildBlock">A builder function used to construct the graph.</param>
+        /// <returns>A graph with no materialized value.</returns>
+        public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock)
+            where TShape : Shape
+            => CreateMaterialized<TShape, NotUsed>(buildBlock);
+
+        /// <summary>
+        /// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
+        /// </summary>
+        /// <typeparam name="TShape">Shape of the produced graph.</typeparam>
+        /// <typeparam name="TMat">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <param name="buildBlock">Graph construction function.</param>
+        /// <returns>A graph with materialized value.</returns>
+        public static IGraph<TShape, TMat> CreateMaterialized<TShape, TMat>(Func<Builder<TMat>, TShape> buildBlock) where TShape : Shape
         {
-            var builder = new Builder<NotUsed>();
+            var builder = new Builder<TMat>();
             var shape = buildBlock(builder);
             var module = builder.Module.ReplaceShape(shape);
 
-            return new GraphImpl<TShape, NotUsed>(shape, module);
+            return new GraphImpl<TShape, TMat>(shape, module);
         }
-        
+
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graph <paramref name="g1"/> 
         /// and passing its <see cref="Shape"/> along with the <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShapeOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TShape1">TBD</typeparam>
-        /// <param name="g1">TBD</param>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShapeOut">A type describing shape of the returned graph.</typeparam>
+        /// <typeparam name="TMat">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <typeparam name="TShape1">A type of shape of the input graph.</typeparam>
+        /// <param name="g1">Graph used as input parameter.</param>
+        /// <param name="buildBlock">Graph construction function.</param>
+        /// <returns>A graph with materialized value.</returns>
         public static IGraph<TShapeOut, TMat> Create<TShapeOut, TMat, TShape1>(IGraph<TShape1, TMat> g1, Func<Builder<TMat>, TShape1, TShapeOut> buildBlock) 
             where TShapeOut: Shape
             where TShape1: Shape
@@ -51,22 +64,22 @@ namespace Akka.Streams.Dsl
 
             return new GraphImpl<TShapeOut, TMat>(shape, module);
         }
-        
+
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graphs and passing their <see cref="Shape"/>s 
         /// along with the <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShapeOut">TBD</typeparam>
-        /// <typeparam name="TMatOut">TBD</typeparam>
-        /// <typeparam name="TMat0">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TShape0">TBD</typeparam>
-        /// <typeparam name="TShape1">TBD</typeparam>
-        /// <param name="g0">TBD</param>
-        /// <param name="g1">TBD</param>
-        /// <param name="combineMaterializers">TBD</param>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShapeOut">A type describing shape of the returned graph.</typeparam>
+        /// <typeparam name="TMatOut">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <typeparam name="TMat0">A type of materialized value of the first input graph parameter.</typeparam>
+        /// <typeparam name="TMat1">A type of materialized value of the second input graph parameter.</typeparam>
+        /// <typeparam name="TShape0">A type describing the shape of a first input graph parameter.</typeparam>
+        /// <typeparam name="TShape1">A type describing the shape of a second input graph parameter.</typeparam>
+        /// <param name="g0">A first input graph.</param>
+        /// <param name="g1">A second input graph.</param>
+        /// <param name="combineMaterializers">Function used to determine output materialized value based on the materialized values of the passed graphs.</param>
+        /// <param name="buildBlock">A graph constructor function.</param>
+        /// <returns>A graph with materialized value.</returns>
         public static IGraph<TShapeOut, TMatOut> Create<TShapeOut, TMatOut, TMat0, TMat1, TShape0, TShape1>(
             IGraph<TShape0, TMat0> g0, IGraph<TShape1, TMat1> g1, 
             Func<TMat0, TMat1, TMatOut> combineMaterializers,
@@ -89,20 +102,20 @@ namespace Akka.Streams.Dsl
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graphs and passing their <see cref="Shape"/>s 
         /// along with the <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShapeOut">TBD</typeparam>
-        /// <typeparam name="TMatOut">TBD</typeparam>
-        /// <typeparam name="TMat0">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TShape0">TBD</typeparam>
-        /// <typeparam name="TShape1">TBD</typeparam>
-        /// <typeparam name="TShape2">TBD</typeparam>
-        /// <param name="g0">TBD</param>
-        /// <param name="g1">TBD</param>
-        /// <param name="g2">TBD</param>
-        /// <param name="combineMaterializers">TBD</param>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShapeOut">A type describing shape of the returned graph.</typeparam>
+        /// <typeparam name="TMatOut">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <typeparam name="TMat0">A type of materialized value of the first input graph parameter.</typeparam>
+        /// <typeparam name="TMat1">A type of materialized value of the second input graph parameter.</typeparam>
+        /// <typeparam name="TMat2">A type of materialized value of the third input graph parameter.</typeparam>
+        /// <typeparam name="TShape0">A type describing the shape of a first input graph parameter.</typeparam>
+        /// <typeparam name="TShape1">A type describing the shape of a second input graph parameter.</typeparam>
+        /// <typeparam name="TShape2">A type describing the shape of a third input graph parameter.</typeparam>
+        /// <param name="g0">A first input graph.</param>
+        /// <param name="g1">A second input graph.</param>
+        /// <param name="g2">A third input graph.</param>
+        /// <param name="combineMaterializers">Function used to determine output materialized value based on the materialized values of the passed graphs.</param>
+        /// <param name="buildBlock">A graph constructor function.</param>
+        /// <returns>A graph with materialized value.</returns>
         public static IGraph<TShapeOut, TMatOut> Create<TShapeOut, TMatOut, TMat0, TMat1, TMat2, TShape0, TShape1, TShape2>(
             IGraph<TShape0, TMat0> g0, IGraph<TShape1, TMat1> g1, IGraph<TShape2, TMat2> g2, 
             Func<TMat0, TMat1, TMat2, TMatOut> combineMaterializers,
@@ -127,23 +140,23 @@ namespace Akka.Streams.Dsl
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graphs and passing their <see cref="Shape"/>s 
         /// along with the <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShapeOut">TBD</typeparam>
-        /// <typeparam name="TMatOut">TBD</typeparam>
-        /// <typeparam name="TMat0">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <typeparam name="TShape0">TBD</typeparam>
-        /// <typeparam name="TShape1">TBD</typeparam>
-        /// <typeparam name="TShape2">TBD</typeparam>
-        /// <typeparam name="TShape3">TBD</typeparam>
-        /// <param name="g0">TBD</param>
-        /// <param name="g1">TBD</param>
-        /// <param name="g2">TBD</param>
-        /// <param name="g3">TBD</param>
-        /// <param name="combineMaterializers">TBD</param>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShapeOut">A type describing shape of the returned graph.</typeparam>
+        /// <typeparam name="TMatOut">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <typeparam name="TMat0">A type of materialized value of the first input graph parameter.</typeparam>
+        /// <typeparam name="TMat1">A type of materialized value of the second input graph parameter.</typeparam>
+        /// <typeparam name="TMat2">A type of materialized value of the third input graph parameter.</typeparam>
+        /// <typeparam name="TMat3">A type of materialized value of the fourth input graph parameter.</typeparam>
+        /// <typeparam name="TShape0">A type describing the shape of a first input graph parameter.</typeparam>
+        /// <typeparam name="TShape1">A type describing the shape of a second input graph parameter.</typeparam>
+        /// <typeparam name="TShape2">A type describing the shape of a third input graph parameter.</typeparam>
+        /// <typeparam name="TShape3">A type describing the shape of a fourth input graph parameter.</typeparam>
+        /// <param name="g0">A first input graph.</param>
+        /// <param name="g1">A second input graph.</param>
+        /// <param name="g2">A third input graph.</param>
+        /// <param name="g3">A fourth input graph.</param>
+        /// <param name="combineMaterializers">Function used to determine output materialized value based on the materialized values of the passed graphs.</param>
+        /// <param name="buildBlock">A graph constructor function.</param>
+        /// <returns>A graph with materialized value.</returns>
         public static IGraph<TShapeOut, TMatOut> Create<TShapeOut, TMatOut, TMat0, TMat1, TMat2, TMat3, TShape0, TShape1, TShape2, TShape3>(
             IGraph<TShape0, TMat0> g0, IGraph<TShape1, TMat1> g1, IGraph<TShape2, TMat2> g2, IGraph<TShape3, TMat3> g3, 
             Func<TMat0, TMat1, TMat2, TMat3, TMatOut> combineMaterializers,
@@ -170,26 +183,26 @@ namespace Akka.Streams.Dsl
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graphs and passing their <see cref="Shape"/>s 
         /// along with the <see cref="Builder{TMat}"/> to the given create function.
         /// </summary>
-        /// <typeparam name="TShapeOut">TBD</typeparam>
-        /// <typeparam name="TMatOut">TBD</typeparam>
-        /// <typeparam name="TMat0">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <typeparam name="TMat4">TBD</typeparam>
-        /// <typeparam name="TShape0">TBD</typeparam>
-        /// <typeparam name="TShape1">TBD</typeparam>
-        /// <typeparam name="TShape2">TBD</typeparam>
-        /// <typeparam name="TShape3">TBD</typeparam>
-        /// <typeparam name="TShape4">TBD</typeparam>
-        /// <param name="g0">TBD</param>
-        /// <param name="g1">TBD</param>
-        /// <param name="g2">TBD</param>
-        /// <param name="g3">TBD</param>
-        /// <param name="g4">TBD</param>
-        /// <param name="combineMaterializers">TBD</param>
-        /// <param name="buildBlock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShapeOut">A type describing shape of the returned graph.</typeparam>
+        /// <typeparam name="TMatOut">A type of value, that graph will materialize to after completion.</typeparam>
+        /// <typeparam name="TMat0">A type of materialized value of the first input graph parameter.</typeparam>
+        /// <typeparam name="TMat1">A type of materialized value of the second input graph parameter.</typeparam>
+        /// <typeparam name="TMat2">A type of materialized value of the third input graph parameter.</typeparam>
+        /// <typeparam name="TMat3">A type of materialized value of the fourth input graph parameter.</typeparam>
+        /// <typeparam name="TMat4">A type of materialized value of the fifth input graph parameter.</typeparam>
+        /// <typeparam name="TShape0">A type describing the shape of a first input graph parameter.</typeparam>
+        /// <typeparam name="TShape1">A type describing the shape of a second input graph parameter.</typeparam>
+        /// <typeparam name="TShape2">A type describing the shape of a third input graph parameter.</typeparam>
+        /// <typeparam name="TShape3">A type describing the shape of a fourth input graph parameter.</typeparam>
+        /// <typeparam name="TShape4">A type describing the shape of a fifth input graph parameter.</typeparam>
+        /// <param name="g0">A first input graph.</param>
+        /// <param name="g1">A second input graph.</param>
+        /// <param name="g2">A third input graph.</param>
+        /// <param name="g3">A fourth input graph.</param>
+        /// <param name="g4">A fifth input graph.</param>
+        /// <param name="combineMaterializers">Function used to determine output materialized value based on the materialized values of the passed graphs.</param>
+        /// <param name="buildBlock">A graph constructor function.</param>
+        /// <returns>A graph with materialized value.</returns>
         public static IGraph<TShapeOut, TMatOut> Create<TShapeOut, TMatOut, TMat0, TMat1, TMat2, TMat3, TMat4, TShape0, TShape1, TShape2, TShape3, TShape4>(
             IGraph<TShape0, TMat0> g0, IGraph<TShape1, TMat1> g1, IGraph<TShape2, TMat2> g2, IGraph<TShape3, TMat3> g3, IGraph<TShape4, TMat4> g4, 
             Func<TMat0, TMat1, TMat2, TMat3, TMat4, TMatOut> combineMaterializers,

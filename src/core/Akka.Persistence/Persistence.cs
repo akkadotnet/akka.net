@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistence.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -17,40 +18,24 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     internal struct PluginHolder
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IActorRef Ref;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly EventAdapters Adapters;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Config Config;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="ref">TBD</param>
-        /// <param name="adapters">TBD</param>
-        /// <param name="config">TBD</param>
         public PluginHolder(IActorRef @ref, EventAdapters adapters, Config config)
         {
             Ref = @ref;
             Adapters = adapters;
             Config = config;
         }
+
+        public IActorRef Ref { get; }
+
+        public EventAdapters Adapters { get; }
+
+        public Config Config { get; }
     }
 
     /// <summary>
-    /// TBD
+    /// Launches the Akka.Persistence runtime
     /// </summary>
     public class PersistenceExtension : IExtension
     {
@@ -64,6 +49,7 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
+        private readonly Lazy<IActorRef> _recoveryPermitter;
 
         private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
 
@@ -71,10 +57,15 @@ namespace Akka.Persistence
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
 
         /// <summary>
-        /// TBD
+        /// Creates a new Akka.Persistence extension.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="NullReferenceException">TBD</exception>
+        /// <param name="system">The ActorSystem that will be using Akka.Persistence</param>
+        /// <exception cref="NullReferenceException">
+        /// This exception is thrown when the default journal plugin, <c>journal.plugin</c> is not configured.
+        /// </exception>
+        /// <remarks>
+        /// DO NOT CALL DIRECTLY. Will be instantiated automatically be Akka.Persistence actors.
+        /// </remarks>
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
@@ -96,7 +87,7 @@ namespace Akka.Persistence
                 if (string.IsNullOrEmpty(configPath))
                 {
                     if (_log.IsWarningEnabled)
-                        _log.Warning("No default snapshot store configured! " + 
+                        _log.Warning("No default snapshot store configured! " +
                             "To configure a default snapshot-store plugin set the `akka.persistence.snapshot-store.plugin` key. " +
                             "For details see 'persistence.conf'");
                     return NoSnapshotStorePluginId;
@@ -108,7 +99,7 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy");
                 var configuratorType = Type.GetType(configuratorTypeName);
-                return ((IStashOverflowStrategyConfigurator) Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
+                return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -120,26 +111,29 @@ namespace Akka.Persistence
                 JournalFor(id);
             });
 
-            _config.GetStringList("journal.auto-start-snapshot-stores").ForEach(id =>
+            _config.GetStringList("snapshot-store.auto-start-snapshot-stores").ForEach(id =>
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Auto-starting snapshot store `{0}`", id);
                 SnapshotStoreFor(id);
+            });
+
+            _recoveryPermitter = new Lazy<IActorRef>(() =>
+            {
+                var maxPermits = _config.GetInt("max-concurrent-recoveries");
+                return _system.SystemActorOf(Akka.Persistence.RecoveryPermitter.Props(maxPermits), "recoveryPermitter");
             });
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IStashOverflowStrategy DefaultInternalStashOverflowStrategy
-        {
-            get { return _defaultInternalStashOverflowStrategy.Value; }
-        }
+        public IStashOverflowStrategy DefaultInternalStashOverflowStrategy => _defaultInternalStashOverflowStrategy.Value;
 
         /// <summary>
-        /// TBD
+        /// The Akka.Persistence settings for the journal and snapshot store
         /// </summary>
-        public PersistenceSettings Settings { get; private set; }
+        public PersistenceSettings Settings { get; }
 
         /// <summary>
         /// TBD
@@ -152,11 +146,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
+        /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
+        /// </summary>
+        internal IActorRef RecoveryPermitter()
+        {
+            return _recoveryPermitter.Value;
+        }
+
+        /// <summary>
         /// Returns an <see cref="EventAdapters"/> object which serves as a per-journal collection of bound event adapters. 
         /// If no adapters are registered for a given journal the EventAdapters object will simply return the identity adapter for each 
         /// class, otherwise the most specific adapter matching a given class will be returned.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public EventAdapters AdaptersFor(string journalPluginId)
         {
@@ -184,6 +190,9 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         internal Config JournalConfigFor(string journalPluginId)
         {
@@ -195,14 +204,16 @@ namespace Akka.Persistence
         /// Looks up the plugin config by plugin's ActorRef.
         /// </summary>
         /// <param name="journalPluginActor">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="journalPluginActor"/> is unknown.
+        /// </exception>
         /// <returns>TBD</returns>
         internal Config ConfigFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
                 .FirstOrDefault(e => e.Value.Ref.Equals(journalPluginActor));
             if (extension == null)
-                throw new ArgumentException(string.Format("Unknown plugin actor {0}", journalPluginActor));
+                throw new ArgumentException($"Unknown plugin actor {journalPluginActor}");
 
             return extension.Value.Config;
         }
@@ -214,6 +225,9 @@ namespace Akka.Persistence
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public IActorRef JournalFor(string journalPluginId)
         {
@@ -229,6 +243,9 @@ namespace Akka.Persistence
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
         /// <param name="snapshotPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
@@ -253,10 +270,10 @@ namespace Akka.Persistence
             var pluginActorName = configPath;
             var pluginTypeName = pluginConfig.GetString("class");
             if (string.IsNullOrEmpty(pluginTypeName))
-                throw new ArgumentException(string.Format("Plugin class name must be defined in config property [{0}.class]", configPath));
+                throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
-            object[] pluginActorArgs = pluginType.GetConstructor(new[] {typeof (Config)}) != null ? new object[] {pluginConfig} : null;
+            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             return system.SystemActorOf(pluginActorProps, pluginActorName);
@@ -272,7 +289,7 @@ namespace Akka.Persistence
         {
             if (string.IsNullOrEmpty(configPath) || !system.Settings.Config.HasPath(configPath))
             {
-                throw new ArgumentException("Persistence config is missing plugin config path for: " + configPath);
+                throw new ArgumentException($"Persistence config is missing plugin config path for: {configPath}");
             }
 
             var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
@@ -291,7 +308,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Persistence Instance = new Persistence();
+        public static Persistence Instance { get; } = new Persistence();
 
         /// <summary>
         /// TBD
@@ -316,16 +333,17 @@ namespace Akka.Persistence
     /// <summary>
     /// Persistence configuration.
     /// </summary>
-    public class PersistenceSettings : Settings
+    public sealed class PersistenceSettings : Settings
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public ViewSettings View { get; private set; }
+        public ViewSettings View { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public class ViewSettings
+        public sealed class ViewSettings
         {
             /// <summary>
             /// TBD
@@ -342,25 +360,28 @@ namespace Akka.Persistence
             /// <summary>
             /// TBD
             /// </summary>
-            public bool AutoUpdate { get; private set; }
+            public bool AutoUpdate { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public TimeSpan AutoUpdateInterval { get; private set; }
+            public TimeSpan AutoUpdateInterval { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long AutoUpdateReplayMax { get; private set; }
+            public long AutoUpdateReplayMax { get; }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public class AtLeastOnceDeliverySettings
+        public sealed class AtLeastOnceDeliverySettings
         {
             /// <summary>
             /// TBD
@@ -393,7 +414,7 @@ namespace Akka.Persistence
             /// <summary>
             ///     Interval between redelivery attempts.
             /// </summary>
-            public TimeSpan RedeliverInterval { get; private set; }
+            public TimeSpan RedeliverInterval { get; }
 
             /// <summary>
             ///     Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this
@@ -401,20 +422,21 @@ namespace Akka.Persistence
             ///     <see cref="MaxUnconfirmedMessagesExceededException" />
             ///     instead of accepting messages.
             /// </summary>
-            public int MaxUnconfirmedMessages { get; private set; }
+            public int MaxUnconfirmedMessages { get; }
 
             /// <summary>
             ///     After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
             ///     <see cref="ActorBase.Self" />.
             ///     The count is reset after restart.
             /// </summary>
-            public int WarnAfterNumberOfUnconfirmedAttempts { get; private set; }
+            public int WarnAfterNumberOfUnconfirmedAttempts { get; }
+
             /// <summary>
             ///     Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to
             ///     prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long
             ///     time.
             /// </summary>
-            public int RedeliveryBurstLimit { get; private set; }
+            public int RedeliveryBurstLimit { get; }
 
 
             /// <summary>
@@ -466,33 +488,19 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public InternalSettings Internal { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class InternalSettings
+        public InternalSettings Internal { get; }
+
+        public sealed class InternalSettings
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="config">TBD</param>
             public InternalSettings(Config config)
             {
                 PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands");
                 PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations");
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public bool PublishPluginCommands { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public bool PublishConfirmations { get; private set; }
+            public bool PublishPluginCommands { get; }
+
+            public bool PublishConfirmations { get; }
         }
 
         /// <summary>
@@ -517,7 +525,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Called when the persistent actor is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
-        /// will recover its persistent state behore handling the first incoming message.
+        /// will recover its persistent state before handling the first incoming message.
         /// 
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>
@@ -545,10 +553,10 @@ namespace Akka.Persistence
         /// TBD
         /// </summary>
         string JournalPath { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
         Config DefaultConfig { get; }
     }
 }
-

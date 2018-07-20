@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FsApi.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,10 +127,11 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
-            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
@@ -263,6 +264,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
@@ -334,10 +336,11 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
             member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
-            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
