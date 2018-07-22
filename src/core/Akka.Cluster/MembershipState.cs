@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -42,112 +43,117 @@ namespace Akka.Cluster
         public string SelfDataCenter { get; }
         public int CrossDataCenterConnections { get; }
 
+        private readonly Lazy<Member> _selfMember;
+        private readonly Lazy<Reachability> _dcReachability;
+        private readonly Lazy<Reachability> _dcReachabilityWithoutObservationsWithin;
+        private readonly Lazy<Reachability> _dcReachabilityExcludingDownedObservers;
+        private readonly Lazy<Reachability> _dcReachabilityNoOutsideNodes;
+        private readonly Lazy<ImmutableDictionary<string, ImmutableSortedSet<Member>>> _ageSortedTopOldestMembersPerDc;
+
         public MembershipState(Gossip latestGossip, UniqueAddress selfUniqueAddress, string selfDataCenter, int crossDataCenterConnections)
         {
             LatestGossip = latestGossip;
             SelfUniqueAddress = selfUniqueAddress;
             SelfDataCenter = selfDataCenter;
             CrossDataCenterConnections = crossDataCenterConnections;
+
+            _selfMember = new Lazy<Member>(() => LatestGossip.GetMember(SelfUniqueAddress), LazyThreadSafetyMode.None);
+            _dcReachability = new Lazy<Reachability>(() => 
+                Overview.Reachability.RemoveObservers(
+                    Members
+                    .Where(m => m.DataCenter != SelfDataCenter)
+                    .Select(m => m.UniqueAddress)
+                    .ToImmutableHashSet()), LazyThreadSafetyMode.None);
+            
+            _dcReachabilityWithoutObservationsWithin = new Lazy<Reachability>(() => 
+                DcReachability.FilterRecords(r => LatestGossip.GetMember(r.Subject).DataCenter != SelfDataCenter), LazyThreadSafetyMode.None);
+            
+            _dcReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
+            {
+                var membersToExclude = ImmutableHashSet<UniqueAddress>.Empty.ToBuilder();
+                var nonDcMembers = new List<UniqueAddress>();
+
+                foreach (var member in Members)
+                {
+                    if (member.DataCenter != SelfDataCenter)
+                    {
+                        nonDcMembers.Add(member.UniqueAddress);
+                        membersToExclude.Add(member.UniqueAddress);
+                    }
+                    else if (member.Status == MemberStatus.Down)
+                    {
+                        membersToExclude.Add(member.UniqueAddress);
+                    }
+                }
+
+                return Overview.Reachability
+                    .RemoveObservers(membersToExclude.ToImmutable())
+                    .Remove(nonDcMembers);
+            }, LazyThreadSafetyMode.None);
+            
+            _dcReachabilityNoOutsideNodes = new Lazy<Reachability>(() => 
+                Overview.Reachability.Remove(
+                    Members
+                        .Where(m => m.DataCenter != SelfDataCenter)
+                        .Select(m => m.UniqueAddress)), LazyThreadSafetyMode.None);
+            
+            _ageSortedTopOldestMembersPerDc = new Lazy<ImmutableDictionary<string, ImmutableSortedSet<Member>>>(() =>
+            {
+                var acc = ImmutableDictionary<string, ImmutableSortedSet<Member>>.Empty.ToBuilder();
+                foreach (var member in LatestGossip.Members)
+                {
+                    if (acc.TryGetValue(member.DataCenter, out var set))
+                    {
+                        if (set.Count < CrossDataCenterConnections)
+                        {
+                            acc[member.DataCenter] = set.Add(member);
+                        }
+                        else
+                        {
+                            var younger = set.FirstOrDefault(m => member.IsOlderThan(m));
+                            if (younger != null)
+                            {
+                                acc[member.DataCenter] = set.Remove(younger).Add(member);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        acc[member.DataCenter] = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering).Add(member);
+                    }
+                }
+
+                return acc.ToImmutable();
+            }, LazyThreadSafetyMode.None);
         }
 
-        private Member _selfMember;
-        private Reachability _dcReachability;
-        private Reachability _dcReachabilityWithoutObservationsWithin;
-        private Reachability _dcReachabilityExcludingDownedObservers;
-        private Reachability _dcReachabilityNoOutsideNodes;
-        private ImmutableDictionary<string, ImmutableSortedSet<Member>> _ageSortedTopOldestMembersPerDc;
-
-        public Member SelfMember => _selfMember ?? (_selfMember = LatestGossip.GetMember(SelfUniqueAddress));
+        public Member SelfMember => _selfMember.Value;
 
         /// <summary>
         /// Reachability excluding observations from nodes outside of the data center, 
         /// but including observed unreachable nodes outside of the data center.
         /// </summary>
-        public Reachability DcReachability => _dcReachability ?? (_dcReachability = Overview.Reachability.RemoveObservers(Members.Where(m => m.DataCenter != SelfDataCenter).Select(m => m.UniqueAddress).ToImmutableHashSet()));
+        public Reachability DcReachability => _dcReachability.Value;
 
         /// <summary>
         /// Reachability excluding observations from nodes outside of the data center 
         /// and observations within self data center, but including observed unreachable 
         /// nodes outside of the data center.
         /// </summary>
-        public Reachability DcReachabilityWithoutObservationsWithin =>
-            _dcReachabilityWithoutObservationsWithin ?? (_dcReachabilityWithoutObservationsWithin = DcReachability.FilterRecords(r => LatestGossip.GetMember(r.Subject).DataCenter != SelfDataCenter));
+        public Reachability DcReachabilityWithoutObservationsWithin => _dcReachabilityWithoutObservationsWithin.Value;
 
         /// <summary>
         /// Reachability for data center nodes, with observations from outside the data center or from downed nodes filtered out.
         /// </summary>
-        public Reachability DcReachabilityExcludingDownedObservers
-        {
-            get
-            {
-                if (_dcReachabilityExcludingDownedObservers == null)
-                {
-                    var membersToExclude = ImmutableHashSet<UniqueAddress>.Empty.ToBuilder();
-                    var nonDcMembers = new List<UniqueAddress>();
+        public Reachability DcReachabilityExcludingDownedObservers => _dcReachabilityExcludingDownedObservers.Value;
 
-                    foreach (var member in Members)
-                    {
-                        if (member.DataCenter != SelfDataCenter)
-                        {
-                            nonDcMembers.Add(member.UniqueAddress);
-                            membersToExclude.Add(member.UniqueAddress);
-                        }
-                        else if (member.Status == MemberStatus.Down)
-                        {
-                            membersToExclude.Add(member.UniqueAddress);
-                        }
-                    }
-
-                    _dcReachabilityExcludingDownedObservers = Overview.Reachability
-                        .RemoveObservers(membersToExclude.ToImmutable())
-                        .Remove(nonDcMembers);
-                }
-                return _dcReachabilityExcludingDownedObservers;
-            }
-        }
-
-        public Reachability DcReachabilityNoOutsideNodes =>
-            _dcReachabilityNoOutsideNodes ?? (_dcReachabilityNoOutsideNodes = Overview.Reachability.Remove(Members.Where(m => m.DataCenter != SelfDataCenter).Select(m => m.UniqueAddress)));
+        public Reachability DcReachabilityNoOutsideNodes => _dcReachabilityNoOutsideNodes.Value;
 
         /// <summary>
         /// Up to <see cref="CrossDataCenterConnections"/> number of the oldest members for each DC.
         /// </summary>
-        public ImmutableDictionary<string, ImmutableSortedSet<Member>> AgeSortedTopOldestMembersPerDc
-        {
-            get
-            {
-                if (_ageSortedTopOldestMembersPerDc == null)
-                {
-                    var acc = ImmutableDictionary<string, ImmutableSortedSet<Member>>.Empty.ToBuilder();
-                    foreach (var member in LatestGossip.Members)
-                    {
-                        if (acc.TryGetValue(member.DataCenter, out var set))
-                        {
-                            if (set.Count < CrossDataCenterConnections)
-                            {
-                                acc[member.DataCenter] = set.Add(member);
-                            }
-                            else
-                            {
-                                var younger = set.FirstOrDefault(m => member.IsOlderThan(m));
-                                if (younger != null)
-                                {
-                                    acc[member.DataCenter] = set.Remove(younger).Add(member);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            acc[member.DataCenter] = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering).Add(member);
-                        }
-                    }
-
-                    _ageSortedTopOldestMembersPerDc = acc.ToImmutable();
-                }
-
-                return _ageSortedTopOldestMembersPerDc;
-            }
-        }
+        public ImmutableDictionary<string, ImmutableSortedSet<Member>> AgeSortedTopOldestMembersPerDc =>
+            _ageSortedTopOldestMembersPerDc.Value;
 
         public ImmutableSortedSet<Member> Members => LatestGossip.Members;
 
