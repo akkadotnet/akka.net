@@ -263,7 +263,7 @@ namespace Akka.Cluster.Sharding
 
         private static void DeferGetShardHomeRequest<TCoordinator>(this TCoordinator coordinator, string shard, IActorRef from) where TCoordinator : IShardCoordinator
         {
-            coordinator.Log.Debug("GetShardHome [{1}] request from [{2}] deferred, because rebalance is in progress for this shard. It will be handled when rebalance is done.", shard, from);
+            coordinator.Log.Debug("GetShardHome [{0}] request from [{1}] deferred, because rebalance is in progress for this shard. It will be handled when rebalance is done.", shard, from);
             var pending = coordinator.RebalanceInProgress.TryGetValue(shard, out var prev)
                 ? prev
                 : ImmutableHashSet<IActorRef>.Empty;
