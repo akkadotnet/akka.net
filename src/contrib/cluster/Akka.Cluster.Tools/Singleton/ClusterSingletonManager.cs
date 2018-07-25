@@ -917,6 +917,12 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     return GoToHandingOver(oldest.Singleton, oldest.SingletonTerminated, Sender);
                 }
+                else if (e.FsmEvent is TakeOverFromMe)
+                {
+                    // already oldest, so confirm and continue like that
+                    Sender.Tell(HandOverToMe.Instance);
+                    return Stay();
+                }
                 else if (e.FsmEvent is Terminated terminated && e.StateData is OldestData o && terminated.ActorRef.Equals(o.Singleton))
                 {
                     return Stay().Using(new OldestData(o.Singleton, true));
