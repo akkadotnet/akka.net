@@ -804,7 +804,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
         {
-            Within(TimeSpan.FromSeconds(90), () =>
+            Within(TimeSpan.FromSeconds(120), () =>
             {
                 Join(_config.Fifth, _config.Fourth);
                 RunOn(() =>

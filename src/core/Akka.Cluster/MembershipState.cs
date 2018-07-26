@@ -20,6 +20,9 @@ namespace Akka.Cluster
 {
     internal sealed class MembershipState
     {
+        // this must be publication even thou we don't share state of the fields - lazy deadlock detector can give false negatives
+        private const LazyThreadSafetyMode LazySafety = LazyThreadSafetyMode.PublicationOnly;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsLeaderMemberStatus(MemberStatus status) => status == MemberStatus.Up || status == MemberStatus.Leaving;
 
@@ -57,16 +60,16 @@ namespace Akka.Cluster
             SelfDataCenter = selfDataCenter;
             CrossDataCenterConnections = crossDataCenterConnections;
 
-            _selfMember = new Lazy<Member>(() => LatestGossip.GetMember(SelfUniqueAddress), LazyThreadSafetyMode.None);
+            _selfMember = new Lazy<Member>(() => LatestGossip.GetMember(SelfUniqueAddress), LazySafety);
             _dcReachability = new Lazy<Reachability>(() => 
                 Overview.Reachability.RemoveObservers(
                     Members
                     .Where(m => m.DataCenter != SelfDataCenter)
                     .Select(m => m.UniqueAddress)
-                    .ToImmutableHashSet()), LazyThreadSafetyMode.None);
+                    .ToImmutableHashSet()), LazySafety);
             
             _dcReachabilityWithoutObservationsWithin = new Lazy<Reachability>(() => 
-                DcReachability.FilterRecords(r => LatestGossip.GetMember(r.Subject).DataCenter != SelfDataCenter), LazyThreadSafetyMode.None);
+                DcReachability.FilterRecords(r => LatestGossip.GetMember(r.Subject).DataCenter != SelfDataCenter), LazySafety);
             
             _dcReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
             {
@@ -89,13 +92,13 @@ namespace Akka.Cluster
                 return Overview.Reachability
                     .RemoveObservers(membersToExclude.ToImmutable())
                     .Remove(nonDcMembers);
-            }, LazyThreadSafetyMode.None);
+            }, LazySafety);
             
             _dcReachabilityNoOutsideNodes = new Lazy<Reachability>(() => 
                 Overview.Reachability.Remove(
                     Members
                         .Where(m => m.DataCenter != SelfDataCenter)
-                        .Select(m => m.UniqueAddress)), LazyThreadSafetyMode.None);
+                        .Select(m => m.UniqueAddress)), LazySafety);
             
             _ageSortedTopOldestMembersPerDc = new Lazy<ImmutableDictionary<string, ImmutableSortedSet<Member>>>(() =>
             {
@@ -124,7 +127,7 @@ namespace Akka.Cluster
                 }
 
                 return acc.ToImmutable();
-            }, LazyThreadSafetyMode.None);
+            }, LazySafety);
         }
 
         public Member SelfMember => _selfMember.Value;
