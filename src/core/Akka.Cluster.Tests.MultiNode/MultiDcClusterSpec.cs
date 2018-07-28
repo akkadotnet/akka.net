@@ -41,7 +41,8 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = ConfigurationFactory.ParseString($@"
               # DEBUG On for issue #23864
               akka.loglevel = DEBUG
-              akka.cluster.multi-data-center.cross-data-center-connections = {crossDcConnections}");
+              akka.cluster.multi-data-center.cross-data-center-connections = {crossDcConnections}")
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             NodeConfig(new[] { First, Second }, new[]
             {
@@ -49,7 +50,7 @@ namespace Akka.Cluster.Tests.MultiNode
             });
             NodeConfig(new[] { Third, Fourth, Fifth }, new[]
             {
-                ConfigurationFactory.ParseString(@"akka.cluster.multi-data-center.self-data-center = dc1")
+                ConfigurationFactory.ParseString(@"akka.cluster.multi-data-center.self-data-center = dc2")
             });
 
             TestTransport = true;

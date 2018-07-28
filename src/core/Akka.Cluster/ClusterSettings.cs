@@ -32,10 +32,11 @@ namespace Akka.Cluster
         /// <param name="systemName">The name of the actor system hosting the cluster.</param>
         public ClusterSettings(Config config, string systemName)
         {
+            Console.WriteLine(config);
             //TODO: Requiring!
-            var cc = config.GetConfig("akka.cluster");
+            var cc = config.GetConfig("akka.cluster") ?? throw new ArgumentNullException(nameof(config), "`akka.cluster` config was not provided"); ;
             LogInfo = cc.GetBoolean("log-info");
-            _failureDetectorConfig = cc.GetConfig("failure-detector");
+            _failureDetectorConfig = cc.GetConfig("failure-detector") ?? throw new ArgumentException("`akka.cluster.failure-detector` config was not provided", nameof(config));
             FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class");
             HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
             HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
@@ -51,8 +52,7 @@ namespace Akka.Cluster
             UnreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
             PublishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
-            var key = "down-removal-margin";
-            DownRemovalMargin = cc.GetString(key).ToLowerInvariant().Equals("off") 
+            DownRemovalMargin = cc.GetString("down-removal-margin").ToLowerInvariant().Equals("off") 
                 ? TimeSpan.Zero
                 : cc.GetTimeSpan("down-removal-margin");
 
@@ -93,7 +93,8 @@ namespace Akka.Cluster
             RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
             AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
 
-            MultiDataCenter = new MultiDataCenterSettings(cc.GetConfig("multi-data-center"));
+            var multiDcConfig = cc.GetConfig("multi-data-center") ?? throw new ArgumentException("`akka.cluster.multi-data-center` config was not provided", nameof(config));
+            MultiDataCenter = new MultiDataCenterSettings(multiDcConfig);
             PruneGossipTombstonesAfter = cc.GetTimeSpan("prune-gossip-tombstones-after");
             
             if (PruneGossipTombstonesAfter == TimeSpan.Zero) throw new ArgumentException("`prune-gossip-tombstones-after` must be greater than zero");
