@@ -1611,7 +1611,7 @@ namespace Akka.Cluster
             var remoteGossip = envelope.Gossip;
             var localGossip = LatestGossip;
 
-            if (remoteGossip.Equals(Gossip.Empty))
+            if (ReferenceEquals(remoteGossip, Gossip.Empty))
             {
                 _log.Debug("Cluster Node [{0}] - Ignoring received gossip from [{1}] to protect against overload",
                     _cluster.SelfAddress, from);
@@ -1649,7 +1649,7 @@ namespace Akka.Cluster
             Gossip winningGossip;
             bool talkback;
             ReceiveGossipType gossipType;
-
+            
             switch (comparison)
             {
                 case VectorClock.Ordering.Same:
@@ -1678,26 +1678,20 @@ namespace Akka.Cluster
                     // Removal of member itself is handled in merge (pickHighestPriority)
                     var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (gossip, member) =>
                     {
-                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) &&
-                            !remoteGossip.Members.Contains(member))
+                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) && !remoteGossip.Members.Contains(member))
                         {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}",
-                                _cluster.SelfAddress, member);
-                            return gossip.Prune(
-                                VectorClock.Node.Create(Gossip.VectorClockName(member.UniqueAddress)));
+                            _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}", _cluster.SelfAddress, member);
+                            return gossip.Prune(VectorClock.Node.Create(Gossip.VectorClockName(member.UniqueAddress)));
                         }
                         else return gossip;
                     });
 
                     var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (gossip, member) =>
                     {
-                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) &&
-                            !localGossip.Members.Contains(member))
+                        if (MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) && !localGossip.Members.Contains(member))
                         {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}",
-                                _cluster.SelfAddress, member);
-                            return gossip.Prune(
-                                VectorClock.Node.Create(Gossip.VectorClockName(member.UniqueAddress)));
+                            _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}", _cluster.SelfAddress, member);
+                            return gossip.Prune(VectorClock.Node.Create(Gossip.VectorClockName(member.UniqueAddress)));
                         }
                         else return gossip;
                     });

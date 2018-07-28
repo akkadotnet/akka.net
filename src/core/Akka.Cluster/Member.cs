@@ -365,17 +365,17 @@ namespace Akka.Cluster
 
             // first iterate over 'a' set, ignore all tombstoned elements and check for corresponding member in `b`
             // if member was found, compare them and get more prioritized one - then remove it from `b`
-            foreach (var member in a)
+            foreach (var am in a)
             {
-                if (member.Status != MemberStatus.Down && member.Status != MemberStatus.Exiting && !tombstones.ContainsKey(member.UniqueAddress))
+                if (bmap.TryGetValue(am.UniqueAddress, out var bm))
                 {
-                    if (bmap.TryGetValue(member.UniqueAddress, out var other))
-                    {
-                        var prioritized = HighestPriorityOf(member, other);
-                        result.Add(prioritized);
-                        bmap.Remove(member.UniqueAddress);
-                    }
-                    else result.Add(member);
+                    var winner = HighestPriorityOf(am, bm);
+                    result.Add(winner);
+                    bmap.Remove(am.UniqueAddress);
+                }
+                else if (!MembershipState.IsRemoveUnreachableWithMemberStatus(am.Status) && !tombstones.ContainsKey(am.UniqueAddress))
+                {
+                    result.Add(am);
                 }
             }
 
@@ -384,7 +384,7 @@ namespace Akka.Cluster
             {
                 var address = pair.Key;
                 var member = pair.Value;
-                if (!tombstones.ContainsKey(address) && !MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status))
+                if (!MembershipState.IsRemoveUnreachableWithMemberStatus(member.Status) && !tombstones.ContainsKey(address))
                 {
                     result.Add(member);
                 }
