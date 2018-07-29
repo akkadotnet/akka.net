@@ -88,10 +88,14 @@ namespace Akka.Persistence
                         timeoutCancelable.Cancel();
                         if (res.Snapshot != null)
                         {
-                            var snapshot = res.Snapshot;
-                            LastSequenceNr = snapshot.Metadata.SequenceNr;
-                            // Since we are recovering we can ignore the receive behavior from the stack
-                            base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                            var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
+                            var seqNr = LastSequenceNr;
+                            LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
+                            if (!base.AroundReceive(recoveryBehavior, offer))
+                            {
+                                LastSequenceNr = seqNr;
+                                Unhandled(offer);
+                            }
                         }
 
                         ChangeState(Recovering(recoveryBehavior, timeout));
