@@ -1358,6 +1358,14 @@ namespace Akka.Streams.Dsl
         public static Akka.NotUsed None<TLeft, TRight>(TLeft left, TRight right) { }
         public static TRight Right<TLeft, TRight>(TLeft left, TRight right) { }
     }
+    public class KeepAliveConcat<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    {
+        public KeepAliveConcat(int keepAliveFailoverSize, System.TimeSpan interval, System.Func<T, System.Collections.Generic.IEnumerable<T>> extrapolate) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public class LastElement<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<T, T>, System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>>
     {
         public LastElement() { }
@@ -1671,6 +1679,13 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
         public Akka.Streams.Dsl.Source<System.Collections.Immutable.IImmutableList<T>, Akka.NotUsed> ZipN<T>(System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
         public Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> ZipWithN<T, TOut2>(System.Func<System.Collections.Immutable.IImmutableList<T>, TOut2> zipper, System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
+    }
+    public class static SourceGen
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<TOut, TMat> UnfoldFlow<TState, TOut, TMat>(TState seed, Akka.Streams.IGraph<Akka.Streams.FlowShape<TState, System.Tuple<TState, TOut>>, TMat> flow, System.TimeSpan timeout) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<TOut, TMat> UnfoldFlowWith<TOut, TState, TFlowOut, TMat>(TState seed, Akka.Streams.IGraph<Akka.Streams.FlowShape<TState, TFlowOut>, TMat> flow, System.Func<TFlowOut, Akka.Streams.Util.Option<System.Tuple<TState, TOut>>> unfoldWith, System.TimeSpan timeout) { }
     }
     public class static SourceOperations
     {
