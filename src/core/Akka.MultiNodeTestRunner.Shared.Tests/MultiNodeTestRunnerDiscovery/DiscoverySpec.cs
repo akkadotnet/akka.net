@@ -11,7 +11,8 @@ using System.Linq;
 using System.Reflection;
 using Akka.TestKit;
 using Xunit;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 {
@@ -41,7 +42,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
                 constuctor.Should().NotBeNull();
             };
 
-            testDelegate.ShouldNotThrow();
+            testDelegate.Should().NotThrow();
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]

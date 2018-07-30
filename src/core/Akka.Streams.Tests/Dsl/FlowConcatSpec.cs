@@ -13,7 +13,8 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -202,7 +203,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.From(Enumerable.Range(1, 5))
                         .ViaMaterialized(testFlow, Keep.Both)
                         .To(Sink.Ignore<IEnumerable<int>>());
-                runnable.Invoking(r => r.Run(Materializer)).ShouldNotThrow();
+                runnable.Invoking(r => r.Run(Materializer)).Should().NotThrow();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
             }, Materializer);
