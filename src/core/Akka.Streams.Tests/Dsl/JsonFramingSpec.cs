@@ -17,7 +17,8 @@ using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.AwaitResult().Should().AllBeEquivalentTo(new []
+            result.AwaitResult().SequenceEqual(new []
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }",
@@ -96,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
 
-            result.AwaitResult().Should().AllBeEquivalentTo(new[]
+            result.AwaitResult().SequenceEqual(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -119,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
 
-            result.AwaitResult().Should().AllBeEquivalentTo(new[]
+            result.AwaitResult().SequenceEqual(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -147,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
                 .AwaitResult();
 
 
-            result.Should().AllBeEquivalentTo(new[]
+            result.SequenceEqual(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }"

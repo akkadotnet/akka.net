@@ -12,7 +12,8 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.TestKit;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -96,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Limit(1000)
                 .RunWith(Sink.Seq<string>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(new [] {"a", "c"});
+            task.Result.SequenceEqual(new [] {"a", "c"});
         }
     }
 }

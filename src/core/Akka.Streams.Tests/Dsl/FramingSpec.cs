@@ -17,7 +17,8 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -150,7 +151,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<string>(), Materializer);
 
             task1.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-            task1.Result.Should().AllBeEquivalentTo(new[] {"a", "b", "c", "d"});
+            task1.Result.SequenceEqual(new[] {"a", "b", "c", "d"});
 
             var task2 =
                 Source.Single(ByteString.FromString("ab\n"))
