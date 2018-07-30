@@ -13,6 +13,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.Pattern;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
@@ -65,7 +66,6 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private class TestState
         {
-            public TestProbe Observer { get; }
             public ActorSelection SelectCrossDcHeartbeatSender { get; }
             public ImmutableSortedSet<Member> ExpectedAlphaHeartbeaterNodes { get; }
             public IImmutableSet<RoleName> ExpectedAlphaHeartbeaterRoles { get; }
@@ -73,9 +73,8 @@ namespace Akka.Cluster.Tests.MultiNode
             public IImmutableSet<RoleName> ExpectedBetaHeartbeaterRoles { get; }
             public IImmutableSet<RoleName> ExpectedNoActiveHeartbeatSenderRoles { get; }
 
-            public TestState(TestProbe observer, ActorSelection selectCrossDcHeartbeatSender, ImmutableSortedSet<Member> expectedAlphaHeartbeaterNodes, IImmutableSet<RoleName> expectedAlphaHeartbeaterRoles, ImmutableSortedSet<Member> expectedBetaHeartbeaterNodes, IImmutableSet<RoleName> expectedBetaHeartbeaterRoles, IImmutableSet<RoleName> expectedNoActiveHeartbeatSenderRoles)
+            public TestState(ActorSelection selectCrossDcHeartbeatSender, ImmutableSortedSet<Member> expectedAlphaHeartbeaterNodes, IImmutableSet<RoleName> expectedAlphaHeartbeaterRoles, ImmutableSortedSet<Member> expectedBetaHeartbeaterNodes, IImmutableSet<RoleName> expectedBetaHeartbeaterRoles, IImmutableSet<RoleName> expectedNoActiveHeartbeatSenderRoles)
             {
-                Observer = observer;
                 SelectCrossDcHeartbeatSender = selectCrossDcHeartbeatSender;
                 ExpectedAlphaHeartbeaterNodes = expectedAlphaHeartbeaterNodes;
                 ExpectedAlphaHeartbeaterRoles = expectedAlphaHeartbeaterRoles;
@@ -86,6 +85,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         private readonly MultiDcHeartbeatTakingOverConfig _config;
+        private TestState _status;
+        private TestState Status => _status ?? throw new IllegalStateException("Test status not initialized");
+
         public MultiDcHeartbeatTakingOverSpec() : this(new MultiDcHeartbeatTakingOverConfig()) { }
         protected MultiDcHeartbeatTakingOverSpec(MultiDcHeartbeatTakingOverConfig config) : base(config, typeof(MultiDcHeartbeatTakingOverSpec))
         {
@@ -111,28 +113,28 @@ namespace Akka.Cluster.Tests.MultiNode
             // allow all nodes to join:
             AwaitClusterUp(Roles.ToArray());
 
-            var status = RefreshOldestMemberHeartbeatStatuses();
+            RefreshOldestMemberHeartbeatStatuses();
 
-            Log.Info($"expectedAlphaHeartbeaterNodes = ${string.Join(", ", status.ExpectedAlphaHeartbeaterNodes.Select(n => n.Address.Port.Value))}");
-            Log.Info($"expectedBetaHeartbeaterNodes = ${string.Join(", ", status.ExpectedBetaHeartbeaterNodes.Select(n => n.Address.Port.Value))}");
-            Log.Info($"expectedNoActiveHeartbeatSenderRoles = ${string.Join(", ", status.ExpectedNoActiveHeartbeatSenderRoles.Select(n => GetAddress(n).Port.Value))}");
+            Log.Info($"expectedAlphaHeartbeaterNodes = ${string.Join(", ", Status.ExpectedAlphaHeartbeaterNodes.Select(n => n.Address.Port.Value))}");
+            Log.Info($"expectedBetaHeartbeaterNodes = ${string.Join(", ", Status.ExpectedBetaHeartbeaterNodes.Select(n => n.Address.Port.Value))}");
+            Log.Info($"expectedNoActiveHeartbeatSenderRoles = ${string.Join(", ", Status.ExpectedNoActiveHeartbeatSenderRoles.Select(n => GetAddress(n).Port.Value))}");
 
-            status.ExpectedAlphaHeartbeaterRoles.Count.Should().Be(2);
-            status.ExpectedBetaHeartbeaterRoles.Count.Should().Be(2);
+            Status.ExpectedAlphaHeartbeaterRoles.Count.Should().Be(2);
+            Status.ExpectedBetaHeartbeaterRoles.Count.Should().Be(2);
 
             EnterBarrier("found-expectations");
         }
 
         private void A_2_DC_cluster_must_be_healthy()
         {
-            var s = RefreshOldestMemberHeartbeatStatuses();
-
+            var observer = CreateTestProbe("alpha-observer");
+            var s = Status;
             RunOn(() =>
             {
                 AwaitAssert(() =>
                 {
-                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), s.Observer.Ref);
-                    s.Observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>();
+                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
+                    observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>();
                 });
             }, s.ExpectedAlphaHeartbeaterRoles.ToArray());
 
@@ -140,8 +142,8 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 AwaitAssert(() =>
                 {
-                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), s.Observer.Ref);
-                    s.Observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>();
+                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
+                    observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>();
                 });
             }, s.ExpectedBetaHeartbeaterRoles.ToArray());
 
@@ -149,8 +151,8 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 AwaitAssert(() =>
                 {
-                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), s.Observer.Ref);
-                    s.Observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringDormant>();
+                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
+                    observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringDormant>();
                 });
             }, s.ExpectedNoActiveHeartbeatSenderRoles.ToArray());
 
@@ -159,13 +161,12 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void A_2_DC_cluster_must_other_node_must_become_oldest_when_current_DC_oldest_Leaves()
         {
-            var s = RefreshOldestMemberHeartbeatStatuses();
             var observer = CreateTestProbe("alpha-observer-prime");
 
             // we leave one of the current oldest nodes of the `alpha` DC,
             // since it has 3 members the "not yet oldest" one becomes oldest and should start monitoring across datacenter
-            var preLeaveOldestAlphaRole = s.ExpectedAlphaHeartbeaterRoles.First();
-            var preLeaveOldestAlphaAddress = s.ExpectedAlphaHeartbeaterNodes.First(n => n.Address.Port == GetAddress(preLeaveOldestAlphaRole).Port).Address;
+            var preLeaveOldestAlphaRole = Status.ExpectedAlphaHeartbeaterRoles.First();
+            var preLeaveOldestAlphaAddress = Status.ExpectedAlphaHeartbeaterNodes.First(n => n.Address.Port == GetAddress(preLeaveOldestAlphaRole).Port).Address;
 
             RunOn(() =>
             {
@@ -177,7 +178,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("wat");
 
             // refresh our view about who is currently monitoring things in alpha:
-            s = RefreshOldestMemberHeartbeatStatuses();
+            RefreshOldestMemberHeartbeatStatuses();
 
             EnterBarrier("after-alpha-monitoring-node-left");
 
@@ -186,7 +187,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 AwaitAssert(() =>
                 {
-                    s.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
+                    Status.SelectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
                     observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>(TimeSpan.FromSeconds(5));
                     Log.Info($"Got confirmation from {observer.LastSender} that it is actively monitoring now");
 
@@ -195,7 +196,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("confirmed-heartbeating-take-over");
         }
 
-        private TestState RefreshOldestMemberHeartbeatStatuses()
+        private void RefreshOldestMemberHeartbeatStatuses()
         {
             var crossDcHeartbeatSenderPath = "/system/cluster/core/daemon/crossDcHeartbeatSender";
             var selectCrossDcHeartbeatSender = Sys.ActorSelection(crossDcHeartbeatSenderPath);
@@ -210,8 +211,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .Except(expectedAlphaHeartbeaterRoles)
                 .Except(expectedBetaHeartbeaterRoles);
 
-            return new TestState(
-                observer: CreateTestProbe("alpha-observer"),
+            _status = new TestState(
                 selectCrossDcHeartbeatSender: selectCrossDcHeartbeatSender,
                 expectedAlphaHeartbeaterNodes: expectedAlphaHeartbeaterNodes,
                 expectedAlphaHeartbeaterRoles: expectedAlphaHeartbeaterRoles,

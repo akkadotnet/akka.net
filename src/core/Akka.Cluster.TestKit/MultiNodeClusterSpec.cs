@@ -368,8 +368,8 @@ namespace Akka.Cluster.TestKit
                 AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
                 AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up), "All members should be up"));
                 // clusterView.leader is updated by LeaderChanged, await that to be updated also
-                var firstMember = ClusterView.Members.FirstOrDefault();
-                var expectedLeader = firstMember == null ? null : firstMember.Address;
+                var firstMember = ClusterView.Members.FirstOrDefault(m => m.DataCenter == Cluster.Settings.SelfDataCenter);
+                var expectedLeader = firstMember?.Address;
                 AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
             });
         }

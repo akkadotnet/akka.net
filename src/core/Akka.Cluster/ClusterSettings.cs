@@ -32,7 +32,6 @@ namespace Akka.Cluster
         /// <param name="systemName">The name of the actor system hosting the cluster.</param>
         public ClusterSettings(Config config, string systemName)
         {
-            Console.WriteLine(config);
             //TODO: Requiring!
             var cc = config.GetConfig("akka.cluster") ?? throw new ArgumentNullException(nameof(config), "`akka.cluster` config was not provided"); ;
             LogInfo = cc.GetBoolean("log-info");

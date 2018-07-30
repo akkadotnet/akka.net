@@ -1877,7 +1877,7 @@ namespace Akka.Cluster
                                 string.Join(", ", LatestGossip.Members
                                     .Where(m => m.DataCenter == _selfDataCenter)
                                     .Select(m =>
-                                        $"${m.Address} ${m.Status} seen=${LatestGossip.SeenByNode(m.UniqueAddress)}")));
+                                        $"({m.Address} {m.Status} seen={LatestGossip.SeenByNode(m.UniqueAddress)})")));
                         }
                     }
                 }
