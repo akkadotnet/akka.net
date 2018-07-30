@@ -13,7 +13,8 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions; 
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -393,7 +394,7 @@ namespace Akka.Cluster.Sharding.Tests
                         foreach (var entityId in shardState.EntityIds)
                         {
                             var calculatedShardId = extractShardId2(int.Parse(entityId));
-                            calculatedShardId.Should().AllBeEquivalentTo(shardState.ShardId);
+                            calculatedShardId.Should().BeEquivalentTo(shardState.ShardId);
                         }
                     }
 

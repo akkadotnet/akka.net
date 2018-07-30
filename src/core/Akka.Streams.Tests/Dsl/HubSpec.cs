@@ -15,7 +15,8 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using FluentAssertions; using FluentAssertions.Extensions;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Akka.Actor;
 using Akka.Util.Internal;
@@ -646,8 +647,8 @@ namespace Akka.Streams.Tests.Dsl
                     }, 2, 8), Materializer);
                 var result1 = source.RunWith(Sink.Seq<string>(), Materializer);
                 var result2 = source.RunWith(Sink.Seq<string>(), Materializer);
-                result1.AwaitResult().Should().AllBeEquivalentTo(new[] { "usr-2" });
-                result2.AwaitResult().Should().AllBeEquivalentTo(new[] { "usr-1", "usr-1", "usr-3" });
+                result1.AwaitResult().SequenceEqual(new[] { "usr-2" });
+                result2.AwaitResult().SequenceEqual(new[] { "usr-1", "usr-1", "usr-3" });
             }, Materializer);
         }
 
