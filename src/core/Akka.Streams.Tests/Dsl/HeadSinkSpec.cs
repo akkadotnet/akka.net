@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .Should().Throw<AggregateException>()
                     .WithInnerException<Exception>()
-                    .WithInnerMessage("ex");
+                    .WithMessage("ex");
             }, Materializer);
         }
 
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .Should().Throw<AggregateException>()
                     .WithInnerException<NoSuchElementException>()
-                    .WithInnerMessage("First of empty stream");
+                    .WithMessage("First of empty stream");
             }, Materializer);
         }
 
@@ -113,7 +113,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .Should().Throw<AggregateException>()
                     .WithInnerException<Exception>()
-                    .WithInnerMessage("ex");
+                    .WithMessage("ex");
             }, Materializer);
         }
 
