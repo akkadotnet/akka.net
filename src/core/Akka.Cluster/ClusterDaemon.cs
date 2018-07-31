@@ -1667,8 +1667,10 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node who is leaving the cluster.</param>
         public void Leaving(Address address)
         {
+            var member = _latestGossip.Members.FirstOrDefault(m => m.Address.Equals(address));
+
             // only try to update if the node is available (in the member ring)
-            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up))
+            if (member?.Status == MemberStatus.Up)
             {
                 // mark node as LEAVING
                 var newMembers = _latestGossip.Members.Select(m =>
@@ -1684,6 +1686,10 @@ namespace Akka.Cluster
                 Publish(_latestGossip);
                 // immediate gossip to speed up the leaving process
                 SendGossip();
+            }
+            else if (member?.Status == MemberStatus.Joining)
+            {
+                Downing(address);
             }
         }
 
