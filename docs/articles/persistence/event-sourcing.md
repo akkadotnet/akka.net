@@ -174,7 +174,7 @@ You can also call `DeferAsync` with `Persist`.
 
 It is possible to call `Persist` and `PersistAsync` inside their respective callback blocks and they will properly retain both the thread safety (including the right value of `Sender`) as well as stashing guarantees.
 
-In general it is encouraged to create command handlers which do not need to resort to nested event persisting, however there are situations where it may be useful. It is important to understand the ordering of callback execution in those situations, as well as their implication on the stashing behaviour (that persist enforces). In the following example two persist calls are issued, and each of them issues another persist inside its callback:
+In general it is encouraged to create command handlers which do not need to resort to nested event persisting, however there are situations where it may be useful. It is important to understand the ordering of callback execution in those situations, as well as their implication on the stashing behavior (that persist enforces). In the following example two persist calls are issued, and each of them issues another persist inside its callback:
 
 [!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersists.cs?range=8-36)]
 
@@ -269,7 +269,7 @@ This can be dangerous when used with `UntypedPersistentActor` due to the fact th
 > [!WARNING]
 > Consider using explicit shut-down messages instead of `PoisonPill` when working with persistent actors.
 
-The example below highlights how messages arrive in the Actor's mailbox and how they interact with its internal stashing mechanism when `Persist()` is used. Notice the early stop behaviour that occurs when `PoisonPill` is used:
+The example below highlights how messages arrive in the Actor's mailbox and how they interact with its internal stashing mechanism when `Persist()` is used. Notice the early stop behavior that occurs when `PoisonPill` is used:
 
 [!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=9-35)]
 

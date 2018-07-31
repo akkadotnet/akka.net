@@ -198,9 +198,20 @@ namespace Akka.Cluster.Sharding
             var child = Context.Child(name);
             if (Equals(child, ActorRefs.Nobody))
             {
-                // Note; we only do this if remembering, otherwise the buffer is an overhead
-                MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
-                ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                if (State.Entries.Contains(id))
+                {
+                    if (MessageBuffers.ContainsKey(id))
+                    {
+                        throw new InvalidOperationException($"Message buffers contains id [{id}].");
+                    }
+                    this.GetEntity(id).Tell(payload, sender);
+                }
+                else
+                {
+                    // Note; we only do this if remembering, otherwise the buffer is an overhead
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
+                    ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                }
             }
             else
                 child.Tell(payload, sender);
