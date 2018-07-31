@@ -376,7 +376,7 @@ a special ``Sum`` operation that collapses multiple upstream elements into one a
 the speed of the upstream unaffected by the downstream.
 
 When the upstream is faster, the sum process of the ``Conflate`` starts. Our reducer function simply takes
-the freshest element. This cin a simple dropping operation.
+the freshest element. This is shown as a simple dropping operation.
 
 ```csharp
 var droppyStream = Flow.Create<Message>().Conflate((lastMessage, newMessage) => newMessage);

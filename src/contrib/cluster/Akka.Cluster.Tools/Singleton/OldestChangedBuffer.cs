@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util.Internal;
 
@@ -115,8 +116,15 @@ namespace Akka.Cluster.Tools.Singleton
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-1", () =>
             {
-                var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                }
             });
         }
 
@@ -172,9 +180,13 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void SendFirstChange()
         {
-            object change;
-            _changes = _changes.Dequeue(out change);
-            Context.Parent.Tell(change);
+            // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
+            if (!_cluster.IsTerminated)
+            {
+                object change;
+                _changes = _changes.Dequeue(out change);
+                Context.Parent.Tell(change);
+            }
         }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
@@ -231,7 +243,7 @@ namespace Akka.Cluster.Tools.Singleton
             }
             else if (message is ClusterEvent.MemberRemoved)
             {
-                var removed = (ClusterEvent.MemberRemoved) message;
+                var removed = (ClusterEvent.MemberRemoved)message;
                 Remove(removed.Member);
                 DeliverChanges();
             }
