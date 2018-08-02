@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -93,8 +94,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             public FailOn(int n)
             {
+                var log = Context.GetLogger();
                 Receive<int>(msg =>
                 {
+                    log.Info("Incoming message [{0}] of type [{1}]", n, n.GetType());
                     if (msg == n)
                         Sender.Tell(new Status.Failure(new Exception($"Booming for {n}!")));
                     else
