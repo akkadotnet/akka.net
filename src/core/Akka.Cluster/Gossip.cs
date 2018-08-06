@@ -480,6 +480,8 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Deadline Deadline { get; }
+
+        public override string ToString() => $"GossipEnvelope(from:{From}, to:{To}, deadline: '{Deadline}', gossip: {Gossip})";
     }
 
     /// <summary>

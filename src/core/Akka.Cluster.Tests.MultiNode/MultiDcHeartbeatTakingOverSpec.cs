@@ -39,8 +39,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
             akka {
+              test.testkit.debug = on
               actor.provider = cluster
-              loglevel = INFO
+              loglevel = DEBUG
               remote.log-remote-lifecycle-events = off
               cluster {
                 debug.verbose-heartbeat-logging = off
@@ -48,7 +49,7 @@ namespace Akka.Cluster.Tests.MultiNode
                   cross-data-center-connections = 2
                 }
               }
-            }");
+            }").WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             NodeConfig(new[] { First, Second, Third }, new[]
             {

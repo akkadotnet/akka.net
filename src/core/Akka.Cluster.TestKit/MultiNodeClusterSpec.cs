@@ -45,7 +45,7 @@ namespace Akka.Cluster.TestKit
         public static Config ClusterConfig()
         {
             return ConfigurationFactory.ParseString(@"
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.provider = cluster
                 akka.cluster {
                     gossip-interval                     = 200 ms
                     leader-actions-interval             = 200 ms
@@ -55,7 +55,7 @@ namespace Akka.Cluster.TestKit
                     failure-detector.heartbeat-interval = 500 ms
                     run-coordinated-shutdown-when-down = off
                 }
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
                 #akka.remote.log-remote-lifecycle-events = off
