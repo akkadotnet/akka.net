@@ -52,7 +52,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 gossip-interval                     = 500ms
                 leader-actions-interval             = 1s
                 auto-down-unreachable-after = 1s
-              }");
+              }").WithFallback(MultiNodeClusterSpec.ClusterConfig()); ;
             NodeConfig(new[] { First, Second, Third }, new[]
             {
                 ConfigurationFactory.ParseString("akka.cluster.multi-data-center.self-data-center = dc1")

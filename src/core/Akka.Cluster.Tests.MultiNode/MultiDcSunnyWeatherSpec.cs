@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tests.MultiNode
                   cross-data-center-connections = 2
                 }
               }
-            }");
+            }").WithFallback(MultiNodeClusterSpec.ClusterConfig());
             NodeConfig(new[] { First, Second, Third }, new[]
             {
                 ConfigurationFactory.ParseString("akka.cluster.multi-data-center.self-data-center = alpha")
