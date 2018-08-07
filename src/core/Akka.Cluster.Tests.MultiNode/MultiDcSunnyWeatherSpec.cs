@@ -13,6 +13,7 @@ using System.Linq;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
@@ -59,6 +60,12 @@ namespace Akka.Cluster.Tests.MultiNode
     public class MultiDcSunnyWeatherSpec : MultiNodeClusterSpec
     {
         private readonly MultiDcSunnyWeatherConfig _config;
+        private TestProbe _observer;
+
+        public MultiDcSunnyWeatherSpec(): this(new MultiDcSunnyWeatherConfig())
+        {
+
+        }
 
         protected MultiDcSunnyWeatherSpec(MultiDcSunnyWeatherConfig config) : base(config, typeof(MultiDcSunnyWeatherSpec))
         {
@@ -74,14 +81,14 @@ namespace Akka.Cluster.Tests.MultiNode
         [MultiNodeFact]
         public void Test()
         {
+            _observer = CreateTestProbe("alpha-observer");
+
             A_normal_cluster_must_be_healthy();
             A_normal_cluster_must_never_heartbeat_to_itself_or_members_of_same_as_its_own_data_center();
         }
 
         private void A_normal_cluster_must_be_healthy()
         {
-            var observer = CreateTestProbe("alpha-observer");
-
             // allow all nodes to join:
             AwaitClusterUp(Roles.ToArray());
 
@@ -109,20 +116,20 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
-                var status = observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>(TimeSpan.FromSeconds(5));
+                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), _observer.Ref);
+                var status = _observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>(TimeSpan.FromSeconds(5));
             }, expectedAlphaHeartbeaterRoles.ToArray());
 
             RunOn(() =>
             {
-                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
-                var status = observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>(TimeSpan.FromSeconds(5));
+                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), _observer.Ref);
+                var status = _observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringActive>(TimeSpan.FromSeconds(5));
             }, expectedBetaHeartbeaterRoles.ToArray());
 
             RunOn(() =>
             {
-                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
-                var status = observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringDormant>(TimeSpan.FromSeconds(5));
+                selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), _observer.Ref);
+                var status = _observer.ExpectMsg<CrossDcHeartbeatSender.MonitoringDormant>(TimeSpan.FromSeconds(5));
             }, expectedNoActiveHeartbeatSenderRoles.ToArray());
 
             EnterBarrier("done");
@@ -130,15 +137,13 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void A_normal_cluster_must_never_heartbeat_to_itself_or_members_of_same_as_its_own_data_center()
         {
-            var observer = CreateTestProbe("alpha-observer");
-
             var crossDcHeartbeatSenderPath = "/system/cluster/core/daemon/crossDcHeartbeatSender";
             var selectCrossDcHeartbeatSender = Sys.ActorSelection(crossDcHeartbeatSenderPath);
 
             EnterBarrier("checking-activeReceivers");
 
-            selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), observer.Ref);
-            var report = observer.ExpectMsg<CrossDcHeartbeatSender.IMonitoringStateReport>(TimeSpan.FromSeconds(5));
+            selectCrossDcHeartbeatSender.Tell(new CrossDcHeartbeatSender.ReportStatus(), _observer.Ref);
+            var report = _observer.ExpectMsg<CrossDcHeartbeatSender.IMonitoringStateReport>(TimeSpan.FromSeconds(5));
 
             switch (report)
             {

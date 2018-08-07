@@ -114,7 +114,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         Cluster.Get(Sys).State.Members.Count.ShouldBe(totalNumberOfNodes);
                         Cluster.Get(Sys).State.Members.All(x => x.Status == MemberStatus.Up).ShouldBeTrue();
                         // use the role to test that it is the new incarnation that joined, sneaky
-                        Cluster.Get(Sys).State.Members.SelectMany(x => x.Roles).ShouldBe(new [] { $"round-{round}" });
+                        Cluster.Get(Sys).State.Members.SelectMany(x => x.Roles).ToImmutableHashSet().ShouldBe(new [] { ClusterSettings.DcRolePrefix + "default", $"round-{round}" });
                     });
                 });
                 EnterBarrier("members-up-"+i);

@@ -69,7 +69,9 @@ namespace Akka.Cluster.Tests.MultiNode
     public class MultiDcSplitBrainSpec : MultiNodeClusterSpec
     {
         private readonly MultiDcSplitBrainConfig _config;
-        private int _barrierCount = 0;
+        private int _splits = 0;
+        private int _unsplits = 0;
+
         public MultiDcSplitBrainSpec() : this(new MultiDcSplitBrainConfig()) { }
         protected MultiDcSplitBrainSpec(MultiDcSplitBrainConfig config) : base(config, typeof(MultiDcSplitBrainSpec))
         {
@@ -215,9 +217,8 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 var port = Cluster.SelfAddress.Port.Value;
                 var restartedSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
-                    akka.remote.netty.tcp.port = {port}
-                    akka.remote.artery.canonical.port = {port}
-                    akka.coordinated-shutdown.terminate-actor-system = on"));
+                    akka.remote.dot-netty.tcp.port = {port}
+                    akka.coordinated-shutdown.terminate-actor-system = on").WithFallback(Sys.Settings.Config));
                 Cluster.Get(restartedSystem).Join(thirdAddress);
                 restartedSystem.WhenTerminated.Wait(Remaining);
             }, Fifth);
@@ -271,15 +272,18 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void SplitDataCenters(IEnumerable<RoleName> doNotVerify)
         {
+            _splits++;
             var memberNodes = ImmutableHashSet.CreateRange(DC1).Union(DC2).Except(doNotVerify).ToArray();
             var probe = CreateTestProbe();
 
+            Log.Debug("Spliting data centers. Member nodes: [{0}]", memberNodes);
+
             RunOn(() =>
             {
-                Cluster.Subscribe(probe.Ref, typeof(ClusterEvent.DataCenterReachabilityEvent));
+                Cluster.Subscribe(probe.Ref, typeof(ClusterEvent.UnreachableDataCenter));
                 probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
             }, memberNodes);
-            EnterBarrier($"split-{_barrierCount++}");
+            EnterBarrier($"split-{_splits}");
 
             RunOn(() =>
             {
@@ -289,7 +293,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         TestConductor.Blackhole(dc1Node, dc2Node, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
             }, First);
-            EnterBarrier($"after-split-{_barrierCount++}");
+            EnterBarrier($"after-split-{_splits}");
 
             RunOn(() =>
             {
@@ -308,20 +312,23 @@ namespace Akka.Cluster.Tests.MultiNode
                 Cluster.State.Unreachable.Should().BeEmpty();
 
             }, memberNodes);
-            EnterBarrier($"after-split-verified-{_barrierCount++}");
+            EnterBarrier($"after-split-verified-{_splits}");
         }
 
         private void UnsplitDataCenters(IEnumerable<RoleName> notMembers)
         {
+            _unsplits++;
             var memberNodes = ImmutableHashSet.CreateRange(DC1).Union(DC2).Except(notMembers).ToArray();
             var probe = CreateTestProbe();
+
+            Log.Debug("Unspliting data centers. Member nodes: [{0}]", memberNodes);
 
             RunOn(() =>
             {
                 Cluster.Subscribe(probe.Ref, typeof(ClusterEvent.ReachableDataCenter));
                 probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
             }, memberNodes);
-            EnterBarrier($"unsplit-{_barrierCount++}");
+            EnterBarrier($"unsplit-{_unsplits}");
 
             RunOn(() =>
             {
@@ -331,18 +338,22 @@ namespace Akka.Cluster.Tests.MultiNode
                         TestConductor.PassThrough(dc1Node, dc2Node, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
             }, First);
-            EnterBarrier($"after-unsplit-{_barrierCount++}");
+            EnterBarrier($"after-unsplit-{_unsplits}");
 
             RunOn(() =>
             {
                 probe.ExpectMsg<ClusterEvent.ReachableDataCenter>(TimeSpan.FromSeconds(25));
                 Cluster.Unsubscribe(probe.Ref);
+
+                Log.Debug("Reachable data center received");
+
                 AwaitAssert(() =>
                 {
                     Cluster.State.UnreachableDataCenters.Should().BeEmpty();
+                    Log.Debug("Cluster state: {0}", Cluster.State);
                 });
             }, memberNodes);
-            EnterBarrier($"after-unsplit-verified-{_barrierCount++}");
+            EnterBarrier($"after-unsplit-verified-{_unsplits}");
         }
     }
 }
