@@ -123,6 +123,27 @@ namespace Akka.Streams.Tests.Dsl
             upstream.SendComplete();
             downstream.ExpectComplete();
         }
+
+        [Fact]
+        public void KeepAliveConcat_should_emit_buffered_elements_when_upstream_completed()
+        {
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
+
+            Source.FromPublisher(upstream)
+                .Via(new KeepAliveConcat<int>(5, TimeSpan.FromSeconds(60), x => new[] { x }))
+                .RunWith(Sink.FromSubscriber(downstream), Sys.Materializer());
+
+            upstream.SendNext(1);
+            upstream.SendNext(2);            
+            upstream.SendComplete();
+
+            downstream.Request(2);
+            downstream.ExpectNextN(2).ShouldBeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+
+            downstream.Request(1);
+            downstream.ExpectComplete();
+        }
     }
 
     public static class EnumerableExtensions
