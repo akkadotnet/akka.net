@@ -55,6 +55,10 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
+        /// 
+        /// It will still retrieve previously highest sequence number so that new events are persisted with
+        /// higher sequence numbers rather than starting from 1 and assuming that there are no
+        /// previous event with that sequence number.
         /// </summary>
         public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.None, 0);
 
