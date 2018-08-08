@@ -379,8 +379,15 @@ namespace Akka.Cluster.Sharding
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
             {
-                self.Tell(GracefulShutdown.Instance);
-                return _gracefulShutdownProgress.Task;
+                if (Cluster.IsTerminated || Cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    self.Tell(GracefulShutdown.Instance);
+                    return _gracefulShutdownProgress.Task;
+                }
             });
         }
 

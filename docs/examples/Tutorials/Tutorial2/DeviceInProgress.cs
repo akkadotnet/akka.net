@@ -58,7 +58,7 @@ namespace Tutorials.Tutorial2
         #region device-with-read
         public class Device : UntypedActor
         {
-            private readonly double? _lastTemperatureReading = null;
+            private  double? _lastTemperatureReading = null;
 
             public Device(string groupId, string deviceId)
             {
