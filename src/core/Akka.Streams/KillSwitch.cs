@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Stage;
 
@@ -51,6 +53,99 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static IGraph<BidiShape<T1, T1, T2, T2>, UniqueKillSwitch> SingleBidi<T1, T2>
             () => UniqueBidiKillSwitchStage<T1, T2>.Instance;
+
+        /// <summary>
+        /// Returns a flow, which works like a kill switch stage based on a provided <paramref name="cancellationToken"/>.
+        /// Since unlike cancellation tokens, kill switches expose ability to finish a stream either gracefully via
+        /// <see cref="IKillSwitch.Shutdown"/> or abruptly via <see cref="IKillSwitch.Abort"/>, this distinction is
+        /// handled by specifying <paramref name="cancelGracefully"/> parameter.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="cancellationToken">Cancellation token used to create a cancellation flow.</param>
+        /// <param name="cancelGracefully">
+        /// When set to true, will close stream gracefully via completting the stage.
+        /// When set to false, will close stream by failing the stage with <see cref="OperationCanceledException"/>.
+        /// </param>
+        /// <returns></returns>
+        public static IGraph<FlowShape<T, T>, CancellationToken> AsFlow<T>(this CancellationToken cancellationToken, bool cancelGracefully = false)
+        {
+            return new CancellableKillSwitchStage<T>(cancellationToken, cancelGracefully);
+        }
+
+        internal sealed class CancellableKillSwitchStage<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, CancellationToken>
+        {
+            #region logic
+
+            private sealed class Logic : InAndOutGraphStageLogic
+            {
+                private readonly CancellableKillSwitchStage<T> _stage;
+                private CancellationTokenRegistration? _registration = null;
+
+                public Logic(CancellableKillSwitchStage<T> stage)
+                    : base(stage.Shape)
+                {
+                    _stage = stage;
+                    SetHandler(stage.Inlet, this);
+                    SetHandler(stage.Outlet, this);
+                }
+
+                public override void PreStart()
+                {
+                    if (_stage._cancellationToken.IsCancellationRequested)
+                    {
+                        if (_stage._cancelGracefully)
+                            OnCancelComplete();
+                        else 
+                            OnCancelFail();
+                    }
+                    else
+                    {
+                        var onCancel = _stage._cancelGracefully
+                            ? GetAsyncCallback(OnCancelComplete)
+                            : GetAsyncCallback(OnCancelFail);
+
+                        _registration = _stage._cancellationToken.Register(onCancel);
+                    }
+                }
+
+                public override void PostStop()
+                {
+                    _registration?.Dispose();
+                    base.PostStop();
+                }
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public override void OnPull() => Pull(_stage.Inlet);
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                private void OnCancelComplete() => CompleteStage();
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                private void OnCancelFail() => FailStage(new OperationCanceledException($"Stage cancelled due to cancellation token request.", _stage._cancellationToken));
+            }
+
+            #endregion
+
+            private readonly CancellationToken _cancellationToken;
+            private readonly bool _cancelGracefully;
+
+            public CancellableKillSwitchStage(CancellationToken cancellationToken, bool cancelGracefully)
+            {
+                _cancellationToken = cancellationToken;
+                _cancelGracefully = cancelGracefully;
+                Shape = new FlowShape<T, T>(Inlet, Outlet);
+            }
+
+            public Inlet<T> Inlet { get; } = new Inlet<T>("cancel.in");
+            public Outlet<T> Outlet { get; } = new Outlet<T>("cancel.out");
+
+            public override FlowShape<T, T> Shape { get; }
+            public override ILogicAndMaterializedValue<CancellationToken> CreateLogicAndMaterializedValue(Attributes inheritedAttributes) => 
+                new LogicAndMaterializedValue<CancellationToken>(new Logic(this), _cancellationToken);
+        }
 
         /// <summary>
         /// TBD
