@@ -100,8 +100,8 @@ namespace Akka.Cluster
 
             FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig, system));
             CrossDcFailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(
-                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.ImplementationClass, 
-                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.Config, 
+                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.ImplementationClass,
+                Settings.MultiDataCenter.CrossDcFailureDetectorSettings.Config,
                 system));
 
             Scheduler = CreateScheduler(system);

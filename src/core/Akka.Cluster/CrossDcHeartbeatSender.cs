@@ -80,7 +80,7 @@ namespace Akka.Cluster
             _crossDcSettings = _cluster.Settings.MultiDataCenter.CrossDcFailureDetectorSettings;
             _isVerboseHeartbeat = _cluster.Settings.VerboseHeartbeatLogging;
             IsExternalClusterMember = member => member.DataCenter != SelfDataCenter;
-            _crossDcFailureDetector = _cluster.FailureDetector;
+            _crossDcFailureDetector = _cluster.CrossDcFailureDetector;
             _selfHeartbeat = new ClusterHeartbeatSender.Heartbeat(_cluster.SelfAddress);
             _dataCentersState = CrossDcHeartbeatingState.Init(
                 SelfDataCenter,

@@ -40,8 +40,8 @@ namespace Akka.Cluster.Tests.MultiNode
               akka.loglevel = DEBUG
               akka.cluster.debug.verbose-heartbeat-logging = on
               akka.cluster.debug.verbose-gossip-logging = on
-              akka.remote.netty.tcp.connection-timeout = 5 s # speedup in case of connection issue
-              akka.remote.retry-gate-closed-for = 1 s
+              akka.remote.dot-netty.tcp.connection-timeout = 5s # speedup in case of connection issue
+              akka.remote.retry-gate-closed-for = 1s
               akka.cluster.multi-data-center {
                 failure-detector {
                   acceptable-heartbeat-pause = 4s
@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tests.MultiNode
               akka.cluster {
                 gossip-interval                     = 500ms
                 leader-actions-interval             = 1s
-                auto-down-unreachable-after = 1s
+                auto-down-unreachable-after         = 1s
               }").WithFallback(MultiNodeClusterSpec.ClusterConfig()); ;
             NodeConfig(new[] { First, Second, Third }, new[]
             {
@@ -99,10 +99,10 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void A_cluster_with_multiple_data_centers_must_be_able_to_form_2_data_centers()
         {
-            AwaitClusterUp(First, Second, Third);
+            AwaitClusterUp(First, Second, Third, Fourth, Fifth);
         }
 
-        private void A_cluster_with_multiple_data_centers_must_be_able_to_have_a_data_center_member_join_while_there_is_inter_data_center_split() => Within(TimeSpan.FromSeconds(20), () =>
+        private void A_cluster_with_multiple_data_centers_must_be_able_to_have_a_data_center_member_join_while_there_is_inter_data_center_split() => Within(TimeSpan.FromSeconds(60), () =>
         {
             // introduce a split between data centers
             SplitDataCenters(doNotVerify: new[] { Fourth, Fifth });
@@ -143,7 +143,7 @@ namespace Akka.Cluster.Tests.MultiNode
         });
 
         // fifth is still not a member of the cluster
-        private void A_cluster_with_multiple_data_centers_must_be_able_to_have_a_data_center_member_leave_while_there_is_inter_data_center_split() => Within(TimeSpan.FromSeconds(20), () =>
+        private void A_cluster_with_multiple_data_centers_must_be_able_to_have_a_data_center_member_leave_while_there_is_inter_data_center_split() => Within(TimeSpan.FromSeconds(60), () =>
         {
             SplitDataCenters(doNotVerify: new[] { Fifth });
 
@@ -276,8 +276,6 @@ namespace Akka.Cluster.Tests.MultiNode
             var memberNodes = ImmutableHashSet.CreateRange(DC1).Union(DC2).Except(doNotVerify).ToArray();
             var probe = CreateTestProbe();
 
-            Log.Debug("Spliting data centers. Member nodes: [{0}]", memberNodes);
-
             RunOn(() =>
             {
                 Cluster.Subscribe(probe.Ref, typeof(ClusterEvent.UnreachableDataCenter));
@@ -306,7 +304,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 }, DC1);
                 RunOn(() =>
                 {
-                    Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc2");
+                    Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc1");
                 }, DC2);
 
                 Cluster.State.Unreachable.Should().BeEmpty();
@@ -320,8 +318,6 @@ namespace Akka.Cluster.Tests.MultiNode
             _unsplits++;
             var memberNodes = ImmutableHashSet.CreateRange(DC1).Union(DC2).Except(notMembers).ToArray();
             var probe = CreateTestProbe();
-
-            Log.Debug("Unspliting data centers. Member nodes: [{0}]", memberNodes);
 
             RunOn(() =>
             {
