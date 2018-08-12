@@ -53,11 +53,11 @@ namespace Akka.Cluster.Tests.MultiNode
                 leader-actions-interval             = 1s
                 auto-down-unreachable-after         = 1s
               }").WithFallback(MultiNodeClusterSpec.ClusterConfig()); ;
-            NodeConfig(new[] { First, Second, Third }, new[]
+            NodeConfig(new[] { First, Second }, new[]
             {
                 ConfigurationFactory.ParseString("akka.cluster.multi-data-center.self-data-center = dc1")
             });
-            NodeConfig(new[] { Fourth, Fifth }, new[]
+            NodeConfig(new[] { Third, Fourth, Fifth }, new[]
             {
                 ConfigurationFactory.ParseString("akka.cluster.multi-data-center.self-data-center = dc2")
             });
@@ -99,7 +99,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void A_cluster_with_multiple_data_centers_must_be_able_to_form_2_data_centers()
         {
-            AwaitClusterUp(First, Second, Third, Fourth, Fifth);
+            AwaitClusterUp(First, Second, Third);
         }
 
         private void A_cluster_with_multiple_data_centers_must_be_able_to_have_a_data_center_member_join_while_there_is_inter_data_center_split() => Within(TimeSpan.FromSeconds(60), () =>
@@ -300,11 +300,11 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 RunOn(() =>
                 {
-                    Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc2");
+                    AwaitAssert(() => Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc2"));
                 }, DC1);
                 RunOn(() =>
                 {
-                    Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc1");
+                    AwaitAssert(() => Cluster.State.UnreachableDataCenters.Should().BeEquivalentTo("dc1"));
                 }, DC2);
 
                 Cluster.State.Unreachable.Should().BeEmpty();

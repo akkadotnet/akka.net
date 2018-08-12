@@ -91,6 +91,7 @@ namespace Akka.Cluster
             /// <param name="seenBy">The set of nodes who have seen us.</param>
             /// <param name="leader">The leader of the cluster.</param>
             /// <param name="roleLeaderMap">The list of role leaders.</param>
+            /// <param name="unreachableDataCenters">List of unreachable data centers.</param>
             public CurrentClusterState(
                 ImmutableSortedSet<Member> members,
                 ImmutableHashSet<Member> unreachable,
@@ -147,6 +148,12 @@ namespace Akka.Cluster
             public Address RoleLeader(string role) => RoleLeaderMap.GetOrElse(role, null);
 
             /// <summary>
+            /// Replace the set of unreachable datacenters with the given set
+            /// </summary>
+            public CurrentClusterState WithUnreachableDataCenters(ImmutableHashSet<string> unreachableDataCenters) =>
+                Copy(unreachableDataCenters: unreachableDataCenters);
+
+            /// <summary>
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
             /// to specify different values for the outgoing objects
             /// </summary>
@@ -155,6 +162,7 @@ namespace Akka.Cluster
             /// <param name="seenBy">TBD</param>
             /// <param name="leader">TBD</param>
             /// <param name="roleLeaderMap">TBD</param>
+            /// <param name="unreachableDataCenters">TBD</param>
             /// <returns>TBD</returns>
             public CurrentClusterState Copy(
                 ImmutableSortedSet<Member> members = null,

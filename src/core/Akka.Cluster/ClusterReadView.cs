@@ -102,60 +102,67 @@ namespace Akka.Cluster
                 _cluster = cluster;
                 _readView = readView;
 
-                Receive<ClusterEvent.IClusterDomainEvent>(clusterDomainEvent =>
+                Receive<ClusterEvent.SeenChanged>(changed =>
                 {
-                    clusterDomainEvent.Match()
-                        .With<ClusterEvent.SeenChanged>(changed =>
-                        {
-                            State = State.Copy(seenBy: changed.SeenBy);
-                        })
-                        .With<ClusterEvent.ReachabilityChanged>(changed =>
-                        {
-                            _readView._reachability = changed.Reachability;
-                        })
-                        .With<ClusterEvent.MemberRemoved>(removed =>
-                        {
-                            State = State.Copy(members: State.Members.Remove(removed.Member),
-                                unreachable: State.Unreachable.Remove(removed.Member));
-                        })
-                        .With<ClusterEvent.UnreachableMember>(member =>
-                        {
-                            // replace current member with new member (might have different status, only address is used in == comparison)
-                            State = State.Copy(unreachable: State.Unreachable.Remove(member.Member).Add(member.Member));
-                        })
-                        .With<ClusterEvent.ReachableMember>(member =>
-                        {
-                            State = State.Copy(unreachable: State.Unreachable.Remove(member.Member));
-                        })
-                        .With<ClusterEvent.IMemberEvent>(memberEvent =>
-                        {
-                            var newUnreachable = State.Unreachable;
-                            // replace current member with new member (might have different status, only address is used in == comparison)
-                            if (State.Unreachable.Contains(memberEvent.Member))
-                                newUnreachable = State.Unreachable.Remove(memberEvent.Member).Add(memberEvent.Member);
-                            State = State.Copy(
-                                members: State.Members.Remove(memberEvent.Member).Add(memberEvent.Member),
-                                unreachable: newUnreachable);
-                        })
-                        .With<ClusterEvent.LeaderChanged>(changed =>
-                        {
-                            State = State.Copy(leader: changed.Leader);
-                        })
-                        .With<ClusterEvent.RoleLeaderChanged>(changed =>
-                        {
-                            State = State.Copy(roleLeaderMap: State.RoleLeaderMap.SetItem(changed.Role, changed.Leader));
-                        })
-                        .With<ClusterEvent.CurrentInternalStats>(stats =>
-                        {
-                            readView._latestStats = stats;
-                        })
-                        .With<ClusterEvent.ClusterShuttingDown>(_ => { });
+                    State = State.Copy(seenBy: changed.SeenBy);
+                });
+                Receive<ClusterEvent.ReachabilityChanged>(changed =>
+                {
+                    _readView._reachability = changed.Reachability;
+                });
+                Receive<ClusterEvent.MemberRemoved>(removed =>
+                {
+                    State = State.Copy(members: State.Members.Remove(removed.Member),
+                        unreachable: State.Unreachable.Remove(removed.Member));
+                });
+                Receive<ClusterEvent.UnreachableMember>(member =>
+                {
+                    // replace current member with new member (might have different status, only address is used in == comparison)
+                    State = State.Copy(unreachable: State.Unreachable.Remove(member.Member).Add(member.Member));
+                });
+                Receive<ClusterEvent.ReachableMember>(member =>
+                {
+                    State = State.Copy(unreachable: State.Unreachable.Remove(member.Member));
+                });
+                Receive<ClusterEvent.IMemberEvent>(memberEvent =>
+                {
+                    var newUnreachable = State.Unreachable;
+                    // replace current member with new member (might have different status, only address is used in == comparison)
+                    if (State.Unreachable.Contains(memberEvent.Member))
+                        newUnreachable = State.Unreachable.Remove(memberEvent.Member).Add(memberEvent.Member);
+                    State = State.Copy(
+                        members: State.Members.Remove(memberEvent.Member).Add(memberEvent.Member),
+                        unreachable: newUnreachable);
+                });
+                Receive<ClusterEvent.LeaderChanged>(changed =>
+                {
+                    State = State.Copy(leader: changed.Leader);
+                });
+                Receive<ClusterEvent.RoleLeaderChanged>(changed =>
+                {
+                    State = State.Copy(roleLeaderMap: State.RoleLeaderMap.SetItem(changed.Role, changed.Leader));
+                });
+                Receive<ClusterEvent.CurrentInternalStats>(stats =>
+                {
+                    readView._latestStats = stats;
+                });
+
+                Receive<ClusterEvent.ClusterShuttingDown>(_ => { });
+
+                Receive<ClusterEvent.ReachableDataCenter>(reachable =>
+                {
+                    State = State.WithUnreachableDataCenters(State.UnreachableDataCenters.Remove(reachable.DataCenter));
+                });
+                Receive<ClusterEvent.UnreachableDataCenter>(unreachable =>
+                {
+                    State = State.WithUnreachableDataCenters(State.UnreachableDataCenters.Add(unreachable.DataCenter));
                 });
 
                 Receive<ClusterEvent.CurrentClusterState>(state =>
                 {
                     State = state;
                 });
+                Receive<ClusterEvent.IClusterDomainEvent>(_ => { /* ignore rest */ });
             }
 
             protected override void PreStart()
