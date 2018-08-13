@@ -249,7 +249,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 subscribeProbe.ExpectMsg<ClusterEvent.MemberUp>(up => up.Member.UniqueAddress == fifthOriginalUniqueAddress);
                 subscribeProbe.ExpectMsg<ClusterEvent.MemberRemoved>(up => up.Member.UniqueAddress == fifthOriginalUniqueAddress);
-                subscribeProbe.ExpectMsg<ClusterEvent.MemberUp>(up => up.Member.UniqueAddress == fifthOriginalUniqueAddress);
+                subscribeProbe.ExpectMsg<ClusterEvent.MemberUp>(up => up.Member.Address == fifthOriginalUniqueAddress.Address);
             }, First, Second, Third);
 
             RunOn(() => EnterBarrier("fifth-re-joined"), remainingRoles);
@@ -295,7 +295,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             RunOn(() =>
             {
-                probe.ExpectMsg<ClusterEvent.UnreachableDataCenter>(TimeSpan.FromSeconds(15));
+                probe.ExpectMsg<ClusterEvent.UnreachableDataCenter>(TimeSpan.FromSeconds(25));
                 Cluster.Unsubscribe(probe.Ref);
 
                 RunOn(() =>

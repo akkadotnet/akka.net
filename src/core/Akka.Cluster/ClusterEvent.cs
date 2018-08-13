@@ -774,7 +774,9 @@ namespace Akka.Cluster
             foreach (var dc in otherDcs)
             {
                 if (!IsReachable(newState, oldState.DcReachability.AllUnreachableOrTerminated, dc))
+                {
                     yield return new UnreachableDataCenter(dc);
+                }
             }
         }
 
@@ -785,8 +787,11 @@ namespace Akka.Cluster
             var otherDcs = oldState.LatestGossip.AllDataCenters.Union(newState.LatestGossip.AllDataCenters).Remove(newState.SelfDataCenter);
             foreach (var dc in otherDcs)
             {
-                if (!IsReachable(oldState, ImmutableHashSet<UniqueAddress>.Empty, dc) && IsReachable(newState, ImmutableHashSet<UniqueAddress>.Empty, dc))
+                if (!IsReachable(oldState, ImmutableHashSet<UniqueAddress>.Empty, dc) &&
+                    IsReachable(newState, ImmutableHashSet<UniqueAddress>.Empty, dc))
+                {
                     yield return new ReachableDataCenter(dc);
+                }
             }
         }
 

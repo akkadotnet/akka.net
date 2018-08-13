@@ -508,7 +508,7 @@ namespace Akka.Cluster.TestKit
 
         public FailureDetectorPuppet FailureDetectorPuppet(Address address)
         {
-            return (FailureDetectorPuppet)Cluster.FailureDetector.GetFailureDetector(address);
+            return Cluster.FailureDetector.TryGetFailureDetector(address, out var puppet) && puppet is FailureDetectorPuppet fd ? fd : null;
         }
     }
 }

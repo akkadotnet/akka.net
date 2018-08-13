@@ -89,8 +89,9 @@ namespace Akka.Cluster.Tests
         {
             return
                 state.FailureDetector.AsInstanceOf<DefaultFailureDetectorRegistry<Address>>()
-                    .GetFailureDetector(node.Address)
-                    .AsInstanceOf<FailureDetectorStub>();
+                    .TryGetFailureDetector(node.Address, out var failureDetector)
+                    ? (FailureDetectorStub)failureDetector
+                    : null;
         }
 
         [Fact]
