@@ -1470,6 +1470,17 @@ namespace Akka.Streams.Dsl
     {
         public OutputTruncationException() { }
     }
+    public class static PagedSource
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Create<T, TKey>(TKey firstKey, System.Func<TKey, System.Threading.Tasks.Task<Akka.Streams.Dsl.PagedSource.Page<T, TKey>>> pageFactory) { }
+        public class Page<T, TKey>
+        {
+            public Page(System.Collections.Generic.IEnumerable<T> items, Akka.Streams.Util.Option<TKey> nextKey) { }
+            public System.Collections.Generic.IEnumerable<T> Items { get; }
+            public Akka.Streams.Util.Option<TKey> NextKey { get; }
+        }
+    }
     public sealed class Partition<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
     {
         public readonly Akka.Streams.Inlet<T> In;
