@@ -67,12 +67,12 @@ namespace Akka.Streams
         /// When set to false, will close stream by failing the stage with <see cref="OperationCanceledException"/>.
         /// </param>
         /// <returns></returns>
-        public static IGraph<FlowShape<T, T>, CancellationToken> AsFlow<T>(this CancellationToken cancellationToken, bool cancelGracefully = false)
+        public static IGraph<FlowShape<T, T>, NotUsed> AsFlow<T>(this CancellationToken cancellationToken, bool cancelGracefully = false)
         {
             return new CancellableKillSwitchStage<T>(cancellationToken, cancelGracefully);
         }
 
-        internal sealed class CancellableKillSwitchStage<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, CancellationToken>
+        internal sealed class CancellableKillSwitchStage<T> : GraphStage<FlowShape<T, T>>
         {
             #region logic
 
@@ -143,8 +143,7 @@ namespace Akka.Streams
             public Outlet<T> Outlet { get; } = new Outlet<T>("cancel.out");
 
             public override FlowShape<T, T> Shape { get; }
-            public override ILogicAndMaterializedValue<CancellationToken> CreateLogicAndMaterializedValue(Attributes inheritedAttributes) => 
-                new LogicAndMaterializedValue<CancellationToken>(new Logic(this), _cancellationToken);
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
         /// <summary>
