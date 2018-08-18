@@ -642,6 +642,7 @@ namespace Akka.Streams
     }
     public class static KillSwitches
     {
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, T>, Akka.NotUsed> AsFlow<T>(this System.Threading.CancellationToken cancellationToken, bool cancelGracefully = False) { }
         public static Akka.Streams.SharedKillSwitch Shared(string name) { }
         public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, T>, Akka.Streams.UniqueKillSwitch> Single<T>() { }
         public static Akka.Streams.IGraph<Akka.Streams.BidiShape<T1, T1, T2, T2>, Akka.Streams.UniqueKillSwitch> SingleBidi<T1, T2>() { }
