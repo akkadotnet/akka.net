@@ -40,8 +40,45 @@ The other major usability improvement is a change to the `ClusterSharding.Start`
 * [Akka.Cluster.Sharding: `RestartShard` escapes into userspace](https://github.com/akkadotnet/akka.net/pull/3509)
 
 **Akka.Streams Additions and Changes**
+In Akka.NET v1.3.9 we've added some new built-in stream stages and API methods designed to help improve developer productivity and ease of use.
 
+* [Akka.Streams: add CombineMaterialized method to Source](https://github.com/akkadotnet/akka.net/pull/3489)
+* [Akka.Streams: 
+KillSwitches: flow stage from CancellationToken](https://github.com/akkadotnet/akka.net/pull/3568)
+* [Akka.Streams: Port KeepAliveConcat and UnfoldFlow](https://github.com/akkadotnet/akka.net/pull/3560)
+* [Akka.Streams: Port PagedSource & IntervalBasedRateLimiter](https://github.com/akkadotnet/akka.net/pull/3570)
 
+**Other Updates, Additions, and Bugfixes**
+* [Akka.Cluster: cluster coordinated leave fix for empty cluster](https://github.com/akkadotnet/akka.net/pull/3516)
+* [Akka.Cluster.Tools: bumped ClusterClient message drop log messages from DEBUG to WARNING](https://github.com/akkadotnet/akka.net/pull/3513)
+* [Akka.Cluster.Tools: Singleton - confirm TakeOverFromMe when singleton already in oldest state](https://github.com/akkadotnet/akka.net/pull/3553)
+* [Akka.Remote: RemoteWatcher race-condition fix](https://github.com/akkadotnet/akka.net/pull/3519)
+* [Akka: fix concurrency bug in CircuitBreaker](https://github.com/akkadotnet/akka.net/pull/3505)
+* [Akka: Fixed ReceiveTimeout not triggered in some case when combined with NotInfluenceReceiveTimeout messages](https://github.com/akkadotnet/akka.net/pull/3555)
+* [Akka.Persistence: Optimized recovery](https://github.com/akkadotnet/akka.net/pull/3549)
+* [Akka.Persistence: Allow persisting events when recovery has completed](https://github.com/akkadotnet/akka.net/pull/3366)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 28 | 2448 | 5691 | Aaron Stannard |
+| 11 | 1373 | 230 | zbynek001 |
+| 8 | 4590 | 577 | Bartosz Sypytkowski |
+| 4 | 438 | 99 | Ismael Hamed |
+| 4 | 230 | 240 | Sean Gilliam |
+| 2 | 1438 | 0 | Oleksandr Bogomaz |
+| 1 | 86 | 79 | Nick Polideropoulos |
+| 1 | 78 | 0 | v1rusw0rm |
+| 1 | 4 | 4 | Joshua Garnett |
+| 1 | 32 | 17 | Jarl Sveinung Flø Rasmussen |
+| 1 | 27 | 1 | Sam13 |
+| 1 | 250 | 220 | Maxim Cherednik |
+| 1 | 184 | 124 | Josh Taylor |
+| 1 | 14 | 0 | Peter Shrosbree |
+| 1 | 1278 | 42 | Marc Piechura |
+| 1 | 1 | 1 | Vasily Kirichenko |
+| 1 | 1 | 1 | Samuel Kelemen |
+| 1 | 1 | 1 | Nyola Mike |
+| 1 | 1 | 1 | Fábio Beirão |
 
 #### 1.3.8 June 04 2018 ####
 **Maintenance Release for Akka.NET 1.3**
