@@ -58,6 +58,8 @@ KillSwitches: flow stage from CancellationToken](https://github.com/akkadotnet/a
 * [Akka.Persistence: Optimized recovery](https://github.com/akkadotnet/akka.net/pull/3549)
 * [Akka.Persistence: Allow persisting events when recovery has completed](https://github.com/akkadotnet/akka.net/pull/3366)
 
+To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.com/akkadotnet/akka.net/milestone/27).
+
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
 | 28 | 2448 | 5691 | Aaron Stannard |
