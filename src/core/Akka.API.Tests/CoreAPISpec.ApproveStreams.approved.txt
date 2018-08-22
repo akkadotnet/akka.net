@@ -1329,6 +1329,11 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Inlet<TIn> In(int id) { }
         public override string ToString() { }
     }
+    public class static IntervalBasedRateLimiter
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>>, Akka.NotUsed> Create<T>(System.TimeSpan minInterval, int maxBatchSize) { }
+    }
     public interface IRunnableGraph<out TMat> : Akka.Streams.IGraph<Akka.Streams.ClosedShape>, Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat>
     {
         Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes);
@@ -1470,6 +1475,17 @@ namespace Akka.Streams.Dsl
     public class OutputTruncationException : System.Exception
     {
         public OutputTruncationException() { }
+    }
+    public class static PagedSource
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Create<T, TKey>(TKey firstKey, System.Func<TKey, System.Threading.Tasks.Task<Akka.Streams.Dsl.PagedSource.Page<T, TKey>>> pageFactory) { }
+        public class Page<T, TKey>
+        {
+            public Page(System.Collections.Generic.IEnumerable<T> items, Akka.Streams.Util.Option<TKey> nextKey) { }
+            public System.Collections.Generic.IEnumerable<T> Items { get; }
+            public Akka.Streams.Util.Option<TKey> NextKey { get; }
+        }
     }
     public sealed class Partition<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
     {
