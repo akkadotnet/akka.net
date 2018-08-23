@@ -146,23 +146,11 @@ namespace Akka.Actor
 
             return null;
         }
-
-        private const int RunContinuationsAsynchronously = 64;
-        private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
-
-
+        
         private static async Task<object> Ask(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider,
             TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            TaskCompletionSource<object> result;
-            if (isRunContinuationsAsynchronouslyAvailable)
-            {
-                result = new TaskCompletionSource<object>((TaskCreationOptions)RunContinuationsAsynchronously);
-            }
-            else
-            {
-                result = new TaskCompletionSource<object>();
-            }
+            TaskCompletionSource<object> result = TaskEx.NonBlockingTaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
@@ -188,7 +176,7 @@ namespace Akka.Actor
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path, isRunContinuationsAsynchronouslyAvailable);
+            var future = new FutureActorRef(result, () => { }, path, TaskEx.IsRunContinuationsAsynchronouslyAvailable);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);

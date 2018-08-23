@@ -33,7 +33,7 @@ namespace Akka.Cluster.Sharding
 
         public string TypeName { get; }
         public string ShardId { get; }
-        public Props EntityProps { get; }
+        public Func<string, Props> EntityProps { get; }
         public ClusterShardingSettings Settings { get; }
         public ExtractEntityId ExtractEntityId { get; }
         public ExtractShardId ExtractShardId { get; }
@@ -45,12 +45,12 @@ namespace Akka.Cluster.Sharding
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
 
-        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; } 
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
 
         public PersistentShard(
             string typeName,
             string shardId,
-            Props entityProps,
+            Func<string, Props> entityProps,
             ClusterShardingSettings settings,
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
@@ -198,9 +198,20 @@ namespace Akka.Cluster.Sharding
             var child = Context.Child(name);
             if (Equals(child, ActorRefs.Nobody))
             {
-                // Note; we only do this if remembering, otherwise the buffer is an overhead
-                MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
-                ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                if (State.Entries.Contains(id))
+                {
+                    if (MessageBuffers.ContainsKey(id))
+                    {
+                        throw new InvalidOperationException($"Message buffers contains id [{id}].");
+                    }
+                    this.GetEntity(id).Tell(payload, sender);
+                }
+                else
+                {
+                    // Note; we only do this if remembering, otherwise the buffer is an overhead
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
+                    ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                }
             }
             else
                 child.Tell(payload, sender);

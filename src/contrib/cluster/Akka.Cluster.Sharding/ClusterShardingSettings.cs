@@ -94,6 +94,8 @@ namespace Akka.Cluster.Sharding
         /// <param name="keepNrOfBatches">Keep this number of old persistent batches</param>
         /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
         /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
+        /// <param name="waitingForStateTimeout">TBD</param>
+        /// <param name="updatingStateTimeout">TBD</param>
         /// <param name="entityRecoveryStrategy">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
@@ -274,6 +276,16 @@ namespace Akka.Cluster.Sharding
             StateStoreMode = stateStoreMode;
             TunningParameters = tunningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
+        }
+
+        /// <summary>
+        /// If true, this node should run the shard region, otherwise just a shard proxy should started on this node.
+        /// </summary>
+        /// <param name="cluster"></param>
+        /// <returns></returns>
+        internal bool ShouldHostShard(Cluster cluster)
+        {
+            return string.IsNullOrEmpty(Role) || cluster.SelfRoles.Contains(Role);
         }
 
         /// <summary>

@@ -576,9 +576,9 @@ When an actor received `PoisonPill` message, that actor will be stopped. (see [P
 
 For a router, which normally passes on messages to routees, the `PoisonPill` messages are processed __by the router only__. `PoisonPill` messages sent to a router will __not__ be sent on to its routees.
 
-However, a `PisonPill` message sent to a router may still affect its routees, as it will stop the router whhich in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
+However, a `PoisonPill` message sent to a router may still affect its routees, as it will stop the router which in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
 
-If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailbxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
+If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
 
 > [!NOTE]
 > The above method will stop all routees, even if they are not created by the router. E.g. routees programatically provided to the router.

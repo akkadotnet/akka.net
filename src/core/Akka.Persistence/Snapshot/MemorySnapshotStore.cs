@@ -9,69 +9,71 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Snapshot
 {
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// In-memory SnapshotStore implementation.
+    /// </summary>
     public class MemorySnapshotStore : SnapshotStore
     {
-        private readonly List<SnapshotEntry> _snapshotCollection = new List<SnapshotEntry>();
-
         /// <summary>
         /// This is available to expose/override the snapshots in derived snapshot stores
         /// </summary>
-        protected virtual List<SnapshotEntry> Snapshots { get { return _snapshotCollection; } }
+        protected virtual List<SnapshotEntry> Snapshots { get; } = new List<SnapshotEntry>();
 
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {
-            Func<SnapshotEntry, bool> pred = x => x.PersistenceId == metadata.PersistenceId &&
-            (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr) &&
-            (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+            bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
+                                                                                    && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+            
 
-            return Task.Run(() =>
-            {
-                var snapshot = Snapshots.FirstOrDefault(pred);
-                Snapshots.Remove(snapshot);
-            });
+            var snapshot = Snapshots.FirstOrDefault(Pred);
+            Snapshots.Remove(snapshot);
+
+            return TaskEx.Completed;
         }
 
         protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
 
-            return Task.Run(() => { Snapshots.RemoveAll(x => filter(x)); });
+            Snapshots.RemoveAll(x => filter(x));
+            return TaskEx.Completed;
         }
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
 
-            return Task.Run(() =>
-            {
-                var snapshot = Snapshots.Where(filter).OrderByDescending(x => x.SequenceNr).Take(1).Select(x => ToSelectedSnapshot(x)).FirstOrDefault();
-                return snapshot;
-            });
+
+            var snapshot = Snapshots.Where(filter).OrderByDescending(x => x.SequenceNr).Take(1).Select(x => ToSelectedSnapshot(x)).FirstOrDefault();
+            return Task.FromResult(snapshot);
         }
 
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
-            await Task.Run(() =>
-            {
-                var snapshotEntry = ToSnapshotEntry(metadata, snapshot);
-                var existingSnapshot = Snapshots.FirstOrDefault(CreateSnapshotIdFilter(snapshotEntry.Id));
 
-                if (existingSnapshot != null)
-                {
-                    existingSnapshot.Snapshot = snapshotEntry.Snapshot;
-                    existingSnapshot.Timestamp = snapshotEntry.Timestamp;
-                }
-                else
-                {
-                    Snapshots.Add(snapshotEntry);
-                }
-            });
+            var snapshotEntry = ToSnapshotEntry(metadata, snapshot);
+            var existingSnapshot = Snapshots.FirstOrDefault(CreateSnapshotIdFilter(snapshotEntry.Id));
+
+            if (existingSnapshot != null)
+            {
+                existingSnapshot.Snapshot = snapshotEntry.Snapshot;
+                existingSnapshot.Timestamp = snapshotEntry.Timestamp;
+            }
+            else
+            {
+                Snapshots.Add(snapshotEntry);
+            }
+
+            return TaskEx.Completed;
         }
 
-        private Func<SnapshotEntry, bool> CreateSnapshotIdFilter(string snapshotId)
+        private static Func<SnapshotEntry, bool> CreateSnapshotIdFilter(string snapshotId)
         {
             return x => x.Id == snapshotId;
         }
@@ -101,6 +103,11 @@ namespace Akka.Persistence.Snapshot
         }
     }
 
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Represents a snapshot stored inside the in-memory <see cref="SnapshotStore"/>
+    /// </summary>
     public class SnapshotEntry
     {
         public string Id { get; set; }

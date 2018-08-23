@@ -2,21 +2,85 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2018 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.3.8</VersionPrefix>
+    <VersionPrefix>1.3.9</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.3.0</XunitVersion>
-    <TestSdkVersion>15.3.0</TestSdkVersion>
+    <XunitVersion>2.3.1</XunitVersion>
+    <TestSdkVersion>15.7.2</TestSdkVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder*</PackageReleaseNotes>
+    <PackageReleaseNotes>Maintenance Release for Akka.NET 1.3**
+Akka.NET v1.3.9 features some major changes to Akka.Cluster.Sharding, additional Akka.Streams stages, and some general bug fixes across the board.
+Akka.Cluster.Sharding Improvements**
+The [Akka.Cluster.Sharding documentation](http://getakka.net/articles/clustering/cluster-sharding.html#quickstart) already describes some of the major changes in Akka.NET v1.3.9, but we figured it would be worth calling special attention to those changes here.
+Props Factory for Entity Actors**
+&gt; In some cases, the actor may need to know the `entityId` associated with it. This can be achieved using the `entityPropsFactory` parameter to `ClusterSharding.Start` or `ClusterSharding.StartAsync`. The entity ID will be passed to the factory as a parameter, which can then be used in the creation of the actor.
+In addition to the existing APIs we've always had for defining sharded entities via `Props`, Akka.NET v1.3.9 introduces [a new method overload for `Start`](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_Start_System_String_System_Func_System_String_Akka_Actor_Props__Akka_Cluster_Sharding_ClusterShardingSettings_Akka_Cluster_Sharding_ExtractEntityId_Akka_Cluster_Sharding_ExtractShardId_) and [`StartAsync`](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_StartAsync_System_String_System_Func_System_String_Akka_Actor_Props__Akka_Cluster_Sharding_ClusterShardingSettings_Akka_Cluster_Sharding_ExtractEntityId_Akka_Cluster_Sharding_ExtractShardId_) which allows users to pass in the `entityId` of each entity actor as a constructor argument to those entities when they start.
+For example:
+```
+var anotherCounterShard = ClusterSharding.Get(Sys).Start(
+	                        typeName: "AnotherCounter",
+	                        entityProps: Props.Create&lt;AnotherCounter&gt;(),
+	                        typeName: AnotherCounter.ShardingTypeName,
+	                        entityPropsFactory: entityId =&gt; AnotherCounter.Props(entityId),
+	                        settings: ClusterShardingSettings.Create(Sys),
+	                        extractEntityId: Counter.ExtractEntityId,
+	                        extractShardId: Counter.ExtractShardId);
+```
+This will give you the opportunity to pass in the `entityId` for each actor as a constructor argument into the `Props` of your entity actor and possibly other use cases too.
+Improvements to Starting and Querying Existing Shard Entity Types**
+Two additional major usability improvements to Cluster.Sharding come from some API additions and changes.
+The first is that it's now possible to look up all of the currently registered shard types via the [`ClusterSharding.ShardTypeNames` property](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_ShardTypeNames). So long as a `ShardRegion` of that type has been started in the cluster, that entity type name will be added to the collection exposed by this property.
+The other major usability improvement is a change to the `ClusterSharding.Start` property itself. Historically, you used to have to know whether or not the node you wanted to use sharding on was going to be hosting shards (call `ClusterSharding.Start`) or simply communicated with shards hosted on a different cluster role type (call `ClusterSharding.StartProxy`). Going forward, it's safe to call `ClusterSharding.Start` on any node and you will either receive an `IActorRef` to active `ShardRegion` or a `ShardRegion` running in "proxy only" mode; this is determined by looking at the `ClusterShardingSettings` and determining if the current node is in a role that is allowed to host shards of this type.
+[Akka.Cluster.Sharding: Sharding API Updates](https://github.com/akkadotnet/akka.net/pull/3524)
+[Akka.Cluster.Sharding: sharding rebalance fix](https://github.com/akkadotnet/akka.net/pull/3518)
+[Akka.Cluster.Sharding: log formatting fix](https://github.com/akkadotnet/akka.net/pull/3554)
+[Akka.Cluster.Sharding: `RestartShard` escapes into userspace](https://github.com/akkadotnet/akka.net/pull/3509)
+Akka.Streams Additions and Changes**
+In Akka.NET v1.3.9 we've added some new built-in stream stages and API methods designed to help improve developer productivity and ease of use.
+[Akka.Streams: add CombineMaterialized method to Source](https://github.com/akkadotnet/akka.net/pull/3489)
+[Akka.Streams:
+KillSwitches: flow stage from CancellationToken](https://github.com/akkadotnet/akka.net/pull/3568)
+[Akka.Streams: Port KeepAliveConcat and UnfoldFlow](https://github.com/akkadotnet/akka.net/pull/3560)
+[Akka.Streams: Port PagedSource &amp; IntervalBasedRateLimiter](https://github.com/akkadotnet/akka.net/pull/3570)
+Other Updates, Additions, and Bugfixes**
+[Akka.Cluster: cluster coordinated leave fix for empty cluster](https://github.com/akkadotnet/akka.net/pull/3516)
+[Akka.Cluster.Tools: bumped ClusterClient message drop log messages from DEBUG to WARNING](https://github.com/akkadotnet/akka.net/pull/3513)
+[Akka.Cluster.Tools: Singleton - confirm TakeOverFromMe when singleton already in oldest state](https://github.com/akkadotnet/akka.net/pull/3553)
+[Akka.Remote: RemoteWatcher race-condition fix](https://github.com/akkadotnet/akka.net/pull/3519)
+[Akka: fix concurrency bug in CircuitBreaker](https://github.com/akkadotnet/akka.net/pull/3505)
+[Akka: Fixed ReceiveTimeout not triggered in some case when combined with NotInfluenceReceiveTimeout messages](https://github.com/akkadotnet/akka.net/pull/3555)
+[Akka.Persistence: Optimized recovery](https://github.com/akkadotnet/akka.net/pull/3549)
+[Akka.Persistence: Allow persisting events when recovery has completed](https://github.com/akkadotnet/akka.net/pull/3366)
+To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.com/akkadotnet/akka.net/milestone/27).
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 28 | 2448 | 5691 | Aaron Stannard |
+| 11 | 1373 | 230 | zbynek001 |
+| 8 | 4590 | 577 | Bartosz Sypytkowski |
+| 4 | 438 | 99 | Ismael Hamed |
+| 4 | 230 | 240 | Sean Gilliam |
+| 2 | 1438 | 0 | Oleksandr Bogomaz |
+| 1 | 86 | 79 | Nick Polideropoulos |
+| 1 | 78 | 0 | v1rusw0rm |
+| 1 | 4 | 4 | Joshua Garnett |
+| 1 | 32 | 17 | Jarl Sveinung Flø Rasmussen |
+| 1 | 27 | 1 | Sam13 |
+| 1 | 250 | 220 | Maxim Cherednik |
+| 1 | 184 | 124 | Josh Taylor |
+| 1 | 14 | 0 | Peter Shrosbree |
+| 1 | 1278 | 42 | Marc Piechura |
+| 1 | 1 | 1 | Vasily Kirichenko |
+| 1 | 1 | 1 | Samuel Kelemen |
+| 1 | 1 | 1 | Nyola Mike |
+| 1 | 1 | 1 | Fábio Beirão |</PackageReleaseNotes>
   </PropertyGroup>
 </Project>

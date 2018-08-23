@@ -56,14 +56,21 @@ namespace Akka.Persistence.Snapshot
 
             if (message is LoadSnapshot loadSnapshot)
             {
-                _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
-                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
-                        ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
-                        : new LoadSnapshotFailed(t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")), 
-						_continuationOptions)
-                    .PipeTo(senderPersistentActor);
+                if (loadSnapshot.Criteria == SnapshotSelectionCriteria.None)
+                {
+                    senderPersistentActor.Tell(new LoadSnapshotResult(null, loadSnapshot.ToSequenceNr));
+                }
+                else
+                {
+                    _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                            ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
+                            : new LoadSnapshotFailed(t.IsFaulted
+                                    ? TryUnwrapException(t.Exception)
+                                    : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
+                            _continuationOptions)
+                        .PipeTo(senderPersistentActor);
+                }
             }
             else if (message is SaveSnapshot saveSnapshot)
             {

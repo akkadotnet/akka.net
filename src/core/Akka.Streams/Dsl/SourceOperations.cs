@@ -394,6 +394,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
         public static Source<TOut, TMat> TakeWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
@@ -2037,6 +2038,24 @@ namespace Akka.Streams.Dsl
         public static Source<TOut, TMat> Concat<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Concat(flow, other);
+        }
+
+        /// <summary>
+        /// Combines the given <see cref="Source{TOut, TMat}"/> to this <see cref="Source{TOut,TMat}"/> with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Source<T, TMat1> flow, Source<T, TMat2> other, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
+        {
+            return Source.CombineMaterialized(flow, other, strategy, combineMaterializers);
         }
 
         /// <summary>

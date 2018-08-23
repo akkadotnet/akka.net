@@ -89,6 +89,7 @@ namespace Akka.Actor
         /// <param name="result">TBD</param>
         /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
+        /// <param name="tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable">TBD</param>
         public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path, bool tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable)
         {
             if (ActorCell.Current != null)

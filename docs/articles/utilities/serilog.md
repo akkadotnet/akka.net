@@ -15,7 +15,7 @@ PM> Install-Package Akka.Logger.Serilog
 
 ## Example
 
-The following example uses Serilogs __Colored Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilogs documentation for details on these.
+The following example uses Serilog's __Colored Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilog's documentation for details on these.
 
 ```
 PM> Install-Package Serilog.Sinks.ColoredConsole
@@ -101,7 +101,7 @@ In order to be able to change log level without the need to recompile, we need t
 
 ```
 
-The code can then be updated as follows removing the inline HOCON from the actor system creation code.  Note in the following example, if a minimum level is not specfied, Information level events and higher will be processed.  Please read the documentation for [Serilog](https://serilog.net/) configuration for more details on this.  It is also possible to move serilog configuration to the application configuration, for example if using a rolling log file sink, again, browsing the serilog documentation is the best place for details on that feature.  
+The code can then be updated as follows removing the inline HOCON from the actor system creation code.  Note in the following example, if a minimum level is not specified, Information level events and higher will be processed.  Please read the documentation for [Serilog](https://serilog.net/) configuration for more details on this.  It is also possible to move serilog configuration to the application configuration, for example if using a rolling log file sink, again, browsing the serilog documentation is the best place for details on that feature.  
 
 ```csharp
 var logger = new LoggerConfiguration()
@@ -113,6 +113,3 @@ Serilog.Log.Logger = logger;
 
 var system = ActorSystem.Create("my-test-system");
 ```
-
-
-

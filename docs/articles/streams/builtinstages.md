@@ -365,7 +365,7 @@ to provide back pressure onto the sink.
 
 **cancels** when the actor terminates
 
-**backpressures** when the actor acknowledgement has not arrived.
+**backpressures** when the actor acknowledgment has not arrived.
 
 #### PreMaterialize
 
@@ -680,7 +680,7 @@ Throwing an exception inside `RecoverWith` _will_ be logged on ERROR level autom
 
 **emits** the element is available from the upstream or upstream is failed and pf returns alternative Source
 
-**backpressures** downstream backpressures, after failure happened it backprssures to alternative Source
+**backpressures** downstream backpressures, after failure happened it backpressures to alternative Source
 
 **completes** upstream completes or upstream failed with exception pf can handle
 
@@ -709,7 +709,7 @@ would log the `e2` error.
 Since the underlying failure signal OnError arrives out-of-band, it might jump over existing elements.
 This stage can recover the failure signal, but not the skipped elements, which will be dropped.
 
-Similarily to `Recover` throwing an exception inside `SelectError` _will_ be logged on ERROR level automatically.
+Similarly to `Recover` throwing an exception inside `SelectError` _will_ be logged on ERROR level automatically.
 
 **emits**  when element is available from the upstream or upstream is failed and function returns an element
 

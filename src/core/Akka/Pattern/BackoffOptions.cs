@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Pattern
 {
     /// <summary>
-    /// Builds back-off options for creating a back-off supervisor. You can pass <see cref="Akka.Pattern.BackoffOptions"/> to <see cref="Akka.Pattern.BackoffSupervisor.Props"/>.
+    /// Builds back-off options for creating a back-off supervisor. You can pass <see cref="Akka.Pattern.BackoffOptions"/> to <see cref="Akka.Pattern.BackoffSupervisor.Props(BackoffOptions)"/>.
     /// </summary>
     public static class Backoff
     {

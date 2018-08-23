@@ -296,6 +296,7 @@ namespace Akka.Cluster
         /// actor system is manually restarted.
         /// </summary>
         /// <param name="seedNodes">TBD</param>
+        /// <param name="token">TBD</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
         {
             var completion = new TaskCompletionSource<NotUsed>();
@@ -424,7 +425,7 @@ namespace Akka.Cluster
         /// ActorRef with the cluster's <see cref="SelfAddress"/>, unless address' host is already defined
         /// </summary>
         /// <param name="actorRef">An <see cref="IActorRef"/> belonging to the current node.</param>
-        /// <returns>The absolute remote <see cref="ActorPath"/> of <see cref="actorRef"/>.</returns>
+        /// <returns>The absolute remote <see cref="ActorPath"/> of <paramref name="actorRef"/>.</returns>
         public ActorPath RemotePathOf(IActorRef actorRef)
         {
             var path = actorRef.Path;
@@ -462,6 +463,11 @@ namespace Akka.Cluster
         /// The current snapshot state of the cluster.
         /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
+
+        /// <summary>
+        /// Access to the current member info for this node.
+        /// </summary>
+        public Member SelfMember => _readView.Self;
 
         private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 

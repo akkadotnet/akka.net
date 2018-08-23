@@ -35,7 +35,7 @@ namespace Akka.Cluster.Sharding
 
         public string TypeName { get; }
         public string ShardId { get; }
-        public Props EntityProps { get; }
+        public Func<string, Props> EntityProps { get; }
         public ClusterShardingSettings Settings { get; }
         public ExtractEntityId ExtractEntityId { get; }
         public ExtractShardId ExtractShardId { get; }
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Sharding
         public DDataShard(
             string typeName,
             ShardId shardId,
-            Props entityProps,
+            Func<string, Props> entityProps,
             ClusterShardingSettings settings,
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Sharding
             _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityCap);
             _writeConsistency = new WriteMajority(settings.TunningParameters.UpdatingStateTimeout, majorityCap);
             _stateKeys = Enumerable.Range(0, NrOfKeys).Select(i => new ORSetKey<EntryId>($"shard-{typeName}-{shardId}-{i}")).ToImmutableArray();
-            
+
             GetState();
         }
 

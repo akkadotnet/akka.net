@@ -19,7 +19,6 @@ namespace Akka.Persistence
     public interface IPendingHandlerInvocation
     {
         object Event { get; }
-        
         Action<object> Handler { get; }
     }
 
@@ -180,7 +179,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Returns true if this persistent entity is currently recovering.
         /// </summary>
-        public bool IsRecovering => _currentState?.IsRecoveryRunning ?? true;
+        public bool IsRecovering => _currentState?.IsRecoveryRunning() ?? true;
 
         /// <summary>
         /// Returns true if this persistent entity has successfully finished recovery.
@@ -297,6 +296,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void Persist<TEvent>(TEvent @event, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
@@ -313,17 +317,23 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             if (events == null) return;
 
-            Action<object> inv = o => handler((TEvent)o);
+            void Inv(object o) => handler((TEvent)o);
             var persistents = ImmutableList<IPersistentRepresentation>.Empty.ToBuilder();
             foreach (var @event in events)
             {
                 _pendingStashingPersistInvocations++;
-                _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, inv));
+                _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, Inv));
                 persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
             }
+
             if (persistents.Count > 0)
                 _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
         }
@@ -358,6 +368,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
@@ -373,13 +388,20 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
-            Action<object> inv = o => handler((TEvent)o);
-            foreach (var @event in events)
+            if (IsRecovering)
             {
-                _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, inv));
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
             }
-            _eventBatch.AddFirst(new AtomicWrite(events.Select(e => new Persistent(e, persistenceId: PersistenceId,
-                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+
+            void Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            foreach (var @event in enumerable)
+            {
+                _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
+            }
+
+            _eventBatch.AddFirst(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
                 .ToImmutableList<IPersistentRepresentation>()));
         }
 
@@ -406,6 +428,11 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         public void DeferAsync<TEvent>(TEvent evt, Action<TEvent> handler)
         {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
             if (_pendingInvocations.Count == 0)
             {
                 handler(evt);
@@ -443,7 +470,7 @@ namespace Akka.Persistence
             if (message != null)
             {
                 Log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
-                   message.GetType(), LastSequenceNr, PersistenceId);
+                    message.GetType(), LastSequenceNr, PersistenceId);
             }
             else
             {
@@ -562,7 +589,7 @@ namespace Akka.Persistence
             {
                 _internalStash.Stash();
             }
-            catch(StashOverflowException e)
+            catch (StashOverflowException e)
             {
                 var strategy = InternalStashOverflowStrategy;
                 if (strategy is DiscardToDeadLetterStrategy)

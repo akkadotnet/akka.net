@@ -9,7 +9,7 @@ Cluster sharding is useful in cases when you want to contact with cluster actors
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
 1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals.
-2. `ddata` (**experimental**, available in versions above 1.3.2) depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventualy consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. At this moment this mode doesn't support `akka.cluster.sharding.remember-entities` option.
+2. `ddata` (**experimental**, available in versions above 1.3.2) depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. At this moment this mode doesn't support `akka.cluster.sharding.remember-entities` option.
 
 Cluster sharding may be active only on nodes in `Up` status - so the ones fully recognized and acknowledged by every other node in a cluster.
 
@@ -55,6 +55,8 @@ In this example, we first specify way to resolve our message recipients in conte
 
 Second part of an example is registering custom actor type as sharded entity using `ClusterSharding.Start` or `ClusterSharding.StartAsync` methods. Result is the `IActorRef` to shard region used to communicate between current actor system and target entities. Shard region must be specified once per each type on each node, that is expected to participate in sharding entities of that type. Keep in mind, that it's recommended to wait for the current node to first fully join the cluster before initializing a shard regions in order to avoid potential timeouts.
 
+In some cases, the actor may need to know the `entityId` associated with it. This can be achieved using the `entityPropsFactory` parameter to `ClusterSharding.Start` or `ClusterSharding.StartAsync`. The entity ID will be passed to the factory as a parameter, which can then be used in the creation of the actor.
+
 In case when you want to send message to entities from specific node, but you don't want that node to participate in sharding itself, you can use `ShardRegionProxy` for that.
 
 Example:
@@ -80,7 +82,7 @@ To reduce memory consumption, you may decide to stop entities after some period 
 
 ## Remembering entities
 
-By default, when a shard is rebalanced to another node, the entities it stored before migration, are NOT started immediatelly after. Instead they are recreated ad-hoc, when new messages are incoming. This behavior can be modified by `akka.cluster.sharding.remember-entities = true` configuration. It will instruct shards to keep their state between rebalances - it also comes with extra cost due to necessity of persisting information about started/stopped entities. Additionally a message extractor logic must be aware of `ShardRegion.StartEntity` message:
+By default, when a shard is rebalanced to another node, the entities it stored before migration, are NOT started immediately after. Instead they are recreated ad-hoc, when new messages are incoming. This behavior can be modified by `akka.cluster.sharding.remember-entities = true` configuration. It will instruct shards to keep their state between rebalances - it also comes with extra cost due to necessity of persisting information about started/stopped entities. Additionally a message extractor logic must be aware of `ShardRegion.StartEntity` message:
 
 ```csharp
 public sealed class ShardEnvelope

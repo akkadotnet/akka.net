@@ -398,7 +398,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ExitingConfirmed && Equals((ExitingConfirmed) obj);
+                return obj is ExitingConfirmed && Equals((ExitingConfirmed)obj);
             }
 
             /// <inheritdoc/>
@@ -872,7 +872,7 @@ namespace Akka.Cluster
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "leave", () =>
             {
-                if (Cluster.Get(sys).IsTerminated)
+                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
                 {
                     return Task.FromResult(Done.Instance);
                 }
@@ -898,8 +898,8 @@ namespace Akka.Cluster
             _clusterPromise.TrySetResult(Done.Instance);
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
-                // run the last phases if the node was downed (not leaving)
-                _coordShutdown.Run(CoordinatedShutdown.PhaseClusterShutdown);
+                // if it was stopped due to leaving CoordinatedShutdown was started earlier
+                _coordShutdown.Run(CoordinatedShutdown.ClusterDowningReason.Instance);
             }
         }
     }
@@ -941,7 +941,7 @@ namespace Akka.Cluster
         {
             return new OneForOneStrategy(e =>
             {
-                //TODO: JVM version matches NonFatal. Can / should we do something similar? 
+                //TODO: JVM version matches NonFatal. Can / should we do something similar?
                 _log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
                     Cluster.Get(Context.System).SelfAddress, e);
                 Self.Tell(PoisonPill.Instance);
@@ -968,7 +968,7 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Actor used to power the guts of the Akka.Cluster membership and gossip protocols.
     /// </summary>
     internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
@@ -1075,10 +1075,16 @@ namespace Akka.Cluster
         {
             var sys = Context.System;
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () => _selfExiting.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () =>
+            {
+                if (_latestGossip.Members.IsEmpty)
+                    return Task.FromResult(Done.Instance); // not joined yet
+                else
+                    return _selfExiting.Task;
+            });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
-                if (Cluster.Get(sys).IsTerminated)
+                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
                     return TaskEx.Completed;
                 else
                 {
@@ -1295,7 +1301,7 @@ namespace Akka.Cluster
         private void BecomeInitialized()
         {
             // start heartbeatSender here, and not in constructor to make sure that
-            // heartbeating doesn't start before Welcome is received            
+            // heartbeating doesn't start before Welcome is received
             Context.ActorOf(Props.Create<ClusterHeartbeatSender>().WithDispatcher(_cluster.Settings.UseDispatcher),
                 "heartbeatSender");
             // make sure that join process is stopped
@@ -1314,7 +1320,7 @@ namespace Akka.Cluster
             {
                 var ge = message as GossipEnvelope;
                 var receivedType = ReceiveGossip(ge);
-                if(_cluster.Settings.VerboseGossipReceivedLogging)
+                if (_cluster.Settings.VerboseGossipReceivedLogging)
                     _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
             else if (message is GossipStatus)
@@ -1388,7 +1394,7 @@ namespace Akka.Cluster
             }
             else if (message is InternalClusterAction.ExitingConfirmed)
             {
-                var c = (InternalClusterAction.ExitingConfirmed) message;
+                var c = (InternalClusterAction.ExitingConfirmed)message;
                 ReceiveExitingConfirmed(c.Address);
             }
             else if (ReceiveExitingCompleted(message)) { }
@@ -1662,7 +1668,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up))
+            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp || m.Status == MemberStatus.Up)))
             {
                 // mark node as LEAVING
                 var newMembers = _latestGossip.Members.Select(m =>
@@ -1968,7 +1974,7 @@ namespace Akka.Cluster
                 _exitingTasksInProgress = true;
                 _log.Info("Exiting, starting coordinated shutdown.");
                 _selfExiting.TrySetResult(Done.Instance);
-                _coordShutdown.Run();
+                _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
 
             if (talkback)
@@ -2094,7 +2100,7 @@ namespace Akka.Cluster
                 // linear reduction of the probability with increasing number of nodes
                 // from ReduceGossipDifferentViewProbability at ReduceGossipDifferentViewProbability nodes
                 // to ReduceGossipDifferentViewProbability / 10 at ReduceGossipDifferentViewProbability * 3 nodes
-                // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes     
+                // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes
                 var k = (minP - _cluster.Settings.GossipDifferentViewProbability) / (high - low);
                 return _cluster.Settings.GossipDifferentViewProbability + (size - low) * k;
             }
@@ -2202,7 +2208,7 @@ namespace Akka.Cluster
         /// this function will check to see if that threshold is met.
         /// </summary>
         /// <returns>
-        /// <c>true</c> if the setting isn't enabled or is satisfied. 
+        /// <c>true</c> if the setting isn't enabled or is satisfied.
         /// <c>false</c> is the setting is enabled and unsatisfied.
         /// </returns>
         public bool IsMinNrOfMembersFulfilled()
@@ -2314,7 +2320,7 @@ namespace Akka.Cluster
                     _exitingTasksInProgress = true;
                     _log.Info("Exiting (leader), starting coordinated shutdown.");
                     _selfExiting.TrySetResult(Done.Instance);
-                    _coordShutdown.Run();
+                    _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
                 }
 
                 UpdateLatestGossip(newGossip);
@@ -2553,21 +2559,21 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes (except itself) and expect
     /// <see cref="InternalClusterAction.InitJoinAck"/> reply back. The seed node that replied first
     /// will be used and joined to. <see cref="InternalClusterAction.InitJoinAck"/> replies received after
     /// the first one are ignored.
-    /// 
-    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the 
+    ///
+    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the
     /// <see cref="ClusterSettings.SeedNodeTimeout"/>. When at least one reply has been received it stops itself after
     /// an idle <see cref="ClusterSettings.SeedNodeTimeout"/>.
-    /// 
+    ///
     /// The seed nodes can be started in any order, but they will not be "active" until they have been
     /// able to join another seed node (seed1.)
-    /// 
+    ///
     /// They will retry the join procedure.
-    /// 
+    ///
     /// Possible scenarios:
     ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
     ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
@@ -2589,7 +2595,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -2659,12 +2665,12 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Used only for the first seed node.
     /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes except itself.
-    /// If other seed nodes are not part of the cluster yet they will reply with 
+    /// If other seed nodes are not part of the cluster yet they will reply with
     /// <see cref="InternalClusterAction.InitJoinNack"/> or not respond at all and then the
-    /// first seed node will join itself to initialize the new cluster. When the first seed 
+    /// first seed node will join itself to initialize the new cluster. When the first seed
     /// node is restarted, and some other seed node is part of the cluster it will reply with
     /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
     /// join that other seed node to join the existing cluster.
@@ -2685,7 +2691,7 @@ namespace Akka.Cluster
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
-        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -2896,7 +2902,7 @@ namespace Akka.Cluster
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// The supplied callback will be run once when the current cluster member has the same status.
     /// </summary>
     internal class OnMemberStatusChangedListener : ReceiveActor
