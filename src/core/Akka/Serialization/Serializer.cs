@@ -75,10 +75,10 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="address">The address to use when serializing local ActorRef´s</param>
         /// <param name="obj">The object to serialize</param>
-        /// <returns>TBD</returns>
+        /// <returns>A serialized message</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
-            return Serialization.SerializeWithTransport(system, address, () => ToBinary(obj));
+            return Serialization.SerializeWithTransport(system, address, this, obj);
         }
 
         /// <summary>
