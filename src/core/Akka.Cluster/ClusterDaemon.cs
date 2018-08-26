@@ -1725,7 +1725,7 @@ namespace Akka.Cluster
             if (comparison == VectorClock.Ordering.Concurrent && _cluster.Settings.Debug.VerboseGossipLogging)
             {
                 _log.Debug(
-                    @"""Couldn't establish a causal relationship between ""remote"" gossip and ""local"" gossip - Remote[{0}] - Local[{1}] - merged them into [{2}]""",
+                    @"Couldn't establish a causal relationship between ""remote"" gossip and ""local"" gossip - Remote[{0}] - Local[{1}] - merged them into [{2}]",
                     remoteGossip, localGossip, winningGossip);
             }
 
@@ -1957,7 +1957,7 @@ namespace Akka.Cluster
 
             var removedOtherDc = latestGossip.IsMultiDc
                 ? latestGossip.Members
-                    .Where(m => m.DataCenter == _selfDataCenter && MembershipState.IsRemoveUnreachableWithMemberStatus(m.Status))
+                    .Where(m => m.DataCenter != _selfDataCenter && MembershipState.IsRemoveUnreachableWithMemberStatus(m.Status))
                     .ToImmutableHashSet()
                 : ImmutableHashSet<Member>.Empty;
 
