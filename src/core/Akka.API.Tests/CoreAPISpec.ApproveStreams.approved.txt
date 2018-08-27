@@ -1938,6 +1938,11 @@ namespace Akka.Streams.Dsl
     {
         public static Akka.Streams.Dsl.TcpExt TcpStream(this Akka.Actor.ActorSystem system) { }
     }
+    public class static TimeWindow
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Flow<T, TState, Akka.NotUsed> Create<T, TState>(System.TimeSpan duration, System.Func<T, TState> seed, System.Func<TState, T, TState> aggregate, bool eager = True) { }
+    }
     public class UnexpectedOutputException : System.Exception
     {
         public UnexpectedOutputException(object element) { }
