@@ -54,6 +54,11 @@ namespace Akka.Cluster.TestKit
                     publish-stats-interval              = 0 s # always, when it happens
                     failure-detector.heartbeat-interval = 500 ms
                     run-coordinated-shutdown-when-down = off
+
+                    sharding {
+                      retry-interval = 200ms
+                      waiting-for-state-timeout = 200ms
+                    }
                 }
                 akka.loglevel = DEBUG
                 akka.log-dead-letters = off

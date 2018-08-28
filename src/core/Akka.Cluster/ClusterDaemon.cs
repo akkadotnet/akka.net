@@ -1451,7 +1451,7 @@ namespace Akka.Cluster
 
             // send ExitingConfirmed to two potential leaders
             var membersWithoutSelf = LatestGossip.Members.Where(m => !m.UniqueAddress.Equals(SelfUniqueAddress))
-                .ToImmutableSortedSet();
+                .ToImmutableSortedSet(Member.LeaderStatusOrdering);
 
             var leader = _membershipState.LeaderOf(membersWithoutSelf);
             if (leader != null)
@@ -1473,7 +1473,7 @@ namespace Akka.Cluster
         private void ReceiveExitingConfirmed(UniqueAddress node)
         {
             _cluster.LogInfo("Exiting confirmed [{0}]", node.Address);
-            _exitingConfirmed.Add(node);
+            _exitingConfirmed = _exitingConfirmed.Add(node);
         }
 
         private void CleanupExitingConfirmed()
