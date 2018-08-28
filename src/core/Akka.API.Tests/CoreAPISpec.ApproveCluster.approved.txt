@@ -79,6 +79,7 @@ namespace Akka.Cluster
             public System.Collections.Immutable.ImmutableHashSet<string> UnreachableDataCenters { get; }
             public Akka.Cluster.ClusterEvent.CurrentClusterState Copy(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy = null, Akka.Actor.Address leader = null, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap = null, System.Collections.Immutable.ImmutableHashSet<string> unreachableDataCenters = null) { }
             public Akka.Actor.Address RoleLeader(string role) { }
+            public Akka.Cluster.ClusterEvent.CurrentClusterState WithUnreachableDataCenters(System.Collections.Immutable.ImmutableHashSet<string> unreachableDataCenters) { }
         }
         public abstract class DataCenterReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent
         {
