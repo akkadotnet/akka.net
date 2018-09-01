@@ -41,6 +41,8 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = ConfigurationFactory.ParseString($@"
               # DEBUG On for issue #23864
               akka.loglevel = DEBUG
+              #akka.cluster.debug.verbose-receive-gossip-logging = on
+              #akka.cluster.debug.verbose-gossip-logging = on
               akka.cluster.multi-data-center.cross-data-center-connections = {crossDcConnections}")
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
@@ -191,7 +193,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     // since the unreachable nodes are inside of dc1
                     Cluster.Leave(GetAddress(Fourth));
 
-                    AwaitAssert(() => ClusterView.Members.Select(m => m.Address).Should().NotContain(GetAddress(Fourth)));
+                    AwaitAssert(() => ClusterView.Members.Select(m => m.Address).Should().NotContain(GetAddress(Fourth), "4th node should leave the cluster"));
                     AwaitAssert(() => ClusterView.Members.Where(m => m.Status == MemberStatus.Up).Select(m => m.Address).Should().Contain(GetAddress(Fifth)));
                 }, Third);
                 EnterBarrier("other-data-center-internal-unreachable changed");
