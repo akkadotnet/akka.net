@@ -190,5 +190,11 @@ namespace Akka.TestKit
         {
             return TestActor.GetHashCode();
         }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return $"TestProbe({TestActor})";
+        }
     }
 }
