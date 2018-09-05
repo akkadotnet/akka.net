@@ -4880,7 +4880,6 @@ namespace Akka.Util.Internal
         public static System.Collections.Generic.IEnumerable<T> Drop<T>(this System.Collections.Generic.IEnumerable<T> self, int count) { }
         public static void ForEach<T>(this System.Collections.Generic.IEnumerable<T> source, System.Action<T> action) { }
         public static TValue GetOrElse<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue elseValue) { }
-        public static T GetOrElse<T>(this T obj, T elseValue) { }
         public static T Head<T>(this System.Collections.Generic.IEnumerable<T> self) { }
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }

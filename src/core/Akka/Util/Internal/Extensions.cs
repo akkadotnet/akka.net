@@ -138,20 +138,6 @@ namespace Akka.Util.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="obj">TBD</param>
-        /// <param name="elseValue">TBD</param>
-        /// <returns>TBD</returns>
-        public static T GetOrElse<T>(this T obj, T elseValue)
-        {
-            if (obj.Equals(default(T)))
-                return elseValue;
-            return obj;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TValue">TBD</typeparam>
         /// <param name="hash">TBD</param>
@@ -170,7 +156,7 @@ namespace Akka.Util.Internal
         /// <param name="this">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static TimeSpan Max(this TimeSpan @this, TimeSpan other) 
+        public static TimeSpan Max(this TimeSpan @this, TimeSpan other)
         {
             return @this > other ? @this : other;
         }
