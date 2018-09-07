@@ -174,7 +174,7 @@ namespace Akka.Event
             {
                 response = askTask.Result;
             }
-            catch (TaskCanceledException)
+            catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
             {
                 Publish(new Warning(loggingBusName, GetType(),
                      string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
