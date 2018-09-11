@@ -32,8 +32,8 @@ Param(
 $FakeVersion = "4.63.0"
 $NBenchVersion = "1.0.1"
 $DotNetChannel = "preview";
-$DotNetVersion = "2.0.0";
-$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVersion/scripts/obtain/dotnet-install.ps1";
+$DotNetVersion = "2.1.0";
+$DotNetInstallerUri = "https://dot.net/v1/dotnet-install.ps1";
 $NugetVersion = "4.3.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 $ProtobufVersion = "3.4.0"
@@ -76,12 +76,25 @@ if (Get-Command dotnet -ErrorAction SilentlyContinue) {
     $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
 }
 
+Function Download-File([string]$url, [string]$destination)
+{
+    $client = (New-Object System.Net.WebClient)
+    $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+    if ($proxy)
+    {
+        $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
+    }
+    $client.Proxy = $proxy
+    Write-Host "Downloading $url to $destination..."
+    $client.DownloadFile($url, $destination)
+}
+
 if($FoundDotNetCliVersion -ne $DotNetVersion) {
     $InstallPath = Join-Path $PSScriptRoot ".dotnet"
     if (!(Test-Path $InstallPath)) {
         mkdir -Force $InstallPath | Out-Null;
     }
-    (New-Object System.Net.WebClient).DownloadFile($DotNetInstallerUri, "$InstallPath\dotnet-install.ps1");
+    Download-File $DotNetInstallerUri "$InstallPath\dotnet-install.ps1"
     & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotNetVersion -InstallDir $InstallPath -Architecture x64;
 
     Remove-PathVariable "$InstallPath"
@@ -98,7 +111,7 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
 $NugetPath = Join-Path $ToolPath "nuget.exe"
 if (!(Test-Path $NugetPath)) {
     Write-Host "Downloading NuGet.exe..."
-    (New-Object System.Net.WebClient).DownloadFile($NugetUrl, $NugetPath);
+    Download-File $NugetUrl $NugetPath
 }
 
 ###########################################################################
