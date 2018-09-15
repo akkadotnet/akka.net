@@ -1033,7 +1033,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Async() { }
         public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> Atop<TOut12, TIn21, TMat2>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi) { }
-        public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> AtopMat<TOut12, TIn21, TMat2, TMat3>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, System.Func<TMat, TMat2, TMat3> combine) { }
+        public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat3> AtopMat<TOut12, TIn21, TMat2, TMat3>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, System.Func<TMat, TMat2, TMat3> combine) { }
         public Akka.Streams.Dsl.Flow<TIn1, TOut2, TMat> Join<TMat2>(Akka.Streams.Dsl.Flow<TOut1, TIn2, TMat2> flow) { }
         public Akka.Streams.Dsl.Flow<TIn1, TOut2, TMat3> JoinMat<TMat2, TMat3>(Akka.Streams.Dsl.Flow<TOut1, TIn2, TMat2> flow, System.Func<TMat, TMat2, TMat3> combine) { }
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Named(string name) { }
