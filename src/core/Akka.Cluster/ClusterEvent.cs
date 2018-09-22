@@ -800,6 +800,14 @@ namespace Akka.Cluster
             if (ReferenceEquals(oldState, newState)) yield break;
 
             var newMembers = newState.LatestGossip.Members;
+            var oldMembers = oldState.LatestGossip.Members;
+
+            foreach (var oldMember in oldMembers)
+            {
+                if (!newMembers.Contains(oldMember))
+                    yield return new MemberRemoved(oldMember.Copy(status: MemberStatus.Removed), oldMember.Status);
+            }
+
             var oldMembersMap = oldState.LatestGossip.Members.ToDictionary(m => m.UniqueAddress, m => m);
 
             foreach (var newMember in newMembers)
@@ -820,13 +828,6 @@ namespace Akka.Cluster
                     if (e != null)
                         yield return e; // if member didn't exists
                 }
-            }
-
-            var oldMembers = oldState.LatestGossip.Members;
-            foreach (var oldMember in oldMembers)
-            {
-                if (!newMembers.Contains(oldMember))
-                    yield return new MemberRemoved(oldMember.Copy(status: MemberStatus.Removed), oldMember.Status);
             }
         }
 
