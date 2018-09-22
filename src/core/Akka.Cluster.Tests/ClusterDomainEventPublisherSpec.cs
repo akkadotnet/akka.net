@@ -152,7 +152,11 @@ namespace Akka.Cluster.Tests
                 new ClusterEvent.RoleLeaderChanged("GRP", dUp.Address),
                 new ClusterEvent.RoleLeaderChanged(ClusterSettings.DcRolePrefix + ClusterSettings.DefaultDataCenter, dUp.Address));
             _publisher.Tell(new InternalClusterAction.PublishChanges(State(new Gossip(ImmutableSortedSet.Create(cUp, dUp)), dUp.UniqueAddress, ClusterSettings.DefaultDataCenter)));
-            subscriber.ExpectMsg(new ClusterEvent.RoleLeaderChanged("GRP", cUp.Address));
+
+            // JVM version only checks for GRP, but their Set impl will always use GRP first: not a case in .NET
+            subscriber.ExpectMsgAllOf(
+                new ClusterEvent.RoleLeaderChanged("GRP", cUp.Address),
+                new ClusterEvent.RoleLeaderChanged(ClusterSettings.DcRolePrefix + ClusterSettings.DefaultDataCenter, cUp.Address));
         }
 
         [Fact]

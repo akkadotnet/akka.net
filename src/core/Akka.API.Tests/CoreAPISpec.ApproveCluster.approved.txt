@@ -71,7 +71,7 @@ namespace Akka.Cluster
         {
             public CurrentClusterState() { }
             public CurrentClusterState(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy, Akka.Actor.Address leader, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap, System.Collections.Immutable.ImmutableHashSet<string> unreachableDataCenters) { }
-            public System.Collections.Immutable.ImmutableHashSet<string> AllRoles { get; }
+            public System.Collections.Immutable.ImmutableSortedSet<string> AllRoles { get; }
             public Akka.Actor.Address Leader { get; }
             public System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> Members { get; }
             public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> SeenBy { get; }

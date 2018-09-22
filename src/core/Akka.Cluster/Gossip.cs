@@ -289,7 +289,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public ImmutableHashSet<string> AllRoles => Members.SelectMany(m => m.Roles).ToImmutableHashSet();
+        public ImmutableSortedSet<string> AllRoles => Members.SelectMany(m => m.Roles).ToImmutableSortedSet();
 
         /// <summary>
         /// TBD
