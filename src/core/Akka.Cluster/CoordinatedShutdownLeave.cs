@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 
+using System;
 using System.Linq;
 using Akka.Actor;
 
@@ -55,24 +56,31 @@ namespace Akka.Cluster
         {
             Receive<ClusterEvent.CurrentClusterState>(s =>
             {
-                if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
-                                       &&
-                                       (m.Status == MemberStatus.Leaving || m.Status == MemberStatus.Exiting ||
-                                        m.Status == MemberStatus.Down)))
+                if (s.Members.IsEmpty)
                 {
-                    replyTo.Tell(Done.Instance);
-                    Context.Stop(Self);
+                    // not joined yet
+                    Done(replyTo);
+                }
+                else if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
+                        && (m.Status == MemberStatus.Leaving || m.Status == MemberStatus.Exiting || m.Status == MemberStatus.Down)))
+                {
+                    Done(replyTo);
                 }
             });
 
-            Receive<ClusterEvent.IMemberEvent>(evt =>
+            Receive<ClusterEvent.IMemberEvent>(evt => // we only subscribe to MemberLeft and MemberRemoved
             {
                 if (evt.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
                 {
-                    replyTo.Tell(Done.Instance);
-                    Context.Stop(Self);
+                    Done(replyTo);
                 }
             });
+        }
+
+        private void Done(IActorRef replyTo)
+        {
+            replyTo.Tell(Akka.Done.Instance);
+            Context.Stop(Self);
         }
     }
 }
