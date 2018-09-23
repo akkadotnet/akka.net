@@ -131,7 +131,7 @@ namespace Akka.Cluster
             /// <summary>
             /// All node roles in the cluster
             /// </summary>
-            public ImmutableHashSet<string> AllRoles => RoleLeaderMap.Keys.ToImmutableHashSet();
+            public ImmutableSortedSet<string> AllRoles => RoleLeaderMap.Keys.ToImmutableSortedSet();
 
             public ImmutableHashSet<string> UnreachableDataCenters { get; }
 
