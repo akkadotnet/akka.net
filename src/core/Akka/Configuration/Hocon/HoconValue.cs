@@ -387,12 +387,12 @@ namespace Akka.Configuration.Hocon
                     case "nanos":
                     case "nano":
                     case "ns":
-                        return TimeSpan.FromTicks((long) Math.Round(1000000 * TimeSpan.TicksPerMillisecond * v));
+                        return TimeSpan.FromTicks((long) Math.Round(TimeSpan.TicksPerMillisecond * v / 1000000.0));
                     case "microseconds":
                     case "microsecond":
                     case "micros":
                     case "micro":
-                        return TimeSpan.FromTicks((long) Math.Round(1000 * TimeSpan.TicksPerMillisecond * v));
+                        return TimeSpan.FromTicks((long) Math.Round(TimeSpan.TicksPerMillisecond * v / 1000.0));
                     case "milliseconds":
                     case "millisecond":
                     case "millis":

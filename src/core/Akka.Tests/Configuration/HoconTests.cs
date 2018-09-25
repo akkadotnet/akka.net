@@ -884,6 +884,28 @@ ip = ""::1""
             Assert.Equal(50, res.TotalMilliseconds);
         }
 
+        [Fact]
+        public void Can_parse_nanoseconds()
+        {
+            var expected = TimeSpan.FromTicks(12);
+            var value = "1234 ns";
+            var hocon = $"timespan = {value}";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            res.ShouldBe(expected, $"'{value}' rounds to 12 ticks");
+        }
+
+        [Fact]
+        public void Can_parse_microseconds()
+        {
+            var expected = TimeSpan.FromTicks((long) Math.Round(TimeSpan.TicksPerMillisecond * 0.123));
+            var value = "123 microseconds";
+            var hocon = $"timespan = {value}";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            res.ShouldBe(expected, $"'{value}' is {expected}");
+        }
+
         [Fact(Skip = "not working yet")]
         public void Can_substitute_with_concated_string()
         {
