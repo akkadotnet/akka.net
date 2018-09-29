@@ -213,14 +213,16 @@ namespace Akka.Cluster.Tests.MultiNode
                 // actor system to be able to start new with same port
                 var thirdAddress = GetAddress(Third);
                 EnterBarrier("fifth-waiting-for-termination");
-                Sys.WhenTerminated.Wait(Remaining).Should().BeTrue();
+                var timeout = Remaining;
+                Sys.WhenTerminated.Wait(Remaining).Should().BeTrue(because: $"original 5th node should be terminated within {timeout}");
 
                 var port = Cluster.SelfAddress.Port.Value;
                 var restartedSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.port = {port}
                     akka.coordinated-shutdown.terminate-actor-system = on").WithFallback(Sys.Settings.Config));
                 Cluster.Get(restartedSystem).Join(thirdAddress);
-                restartedSystem.WhenTerminated.Wait(Remaining).Should().BeTrue();
+                timeout = Remaining;
+                restartedSystem.WhenTerminated.Wait(timeout).Should().BeTrue(because: $"restarted 5th node should be terminated within {timeout}");
             }, Fifth);
 
             // no multi-jvm test facilities on fifth after this

@@ -171,13 +171,6 @@ namespace Akka.Cluster
         /// <returns>true if convergence have been reached and false if not</returns>
         public bool Convergence(ImmutableHashSet<UniqueAddress> exitingConfirmed)
         {
-            // If another member in the data center that is UP or LEAVING and has not seen this gossip or is exiting
-            // convergence cannot be reached
-            var memberHinderingConvergenceExists = Members.Any(member =>
-                member.DataCenter == SelfDataCenter
-                && IsConvergenceMemberStatus(member.Status)
-                && !(LatestGossip.SeenByNode(member.UniqueAddress) || exitingConfirmed.Contains(member.UniqueAddress)));
-
             // Find cluster members in the data center that are unreachable from other members of the data center
             // excluding observations from members outside of the data center, that have status DOWN or is passed in as confirmed exiting.
             var unreachableInDc = DcReachabilityExcludingDownedObservers.AllUnreachableOrTerminated
@@ -186,7 +179,20 @@ namespace Akka.Cluster
 
             // unreachables outside of the data center or with status DOWN or EXITING does not affect convergence
             var allUnreachablesCanBeIgnored = unreachableInDc.All(unreachable => IsConvergenceSkipUnreachableWithMemberStatus(unreachable.Status));
-            return allUnreachablesCanBeIgnored && !memberHinderingConvergenceExists;
+            if (allUnreachablesCanBeIgnored)
+            {
+                // If another member in the data center that is UP or LEAVING and has not seen this gossip or is exiting
+                // convergence cannot be reached
+                var memberHinderingConvergenceExists = Members.Any(member =>
+                    member.DataCenter == SelfDataCenter
+                    && IsConvergenceMemberStatus(member.Status)
+                    && !(LatestGossip.SeenByNode(member.UniqueAddress) ||
+                         exitingConfirmed.Contains(member.UniqueAddress)));
+
+                return !memberHinderingConvergenceExists;
+            }
+
+            return false;
         }
 
         public ImmutableSortedSet<Member> DcMembers => LatestGossip.IsMultiDc ? Members.Where(m => m.DataCenter != SelfDataCenter).ToImmutableSortedSet(Member.AgeOrdering) : Members;
@@ -195,7 +201,11 @@ namespace Akka.Cluster
 
         public Member YoungestMember => DcMembers.MaxBy(m => m.UpNumber == int.MaxValue ? 0 : m.UpNumber);
 
-        public bool IsLeader(UniqueAddress node) => Leader == null || Leader == node;
+        public bool IsLeader(UniqueAddress node)
+        {
+            var leader = Leader;
+            return leader == null || leader == node;
+        }
 
         public UniqueAddress RoleLeader(string role) => LeaderOf(Members.Where(m => m.HasRole(role)));
 
@@ -217,9 +227,11 @@ namespace Akka.Cluster
 
         public bool IsInSameDc(UniqueAddress node) => node == SelfUniqueAddress || LatestGossip.GetMember(node).DataCenter == SelfDataCenter;
 
-        public bool IsValidNodeForGossip(UniqueAddress node) =>
-            // if cross DC we need to check pairwise unreachable observation
-            node != SelfUniqueAddress && (IsInSameDc(node) && IsReachableExcludingDownedObservers(node)) || Overview.Reachability.IsReachable(SelfUniqueAddress, node);
+        public bool IsValidNodeForGossip(UniqueAddress node)
+        {
+            if (node != SelfUniqueAddress && ((IsInSameDc(node) && IsReachableExcludingDownedObservers(node)) || Overview.Reachability.IsReachable(SelfUniqueAddress, node))) return true;
+            return false;
+        }
 
         /// <summary>
         /// Returns true if toAddress should be reachable from the fromDc in general, within a data center

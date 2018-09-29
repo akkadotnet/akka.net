@@ -806,6 +806,7 @@ namespace Akka.Cluster
         private int _leaderActionCounter = 0;
 
         private bool _exitingTasksInProgress = false;
+        private bool _isCurrentlyLeader = false;
         private readonly TaskCompletionSource<Done> _selfExiting = new TaskCompletionSource<Done>();
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private ImmutableHashSet<UniqueAddress> _exitingConfirmed = ImmutableHashSet<UniqueAddress>.Empty;
@@ -1479,7 +1480,7 @@ namespace Akka.Cluster
         private void CleanupExitingConfirmed()
         {
             // in case the actual removal was performed by another leader node
-            if (_exitingConfirmed.Count != 0)
+            if (!_exitingConfirmed.IsEmpty)
                 _exitingConfirmed = _exitingConfirmed
                     .Where(n => LatestGossip.Members.Any(m => m.UniqueAddress.Equals(n))).ToImmutableHashSet();
         }
@@ -1791,10 +1792,14 @@ namespace Akka.Cluster
             if (IsGossipSpeedupNeeded()) SendGossip();
         }
 
-        private bool IsGossipSpeedupNeeded() => LatestGossip.IsMultiDc
-            ? LatestGossip.Overview.Seen.Count(_membershipState.IsInSameDc) <
-              LatestGossip.Members.Count(m => m.DataCenter == _cluster.SelfDataCenter) / 2
-            : LatestGossip.Overview.Seen.Count < LatestGossip.Members.Count / 2;
+        private bool IsGossipSpeedupNeeded()
+        {
+            if (LatestGossip.IsMultiDc)
+                return LatestGossip.Overview.Seen.Count(_membershipState.IsInSameDc) <
+                       LatestGossip.Members.Count(m => m.DataCenter == _cluster.SelfDataCenter) / 2;
+            else
+                return LatestGossip.Overview.Seen.Count < LatestGossip.Members.Count / 2;
+        }
 
         /// <summary>
         /// Sends full gossip to `n` other random members.
@@ -1821,7 +1826,7 @@ namespace Akka.Cluster
                 var peer = _gossipTargetSelector.GossipTarget(_membershipState);
                 if (peer != null)
                 {
-                    if (!_membershipState.IsInSameDc(peer) || LatestGossip.SeenByNode(peer))
+                    if (!_membershipState.IsInSameDc(peer) || localGossip.SeenByNode(peer))
                     {
                         // avoid transferring the full state if possible
                         GossipStatusTo(peer);
@@ -1850,6 +1855,12 @@ namespace Akka.Cluster
         {
             if (_membershipState.IsLeader(SelfUniqueAddress))
             {
+                if (!_isCurrentlyLeader)
+                {
+                    _cluster.LogInfo("Cluster Node [{0}] dc [{1}] is the new leader", SelfAddress, _cluster.Settings.SelfDataCenter);
+                    _isCurrentlyLeader = true;
+                }
+
                 // only run the leader actions if we are the LEADER
                 const int firstNotice = 20;
                 const int periodicNotice = 60;
@@ -1881,6 +1892,11 @@ namespace Akka.Cluster
                         }
                     }
                 }
+            }
+            else if (_isCurrentlyLeader)
+            {
+                _cluster.LogInfo("Cluster Node [{0}] dc [{1}] is no longer the leader", SelfAddress, _cluster.Settings.SelfDataCenter);
+                _isCurrentlyLeader = false;
             }
 
             CleanupExitingConfirmed();
@@ -2195,13 +2211,17 @@ namespace Akka.Cluster
         private void GossipTo(UniqueAddress node)
         {
             if (_membershipState.IsValidNodeForGossip(node))
+            {
                 ClusterCore(node.Address).Tell(new GossipEnvelope(SelfUniqueAddress, node, LatestGossip));
+            }
         }
 
         private void GossipTo(UniqueAddress node, IActorRef destination)
         {
             if (_membershipState.IsValidNodeForGossip(node))
+            {
                 destination.Tell(new GossipEnvelope(SelfUniqueAddress, node, LatestGossip));
+            }
         }
 
         private void GossipStatusTo(UniqueAddress node)
