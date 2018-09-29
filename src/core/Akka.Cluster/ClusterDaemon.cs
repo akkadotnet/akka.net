@@ -1754,10 +1754,9 @@ namespace Akka.Cluster
                 var newOverview = localGossip.Overview.Copy(reachability: newReachability);
                 var newGossip = localGossip.Copy(overview: newOverview);
                 UpdateLatestGossip(newGossip);
-                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine. Node roles [{2}]",
+                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine. Node roles [{2}]. It must still be marked as down before it's removed.",
                     Self, node.Address, string.Join(",", _cluster.SelfRoles));
                 Publish(_latestGossip);
-                Downing(node.Address);
             }
         }
 
