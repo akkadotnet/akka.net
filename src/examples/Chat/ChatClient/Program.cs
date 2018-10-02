@@ -20,7 +20,7 @@ namespace ChatClient
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     actor {
-        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+        provider = remote
     }
     remote {
         dot-netty.tcp {
