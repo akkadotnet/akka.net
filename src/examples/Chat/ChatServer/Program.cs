@@ -34,64 +34,48 @@ akka {
 
             using (var system = ActorSystem.Create("MyServer", config))
             {
-                system.ActorOf<ChatServerActor>("ChatServer");
+                system.ActorOf(Props.Create(() => new ChatServerActor()), "ChatServer");
 
                 Console.ReadLine();
             }
         }
     }
 
-    class ChatServerActor : TypedActor,
-        IHandle<SayRequest>,
-        IHandle<ConnectRequest>,
-        IHandle<NickRequest>,
-        IHandle<Disconnect>,
-        IHandle<ChannelsRequest>,
-        ILogReceive
-
+    class ChatServerActor : ReceiveActor, ILogReceive
     {
         private readonly HashSet<IActorRef> _clients = new HashSet<IActorRef>();
 
-        public void Handle(SayRequest message)
+        public ChatServerActor()
         {
-            //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
-            var response = new SayResponse
+            Receive<SayRequest>(message =>
             {
-                Username = message.Username,
-                Text = message.Text,
-            };
-            foreach (var client in _clients) client.Tell(response, Self);
-        }
+                var response = new SayResponse
+                {
+                    Username = message.Username,
+                    Text = message.Text,
+                };
+                foreach (var client in _clients) client.Tell(response, Self);
+            });
 
-        public void Handle(ConnectRequest message)
-        {
-            //   Console.WriteLine("User {0} has connected", message.Username);
-            _clients.Add(this.Sender);
-            Sender.Tell(new ConnectResponse
+            Receive<ConnectRequest>(message =>
             {
-                Message = "Hello and welcome to Akka .NET chat example",
-            }, Self);
-        }
+                _clients.Add(Sender);
+                Sender.Tell(new ConnectResponse
+                {
+                    Message = "Hello and welcome to Akka.NET chat example",
+                }, Self);
+            });
 
-        public void Handle(NickRequest message)
-        {
-            var response = new NickResponse
+            Receive<NickRequest>(message =>
             {
-                OldUsername = message.OldUsername,
-                NewUsername = message.NewUsername,
-            };
+                var response = new NickResponse
+                {
+                    OldUsername = message.OldUsername,
+                    NewUsername = message.NewUsername,
+                };
 
-            foreach (var client in _clients) client.Tell(response, Self);
-        }
-
-        public void Handle(Disconnect message)
-        {
-
-        }
-
-        public void Handle(ChannelsRequest message)
-        {
-
+                foreach (var client in _clients) client.Tell(response, Self);
+            });
         }
     }
 }
