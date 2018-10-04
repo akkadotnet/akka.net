@@ -2882,9 +2882,7 @@ namespace Akka.Event
     public class Error : Akka.Event.LogEvent
     {
         public Error(System.Exception cause, string logSource, System.Type logClass, object message) { }
-        public System.Exception Cause { get; }
         public override Akka.Event.LogLevel LogLevel() { }
-        public override string ToString() { }
     }
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
