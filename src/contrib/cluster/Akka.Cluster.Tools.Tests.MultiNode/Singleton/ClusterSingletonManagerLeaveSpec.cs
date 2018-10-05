@@ -12,6 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
@@ -30,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
             ")
@@ -40,42 +41,44 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
 
         // The singleton actor
-        public class Echo : ReceiveActor
+    }
+
+    public class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
+    {
+        public class Echo : UntypedActor
         {
             private readonly IActorRef _testActorRef;
 
             public Echo(IActorRef testActorRef)
             {
                 _testActorRef = testActorRef;
+            }
 
-                Receive<string>(x => x.Equals("stop"), _ =>
+            protected override void PreStart() => _testActorRef.Tell("preStart");
+
+            protected override void PostStop() => _testActorRef.Tell("postStop");
+
+            protected override void OnReceive(object message)
+            {
+                switch (message)
                 {
-                    _testActorRef.Tell("stop");
-                    Context.Stop(Self);
-                });
-
-                ReceiveAny(x => Sender.Tell(Self));
+                    case "stop":
+                        _testActorRef.Tell("stop");
+                        Context.Stop(Self);
+                        break;
+                    default:
+                        Sender.Tell(Self);
+                        break;
+                }
             }
-
-            protected override void PreStart()
-            {
-                _testActorRef.Tell("preStart");
-            }
-
-            protected override void PostStop()
-            {
-                _testActorRef.Tell("postStop");
-            }
-
-            public static Props Props(IActorRef testActorRef)
-                => Actor.Props.Create(() => new Echo(testActorRef));
         }
-    }
 
-    public class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
-    {
-        private readonly ClusterSingletonManagerLeaveSpecConfig _config;
         private readonly Lazy<IActorRef> _echoProxy;
+        private readonly TestProbe _echoProxyTerminatedProbe;
+
+        private readonly RoleName _first;
+        private readonly RoleName _second;
+        private readonly RoleName _third;
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
@@ -85,12 +88,16 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config, typeof(ClusterSingletonManagerLeaveSpec))
         {
-            _config = config;
+            _echoProxyTerminatedProbe = CreateTestProbe();
+            _echoProxy = new Lazy<IActorRef>(() => _echoProxyTerminatedProbe.Watch(Sys.ActorOf(
+                ClusterSingletonProxy.Props(
+                    singletonManagerPath: "/user/echo",
+                    settings: ClusterSingletonProxySettings.Create(Sys)),
+                    name: "echoProxy")));
 
-            _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
-                singletonManagerPath: "/user/echo",
-                settings: ClusterSingletonProxySettings.Create(Sys)),
-                name: "echoProxy")));
+            _first = config.First;
+            _second = config.Second;
+            _third = config.Third;
         }
 
         private void Join(RoleName from, RoleName to)
@@ -105,7 +112,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         private IActorRef CreateSingleton()
         {
             return Sys.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: ClusterSingletonManagerLeaveSpecConfig.Echo.Props(TestActor),
+                singletonProps: Props.Create(() => new Echo(TestActor)), 
                 terminationMessage: "stop",
                 settings: ClusterSingletonManagerSettings.Create(Sys)),
                 name: "echo");
@@ -119,40 +126,38 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public void Leaving_ClusterSingletonManager_must_handover_to_new_instance()
         {
-            Join(_config.First, _config.First);
+            Join(_first, _first);
 
-            RunOn(() =>
+            RunOn(() => Within(5.Seconds(), () =>
             {
-                Within(5.Seconds(), () =>
-                {
-                    ExpectMsg("preStart");
-                    _echoProxy.Value.Tell("hello");
-                    ExpectMsg<IActorRef>();
-                });
-            }, _config.First);
+                ExpectMsg("preStart");
+                _echoProxy.Value.Tell("hello");
+                ExpectMsg<IActorRef>();
+            }), _first);
+
             EnterBarrier("first-active");
 
-            Join(_config.Second, _config.First);
-            RunOn(() =>
+            Join(_second, _first);
+
+            RunOn(() => Within(10.Seconds(), () =>
             {
-                Within(10.Seconds(), () =>
-                {
-                    AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(2));
-                });
-            }, _config.First, _config.Second);
+                AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(2));
+            }), _first, _second);
+
             EnterBarrier("second-up");
 
-            Join(_config.Third, _config.First);
+            Join(_third, _first);
             Within(10.Seconds(), () =>
             {
                 AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
             });
+
             EnterBarrier("all-up");
 
             RunOn(() =>
             {
-                Cluster.Leave(Node(_config.First).Address);
-            }, _config.Second);
+                Cluster.Leave(Node(_first).Address);
+            }, _second);
 
             RunOn(() =>
             {
@@ -163,19 +168,20 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 // CoordinatedShutdown makes sure that singleton actors are
                 // stopped before Cluster shutdown
                 ExpectMsg("MemberRemoved");
-            }, _config.First);
+                _echoProxyTerminatedProbe.ExpectTerminated(_echoProxy.Value, 10.Seconds());
+            }, _first);
             EnterBarrier("first-stopped");
 
             RunOn(() =>
             {
                 ExpectMsg("preStart");
-            }, _config.Second);
+            }, _second);
             EnterBarrier("second-started");
 
             RunOn(() =>
             {
                 var p = CreateTestProbe();
-                var firstAddress = Node(_config.First).Address;
+                var firstAddress = Node(_first).Address;
                 p.Within(15.Seconds(), () =>
                 {
                     p.AwaitAssert(() =>
@@ -184,37 +190,37 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                         p.ExpectMsg<IActorRef>(1.Seconds()).Path.Address.Should().NotBe(firstAddress);
                     });
                 });
-            }, _config.Second, _config.Third);
+            }, _second, _third);
             EnterBarrier("second-working");
 
             RunOn(() =>
             {
                 var t = TestActor;
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
-                Cluster.Leave(Node(_config.Second).Address);
+                Cluster.Leave(Node(_second).Address);
                 ExpectMsg("stop", 15.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
-            }, _config.Second);
+                _echoProxyTerminatedProbe.ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+            }, _second);
             EnterBarrier("second-stopped");
 
             RunOn(() =>
             {
                 ExpectMsg("preStart");
-            }, _config.Third);
+            }, _third);
             EnterBarrier("third-started");
 
             RunOn(() =>
             {
                 var t = TestActor;
                 Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
-                Cluster.Leave(Node(_config.Third).Address);
+                Cluster.Leave(Node(_third).Address);
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
-            }, _config.Third);
+                _echoProxyTerminatedProbe.ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+            }, _third);
             EnterBarrier("third-stopped");
         }
     }
