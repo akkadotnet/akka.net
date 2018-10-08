@@ -271,7 +271,7 @@ namespace Akka.Persistence
         /// <summary> 
         /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. This method guarantees that no new commands will be received by a persistent actor
-        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and execution of it's handler. It also
+        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and execution of its handler. It also
         /// holds multiple persist calls per received command. Internally this is done by stashing. The stash used
         /// for that is an internal stash which doesn't interfere with the inherited user stash.
         /// 
