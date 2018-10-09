@@ -836,7 +836,7 @@ namespace Akka.Streams.Dsl
 
             private void Dispatch(T left, T right)
             {
-                if (_stage._compare(left, right) == -1)
+                if (_stage._compare(left, right) < 0)
                 {
                     _other = right;
                     Emit(_stage.Out, left, _readLeft);
