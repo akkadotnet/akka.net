@@ -15,7 +15,7 @@ namespace Akka.Pattern
     /// <summary>
     /// Actor used to supervise actors with ability to restart them after back-off timeout occurred. 
     /// It's designed for cases when i.e. persistent actor stops due to journal unavailability or failure. 
-    /// In this case it better to wait before restart.
+    /// In this case it is better to wait before restart.
     /// </summary>
     public sealed class BackoffSupervisor : BackoffSupervisorBase
     {
