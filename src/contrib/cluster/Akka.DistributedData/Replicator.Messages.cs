@@ -14,7 +14,7 @@ using Akka.Actor;
 
 namespace Akka.DistributedData
 {
-    [Serializable]
+    
     public class GetKeyIds
     {
         public static readonly GetKeyIds Instance = new GetKeyIds();
@@ -28,7 +28,7 @@ namespace Akka.DistributedData
         public override int GetHashCode() => nameof(GetKeyIds).GetHashCode();
     }
 
-    [Serializable]
+    
     public sealed class GetKeysIdsResult : IEquatable<GetKeysIdsResult>
     {
         public IImmutableSet<string> Keys { get; }
@@ -71,14 +71,14 @@ namespace Akka.DistributedData
     /// way to pass contextual information (e.g. original sender) without having to use `ask`
     /// or maintain local correlation data structures.
     /// </summary>
-    [Serializable]
-    public sealed class Get : ICommand, IEquatable<Get>, IReplicatorMessage
+    
+    public abstract class Get : ICommand, IEquatable<Get>, IReplicatorMessage
     {
         public IKey Key { get; }
         public IReadConsistency Consistency { get; }
         public object Request { get; }
 
-        public Get(IKey key, IReadConsistency consistency, object request = null)
+        protected Get(IKey key, IReadConsistency consistency, object request = null)
         {
             Key = key;
             Consistency = consistency;
@@ -112,6 +112,15 @@ namespace Akka.DistributedData
 
         /// <inheritdoc/>
         public override string ToString() => $"Get({Key}:{Consistency}{(Request == null ? "" : ", req=" + Request)})";
+    }
+
+    /// <inheritdoc/>
+    public sealed class Get<T> : Get where T : IReplicatedData
+    {
+        public Get(IKey<T> key, IReadConsistency consistency, object request = null)
+            : base(key, consistency, request)
+        {
+        }
     }
 
     /// <summary>
@@ -164,8 +173,8 @@ namespace Akka.DistributedData
         T Get<T>(IKey<T> key) where T : IReplicatedData;
     }
 
-    [Serializable]
-    public sealed class GetSuccess : IGetResponse, IEquatable<GetSuccess>, IReplicatorMessage
+    
+    public abstract class GetSuccess : IGetResponse, IEquatable<GetSuccess>, IReplicatorMessage
     {
         public IKey Key { get; }
         public object Request { get; }
@@ -174,7 +183,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Reply from <see cref="Get"/>. The data value is retrieved with <see cref="Data"/>.
         /// </summary>
-        public GetSuccess(IKey key, object request, IReplicatedData data)
+        protected GetSuccess(IKey key, object request, IReplicatedData data)
         {
             Key = key;
             Request = request;
@@ -219,15 +228,26 @@ namespace Akka.DistributedData
         /// <inheritdoc/>
         public override string ToString() => $"GetSuccess({Key}:{Data}{(Request == null ? "" : ", req=" + Request)})";
     }
+    
+    /// <inheritdoc/>
+    public sealed class GetSuccess<T> : GetSuccess where T : IReplicatedData
+    {
+        public GetSuccess(IKey<T> key, object request, T data) : base(key, request, data)
+        {
+            Data = data;
+        }
 
-    [Serializable]
-    public sealed class NotFound : IGetResponse, IEquatable<NotFound>, IReplicatorMessage
+        public new T Data { get; }
+    }
+
+    
+    public abstract class NotFound : IGetResponse, IEquatable<NotFound>, IReplicatorMessage
     {
         public IKey Key { get; }
 
         public object Request { get; }
 
-        public NotFound(IKey key, object request)
+        protected NotFound(IKey key, object request)
         {
             Key = key;
             Request = request;
@@ -266,17 +286,25 @@ namespace Akka.DistributedData
         }
     }
 
+    /// <inheritdoc/>
+    public sealed class NotFound<T> : NotFound where T : IReplicatedData
+    {
+        public NotFound(IKey<T> key, object request) : base(key, request)
+        {
+        }
+    }
+
     /// <summary>
     /// The <see cref="Get{T}"/> request could not be fulfill according to the given
     /// <see cref="IReadConsistency"/> level and <see cref="IReadConsistency.Timeout"/> timeout.
     /// </summary>
-    [Serializable]
-    public sealed class GetFailure : IGetResponse, IEquatable<GetFailure>, IReplicatorMessage
+    
+    public abstract class GetFailure : IGetResponse, IEquatable<GetFailure>, IReplicatorMessage
     {
         public IKey Key { get; }
         public object Request { get; }
 
-        public GetFailure(IKey key, object request)
+        protected GetFailure(IKey key, object request)
         {
             Key = key;
             Request = request;
@@ -315,6 +343,14 @@ namespace Akka.DistributedData
         /// <inheritdoc/>
         public override string ToString() => $"GetFailure({Key}{(Request == null ? "" : ", req=" + Request)})";
     }
+    
+    /// <inheritdoc/>
+    public sealed class GetFailure<T> : GetFailure where T: IReplicatedData
+    {
+        public GetFailure(IKey<T> key, object request) : base(key, request)
+        {
+        }
+    }
 
     /// <summary>
     /// Register a subscriber that will be notified with a <see cref="Changed"/> message
@@ -329,14 +365,14 @@ namespace Akka.DistributedData
     /// 
     /// If the key is deleted the subscriber is notified with a <see cref="DataDeleted"/> message.
     /// </summary>
-    [Serializable]
-    public sealed class Subscribe : IReplicatorMessage, IEquatable<Subscribe>
+    
+    public abstract class Subscribe : IReplicatorMessage, IEquatable<Subscribe>
     {
         public IKey Key { get; }
 
         public IActorRef Subscriber { get; }
 
-        public Subscribe(IKey key, IActorRef subscriber)
+        protected Subscribe(IKey key, IActorRef subscriber)
         {
             Key = key;
             Subscriber = subscriber;
@@ -367,17 +403,25 @@ namespace Akka.DistributedData
         public override string ToString() => $"Subscribe({Key}, {Subscriber})";
     }
 
+    /// <inheritdoc/>
+    public sealed class Subscribe<T> : Subscribe where T:IReplicatedData
+    {
+        public Subscribe(IKey<T> key, IActorRef subscriber) : base(key, subscriber)
+        {
+        }
+    }
+
     /// <summary>
     /// Unregister a subscriber.
     /// </summary>
     /// <seealso cref="Subscribe"/>
-    [Serializable]
-    public sealed class Unsubscribe : IEquatable<Unsubscribe>, IReplicatorMessage
+    
+    public abstract class Unsubscribe : IEquatable<Unsubscribe>, IReplicatorMessage
     {
         public IKey Key { get; }
         public IActorRef Subscriber { get; }
 
-        public Unsubscribe(IKey key, IActorRef subscriber)
+        protected Unsubscribe(IKey key, IActorRef subscriber)
         {
             Key = key;
             Subscriber = subscriber;
@@ -408,6 +452,14 @@ namespace Akka.DistributedData
         public override string ToString() => $"Unsubscribe({Key}, {Subscriber})";
     }
 
+    /// <inheritdoc/>
+    public sealed class Unsubscribe<T> : Unsubscribe where T : IReplicatedData
+    {
+        public Unsubscribe(IKey<T> key, IActorRef subscriber) : base(key, subscriber)
+        {
+        }
+    }
+
     internal interface IChanged
     {
         IKey Key { get; }
@@ -418,13 +470,13 @@ namespace Akka.DistributedData
     /// The data value is retrieved with <see cref="Data"/> using the typed key.
     /// </summary>
     /// <seealso cref="Subscribe"/>
-    [Serializable]
-    public sealed class Changed : IChanged, IEquatable<Changed>, IReplicatorMessage
+    
+    public abstract class Changed : IChanged, IEquatable<Changed>, IReplicatorMessage
     {
         public IKey Key { get; }
         public object Data { get; }
 
-        public Changed(IKey key, object data)
+        protected Changed(IKey key, object data)
         {
             Key = key;
             Data = data;
@@ -463,6 +515,17 @@ namespace Akka.DistributedData
         public override string ToString() => $"Changed({Key}:{Data})";
     }
 
+    /// <inheritdoc/>
+    public sealed class Changed<T> : Changed where T : IReplicatedData
+    {
+        public Changed(IKey<T> key, T data) : base(key, data)
+        {
+            Data = data;
+        }
+
+        public new T Data { get; }
+    }
+
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to update a data value for the
     /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the 
@@ -477,7 +540,7 @@ namespace Akka.DistributedData
     /// function that only uses the data parameter and stable fields from enclosing scope. It must
     /// for example not access `sender()` reference of an enclosing actor.
     /// </summary>
-    [Serializable]
+    
     public sealed class Update : ICommand, INoSerializationVerificationNeeded
     {
         private IReplicatedData ModifyWithInitial(IReplicatedData initial, Func<IReplicatedData, IReplicatedData> modifier, IReplicatedData data) =>
@@ -550,7 +613,7 @@ namespace Akka.DistributedData
         void ThrowOnFailure();
     }
 
-    [Serializable]
+    
     public sealed class UpdateSuccess : IUpdateResponse, IEquatable<UpdateSuccess>, INoSerializationVerificationNeeded
     {
         public IKey Key { get; }
@@ -609,7 +672,7 @@ namespace Akka.DistributedData
     /// It will eventually be disseminated to other replicas, unless the local replica
     /// crashes before it has been able to communicate with other replicas.
     /// </summary>
-    [Serializable]
+    
     public sealed class UpdateTimeout : IUpdateFailure, IEquatable<UpdateTimeout>
     {
         public IKey Key { get; }
@@ -658,7 +721,7 @@ namespace Akka.DistributedData
     /// If the `modify` function of the <see cref="Update"/> throws an exception the reply message
     /// will be this <see cref="ModifyFailure"/> message. The original exception is included as <see cref="Cause"/>.
     /// </summary>
-    [Serializable]
+    
     public sealed class ModifyFailure : IUpdateFailure
     {
         public IKey Key { get; }
@@ -755,7 +818,7 @@ namespace Akka.DistributedData
     /// Send this message to the local <see cref="Replicator"/> to delete a data value for the
     /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the <see cref="IDeleteResponse"/> messages.
     /// </summary>
-    [Serializable]
+    
     public sealed class Delete : ICommand, INoSerializationVerificationNeeded, IEquatable<Delete>
     {
         public IKey Key { get; }
@@ -829,7 +892,7 @@ namespace Akka.DistributedData
         bool AlreadyDeleted { get; }
     }
 
-    [Serializable]
+    
     public sealed class DeleteSuccess : IDeleteResponse, IEquatable<DeleteSuccess>
     {
         public IKey Key { get; }
@@ -862,7 +925,7 @@ namespace Akka.DistributedData
         public override string ToString() => $"DeleteSuccess({Key}{(Request == null ? "" : ", req=" + Request)})";
     }
 
-    [Serializable]
+    
     public sealed class ReplicationDeleteFailure : IDeleteResponse, IEquatable<ReplicationDeleteFailure>
     {
         public IKey Key { get; }
@@ -893,7 +956,7 @@ namespace Akka.DistributedData
         public override string ToString() => $"ReplicationDeletedFailure({Key})";
     }
 
-    [Serializable]
+    
     public sealed class DataDeleted : Exception, IDeleteResponse, IGetResponse, IUpdateResponse, IEquatable<DataDeleted>
     {
         public IKey Key { get; }
@@ -942,7 +1005,7 @@ namespace Akka.DistributedData
     /// Get current number of replicas, including the local replica.
     /// Will reply to sender with <see cref="ReplicaCount"/>.
     /// </summary>
-    [Serializable]
+    
     public sealed class GetReplicaCount
     {
         public static readonly GetReplicaCount Instance = new GetReplicaCount();
@@ -953,7 +1016,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// Current number of replicas. Reply to <see cref="GetReplicaCount"/>.
     /// </summary>
-    [Serializable]
+    
     public sealed class ReplicaCount : IEquatable<ReplicaCount>
     {
         public int N { get; }
@@ -980,7 +1043,7 @@ namespace Akka.DistributedData
     /// Notify subscribers of changes now, otherwise they will be notified periodically
     /// with the configured `notify-subscribers-interval`.
     /// </summary>
-    [Serializable]
+    
     public sealed class FlushChanges
     {
         public static readonly FlushChanges Instance = new FlushChanges();

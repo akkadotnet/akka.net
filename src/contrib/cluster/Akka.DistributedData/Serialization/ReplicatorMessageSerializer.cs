@@ -5,19 +5,26 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.DistributedData.Internal;
+using Akka.Serialization;
+using Akka.Util.Internal;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Akka.Actor;
-using Akka.DistributedData.Internal;
-using Akka.Util;
-using Akka.Util.Internal;
-using Hyperion;
-using Serializer = Akka.Serialization.Serializer;
+using Akka.DistributedData.Serialization.Proto.Msg;
+using Google.Protobuf;
+using DataEnvelope = Akka.DistributedData.Internal.DataEnvelope;
+using DeltaPropagation = Akka.DistributedData.Internal.DeltaPropagation;
+using DurableDataEnvelope = Akka.DistributedData.Durable.DurableDataEnvelope;
+using Gossip = Akka.DistributedData.Internal.Gossip;
+using Read = Akka.DistributedData.Internal.Read;
+using ReadResult = Akka.DistributedData.Internal.ReadResult;
+using Status = Akka.DistributedData.Internal.Status;
+using Write = Akka.DistributedData.Internal.Write;
 
 namespace Akka.DistributedData.Serialization
 {
-    public sealed class ReplicatorMessageSerializer : Serializer
+    public sealed class ReplicatorMessageSerializer : SerializerWithStringManifest
     {
         #region internal classes
 
@@ -120,46 +127,40 @@ namespace Akka.DistributedData.Serialization
         }
 
         #endregion
-        
-        public static readonly Type WriteAckType = typeof(WriteAck);
-        
+
+        private const string GetManifest = "A";
+        private const string GetSuccessManifest = "B";
+        private const string NotFoundManifest = "C";
+        private const string GetFailureManifest = "D";
+        private const string SubscribeManifest = "E";
+        private const string UnsubscribeManifest = "F";
+        private const string ChangedManifest = "G";
+        private const string DataEnvelopeManifest = "H";
+        private const string WriteManifest = "I";
+        private const string WriteAckManifest = "J";
+        private const string ReadManifest = "K";
+        private const string ReadResultManifest = "L";
+        private const string StatusManifest = "M";
+        private const string GossipManifest = "N";
+        private const string WriteNackManifest = "O";
+        private const string DurableDataEnvelopeManifest = "P";
+        private const string DeltaPropagationManifest = "Q";
+        private const string DeltaNackManifest = "R";
+
+        private readonly Akka.Serialization.Serialization _serialization;
+
         private readonly SmallCache<Read, byte[]> readCache;
         private readonly SmallCache<Write, byte[]> writeCache;
         private readonly Hyperion.Serializer serializer;
         private readonly byte[] writeAckBytes;
+        private readonly byte[] empty = new byte[0];
 
-        public ReplicatorMessageSerializer(ExtendedActorSystem system) : base(system)
+        public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) : base(system)
         {
+            _serialization = system.Serialization;
             var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
-            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, Serialize);
-            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, Serialize);
-
-            var akkaSurrogate =
-                Hyperion.Surrogate.Create<ISurrogated, ISurrogate>(
-                    toSurrogate: from => from.ToSurrogate(system),
-                    fromSurrogate: to => to.FromSurrogate(system));
-
-            serializer = new Hyperion.Serializer(new SerializerOptions(
-                preserveObjectReferences: true,
-                versionTolerance: true,
-                surrogates: new[] { akkaSurrogate },
-                knownTypes: new []
-                {
-                    typeof(Get),
-                    typeof(GetSuccess),
-                    typeof(GetFailure),
-                    typeof(NotFound),
-                    typeof(Subscribe),
-                    typeof(Unsubscribe),
-                    typeof(Changed),
-                    typeof(DataEnvelope),
-                    typeof(Write),
-                    typeof(WriteAck),
-                    typeof(Read),
-                    typeof(ReadResult),
-                    typeof(Internal.Status),
-                    typeof(Gossip)
-                }));
+            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, m => ReadToProto(m).ToByteArray());
+            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, m => WriteToProto(m).ToByteArray());
 
             using (var stream = new MemoryStream())
             {
@@ -175,33 +176,259 @@ namespace Akka.DistributedData.Serialization
             });
         }
 
-        public override bool IncludeManifest => false;
+        public override string Manifest(object o)
+        {
+            switch (o)
+            {
+                case DataEnvelope _: return DataEnvelopeManifest;
+                case Write _: return WriteManifest;
+                case WriteAck _: return WriteAckManifest;
+                case Read _: return ReadManifest;
+                case ReadResult _: return ReadResultManifest;
+                case DeltaPropagation _: return DeltaPropagationManifest;
+                case Status _: return StatusManifest;
+                case Get _: return GetManifest;
+                case GetSuccess _: return GetSuccessManifest;
+                case Durable.DurableDataEnvelope _: return DurableDataEnvelopeManifest;
+                case Changed _: return ChangedManifest;
+                case NotFound _: return NotFoundManifest;
+                case GetFailure _: return GetFailureManifest;
+                case Subscribe _: return SubscribeManifest;
+                case Unsubscribe _: return UnsubscribeManifest;
+                case Gossip _: return GossipManifest;
+                case WriteNack _: return WriteNackManifest;
+                case DeltaNack _: return DeltaNackManifest;
+
+                default: throw new ArgumentException($"Can't serialize object of type [{o.GetType().FullName}] using [{GetType().FullName}]");
+            }
+        }
+
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Write) return writeCache.GetOrAdd((Write) obj);
-            if (obj is Read) return readCache.GetOrAdd((Read)obj);
-            if (obj is WriteAck) return writeAckBytes;
-            
-            return Serialize(obj);
-        }
-
-        private byte[] Serialize(object obj)
-        {
-            using (var stream = new MemoryStream())
+            switch (obj)
             {
-                serializer.Serialize(obj, stream);
-                stream.Position = 0;
-                return stream.ToArray();
+                case DataEnvelope _: return DataEnvelopeToProto((DataEnvelope)obj).ToByteArray();
+                case Write _: return writeCache.GetOrAdd((Write)obj);
+                case WriteAck _: return writeAckBytes;
+                case Read _: return readCache.GetOrAdd((Read)obj);
+                case ReadResult _: return ReadResultToProto((ReadResult)obj).ToByteArray();
+                case DeltaPropagation _: return DeltaPropagationToProto((DeltaPropagation)obj).ToByteArray();
+                case Status _: return StatusToProto((Status)obj).ToByteArray();
+                case Get _: return GetToProto((Get)obj).ToByteArray();
+                case GetSuccess _: return GetSuccessToProto((GetSuccess)obj).ToByteArray();
+                case Durable.DurableDataEnvelope _: return DurableDataEnvelopeToProto((Durable.DurableDataEnvelope)obj).ToByteArray();
+                case Changed _: return ChangedToProto((Changed)obj).ToByteArray();
+                case NotFound _: return NotFoundToProto((NotFound)obj).ToByteArray();
+                case GetFailure _: return GetFailureToProto((GetFailure)obj).ToByteArray();
+                case Subscribe _: return SubscribeToProto((Subscribe)obj).ToByteArray();
+                case Unsubscribe _: return UnsubscribeToProto((Unsubscribe)obj).ToByteArray();
+                case Gossip _: return Compress(GossipToProto((Gossip)obj));
+                case WriteNack _: return empty;
+                case DeltaNack _: return empty;
+
+                default: throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] using [{GetType().FullName}]");
             }
         }
 
-        public override object FromBinary(byte[] bytes, Type type)
+        private byte[] Compress(IMessage msg)
         {
-            if (type == WriteAckType) return WriteAck.Instance;
-            using (var stream = new MemoryStream(bytes))
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Gossip GossipToProto(Gossip gossip)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Unsubscribe UnsubscribeToProto(Unsubscribe unsubscribe)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Subscribe SubscribeToProto(Subscribe msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.GetFailure GetFailureToProto(GetFailure msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.NotFound NotFoundToProto(NotFound msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.DurableDataEnvelope DurableDataEnvelopeToProto(DurableDataEnvelope msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Changed ChangedToProto(Changed msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.GetSuccess GetSuccessToProto(GetSuccess msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Get GetToProto(Get msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Status StatusToProto(Status status)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.DeltaPropagation DeltaPropagationToProto(DeltaPropagation deltaPropagation)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.ReadResult ReadResultToProto(ReadResult readResult)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.DataEnvelope DataEnvelopeToProto(DataEnvelope dataEnvelope)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Write WriteToProto(Write write)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Proto.Msg.Read ReadToProto(Read read)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            dynamic d;
+            switch (manifest)
             {
-                return serializer.Deserialize(stream);
+                case DataEnvelopeManifest: return DataEnvelopeFromBinary(bytes);
+                case WriteManifest: return WriteFromBinary(bytes);
+                case WriteAckManifest: return WriteAck.Instance;
+                case ReadManifest: return ReadFromBinary(bytes);
+                case ReadResultManifest: return ReadResultFromBinary(bytes);
+                case DeltaPropagationManifest: return DeltaPropagationFromBinary(bytes);
+                case StatusManifest: return StatusFromBinary(bytes);
+                case GetManifest: return GetFromBinary(bytes);
+                case GetSuccessManifest: return GetSuccessFromBinary(bytes);
+                case DurableDataEnvelopeManifest: return DurableDataEnvelopeFromBinary(bytes);
+                case ChangedManifest: return ChangedFromBinary(bytes);
+                case NotFoundManifest: return NotFoundFromBinary(bytes);
+                case GetFailureManifest: return GetFailureFromBinary(bytes);
+                case SubscribeManifest: return SubscribeFromBinary(bytes);
+                case UnsubscribeManifest: return UnsubscribeFromBinary(bytes);
+                case GossipManifest: return GossipFromBinary(Decompress(bytes));
+                case WriteNackManifest: return WriteNack.Instance;
+                case DeltaNackManifest: return DeltaNack.Instance;
+
+                default: throw new ArgumentException($"Unimplemented deserialization of message with manifest '{manifest}' using [{GetType().FullName}]");
             }
+        }
+
+        private byte[] Decompress(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object GossipFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object UnsubscribeFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object SubscribeFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object GetFailureFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object NotFoundFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ChangedFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.Changed.Parser.ParseFrom(bytes);
+            dynamic data = OtherMessageFromProto(proto.Data);
+            dynamic key = OtherMessageFromProto(proto.Key);
+            return ChangedDynamic(data, key);
+        }
+
+        private Changed<T> ChangedDynamic<T>(T data, IKey<T> key) where T : IReplicatedData => new Changed<T>(key, data);
+
+        private object OtherMessageFromProto(OtherMessage proto)
+        {
+            var manifest = proto.MessageManifest == null || proto.MessageManifest.IsEmpty
+                ? string.Empty
+                : proto.MessageManifest.ToStringUtf8();
+            return _serialization.Deserialize(proto.EnclosedMessage.ToByteArray(), proto.SerializerId, manifest);
+        }
+
+        private object DurableDataEnvelopeFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object GetSuccessFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ReadResultFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object GetFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object StatusFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object DeltaPropagationFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ReadFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object WriteFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object DataEnvelopeFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
         }
     }
 }
