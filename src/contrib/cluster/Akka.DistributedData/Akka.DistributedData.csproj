@@ -20,6 +20,10 @@
     <PackageReference Include="Hyperion" Version="0.9.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Serialization\Proto\" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CLONABLE</DefineConstants>
   </PropertyGroup>

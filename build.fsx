@@ -443,7 +443,9 @@ Target "Protobuf" <| fun _ ->
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
-        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
+        ("ReplicatorMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/");
+        ("ReplicatedDataMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/"); ]
 
     printfn "Using proto.exe: %s" protocPath
 
