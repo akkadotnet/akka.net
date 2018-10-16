@@ -15,17 +15,17 @@ PM> Install-Package Akka.Logger.Serilog
 
 ## Example
 
-The following example uses Serilog's __Colored Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilog's documentation for details on these.
+The following example uses Serilog's __Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilog's documentation for details on these.
 
 ```
-PM> Install-Package Serilog.Sinks.ColoredConsole
+PM> Install-Package Serilog.Sinks.Console
 ```
 
 Next, you'll need to configure the global `Log.Logger` and also specify to use
 the logger in the config when creating the system, for example like this:
 ```csharp
 var logger = new LoggerConfiguration()
-	.WriteTo.ColoredConsole()
+	.WriteTo.Console()
 	.MinimumLevel.Information()
 	.CreateLogger();
 
@@ -72,7 +72,7 @@ If the configured output template is, for example, `"[{CorrelationId}] {Message}
 ```csharp
 // configure sink with an output template
 var logger = new LoggerConfiguration()
-	.WriteTo.ColoredConsole(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
+	.WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
 	.MinimumLevel.Information()
 	.CreateLogger();
 ```
@@ -105,7 +105,7 @@ The code can then be updated as follows removing the inline HOCON from the actor
 
 ```csharp
 var logger = new LoggerConfiguration()
-                .WriteTo.ColoredConsole()
+                .WriteTo.Console()
                 .MinimumLevel.Information()
                 .CreateLogger();
 
