@@ -10,17 +10,13 @@ using Akka.Serialization;
 using Akka.Util.Internal;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
-using Akka.DistributedData.Serialization.Proto.Msg;
+using Akka.Util;
 using Google.Protobuf;
-using DataEnvelope = Akka.DistributedData.Internal.DataEnvelope;
-using DeltaPropagation = Akka.DistributedData.Internal.DeltaPropagation;
-using DurableDataEnvelope = Akka.DistributedData.Durable.DurableDataEnvelope;
-using Gossip = Akka.DistributedData.Internal.Gossip;
-using Read = Akka.DistributedData.Internal.Read;
-using ReadResult = Akka.DistributedData.Internal.ReadResult;
-using Status = Akka.DistributedData.Internal.Status;
-using Write = Akka.DistributedData.Internal.Write;
+using Google.Protobuf.Collections;
+using Akka.Cluster;
+using System.Threading;
 
 namespace Akka.DistributedData.Serialization
 {
@@ -149,30 +145,37 @@ namespace Akka.DistributedData.Serialization
 
         private readonly Akka.Serialization.Serialization _serialization;
 
-        private readonly SmallCache<Read, byte[]> readCache;
-        private readonly SmallCache<Write, byte[]> writeCache;
-        private readonly Hyperion.Serializer serializer;
-        private readonly byte[] writeAckBytes;
-        private readonly byte[] empty = new byte[0];
+        private readonly SmallCache<Read, byte[]> _readCache;
+        private readonly SmallCache<Write, byte[]> _writeCache;
+        private readonly byte[] _empty = new byte[0];
+
+        private string _protocol;
+        private string Protocol
+        {
+            get
+            {
+                var p = Volatile.Read(ref _protocol);
+                if (ReferenceEquals(p, null))
+                {
+                    p = system.Provider.DefaultAddress.Protocol;
+                    Volatile.Write(ref _protocol, p);
+                }
+
+                return p;
+            }
+        }
 
         public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) : base(system)
         {
             _serialization = system.Serialization;
             var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
-            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, m => ReadToProto(m).ToByteArray());
-            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, m => WriteToProto(m).ToByteArray());
-
-            using (var stream = new MemoryStream())
-            {
-                serializer.Serialize(WriteAck.Instance, stream);
-                stream.Position = 0;
-                writeAckBytes = stream.ToArray();
-            }
-
+            _readCache = new SmallCache<Read, byte[]>(4, cacheTtl, m => ReadToProto(m).ToByteArray());
+            _writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, m => WriteToProto(m).ToByteArray());
+            
             system.Scheduler.Advanced.ScheduleRepeatedly(cacheTtl, new TimeSpan(cacheTtl.Ticks / 2), () =>
             {
-                readCache.Evict();
-                writeCache.Evict();
+                _readCache.Evict();
+                _writeCache.Evict();
             });
         }
 
@@ -208,9 +211,9 @@ namespace Akka.DistributedData.Serialization
             switch (obj)
             {
                 case DataEnvelope _: return DataEnvelopeToProto((DataEnvelope)obj).ToByteArray();
-                case Write _: return writeCache.GetOrAdd((Write)obj);
-                case WriteAck _: return writeAckBytes;
-                case Read _: return readCache.GetOrAdd((Read)obj);
+                case Write _: return _writeCache.GetOrAdd((Write)obj);
+                case WriteAck _: return _empty;
+                case Read _: return _readCache.GetOrAdd((Read)obj);
                 case ReadResult _: return ReadResultToProto((ReadResult)obj).ToByteArray();
                 case DeltaPropagation _: return DeltaPropagationToProto((DeltaPropagation)obj).ToByteArray();
                 case Status _: return StatusToProto((Status)obj).ToByteArray();
@@ -222,92 +225,276 @@ namespace Akka.DistributedData.Serialization
                 case GetFailure _: return GetFailureToProto((GetFailure)obj).ToByteArray();
                 case Subscribe _: return SubscribeToProto((Subscribe)obj).ToByteArray();
                 case Unsubscribe _: return UnsubscribeToProto((Unsubscribe)obj).ToByteArray();
-                case Gossip _: return Compress(GossipToProto((Gossip)obj));
-                case WriteNack _: return empty;
-                case DeltaNack _: return empty;
+                case Gossip _: return GossipToProto((Gossip)obj).Compress();
+                case WriteNack _: return _empty;
+                case DeltaNack _: return _empty;
 
                 default: throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] using [{GetType().FullName}]");
             }
         }
 
-        private byte[] Compress(IMessage msg)
-        {
-            throw new NotImplementedException();
-        }
-
         private Proto.Msg.Gossip GossipToProto(Gossip gossip)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.Gossip
+            {
+                SendBack = gossip.SendBack
+            };
+
+            foreach (var entry in gossip.UpdatedData)
+            {
+                proto.Entries.Add(new Proto.Msg.Gossip.Types.Entry
+                {
+                    Key = entry.Key,
+                    Envelope = DataEnvelopeToProto(entry.Value)
+                });
+            }
+
+            return proto;
         }
 
         private Proto.Msg.Unsubscribe UnsubscribeToProto(Unsubscribe unsubscribe)
         {
-            throw new NotImplementedException();
+            return new Proto.Msg.Unsubscribe
+            {
+                Key = OtherMessageToProto(unsubscribe.Key),
+                Ref = Akka.Serialization.Serialization.SerializedActorPath(unsubscribe.Subscriber)
+            };
+        }
+
+        private Proto.Msg.OtherMessage OtherMessageToProto(object msg)
+        {
+            // Serialize actor references with full address information (defaultAddress).
+            // When sending remote messages currentTransportInformation is already set,
+            // but when serializing for digests or DurableStore it must be set here.
+
+            var serializer = _serialization.FindSerializerFor(msg);
+            var proto = new Proto.Msg.OtherMessage
+            {
+                SerializerId = serializer.Identifier,
+                EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(msg))
+            };
+
+            if (serializer.IncludeManifest)
+            {
+                var manifest = serializer is SerializerWithStringManifest sm
+                    ? sm.Manifest(msg)
+                    : msg.GetType().TypeQualifiedName();
+
+                proto.MessageManifest = ByteString.CopyFromUtf8(manifest);
+            }
+            return proto;
         }
 
         private Proto.Msg.Subscribe SubscribeToProto(Subscribe msg)
         {
-            throw new NotImplementedException();
+            return new Proto.Msg.Subscribe
+            {
+                Key = OtherMessageToProto(msg.Key),
+                Ref = Akka.Serialization.Serialization.SerializedActorPath(msg.Subscriber)
+            };
         }
 
         private Proto.Msg.GetFailure GetFailureToProto(GetFailure msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.GetFailure
+            {
+                Key = OtherMessageToProto(msg.Key)
+            };
+
+            if (!ReferenceEquals(null, msg.Request))
+                proto.Request = OtherMessageToProto(msg.Request);
+
+            return proto;
         }
 
         private Proto.Msg.NotFound NotFoundToProto(NotFound msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.NotFound
+            {
+                Key = OtherMessageToProto(msg.Key)
+            };
+
+            if (!ReferenceEquals(null, msg.Request))
+                proto.Request = OtherMessageToProto(msg.Request);
+
+            return proto;
         }
 
-        private Proto.Msg.DurableDataEnvelope DurableDataEnvelopeToProto(DurableDataEnvelope msg)
+        private Proto.Msg.DurableDataEnvelope DurableDataEnvelopeToProto(Durable.DurableDataEnvelope msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.DurableDataEnvelope
+            {
+                Data = OtherMessageToProto(msg.Data.Data)
+            };
+            // only keep the PruningPerformed entries
+            foreach (var p in msg.Data.Pruning)
+            {
+                if (p.Value is PruningPerformed)
+                    proto.Pruning.Add(PruningToProto(p.Key, p.Value));
+            }
+
+            return proto;
+        }
+
+        private Proto.Msg.DataEnvelope.Types.PruningEntry PruningToProto(UniqueAddress addr, IPruningState pruning)
+        {
+            var proto = new Proto.Msg.DataEnvelope.Types.PruningEntry
+            {
+                RemovedAddress = addr.ToProto()
+            };
+            switch (pruning)
+            {
+                case PruningPerformed performed:
+                    proto.Performed = true;
+                    proto.ObsoleteTime = performed.ObsoleteTime.Ticks / TimeSpan.TicksPerMillisecond;
+                    break;
+                case PruningInitialized init:
+                    proto.Performed = false;
+                    proto.OwnerAddress = init.Owner.ToProto();
+                    foreach (var address in init.Seen)
+                    {
+                        proto.Seen.Add(address.ToProto());
+                    }
+                    break;
+            }
+
+            return proto;
         }
 
         private Proto.Msg.Changed ChangedToProto(Changed msg)
         {
-            throw new NotImplementedException();
+            return new Proto.Msg.Changed
+            {
+                Key = OtherMessageToProto(msg),
+                Data = OtherMessageToProto(msg)
+            };
         }
 
         private Proto.Msg.GetSuccess GetSuccessToProto(GetSuccess msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.GetSuccess
+            {
+                Key = OtherMessageToProto(msg.Key),
+                Data = OtherMessageToProto(msg.Key)
+            };
+
+            if (!ReferenceEquals(null, msg.Request))
+                proto.Request = OtherMessageToProto(msg.Request);
+
+            return proto;
         }
 
         private Proto.Msg.Get GetToProto(Get msg)
         {
-            throw new NotImplementedException();
+            var consistencyValue = 1;
+            switch (msg.Consistency)
+            {
+                case ReadLocal _: consistencyValue = 1; break;
+                case ReadFrom r: consistencyValue = r.N; break;
+                case ReadMajority _: consistencyValue = 0; break;
+                case ReadAll _: consistencyValue = -1; break;
+            }
+
+            var proto = new Proto.Msg.Get
+            {
+                Key = OtherMessageToProto(msg.Key),
+                Consistency = consistencyValue,
+                Timeout = (uint) (msg.Consistency.Timeout.Ticks / TimeSpan.TicksPerMillisecond)
+            };
+
+            if (!ReferenceEquals(null, msg.Request))
+                proto.Request = OtherMessageToProto(msg.Request);
+
+            return proto;
         }
 
         private Proto.Msg.Status StatusToProto(Status status)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.Status
+            {
+                Chunk = (uint)status.Chunk,
+                TotChunks = (uint)status.TotalChunks
+            };
+
+            foreach (var entry in status.Digests)
+            {
+                proto.Entries.Add(new Proto.Msg.Status.Types.Entry
+                {
+                    Key = entry.Key,
+                    Digest = ByteString.CopyFrom(entry.Value.ToByteArray())
+                });
+            }
+
+            return proto;
         }
 
-        private Proto.Msg.DeltaPropagation DeltaPropagationToProto(DeltaPropagation deltaPropagation)
+        private Proto.Msg.DeltaPropagation DeltaPropagationToProto(DeltaPropagation msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.DeltaPropagation
+            {
+                FromNode = msg.FromNode.ToProto()
+            };
+            if (msg.ShouldReply)
+                proto.Reply = msg.ShouldReply;
+
+            foreach (var entry in msg.Deltas)
+            {
+                var d = entry.Value;
+                var delta = new Proto.Msg.DeltaPropagation.Types.Entry
+                {
+                    Key = entry.Key,
+                    FromSeqNr = d.FromSeqNr,
+                    Envelope = DataEnvelopeToProto(d.DataEnvelope)
+                };
+                if (d.ToSeqNr != d.FromSeqNr)
+                    delta.ToSeqNr = d.ToSeqNr;
+
+                proto.Entries.Add(delta);
+            }
+
+            return proto;
         }
 
-        private Proto.Msg.ReadResult ReadResultToProto(ReadResult readResult)
+        private Proto.Msg.ReadResult ReadResultToProto(ReadResult msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.ReadResult();
+            if (msg.Envelope != null)
+                proto.Envelope = DataEnvelopeToProto(msg.Envelope);
+
+            return proto;
         }
 
-        private Proto.Msg.DataEnvelope DataEnvelopeToProto(DataEnvelope dataEnvelope)
+        private Proto.Msg.DataEnvelope DataEnvelopeToProto(DataEnvelope msg)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.DataEnvelope
+            {
+                Data = OtherMessageToProto(msg.Data)
+            };
+
+            foreach (var entry in msg.Pruning)
+                proto.Pruning.Add(PruningToProto(entry.Key, entry.Value));
+
+            if (!msg.DeltaVersions.IsEmpty)
+                proto.DeltaVersions = msg.DeltaVersions.ToProto();
+
+            return proto;
         }
 
         private Proto.Msg.Write WriteToProto(Write write)
         {
-            throw new NotImplementedException();
+            return new Proto.Msg.Write
+            {
+                Key = write.Key,
+                Envelope = DataEnvelopeToProto(write.Envelope)
+            };
         }
 
         private Proto.Msg.Read ReadToProto(Read read)
         {
-            throw new NotImplementedException();
+            return new Proto.Msg.Read
+            {
+                Key = read.Key
+            };
         }
 
         public override object FromBinary(byte[] bytes, string manifest)
@@ -330,45 +517,137 @@ namespace Akka.DistributedData.Serialization
                 case GetFailureManifest: return GetFailureFromBinary(bytes);
                 case SubscribeManifest: return SubscribeFromBinary(bytes);
                 case UnsubscribeManifest: return UnsubscribeFromBinary(bytes);
-                case GossipManifest: return GossipFromBinary(Decompress(bytes));
+                case GossipManifest: return GossipFromBinary(SerializationSupport.Decompress(bytes));
                 case WriteNackManifest: return WriteNack.Instance;
                 case DeltaNackManifest: return DeltaNack.Instance;
 
                 default: throw new ArgumentException($"Unimplemented deserialization of message with manifest '{manifest}' using [{GetType().FullName}]");
             }
         }
-
-        private byte[] Decompress(byte[] bytes)
+        
+        private Gossip GossipFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes);
+            var builder = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
+            }
+
+            return new Gossip(builder.ToImmutable(), proto.SendBack);
         }
 
-        private object GossipFromBinary(byte[] bytes)
+        private DataEnvelope DataEnvelopeFromProto(Proto.Msg.DataEnvelope proto)
         {
-            throw new NotImplementedException();
+            var data = (IReplicatedData) OtherMessageFromProto(proto.Data);
+            var pruning = PruningFromProto(proto.Pruning);
+            var vvector =
+                proto.DeltaVersions != null
+                ? SerializationSupport.VersionVectorFromProto(proto.DeltaVersions)
+                : VersionVector.Empty;
+
+            return new DataEnvelope(data, pruning, vvector);
         }
 
-        private object UnsubscribeFromBinary(byte[] bytes)
+        private ImmutableDictionary<UniqueAddress, IPruningState> PruningFromProto(RepeatedField<Proto.Msg.DataEnvelope.Types.PruningEntry> pruning)
         {
-            throw new NotImplementedException();
+            if (pruning.Count == 0)
+            {
+                return ImmutableDictionary<UniqueAddress, IPruningState>.Empty;
+            }
+            else
+            {
+                var builder = ImmutableDictionary<UniqueAddress, IPruningState>.Empty.ToBuilder();
+
+                foreach (var entry in pruning)
+                {
+                    var removed = UniqueAddressFromProto(entry.RemovedAddress);
+                    if (entry.Performed)
+                    {
+                        builder.Add(removed, new PruningPerformed(new DateTime(entry.ObsoleteTime * TimeSpan.TicksPerMillisecond)));
+                    }
+                    else
+                    {
+                        var seen = new Actor.Address[entry.Seen.Count];
+                        var i = 0;
+                        foreach (var s in entry.Seen)
+                        {
+                            seen[i] = AddressFromProto(s.Hostname, s.Port);
+                            i++;
+                        }
+                        builder.Add(removed, new PruningInitialized(UniqueAddressFromProto(entry.OwnerAddress), seen));
+                    }
+                }
+
+                return builder.ToImmutable();
+
+            }
         }
 
-        private object SubscribeFromBinary(byte[] bytes)
+        private UniqueAddress UniqueAddressFromProto(Proto.Msg.UniqueAddress msg)
         {
-            throw new NotImplementedException();
+            return new UniqueAddress(AddressFromProto(msg.Address.Hostname, msg.Address.Port), msg.Uid);
         }
 
-        private object GetFailureFromBinary(byte[] bytes)
+        private Actor.Address AddressFromProto(string hostname, uint port)
         {
-            throw new NotImplementedException();
+            return new Actor.Address(Protocol, system.Name, hostname, (int)port);
         }
 
-        private object NotFoundFromBinary(byte[] bytes)
+        private Unsubscribe UnsubscribeFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.Unsubscribe.Parser.ParseFrom(bytes);
+            var actorRef = system.Provider.ResolveActorRef(proto.Ref);
+            dynamic key = OtherMessageFromProto(proto.Key);
+            return DynamicUnsubscribe(key, actorRef);
         }
 
-        private object ChangedFromBinary(byte[] bytes)
+        private Unsubscribe DynamicUnsubscribe<T>(IKey<T> key, Actor.IActorRef actorRef) where T : IReplicatedData
+        {
+            return new Unsubscribe<T>(key, actorRef);
+        }
+
+        private Subscribe SubscribeFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.Subscribe.Parser.ParseFrom(bytes);
+            var actorRef = system.Provider.ResolveActorRef(proto.Ref);
+            dynamic key = OtherMessageFromProto(proto.Key);
+            return DynamicSubscribe(key, actorRef);
+        }
+
+        private Subscribe DynamicSubscribe<T>(IKey<T> key, Actor.IActorRef actorRef) where T : IReplicatedData
+        {
+            return new Subscribe<T>(key, actorRef);
+        }
+
+        private GetFailure GetFailureFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.GetFailure.Parser.ParseFrom(bytes);
+            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
+            dynamic key = OtherMessageFromProto(proto.Key);
+
+            return DynamicGetFailure(key, request);
+        }
+
+        private GetFailure DynamicGetFailure<T>(dynamic key, object request) where T : IReplicatedData
+        {
+            return new GetFailure<T>(key, request);
+        }
+
+        private NotFound NotFoundFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.NotFound.Parser.ParseFrom(bytes);
+            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
+            dynamic key = OtherMessageFromProto(proto.Key);
+            return DynamicNotFound(key, request);
+        }
+
+        private NotFound DynamicNotFound<T>(IKey<T> key, object request) where T: IReplicatedData
+        {
+            return new NotFound<T>(key, request);
+        }
+
+        private Changed ChangedFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Changed.Parser.ParseFrom(bytes);
             dynamic data = OtherMessageFromProto(proto.Data);
@@ -376,9 +655,9 @@ namespace Akka.DistributedData.Serialization
             return ChangedDynamic(data, key);
         }
 
-        private Changed<T> ChangedDynamic<T>(T data, IKey<T> key) where T : IReplicatedData => new Changed<T>(key, data);
+        private Changed ChangedDynamic<T>(T data, IKey<T> key) where T : IReplicatedData => new Changed<T>(key, data);
 
-        private object OtherMessageFromProto(OtherMessage proto)
+        private object OtherMessageFromProto(Proto.Msg.OtherMessage proto)
         {
             var manifest = proto.MessageManifest == null || proto.MessageManifest.IsEmpty
                 ? string.Empty
@@ -386,49 +665,109 @@ namespace Akka.DistributedData.Serialization
             return _serialization.Deserialize(proto.EnclosedMessage.ToByteArray(), proto.SerializerId, manifest);
         }
 
-        private object DurableDataEnvelopeFromBinary(byte[] bytes)
+        private Durable.DurableDataEnvelope DurableDataEnvelopeFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.DurableDataEnvelope.Parser.ParseFrom(bytes);
+            var data = (IReplicatedData) OtherMessageFromProto(proto.Data);
+            var pruning = PruningFromProto(proto.Pruning);
+
+            return new Durable.DurableDataEnvelope(new DataEnvelope(data, pruning));
         }
 
-        private object GetSuccessFromBinary(byte[] bytes)
+        private GetSuccess GetSuccessFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.GetSuccess.Parser.ParseFrom(bytes);
+            dynamic key = OtherMessageFromProto(proto.Key);
+            dynamic data = OtherMessageFromProto(proto.Data);
+            var request = proto.Request != null
+                ? OtherMessageFromProto(proto.Request)
+                : null;
+
+            return DynamicGetSuccess(data, key, request);
         }
 
-        private object ReadResultFromBinary(byte[] bytes)
+        private GetSuccess DynamicGetSuccess<T>(T data, IKey<T> key, object request) where T: IReplicatedData
         {
-            throw new NotImplementedException();
+            return new GetSuccess<T>(key, request, data);
         }
 
-        private object GetFromBinary(byte[] bytes)
+        private ReadResult ReadResultFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.ReadResult.Parser.ParseFrom(bytes);
+            var envelope = proto.Envelope != null
+                ? DataEnvelopeFromProto(proto.Envelope)
+                : null;
+            return new ReadResult(envelope);
         }
 
-        private object StatusFromBinary(byte[] bytes)
+        private Get GetFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.Get.Parser.ParseFrom(bytes);
+            dynamic key = OtherMessageFromProto(proto.Key);
+            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
+            var timeout = new TimeSpan(proto.Timeout * TimeSpan.TicksPerMillisecond);
+            IReadConsistency consistency;
+            switch (proto.Consistency)
+            {
+                case 0: consistency = new ReadMajority(timeout); break;
+                case -1: consistency = new ReadAll(timeout); break;
+                case 1: consistency = ReadLocal.Instance; break;
+                default: consistency = new ReadFrom(proto.Consistency, timeout); break;
+            }
+            return DynamicGet(key, consistency, request);
         }
 
-        private object DeltaPropagationFromBinary(byte[] bytes)
+        private Get<T> DynamicGet<T>(IKey<T> key, IReadConsistency consistency, object request) where T: IReplicatedData
         {
-            throw new NotImplementedException();
+            return new Get<T>(key, consistency, request);
         }
 
-        private object ReadFromBinary(byte[] bytes)
+        private Status StatusFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.Status.Parser.ParseFrom(bytes);
+            var builder = ImmutableDictionary<string, ByteString>.Empty.ToBuilder();
+
+            foreach (var entry in proto.Entries)
+            {
+                builder.Add(entry.Key, entry.Digest);
+            }
+
+            return new Status(builder.ToImmutable(), (int)proto.Chunk, (int)proto.TotChunks);
         }
 
-        private object WriteFromBinary(byte[] bytes)
+        private DeltaPropagation DeltaPropagationFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.DeltaPropagation.Parser.ParseFrom(bytes);
+            var reply = proto.Reply;
+            var fromNode = UniqueAddressFromProto(proto.FromNode);
+
+            var builder = ImmutableDictionary<string, Delta>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var fromSeqNr = entry.FromSeqNr;
+                var toSeqNr = entry.ToSeqNr == default(long) ? fromSeqNr : entry.ToSeqNr;
+                builder.Add(entry.Key, new Delta(DataEnvelopeFromProto(entry.Envelope), fromSeqNr, toSeqNr));
+            }
+
+            return new DeltaPropagation(fromNode, reply, builder.ToImmutable());
         }
 
-        private object DataEnvelopeFromBinary(byte[] bytes)
+        private Read ReadFromBinary(byte[] bytes)
         {
-            throw new NotImplementedException();
+            var proto = Proto.Msg.Read.Parser.ParseFrom(bytes);
+            return new Read(proto.Key);
+        }
+
+        private Write WriteFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.Write.Parser.ParseFrom(bytes);
+            return new Write(proto.Key, DataEnvelopeFromProto(proto.Envelope));
+        }
+
+        private DataEnvelope DataEnvelopeFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.DataEnvelope.Parser.ParseFrom(bytes);
+            return DataEnvelopeFromProto(proto);
         }
     }
 }
