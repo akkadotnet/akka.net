@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using UniqueAddress = Akka.Cluster.UniqueAddress;
 
@@ -31,6 +32,11 @@ namespace Akka.DistributedData
         public static readonly PNCounterDictionary<TKey> Empty = new PNCounterDictionary<TKey>(ORDictionary<TKey, PNCounter>.Empty);
 
         private readonly ORDictionary<TKey, PNCounter> _underlying;
+        public ORDictionary<TKey, PNCounter> Underlying
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _underlying;
+        }
 
         public PNCounterDictionary(ORDictionary<TKey, PNCounter> underlying)
         {

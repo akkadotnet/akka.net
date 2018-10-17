@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -115,6 +116,12 @@ namespace Akka.DistributedData
 
         internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
         private readonly VersionVector _versionVector;
+
+        internal VersionVector VersionVector
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _versionVector;
+        }
 
         internal static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
         {

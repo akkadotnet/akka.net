@@ -14,6 +14,8 @@ using System.IO;
 using System.IO.Compression;
 using Akka.Actor;
 using Akka.Cluster;
+using Akka.Serialization;
+using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.DistributedData.Serialization
@@ -123,6 +125,30 @@ namespace Akka.DistributedData.Serialization
             where T: IWithSerializationSupport
         {
             return new Actor.Address(serializer.Protocol, serializer.System.Name, hostname, (int)port);
+        }
+
+        public static Proto.Msg.OtherMessage OtherMessageToProto<T>(this T s, object msg) where T : IWithSerializationSupport
+        {
+            // Serialize actor references with full address information (defaultAddress).
+            // When sending remote messages currentTransportInformation is already set,
+            // but when serializing for digests or DurableStore it must be set here.
+
+            var serializer = s.Serialization.FindSerializerFor(msg);
+            var proto = new Proto.Msg.OtherMessage
+            {
+                SerializerId = serializer.Identifier,
+                EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(msg))
+            };
+
+            if (serializer.IncludeManifest)
+            {
+                var manifest = serializer is SerializerWithStringManifest sm
+                    ? sm.Manifest(msg)
+                    : msg.GetType().TypeQualifiedName();
+
+                proto.MessageManifest = ByteString.CopyFromUtf8(manifest);
+            }
+            return proto;
         }
     }
 

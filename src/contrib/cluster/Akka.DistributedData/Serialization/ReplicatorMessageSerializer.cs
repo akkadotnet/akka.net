@@ -268,40 +268,17 @@ namespace Akka.DistributedData.Serialization
         {
             return new Proto.Msg.Unsubscribe
             {
-                Key = OtherMessageToProto(unsubscribe.Key),
+                Key = this.OtherMessageToProto(unsubscribe.Key),
                 Ref = Akka.Serialization.Serialization.SerializedActorPath(unsubscribe.Subscriber)
             };
         }
 
-        private Proto.Msg.OtherMessage OtherMessageToProto(object msg)
-        {
-            // Serialize actor references with full address information (defaultAddress).
-            // When sending remote messages currentTransportInformation is already set,
-            // but when serializing for digests or DurableStore it must be set here.
-
-            var serializer = _serialization.FindSerializerFor(msg);
-            var proto = new Proto.Msg.OtherMessage
-            {
-                SerializerId = serializer.Identifier,
-                EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(msg))
-            };
-
-            if (serializer.IncludeManifest)
-            {
-                var manifest = serializer is SerializerWithStringManifest sm
-                    ? sm.Manifest(msg)
-                    : msg.GetType().TypeQualifiedName();
-
-                proto.MessageManifest = ByteString.CopyFromUtf8(manifest);
-            }
-            return proto;
-        }
 
         private Proto.Msg.Subscribe SubscribeToProto(Subscribe msg)
         {
             return new Proto.Msg.Subscribe
             {
-                Key = OtherMessageToProto(msg.Key),
+                Key = this.OtherMessageToProto(msg.Key),
                 Ref = Akka.Serialization.Serialization.SerializedActorPath(msg.Subscriber)
             };
         }
@@ -310,11 +287,11 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GetFailure
             {
-                Key = OtherMessageToProto(msg.Key)
+                Key = this.OtherMessageToProto(msg.Key)
             };
 
             if (!ReferenceEquals(null, msg.Request))
-                proto.Request = OtherMessageToProto(msg.Request);
+                proto.Request = this.OtherMessageToProto(msg.Request);
 
             return proto;
         }
@@ -323,11 +300,11 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.NotFound
             {
-                Key = OtherMessageToProto(msg.Key)
+                Key = this.OtherMessageToProto(msg.Key)
             };
 
             if (!ReferenceEquals(null, msg.Request))
-                proto.Request = OtherMessageToProto(msg.Request);
+                proto.Request = this.OtherMessageToProto(msg.Request);
 
             return proto;
         }
@@ -336,7 +313,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.DurableDataEnvelope
             {
-                Data = OtherMessageToProto(msg.Data.Data)
+                Data = this.OtherMessageToProto(msg.Data.Data)
             };
             // only keep the PruningPerformed entries
             foreach (var p in msg.Data.Pruning)
@@ -377,8 +354,8 @@ namespace Akka.DistributedData.Serialization
         {
             return new Proto.Msg.Changed
             {
-                Key = OtherMessageToProto(msg),
-                Data = OtherMessageToProto(msg)
+                Key = this.OtherMessageToProto(msg),
+                Data = this.OtherMessageToProto(msg)
             };
         }
 
@@ -386,12 +363,12 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GetSuccess
             {
-                Key = OtherMessageToProto(msg.Key),
-                Data = OtherMessageToProto(msg.Key)
+                Key = this.OtherMessageToProto(msg.Key),
+                Data = this.OtherMessageToProto(msg.Key)
             };
 
             if (!ReferenceEquals(null, msg.Request))
-                proto.Request = OtherMessageToProto(msg.Request);
+                proto.Request = this.OtherMessageToProto(msg.Request);
 
             return proto;
         }
@@ -409,13 +386,13 @@ namespace Akka.DistributedData.Serialization
 
             var proto = new Proto.Msg.Get
             {
-                Key = OtherMessageToProto(msg.Key),
+                Key = this.OtherMessageToProto(msg.Key),
                 Consistency = consistencyValue,
                 Timeout = (uint) (msg.Consistency.Timeout.Ticks / TimeSpan.TicksPerMillisecond)
             };
 
             if (!ReferenceEquals(null, msg.Request))
-                proto.Request = OtherMessageToProto(msg.Request);
+                proto.Request = this.OtherMessageToProto(msg.Request);
 
             return proto;
         }
@@ -480,7 +457,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.DataEnvelope
             {
-                Data = OtherMessageToProto(msg.Data)
+                Data = this.OtherMessageToProto(msg.Data)
             };
 
             foreach (var entry in msg.Pruning)
