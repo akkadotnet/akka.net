@@ -17,10 +17,11 @@ using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Akka.Cluster;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Akka.DistributedData.Serialization
 {
-    public sealed class ReplicatorMessageSerializer : SerializerWithStringManifest
+    public sealed class ReplicatorMessageSerializer : SerializerWithStringManifest, IWithSerializationSupport
     {
         #region internal classes
 
@@ -150,7 +151,7 @@ namespace Akka.DistributedData.Serialization
         private readonly byte[] _empty = new byte[0];
 
         private string _protocol;
-        private string Protocol
+        public string Protocol
         {
             get
             {
@@ -163,6 +164,17 @@ namespace Akka.DistributedData.Serialization
 
                 return p;
             }
+        }
+
+        public Actor.ActorSystem System
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => system;
+        }
+        public Akka.Serialization.Serialization Serialization
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _serialization;
         }
 
         public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) : base(system)
@@ -539,11 +551,11 @@ namespace Akka.DistributedData.Serialization
 
         private DataEnvelope DataEnvelopeFromProto(Proto.Msg.DataEnvelope proto)
         {
-            var data = (IReplicatedData) OtherMessageFromProto(proto.Data);
+            var data = (IReplicatedData) this.OtherMessageFromProto(proto.Data);
             var pruning = PruningFromProto(proto.Pruning);
             var vvector =
                 proto.DeltaVersions != null
-                ? SerializationSupport.VersionVectorFromProto(proto.DeltaVersions)
+                ? this.VersionVectorFromProto(proto.DeltaVersions)
                 : VersionVector.Empty;
 
             return new DataEnvelope(data, pruning, vvector);
@@ -561,7 +573,7 @@ namespace Akka.DistributedData.Serialization
 
                 foreach (var entry in pruning)
                 {
-                    var removed = UniqueAddressFromProto(entry.RemovedAddress);
+                    var removed = this.UniqueAddressFromProto(entry.RemovedAddress);
                     if (entry.Performed)
                     {
                         builder.Add(removed, new PruningPerformed(new DateTime(entry.ObsoleteTime * TimeSpan.TicksPerMillisecond)));
@@ -572,10 +584,10 @@ namespace Akka.DistributedData.Serialization
                         var i = 0;
                         foreach (var s in entry.Seen)
                         {
-                            seen[i] = AddressFromProto(s.Hostname, s.Port);
+                            seen[i] = this.AddressFromProto(s.Hostname, s.Port);
                             i++;
                         }
-                        builder.Add(removed, new PruningInitialized(UniqueAddressFromProto(entry.OwnerAddress), seen));
+                        builder.Add(removed, new PruningInitialized(this.UniqueAddressFromProto(entry.OwnerAddress), seen));
                     }
                 }
 
@@ -584,21 +596,11 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private UniqueAddress UniqueAddressFromProto(Proto.Msg.UniqueAddress msg)
-        {
-            return new UniqueAddress(AddressFromProto(msg.Address.Hostname, msg.Address.Port), msg.Uid);
-        }
-
-        private Actor.Address AddressFromProto(string hostname, uint port)
-        {
-            return new Actor.Address(Protocol, system.Name, hostname, (int)port);
-        }
-
         private Unsubscribe UnsubscribeFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Unsubscribe.Parser.ParseFrom(bytes);
             var actorRef = system.Provider.ResolveActorRef(proto.Ref);
-            dynamic key = OtherMessageFromProto(proto.Key);
+            dynamic key = this.OtherMessageFromProto(proto.Key);
             return DynamicUnsubscribe(key, actorRef);
         }
 
@@ -611,7 +613,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = Proto.Msg.Subscribe.Parser.ParseFrom(bytes);
             var actorRef = system.Provider.ResolveActorRef(proto.Ref);
-            dynamic key = OtherMessageFromProto(proto.Key);
+            dynamic key = this.OtherMessageFromProto(proto.Key);
             return DynamicSubscribe(key, actorRef);
         }
 
@@ -623,8 +625,8 @@ namespace Akka.DistributedData.Serialization
         private GetFailure GetFailureFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.GetFailure.Parser.ParseFrom(bytes);
-            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
-            dynamic key = OtherMessageFromProto(proto.Key);
+            var request = proto.Request != null ? this.OtherMessageFromProto(proto.Request) : null;
+            dynamic key = this.OtherMessageFromProto(proto.Key);
 
             return DynamicGetFailure(key, request);
         }
@@ -637,8 +639,8 @@ namespace Akka.DistributedData.Serialization
         private NotFound NotFoundFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.NotFound.Parser.ParseFrom(bytes);
-            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
-            dynamic key = OtherMessageFromProto(proto.Key);
+            var request = proto.Request != null ? this.OtherMessageFromProto(proto.Request) : null;
+            dynamic key = this.OtherMessageFromProto(proto.Key);
             return DynamicNotFound(key, request);
         }
 
@@ -650,25 +652,18 @@ namespace Akka.DistributedData.Serialization
         private Changed ChangedFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Changed.Parser.ParseFrom(bytes);
-            dynamic data = OtherMessageFromProto(proto.Data);
-            dynamic key = OtherMessageFromProto(proto.Key);
+            dynamic data = this.OtherMessageFromProto(proto.Data);
+            dynamic key = this.OtherMessageFromProto(proto.Key);
             return ChangedDynamic(data, key);
         }
 
         private Changed ChangedDynamic<T>(T data, IKey<T> key) where T : IReplicatedData => new Changed<T>(key, data);
 
-        private object OtherMessageFromProto(Proto.Msg.OtherMessage proto)
-        {
-            var manifest = proto.MessageManifest == null || proto.MessageManifest.IsEmpty
-                ? string.Empty
-                : proto.MessageManifest.ToStringUtf8();
-            return _serialization.Deserialize(proto.EnclosedMessage.ToByteArray(), proto.SerializerId, manifest);
-        }
 
         private Durable.DurableDataEnvelope DurableDataEnvelopeFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.DurableDataEnvelope.Parser.ParseFrom(bytes);
-            var data = (IReplicatedData) OtherMessageFromProto(proto.Data);
+            var data = (IReplicatedData) this.OtherMessageFromProto(proto.Data);
             var pruning = PruningFromProto(proto.Pruning);
 
             return new Durable.DurableDataEnvelope(new DataEnvelope(data, pruning));
@@ -677,10 +672,10 @@ namespace Akka.DistributedData.Serialization
         private GetSuccess GetSuccessFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.GetSuccess.Parser.ParseFrom(bytes);
-            dynamic key = OtherMessageFromProto(proto.Key);
-            dynamic data = OtherMessageFromProto(proto.Data);
+            dynamic key = this.OtherMessageFromProto(proto.Key);
+            dynamic data = this.OtherMessageFromProto(proto.Data);
             var request = proto.Request != null
-                ? OtherMessageFromProto(proto.Request)
+                ? this.OtherMessageFromProto(proto.Request)
                 : null;
 
             return DynamicGetSuccess(data, key, request);
@@ -703,8 +698,8 @@ namespace Akka.DistributedData.Serialization
         private Get GetFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Get.Parser.ParseFrom(bytes);
-            dynamic key = OtherMessageFromProto(proto.Key);
-            var request = proto.Request != null ? OtherMessageFromProto(proto.Request) : null;
+            dynamic key = this.OtherMessageFromProto(proto.Key);
+            var request = proto.Request != null ? this.OtherMessageFromProto(proto.Request) : null;
             var timeout = new TimeSpan(proto.Timeout * TimeSpan.TicksPerMillisecond);
             IReadConsistency consistency;
             switch (proto.Consistency)
@@ -739,7 +734,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = Proto.Msg.DeltaPropagation.Parser.ParseFrom(bytes);
             var reply = proto.Reply;
-            var fromNode = UniqueAddressFromProto(proto.FromNode);
+            var fromNode = this.UniqueAddressFromProto(proto.FromNode);
 
             var builder = ImmutableDictionary<string, Delta>.Empty.ToBuilder();
             foreach (var entry in proto.Entries)

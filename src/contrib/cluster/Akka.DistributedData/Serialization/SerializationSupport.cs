@@ -9,6 +9,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using Akka.Actor;
@@ -84,14 +85,51 @@ namespace Akka.DistributedData.Serialization
             return proto;
         }
 
-        public static VersionVector VersionVectorFromProto(Proto.Msg.VersionVector deltaVersions)
+        public static VersionVector VersionVectorFromProto<T>(this T serializer, Proto.Msg.VersionVector proto) 
+            where T: IWithSerializationSupport
         {
-            throw new NotImplementedException();
+            switch (proto.Entries.Count)
+            {
+                case 0: return VersionVector.Empty;
+                case 1:  
+                    var entry = proto.Entries[0];
+                    return VersionVector.Create(serializer.UniqueAddressFromProto(entry.Node), entry.Version);
+                default:
+                    var builder = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
+                    foreach (var e in proto.Entries)
+                    {
+                        builder.Add(serializer.UniqueAddressFromProto(e.Node), e.Version);
+                    }
+                    return VersionVector.Create(builder.ToImmutable());
+            }
         }
 
-        internal static UniqueAddress UniqueAddressFromProto(Proto.Msg.UniqueAddress removedAddress)
+        public static object OtherMessageFromProto<T>(this T serializer, Proto.Msg.OtherMessage proto) 
+            where T: IWithSerializationSupport
         {
-            throw new NotImplementedException();
+            var manifest = proto.MessageManifest == null || proto.MessageManifest.IsEmpty
+                ? string.Empty
+                : proto.MessageManifest.ToStringUtf8();
+            return serializer.Serialization.Deserialize(proto.EnclosedMessage.ToByteArray(), proto.SerializerId, manifest);
         }
+
+        public static UniqueAddress UniqueAddressFromProto<T>(this T serializer, Proto.Msg.UniqueAddress msg)
+            where T : IWithSerializationSupport
+        {
+            return new UniqueAddress(serializer.AddressFromProto(msg.Address.Hostname, msg.Address.Port), msg.Uid);
+        }
+
+        public static Actor.Address AddressFromProto<T>(this T serializer, string hostname, uint port)
+            where T: IWithSerializationSupport
+        {
+            return new Actor.Address(serializer.Protocol, serializer.System.Name, hostname, (int)port);
+        }
+    }
+
+    internal interface IWithSerializationSupport
+    {
+        string Protocol { get; }
+        Akka.Serialization.Serialization Serialization { get; }
+        ActorSystem System { get; }
     }
 }
