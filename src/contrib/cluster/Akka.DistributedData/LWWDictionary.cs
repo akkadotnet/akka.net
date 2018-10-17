@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -103,6 +104,12 @@ namespace Akka.DistributedData
         public static readonly LWWDictionary<TKey, TValue> Empty = new LWWDictionary<TKey, TValue>(ORDictionary<TKey, LWWRegister<TValue>>.Empty);
 
         private readonly ORDictionary<TKey, LWWRegister<TValue>> _underlying;
+
+        public ORDictionary<TKey, LWWRegister<TValue>> Underlying
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _underlying;
+        }
 
         /// <summary>
         /// TBD

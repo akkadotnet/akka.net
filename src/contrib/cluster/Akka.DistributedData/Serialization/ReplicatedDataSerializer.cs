@@ -7,9 +7,11 @@
 
 using Akka.Actor;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -17,7 +19,6 @@ namespace Akka.DistributedData.Serialization
 {
     public sealed class ReplicatedDataSerializer : SerializerWithStringManifest, IWithSerializationSupport
     {
-
         private const string DeletedDataManifest = "A";
         private const string GSetManifest = "B";
         private const string GSetKeyManifest = "b";
@@ -615,11 +616,9 @@ namespace Akka.DistributedData.Serialization
         private Proto.Msg.ORMap ToProto<TKey, TVal>(ORDictionary<TKey, TVal> o) where TVal : IReplicatedData<TVal>
         {
             dynamic keySet = o.KeySet;
-            var orset = ToProto(keySet);
-
             var proto = new Proto.Msg.ORMap
             {
-                Keys = orset
+                Keys = ToProto(keySet)
             };
 
             foreach (var entry in o.ValueMap)
@@ -656,59 +655,407 @@ namespace Akka.DistributedData.Serialization
 
         #region serialize ORDictionary.PutDeltaOp
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal> => ToProto(o).ToByteArray();
-        private IMessage ToProto<TKey, TVal>(ORDictionary<TKey, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal>
-        {
-            throw new NotImplementedException();
-        }
+        private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<int, TVal>.IDeltaOperation)o).ToByteArray();
+
+        private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<long, TVal>.IDeltaOperation)o).ToByteArray();
+
+        private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<string, TVal>.IDeltaOperation)o).ToByteArray();
+
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.PutDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<TKey, TVal>.IDeltaOperation)o).ToByteArray();
+
         #endregion
 
         #region serialize ORDictionary.RemoveDeltaOp
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal> => ToProto(o).ToByteArray();
-        private IMessage ToProto<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal>
-        {
-            throw new NotImplementedException();
-        }
+        private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<int, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<long, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<string, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveDeltaOperation o) where TVal : IReplicatedData<TVal> => 
+            ToProto((ORDictionary<TKey, TVal>.IDeltaOperation)o).ToByteArray();
 
         #endregion
 
         #region serialize ORDictionary.RemoveKeyDeltaOp
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal> => ToProto(o).ToByteArray();
-        private IMessage ToProto<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal>
-        {
-            throw new NotImplementedException();
-        }
+        private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<int, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<long, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<string, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveKeyDeltaOperation o) where TVal : IReplicatedData<TVal> => 
+            ToProto((ORDictionary<TKey, TVal>.IDeltaOperation)o).ToByteArray();
 
         #endregion
 
         #region serialize ORDictionary.UpdateDeltaOp
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal> => ToProto(o).ToByteArray();
-        private IMessage ToProto<TKey, TVal>(ORDictionary<TKey, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal>
-        {
-            throw new NotImplementedException();
-        }
+        private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<int, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<long, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<string, TVal>.IDeltaOperation)o).ToByteArray();
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.UpdateDeltaOperation o) where TVal : IReplicatedData<TVal> =>
+            ToProto((ORDictionary<TKey, TVal>.IDeltaOperation)o).ToByteArray();
 
         #endregion
 
         #region serialize ORDictionary.GroupDeltaOp
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o).ToByteArray();
-        private IMessage ToProto<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal>
+        private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
+        private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<int, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.ORMapDeltaGroup();
+            foreach (var op in ops)
+            {
+                Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
+                switch (op)
+                {
+                    case ORDictionary<int, TVal>.PutDeltaOperation put:
+                        {
+                            var u = (ORSet<int>.AddDeltaOperation)put.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapPut, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                IntKey = put.Key,
+                                Value = this.OtherMessageToProto(put.Value)
+                            });
+                            break;
+                        }
+                    case ORDictionary<int, TVal>.RemoveDeltaOperation rem:
+                        {
+                            var u = (ORSet<int>.RemoveDeltaOperation)rem.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemove, u.Underlying);
+                            break;
+                        }
+                    case ORDictionary<int, TVal>.RemoveKeyDeltaOperation remKey:
+                        {
+                            var u = (ORSet<int>.RemoveDeltaOperation)remKey.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemoveKey, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                IntKey = remKey.Key
+                            });
+                            break;
+                        }
+                    case ORDictionary<int, TVal>.UpdateDeltaOperation update:
+                        {
+                            var u = (ORSet<int>.AddDeltaOperation)update.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapUpdate, u.Underlying);
+                            foreach (var e in update.Values)
+                            {
+                                entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                                {
+                                    IntKey = e.Key,
+                                    Value = this.OtherMessageToProto(e.Value)
+                                });
+                            }
+                            break;
+                        }
+                    default: throw new ArgumentException($"{op} should not be nested");
+                }
+                proto.Entries.Add(entry);
+            }
+
+            return proto;
+        }
+
+        private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
+        private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<long, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup();
+            foreach (var op in ops)
+            {
+                Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
+                switch (op)
+                {
+                    case ORDictionary<long, TVal>.PutDeltaOperation put:
+                        {
+                            var u = (ORSet<long>.AddDeltaOperation)put.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapPut, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                LongKey = put.Key,
+                                Value = this.OtherMessageToProto(put.Value)
+                            });
+                            break;
+                        }
+                    case ORDictionary<long, TVal>.RemoveDeltaOperation rem:
+                        {
+                            var u = (ORSet<long>.RemoveDeltaOperation)rem.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemove, u.Underlying);
+                            break;
+                        }
+                    case ORDictionary<long, TVal>.RemoveKeyDeltaOperation remKey:
+                        {
+                            var u = (ORSet<long>.RemoveDeltaOperation)remKey.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemoveKey, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                LongKey = remKey.Key
+                            });
+                            break;
+                        }
+                    case ORDictionary<long, TVal>.UpdateDeltaOperation update:
+                        {
+                            var u = (ORSet<long>.AddDeltaOperation)update.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapUpdate, u.Underlying);
+                            foreach (var e in update.Values)
+                            {
+                                entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                                {
+                                    LongKey = e.Key,
+                                    Value = this.OtherMessageToProto(e.Value)
+                                });
+                            }
+                            break;
+                        }
+                    default: throw new ArgumentException($"{op} should not be nested");
+                }
+                proto.Entries.Add(entry);
+            }
+
+            return proto;
+        }
+
+        private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
+        private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<string, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup();
+            foreach (var op in ops)
+            {
+                Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
+                switch (op)
+                {
+                    case ORDictionary<string, TVal>.PutDeltaOperation put:
+                        {
+                            var u = (ORSet<string>.AddDeltaOperation)put.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapPut, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                StringKey = put.Key,
+                                Value = this.OtherMessageToProto(put.Value)
+                            });
+                            break;
+                        }
+                    case ORDictionary<string, TVal>.RemoveDeltaOperation rem:
+                        {
+                            var u = (ORSet<string>.RemoveDeltaOperation)rem.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemove, u.Underlying);
+                            break;
+                        }
+                    case ORDictionary<string, TVal>.RemoveKeyDeltaOperation remKey:
+                        {
+                            var u = (ORSet<string>.RemoveDeltaOperation)remKey.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemoveKey, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                StringKey = remKey.Key
+                            });
+                            break;
+                        }
+                    case ORDictionary<string, TVal>.UpdateDeltaOperation update:
+                        {
+                            var u = (ORSet<string>.AddDeltaOperation)update.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapUpdate, u.Underlying);
+                            foreach (var e in update.Values)
+                            {
+                                entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                                {
+                                    StringKey = e.Key,
+                                    Value = this.OtherMessageToProto(e.Value)
+                                });
+                            }
+                            break;
+                        }
+                    default: throw new ArgumentException($"{op} should not be nested");
+                }
+                proto.Entries.Add(entry);
+            }
+
+            return proto;
+        }
+
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
+        private Proto.Msg.ORMapDeltaGroup ToProto<TKey, TVal>(params ORDictionary<TKey, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup();
+            foreach (var op in ops)
+            {
+                Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
+                switch (op)
+                {
+                    case ORDictionary<TKey, TVal>.PutDeltaOperation put:
+                        {
+                            var u = (ORSet<TKey>.AddDeltaOperation)put.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapPut, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                OtherKey = this.OtherMessageToProto(put.Key),
+                                Value = this.OtherMessageToProto(put.Value)
+                            });
+                            break;
+                        }
+                    case ORDictionary<TKey, TVal>.RemoveDeltaOperation rem:
+                        {
+                            var u = (ORSet<TKey>.RemoveDeltaOperation)rem.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemove, u.Underlying);
+                            break;
+                        }
+                    case ORDictionary<TKey, TVal>.RemoveKeyDeltaOperation remKey:
+                        {
+                            var u = (ORSet<TKey>.RemoveDeltaOperation)remKey.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapRemoveKey, u.Underlying);
+                            entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                            {
+                                OtherKey = this.OtherMessageToProto(remKey.Key)
+                            });
+                            break;
+                        }
+                    case ORDictionary<TKey, TVal>.UpdateDeltaOperation update:
+                        {
+                            var u = (ORSet<TKey>.AddDeltaOperation)update.Underlying;
+                            entry = CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp.OrmapUpdate, u.Underlying);
+                            foreach (var e in update.Values)
+                            {
+                                entry.EntryData.Add(new Proto.Msg.ORMapDeltaGroup.Types.MapEntry
+                                {
+                                    OtherKey = this.OtherMessageToProto(e.Key),
+                                    Value = this.OtherMessageToProto(e.Value)
+                                });
+                            }
+                            break;
+                        }
+                    default: throw new ArgumentException($"{op} should not be nested");
+                }
+                proto.Entries.Add(entry);
+            }
+
+            return proto;
+        }
+
+        private Proto.Msg.ORMapDeltaGroup.Types.Entry CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp type, ORSet<int> delta)
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup.Types.Entry
+            {
+                Operation = type,
+                Underlying = ToProto(delta)
+            };
+            return proto;
+        }
+
+        private Proto.Msg.ORMapDeltaGroup.Types.Entry CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp type, ORSet<long> delta)
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup.Types.Entry
+            {
+                Operation = type,
+                Underlying = ToProto(delta)
+            };
+            return proto;
+        }
+
+        private Proto.Msg.ORMapDeltaGroup.Types.Entry CreateORMapDeltaEntry(Proto.Msg.ORMapDeltaOp type, ORSet<string> delta)
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup.Types.Entry
+            {
+                Operation = type,
+                Underlying = ToProto(delta)
+            };
+            return proto;
+        }
+
+        private Proto.Msg.ORMapDeltaGroup.Types.Entry CreateORMapDeltaEntry<TKey>(Proto.Msg.ORMapDeltaOp type, ORSet<TKey> delta)
+        {
+            var proto = new Proto.Msg.ORMapDeltaGroup.Types.Entry
+            {
+                Operation = type,
+                Underlying = ToProto(delta)
+            };
+            return proto;
         }
 
         #endregion
 
         #region serialize LWWDictionary
 
+        private byte[] ToBinary<TVal>(LWWDictionary<int, TVal> o) => ToProto(o).Compress();
+        private Proto.Msg.LWWMap ToProto<TVal>(LWWDictionary<int, TVal> o)
+        {
+            var proto = new Proto.Msg.LWWMap
+            {
+                Keys = ToProto(o.Underlying.KeySet)
+            };
+
+            foreach (var entry in o.Underlying.Entries)
+                proto.Entries.Add(new Proto.Msg.LWWMap.Types.Entry
+                {
+                    Value = ToProto(entry.Value),
+                    IntKey = entry.Key
+                });
+
+            return proto;
+        }
+
+        private byte[] ToBinary<TVal>(LWWDictionary<long, TVal> o) => ToProto(o).Compress();
+        private Proto.Msg.LWWMap ToProto<TVal>(LWWDictionary<long, TVal> o)
+        {
+            var proto = new Proto.Msg.LWWMap
+            {
+                Keys = ToProto(o.Underlying.KeySet)
+            };
+
+            foreach (var entry in o.Underlying.Entries)
+                proto.Entries.Add(new Proto.Msg.LWWMap.Types.Entry
+                {
+                    Value = ToProto(entry.Value),
+                    LongKey = entry.Key
+                });
+
+            return proto;
+        }
+
+        private byte[] ToBinary<TVal>(LWWDictionary<string, TVal> o) => ToProto(o).Compress();
+        private Proto.Msg.LWWMap ToProto<TVal>(LWWDictionary<string, TVal> o)
+        {
+            var proto = new Proto.Msg.LWWMap
+            {
+                Keys = ToProto(o.Underlying.KeySet)
+            };
+
+            foreach (var entry in o.Underlying.Entries)
+                proto.Entries.Add(new Proto.Msg.LWWMap.Types.Entry
+                {
+                    Value = ToProto(entry.Value),
+                    StringKey = entry.Key
+                });
+
+            return proto;
+        }
+
         private byte[] ToBinary<TKey, TVal>(LWWDictionary<TKey, TVal> o) => ToProto(o).Compress();
         private Proto.Msg.LWWMap ToProto<TKey, TVal>(LWWDictionary<TKey, TVal> o)
         {
-            throw new NotImplementedException();
+            var proto = new Proto.Msg.LWWMap
+            {
+                Keys = ToProto<TKey>(o.Underlying.KeySet)
+            };
+
+            foreach (var entry in o.Underlying.Entries)
+                proto.Entries.Add(new Proto.Msg.LWWMap.Types.Entry
+                {
+                    Value = ToProto(entry.Value),
+                    OtherKey = this.OtherMessageToProto(entry.Key)
+                });
+
+            return proto;
         }
 
         #endregion
@@ -718,7 +1065,31 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TKey, TVal>(ORMultiValueDictionary<TKey, TVal> o) => ToProto(o).Compress();
         private Proto.Msg.ORMultiMap ToProto<TKey, TVal>(ORMultiValueDictionary<TKey, TVal> o)
         {
-            throw new NotImplementedException();
+            dynamic keys = o.Underlying.KeySet;
+            var proto = new Proto.Msg.ORMultiMap
+            {
+                Keys = ToProto(keys)
+            };
+
+            foreach (var entry in o.Underlying.Entries)
+            {
+                dynamic value = entry.Value;
+                Proto.Msg.ORSet orset = ToProto(value);
+                var e = new Proto.Msg.ORMultiMap.Types.Entry { Value = orset };
+                switch ((object)entry.Key)
+                {
+                    case int i: e.IntKey = i; break;
+                    case long l: e.LongKey = l; break;
+                    case string s: e.StringKey = s; break;
+                    default: e.OtherKey = this.OtherMessageToProto(entry.Key); break;
+                }
+                proto.Entries.Add(e);
+            }
+
+            if (o.DeltaValues)
+                proto.WithValueDeltas = true;
+
+            return proto;
         }
 
         #endregion
@@ -758,7 +1129,208 @@ namespace Akka.DistributedData.Serialization
 
         public override object FromBinary(byte[] bytes, string manifest)
         {
+            switch (manifest)
+            {
+                case DeletedDataManifest: return DeletedData.Instance;
+                case GSetManifest: return FromProto(Proto.Msg.GSet.Parser.ParseFrom(bytes));
+                case GSetKeyManifest: return null;
+                case ORSetManifest: return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                case ORSetKeyManifest: return null;
+                case ORSetAddManifest: return ORSetAddFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                case ORSetRemoveManifest: return ORSetRemoveFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                case ORSetFullManifest: return ORSetFullFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                case ORSetDeltaGroupManifest: return FromProto(ORSetDeltaGroup.Parser.ParseFrom(bytes));
+                case FlagManifest: return FromProto(Proto.Msg.Flag.Parser.ParseFrom(bytes));
+                case FlagKeyManifest: return null;
+                case LWWRegisterManifest: return FromProto(Proto.Msg.LWWRegister.Parser.ParseFrom(bytes));
+                case LWWRegisterKeyManifest: return null;
+                case GCounterManifest: return FromProto(Proto.Msg.GCounter.Parser.ParseFrom(bytes));
+                case GCounterKeyManifest: return null;
+                case PNCounterManifest: return FromProto(Proto.Msg.PNCounter.Parser.ParseFrom(bytes));
+                case PNCounterKeyManifest: return null;
+                case ORMapManifest: return FromProto(Proto.Msg.ORMap.Parser.ParseFrom(bytes));
+                case ORMapKeyManifest: return null;
+                case ORMapPutManifest: return OrMapPutFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapRemoveManifest: return OrMapRemoveFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapRemoveKeyManifest: return OrMapRemoveKeyFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapUpdateManifest: return OrMapUpdateFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapDeltaGroupManifest: return OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case LWWMapManifest: return FromProto(Proto.Msg.LWWMap.Parser.ParseFrom(bytes));
+                case LWWMapKeyManifest: return null;
+                case PNCounterMapManifest: return FromProto(Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes));
+                case PNCounterMapKeyManifest: return null;
+                case ORMultiMapManifest: return FromProto(Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes));
+                case ORMultiMapKeyManifest: return null;
+                case VersionVectorManifest: return this.VersionVectorFromProto(Proto.Msg.VersionVector.Parser.ParseFrom(bytes));
+                default: throw new NotSupportedException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType().FullName}]");
+            }
+        }
+
+        private object OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
             throw new NotImplementedException();
         }
+
+        private object OrMapUpdateFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
+            throw new NotImplementedException();
+        }
+        
+        private object OrMapRemoveKeyFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object OrMapRemoveFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object OrMapPutFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.LWWMap proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.ORMultiMap proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.PNCounterMap proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.ORMap proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.PNCounter proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.GCounter proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.LWWRegister proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.Flag proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.ORSetDeltaGroup proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ORSetFullFromProto(Proto.Msg.ORSet proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ORSetRemoveFromProto(Proto.Msg.ORSet proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object ORSetAddFromProto(Proto.Msg.ORSet proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        private object FromProto(Proto.Msg.ORSet proto)
+        {
+            throw new NotImplementedException();
+        }
+
+        #region deserialize GSet
+
+        private object FromProto(Proto.Msg.GSet proto)
+        {
+            if (proto.IntElements.Count != 0)
+            {
+                var count = proto.IntElements.Count;
+                var elements = new int[count];
+                var i = 0;
+                foreach (var item in proto.IntElements)
+                {
+                    elements[i] = item;
+                    i++;
+                }
+                return GSet.Create(elements);
+            }
+            else if (proto.LongElements.Count != 0)
+            {
+                var count = proto.LongElements.Count;
+                var elements = new long[count];
+                var i = 0;
+                foreach (var item in proto.LongElements)
+                {
+                    elements[i] = item;
+                    i++;
+                }
+                return GSet.Create(elements);
+            }
+            else if (proto.StringElements.Count != 0)
+            {
+                var count = proto.StringElements.Count;
+                var elements = new string[count];
+                var i = 0;
+                foreach (var item in proto.StringElements)
+                {
+                    elements[i] = item;
+                    i++;
+                }
+                return GSet.Create(elements);
+
+            }
+            else if (proto.ActorRefElements.Count != 0)
+            {
+                var count = proto.ActorRefElements.Count;
+                var elements = new IActorRef[count];
+                var i = 0;
+                foreach (var item in proto.ActorRefElements)
+                {
+                    elements[i] = system.Provider.ResolveActorRef(item);
+                    i++;
+                }
+                return GSet.Create(elements);
+            }
+            else
+            {
+                var count = proto.OtherElements.Count;
+                dynamic elements = null;
+                var i = 0;
+                foreach (var item in proto.OtherElements)
+                {
+                    var o = this.OtherMessageFromProto(item);
+                    if (elements == null)
+                        elements = Array.CreateInstance(o.GetType(), count);
+                    elements[i] = o;
+                    i++;
+                }
+                return DynamicGSet(elements);
+            }
+        }
+
+        private GSet<T> DynamicGSet<T>(T[] elements)
+        {
+            return GSet.Create<T>(elements);
+        }
+
+        #endregion
     }
 }
