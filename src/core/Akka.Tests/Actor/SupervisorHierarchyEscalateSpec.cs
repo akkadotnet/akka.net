@@ -8,11 +8,17 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
     public class SupervisorHierarchyEscalateSpec : AkkaSpec
     {
+        public SupervisorHierarchyEscalateSpec(ITestOutputHelper output) : base(output)
+        {
+
+        }
+
         enum Command
         {
             Reply,
