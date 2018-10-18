@@ -152,18 +152,29 @@ namespace Akka.Tests.Actor
                 Props.Create(() => new Shell(supProps)).WithSupervisorStrategy(new ReportingStrategy(TestActor, Sys.Log)),
                 "supervisor");
 
-            sup.Tell(new Broadcast(Command.Reply));
+            for (var i = 0; i < childCount; i++)
+                sup.Tell(Command.Reply);
             ReceiveN(childCount);
 
             // will cause grandchild to fail. 
-            // Supervision will be grandchild --> router (Escalate) --> supervisor (Resume)
+            // Supervision will be grandchild --> router (Escalate) --> supervisor (Escalate) --> Shell (Resume)
+            IActorRef failedActor = null;
             sup.Tell(Command.Fail);
-            var failedActor = ExpectMsg<IActorRef>();
+            failedActor = ExpectMsg<IActorRef>();
 
             // send a message back directly to the failed grandchild
             // and verify that the grandchild has been resumed
-            sup.Tell(new Broadcast(Command.Reply));
-            ReceiveN(childCount);
+            for (var i = 0; i < 100; i++)
+            {
+                if (i % 5 == 0)
+                {
+                    sup.Tell(Command.Fail);
+                }
+                sup.Tell(Command.Reply);
+            }
+                
+            ReceiveN(122);
+
 
             Watch(failedActor);
             sup.Tell(new Broadcast(PoisonPill.Instance)); // should kill all routees
