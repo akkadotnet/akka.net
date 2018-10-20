@@ -7,13 +7,16 @@
 
 using Akka.Actor;
 using Akka.DistributedData.Internal;
-using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Akka.DistributedData.Serialization.Proto.Msg;
+using Google.Protobuf.Collections;
 
 namespace Akka.DistributedData.Serialization
 {
@@ -1139,7 +1142,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSetAddManifest: return ORSetAddFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
                 case ORSetRemoveManifest: return ORSetRemoveFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
                 case ORSetFullManifest: return ORSetFullFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
-                case ORSetDeltaGroupManifest: return FromProto(ORSetDeltaGroup.Parser.ParseFrom(bytes));
+                case ORSetDeltaGroupManifest: return FromProto(Proto.Msg.ORSetDeltaGroup.Parser.ParseFrom(bytes));
                 case FlagManifest: return FromProto(Proto.Msg.Flag.Parser.ParseFrom(bytes));
                 case FlagKeyManifest: return null;
                 case LWWRegisterManifest: return FromProto(Proto.Msg.LWWRegister.Parser.ParseFrom(bytes));
@@ -1165,7 +1168,7 @@ namespace Akka.DistributedData.Serialization
                 default: throw new NotSupportedException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType().FullName}]");
             }
         }
-
+        
         private object OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup proto)
         {
             throw new NotImplementedException();
@@ -1203,58 +1206,272 @@ namespace Akka.DistributedData.Serialization
 
         private object FromProto(Proto.Msg.PNCounterMap proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto.Keys);
+            return DynamicPNCounterDictionary(orset, proto.Entries);
+        }
+
+        private PNCounterDictionary<T> DynamicPNCounterDictionary<T>(ORSet<T> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
+        {
+            dynamic keys = null;
+            var values = new PNCounter[entries.Count];
+            var i = 0;
+            foreach (var entry in entries)
+            {
+                values[i] = FromProto(entry.Value);
+
+                if (entry.StringKey != null)
+                {
+                    var key = entry.StringKey;
+                    if (keys == null)
+                        keys = new string[entries.Count];
+                    keys[i] = key;
+                }
+                else if (entry.OtherKey != null)
+                {
+                    var key = entry.OtherKey;
+                    if (keys == null)
+                        keys = Array.CreateInstance(key.GetType(), entries.Count);
+                    keys[i] = key;
+                }
+                else if (entry.LongKey != default(long))
+                {
+                    var key = entry.LongKey;
+                    if (keys == null)
+                        keys = new long[entries.Count];
+                    keys[i] = key;
+                }
+                else if (entry.IntKey != default(int))
+                {
+                    var key = entry.IntKey;
+                    if (keys == null)
+                        keys = new int[entries.Count];
+                    keys[i] = key;
+                }
+
+                i++;
+            }
+
+            var ormap = DynamicORDictionary(orset, keys, values);
+            return new PNCounterDictionary<T>(ormap);
         }
 
         private object FromProto(Proto.Msg.ORMap proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto.Keys);
+            dynamic keys = null;
+            dynamic values = null;
+            var i = 0;
+            foreach (var entry in proto.Entries)
+            {
+                var value = this.OtherMessageFromProto(entry.Value);
+                if (values == null)
+                    values = Array.CreateInstance(value.GetType(), proto.Entries.Count);
+                values[i] = value;
+
+                if (entry.StringKey != null)
+                {
+                    var key = entry.StringKey;
+                    if (keys == null)
+                        keys = new string[proto.Entries.Count];
+                    keys[i] = key;
+                }
+                else if (entry.OtherKey != null)
+                {
+                    var key = entry.OtherKey;
+                    if (keys == null)
+                        keys = Array.CreateInstance(key.GetType(), proto.Entries.Count);
+                    keys[i] = key;
+                }
+                else if (entry.LongKey != default(long))
+                {
+                    var key = entry.LongKey;
+                    if (keys == null)
+                        keys = new long[proto.Entries.Count];
+                    keys[i] = key;
+                }
+                else if (entry.IntKey != default(int))
+                {
+                    var key = entry.IntKey;
+                    if (keys == null)
+                        keys = new int[proto.Entries.Count];
+                    keys[i] = key;
+                }
+
+                i++;
+            }
+            return DynamicORDictionary(orset, keys, values);
         }
 
-        private object FromProto(Proto.Msg.PNCounter proto)
+        private ORDictionary<TKey, TValue> DynamicORDictionary<TKey, TValue>(ORSet<TKey> keySet, TKey[] keys, TValue[] values)
+            where TValue : IReplicatedData<TValue>
         {
-            throw new NotImplementedException();
+            var builder = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            for (int i = 0; i < keys.Length; i++)
+            {
+                builder.Add(keys[i], values[i]);
+            }
+            
+            return new ORDictionary<TKey,TValue>(keySet, builder.ToImmutable());
         }
 
-        private object FromProto(Proto.Msg.GCounter proto)
+        private PNCounter FromProto(Proto.Msg.PNCounter proto) => 
+            new PNCounter(FromProto(proto.Increments), FromProto(proto.Decrements));
+
+        private GCounter FromProto(Proto.Msg.GCounter proto)
         {
-            throw new NotImplementedException();
+            var builder = ImmutableDictionary<Akka.Cluster.UniqueAddress, ulong>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var node = this.UniqueAddressFromProto(entry.Node);
+                var value = BitConverter.ToUInt64(entry.Value.ToByteArray(), 0);
+                builder.Add(node, value);
+            }
+            return new GCounter(builder.ToImmutable());
         }
 
         private object FromProto(Proto.Msg.LWWRegister proto)
         {
-            throw new NotImplementedException();
+            var node = this.UniqueAddressFromProto(proto.Node);
+            dynamic state = this.OtherMessageFromProto(proto.State);
+            return DynamicLWWRegister(node, state, proto.Timestamp);
         }
 
-        private object FromProto(Proto.Msg.Flag proto)
+        private LWWRegister<T> DynamicLWWRegister<T>(Akka.Cluster.UniqueAddress node, T state, long timestamp)
         {
-            throw new NotImplementedException();
+            return new LWWRegister<T>(node, state, timestamp);
         }
 
+        private Flag FromProto(Proto.Msg.Flag proto) => proto.Enabled ? Flag.True : Flag.False;
+
+        #region deserialize ORSet
+        
         private object FromProto(Proto.Msg.ORSetDeltaGroup proto)
         {
-            throw new NotImplementedException();
+            var head = proto.Entries[0];
+            dynamic orset = FromProto(head.Underlying);
+            return DynamicORSetDelta(orset, head.Operation, proto);
+        }
+
+        private ORSet<T>.DeltaGroup DynamicORSetDelta<T>(ORSet<T> horset, Proto.Msg.ORSetDeltaOp hop, Proto.Msg.ORSetDeltaGroup proto)
+        {
+            var builder = ImmutableArray.CreateBuilder<IReplicatedData>(proto.Entries.Count);
+            var op = ORSetDeltaFrom(hop, horset);
+            builder.Add(op);
+
+            for (int i = 1; i < proto.Entries.Count; i++)
+            {
+                var entry = proto.Entries[i];
+                var orset = (ORSet<T>)FromProto(entry.Underlying);
+                builder.Add(ORSetDeltaFrom(entry.Operation, orset));
+            }
+            
+            return new ORSet<T>.DeltaGroup(builder.ToImmutable());
+        }
+
+        private ORSet<T>.IDeltaOperation ORSetDeltaFrom<T>(Proto.Msg.ORSetDeltaOp op, ORSet<T> orset)
+        {
+            switch (op)
+            {
+                case Proto.Msg.ORSetDeltaOp.Add: return DynamicORSetAdd(orset);
+                case Proto.Msg.ORSetDeltaOp.Remove: return DynamicORSetRemove(orset);
+                case Proto.Msg.ORSetDeltaOp.Full: return DynamicORSetFull(orset);
+                default: throw new ArgumentException("Delta operation cannot be nested");
+            }
         }
 
         private object ORSetFullFromProto(Proto.Msg.ORSet proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto);
+            return DynamicORSetFull(orset);
         }
+
+        private ORSet<T>.FullStateDeltaOperation DynamicORSetFull<T>(ORSet<T> orset) =>
+            new ORSet<T>.FullStateDeltaOperation(orset);
 
         private object ORSetRemoveFromProto(Proto.Msg.ORSet proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto);
+            return DynamicORSetRemove(orset);
         }
+
+        private ORSet<T>.RemoveDeltaOperation DynamicORSetRemove<T>(ORSet<T> orset) =>
+            new ORSet<T>.RemoveDeltaOperation(orset);
 
         private object ORSetAddFromProto(Proto.Msg.ORSet proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto);
+            return DynamicORSetAdd(orset);
         }
+
+        private ORSet<T>.AddDeltaOperation DynamicORSetAdd<T>(ORSet<T> orset) => 
+            new ORSet<T>.AddDeltaOperation(orset);
 
         private object FromProto(Proto.Msg.ORSet proto)
         {
-            throw new NotImplementedException();
+            var vvector = this.VersionVectorFromProto(proto.Vvector);
+            var dots = new List<VersionVector>(proto.Dots.Count);
+            foreach (var dot in proto.Dots)
+                dots.Add(this.VersionVectorFromProto(dot));
+
+            if (proto.IntElements.Count != 0)
+            {
+                var elements =
+                    proto.IntElements.Zip(dots, (value, dot) => new KeyValuePair<int, VersionVector>(value, dot))
+                    .ToImmutableDictionary();
+                
+                return new ORSet<int>(elements, vvector);
+            }
+            else if (proto.LongElements.Count != 0)
+            {
+                var elements =
+                    proto.LongElements.Zip(dots, (value, dot) => new KeyValuePair<long, VersionVector>(value, dot))
+                        .ToImmutableDictionary();
+
+                return new ORSet<long>(elements, vvector);
+            }
+            else if (proto.StringElements.Count != 0)
+            {
+                var elements =
+                    proto.StringElements.Zip(dots, (value, dot) => new KeyValuePair<string, VersionVector>(value, dot))
+                        .ToImmutableDictionary();
+
+                return new ORSet<string>(elements, vvector);
+            }
+            else if (proto.ActorRefElements.Count != 0)
+            {
+                var elements =
+                    proto.ActorRefElements.Zip(dots, (value, dot) => 
+                            new KeyValuePair<IActorRef, VersionVector>(system.Provider.ResolveActorRef(value), dot))
+                        .ToImmutableDictionary();
+
+                return new ORSet<IActorRef>(elements, vvector);
+            }
+            else
+            {
+                int i = 0;
+                dynamic elements = null;
+                foreach (var other in proto.OtherElements)
+                {
+                    var value = this.OtherMessageFromProto(other);
+                    if (elements == null)
+                        elements = Array.CreateInstance(value.GetType(), proto.OtherElements.Count);
+                    elements[i] = value;
+                    i++;
+                }
+
+                return DynamicORSet(elements, dots, vvector);
+            }
         }
+
+        private ORSet<T> DynamicORSet<T>(T[] elements, List<VersionVector> dots, VersionVector vvector)
+        {
+            var elementMap = elements
+                .Zip(dots, (value, dot) => new KeyValuePair<T, VersionVector>(value, dot))
+                .ToImmutableDictionary();
+            return new ORSet<T>(elementMap, vvector);
+        }
+
+        #endregion
 
         #region deserialize GSet
 
