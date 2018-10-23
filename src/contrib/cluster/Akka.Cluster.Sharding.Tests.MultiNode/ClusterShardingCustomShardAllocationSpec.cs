@@ -37,7 +37,6 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }
                     }
-                    akka.loglevel = DEBUG
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
 

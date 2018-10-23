@@ -72,8 +72,6 @@ namespace Akka.Cluster.Sharding.Tests
             Fourth = Role("fourth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                # DEBUG because of failing test, issue #23741
-                akka.loglevel = DEBUG
                 akka.cluster.debug.verbose-heartbeat-logging = on
                 akka.cluster.debug.verbose-gossip-logging = on
                 akka.actor.provider = cluster

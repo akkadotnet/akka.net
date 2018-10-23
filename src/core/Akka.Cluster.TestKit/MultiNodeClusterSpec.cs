@@ -60,7 +60,7 @@ namespace Akka.Cluster.TestKit
                       waiting-for-state-timeout = 200ms
                     }
                 }
-                akka.loglevel = DEBUG
+                akka.loglevel = INFO
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
                 #akka.remote.log-remote-lifecycle-events = off

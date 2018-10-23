@@ -41,7 +41,6 @@ namespace Akka.Cluster.Tests.MultiNode
             akka {
               test.testkit.debug = on
               actor.provider = cluster
-              loglevel = DEBUG
               remote.log-remote-lifecycle-events = off
               cluster {
                 debug.verbose-heartbeat-logging = off

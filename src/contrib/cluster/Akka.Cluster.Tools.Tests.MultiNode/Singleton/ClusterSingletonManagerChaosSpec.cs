@@ -41,7 +41,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
             ")

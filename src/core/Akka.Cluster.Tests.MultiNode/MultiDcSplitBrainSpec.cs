@@ -37,7 +37,6 @@ namespace Akka.Cluster.Tests.MultiNode
             Fifth = Role("fifth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-              akka.loglevel = DEBUG
               akka.cluster.debug.verbose-heartbeat-logging = on
               akka.cluster.debug.verbose-gossip-logging = on
               akka.remote.dot-netty.tcp.connection-timeout = 5s # speedup in case of connection issue

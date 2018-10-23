@@ -39,8 +39,6 @@ namespace Akka.Cluster.Tests.MultiNode
             Fifth = Role("fifth");
 
             CommonConfig = ConfigurationFactory.ParseString($@"
-              # DEBUG On for issue #23864
-              akka.loglevel = DEBUG
               #akka.cluster.debug.verbose-receive-gossip-logging = on
               #akka.cluster.debug.verbose-gossip-logging = on
               akka.cluster.multi-data-center.cross-data-center-connections = {crossDcConnections}")
