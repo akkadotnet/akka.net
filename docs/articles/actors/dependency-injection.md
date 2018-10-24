@@ -91,7 +91,7 @@ var container = builder.Build();
 
 // Create the ActorSystem and Dependency Resolver
 var system = ActorSystem.Create("MySystem");
-var propsResolver = new AutoFacDependencyResolver(container, system);
+system.UseAutofac(container);
 ```
 
 ### CastleWindsor
