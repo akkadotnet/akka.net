@@ -256,14 +256,38 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
-            var flagsRaw = config.GetStringList("certificate.flags");
-            var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
+            
 
-            return new SslSettings(
-                certificatePath: config.GetString("certificate.path"),
-                certificatePassword: config.GetString("certificate.password"),
-                flags: flags,
-                suppressValidation: config.GetBoolean("suppress-validation", false));
+            if (config.GetBoolean("certificate.use-thumprint-over-file", false))
+            {
+                return new SslSettings(config.GetString("certificate.thumbprint"),
+                    config.GetString("certificate.store-name"),
+                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                        config.GetBoolean("suppress-validation", false));
+
+            }
+            else
+            {
+                var flagsRaw = config.GetStringList("certificate.flags");
+                var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
+
+                return new SslSettings(
+                    certificatePath: config.GetString("certificate.path"),
+                    certificatePassword: config.GetString("certificate.password"),
+                    flags: flags,
+                    suppressValidation: config.GetBoolean("suppress-validation", false));
+            }
+
+        }
+
+        private static StoreLocation ParseStoreLocationName(string str)
+        {
+            switch (str)
+            {
+                case "local-machine": return StoreLocation.LocalMachine;
+                case "current-user": return StoreLocation.CurrentUser;
+                default: throw new ArgumentException($"Unrecognized flag in X509 certificate config [{str}]. Available flags: local-machine | current-user");
+            }
         }
 
         private static X509KeyStorageFlags ParseKeyStorageFlag(string str)
@@ -296,6 +320,36 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = false;
         }
 
+        public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
+        {
+
+            var store = new X509Store(storeName, storeLocation);
+            try
+            {
+                store.Open(OpenFlags.ReadOnly);
+
+                
+                var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
+                if (find.Count == 0)
+                {
+                    throw new ArgumentException(
+                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
+                }
+
+                Certificate = find[0];
+                SuppressValidation = suppressValidation;
+            }
+            finally
+            {
+#if  NET45 //netstandard1.6 doesn't have close on store.
+                store.Close();
+#else
+#endif
+
+            }
+
+        }
+            
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))
