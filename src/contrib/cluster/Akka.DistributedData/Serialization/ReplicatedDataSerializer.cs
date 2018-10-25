@@ -28,7 +28,7 @@ namespace Akka.DistributedData.Serialization
 
             _serializer =
                 new Hyperion.Serializer(new SerializerOptions(
-                    preserveObjectReferences: false,
+                    preserveObjectReferences: true,
                     versionTolerance: true,
                     surrogates: new[]
                     {
@@ -65,7 +65,7 @@ namespace Akka.DistributedData.Serialization
         {
             using (var ms = new MemoryStream(bytes))
             {
-                var res = _serializer.Deserialize<object>(ms);
+                var res = _serializer.Deserialize(ms);
                 return res;
             }
         }
