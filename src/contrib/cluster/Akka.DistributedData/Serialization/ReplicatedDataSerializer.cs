@@ -28,7 +28,7 @@ namespace Akka.DistributedData.Serialization
 
             _serializer =
                 new Hyperion.Serializer(new SerializerOptions(
-                    preserveObjectReferences: true,
+                    preserveObjectReferences: false,
                     versionTolerance: true,
                     surrogates: new[]
                     {
