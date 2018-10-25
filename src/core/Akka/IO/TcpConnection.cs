@@ -618,6 +618,7 @@ namespace Akka.IO
         protected override void PostStop()
         {
             if (Socket.Connected) Abort();
+            else CloseSocket();
 
             if (IsWritePending)
             {
