@@ -53,7 +53,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             //creates a StringBuilder and adds adds $. Hence, 2 $$
             var testActorRef = new TestActorRef<ReplyActor>(Sys, Props.Create<ReplyActor>());
 
-            Assert.Equal(testActorRef.Path.Name.Substring(0, 2), "$$");
+            Assert.Equal("$$", testActorRef.Path.Name.Substring(0, 2));
         }
 
         [Fact]
