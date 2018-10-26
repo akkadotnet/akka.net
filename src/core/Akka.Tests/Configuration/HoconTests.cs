@@ -155,7 +155,7 @@ root {
             Assert.Equal("1.23", config.GetString("root.double"));
             Assert.True(config.GetBoolean("root.bool"));
             Assert.True(config.GetBoolean("root.object.hasContent"));
-            Assert.Equal(null, config.GetString("root.null"));
+            Assert.Null(config.GetString("root.null"));
             Assert.Equal("foo", config.GetString("root.quoted-string"));
             Assert.Equal("bar", config.GetString("root.unquoted-string"));
             Assert.Equal("foo bar", config.GetString("root.concat-string"));
@@ -190,7 +190,7 @@ root {
             Assert.Equal("1.23", config.GetString("root.double"));
             Assert.True(config.GetBoolean("root.bool"));
             Assert.True(config.GetBoolean("root.object.hasContent"));
-            Assert.Equal(null, config.GetString("root.null"));
+            Assert.Null(config.GetString("root.null"));
             Assert.Equal("foo", config.GetString("root.string"));
             Assert.True(new[] {1, 2, 3}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
         }
@@ -222,7 +222,7 @@ a = null
 a.c = 3
 ";
             var config = ConfigurationFactory.ParseString(hocon);
-            Assert.Equal(null, config.GetString("a.b"));
+            Assert.Null(config.GetString("a.b"));
             Assert.Equal("3", config.GetString("a.c"));
         }
 
@@ -746,7 +746,7 @@ test.value = 456
         public void Can_assign_null_string_to_field()
         {
             var hocon = @"a=null";
-            Assert.Equal(null, ConfigurationFactory.ParseString(hocon).GetString("a"));
+            Assert.Null(ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
 
         [Fact(Skip = "we currently do not make any distinction between quoted and unquoted strings once parsed")]
