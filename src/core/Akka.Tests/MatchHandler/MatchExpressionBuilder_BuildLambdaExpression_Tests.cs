@@ -95,7 +95,7 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Action<String>, Predicate<string>, bool>)result.LambdaExpression.Compile();
             lambda("short", action, predicate);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("longer value", action, predicate);
             Assert.Equal("longer value", updatedValue);
             lambda(4711, action, predicate);
@@ -133,7 +133,7 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Action<String>, Predicate<string>, Action<String>, Predicate<string>, bool>)result.LambdaExpression.Compile();
             lambda("short", action1, predicate1, action2, predicate2);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("longer value", action1, predicate1, action2, predicate2);
             Assert.Equal("longer value", updatedValue);
             lambda("1234567890123456789", action1, predicate1, action2, predicate2);
@@ -177,7 +177,7 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Action<String>, Predicate<string>, Action<int>, Predicate<int>, bool>)result.LambdaExpression.Compile();
             lambda("short", action1, predicate1, action2, predicate2);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("longer value", action1, predicate1, action2, predicate2);
             Assert.Equal("longer value", updatedValue);
             lambda("12345678901234567890", action1, predicate1, action2, predicate2);
@@ -236,7 +236,7 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Func<String, bool>, Func<int, bool>, bool>)result.LambdaExpression.Compile();
             lambda("short", func1, func2);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("longer value", func1, func2);
             Assert.Equal("longer value", updatedValue);
             lambda(2, func1, func2);
@@ -355,7 +355,7 @@ namespace Akka.Tests.MatchHandler
                 result.LambdaExpression.Compile();
 
             lambda("some value", actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionInt);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda(4711, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionInt);
             Assert.Equal("4711", updatedValue);
         }
@@ -407,9 +407,9 @@ namespace Akka.Tests.MatchHandler
                 result.LambdaExpression.Compile();
 
             lambda("some value", actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, extraParamsArray);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda(4711, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, extraParamsArray);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda(42, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, actionString, predicateString, extraParamsArray);
             Assert.Equal("42", updatedValue);
 
@@ -438,7 +438,7 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Action<object>, bool>)result.LambdaExpression.Compile();
             lambda(4711, action);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("the value", action);
             Assert.Equal("WasString:the value", updatedValue);
         }
@@ -468,9 +468,9 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Action<object>, Predicate<Object>, bool>)result.LambdaExpression.Compile();
             lambda(4711, action, predicate);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("short", action, predicate);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("the value", action, predicate);
             Assert.Equal("the value", updatedValue);
         }
@@ -507,9 +507,9 @@ namespace Akka.Tests.MatchHandler
             //Compile the expression and test it
             var lambda = (Func<object, Func<object, bool>, bool>)result.LambdaExpression.Compile();
             lambda(4711, func);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("short", func);
-            Assert.Equal(null, updatedValue);
+            Assert.Null(updatedValue);
             lambda("the value", func);
             Assert.Equal("the value", updatedValue);
         }

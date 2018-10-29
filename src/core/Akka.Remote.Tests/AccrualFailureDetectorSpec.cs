@@ -76,8 +76,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_return_phi_value_of_zero_on_startup_for_each_address_when_no_heartbeats()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
-            Assert.Equal(fd.CurrentPhi, 0.0);
-            Assert.Equal(fd.CurrentPhi, 0.0);
+            Assert.Equal(0.0, fd.CurrentPhi);
+            Assert.Equal(0.0, fd.CurrentPhi);
         }
 
         [Fact]

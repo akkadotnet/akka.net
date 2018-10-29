@@ -32,7 +32,7 @@ namespace Akka.Tests.Actor
         };
 
         [Theory]
-        [MemberData("RetriesTestData")]
+        [MemberData(nameof(RetriesTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_retries_has_the_expected_properties(int? retries, int expectedRetries)
         {
             var uut = new OneForOneStrategy(retries, null, exn => Directive.Restart);
@@ -41,7 +41,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("TimeoutTestData")]
+        [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_timeouts_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
             var uut = new OneForOneStrategy(-1, timeout, exn => Directive.Restart);
@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("RetriesTestData")]
+        [MemberData(nameof(RetriesTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_retries_and_a_decider_has_the_expected_properties(int? retries, int expectedRetries)
         {
             var uut = new OneForOneStrategy(retries, null, Decider.From(Directive.Restart));
@@ -59,7 +59,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("TimeoutTestData")]
+        [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_timeouts_and_a_decider_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
             var uut = new OneForOneStrategy(-1, timeout, Decider.From(Directive.Restart));
@@ -68,7 +68,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("RetriesTestData")]
+        [MemberData(nameof(RetriesTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_retries_has_the_expected_properties(int? retries, int expectedRetries)
         {
             var uut = new AllForOneStrategy(retries, null, exn => Directive.Restart);
@@ -77,7 +77,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("TimeoutTestData")]
+        [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_timeouts_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
             var uut = new AllForOneStrategy(-1, timeout, exn => Directive.Restart);
@@ -86,7 +86,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("RetriesTestData")]
+        [MemberData(nameof(RetriesTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_retries_and_a_decider_has_the_expected_properties(int? retries, int expectedRetries)
         {
             var uut = new OneForOneStrategy(retries, null, Decider.From(Directive.Restart));
@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
         }
 
         [Theory]
-        [MemberData("TimeoutTestData")]
+        [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_timeouts_and_a_decider_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
             var uut = new OneForOneStrategy(-1, timeout, Decider.From(Directive.Restart));
