@@ -1219,19 +1219,16 @@ namespace Akka.Cluster
             {
                 Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
             }
-            else if (message is ClusterUserAction.JoinTo)
+            else if (message is ClusterUserAction.JoinTo jt)
             {
-                var jt = message as ClusterUserAction.JoinTo;
                 Join(jt.Address);
             }
-            else if (message is InternalClusterAction.JoinSeedNodes)
+            else if (message is InternalClusterAction.JoinSeedNodes js)
             {
-                var js = message as InternalClusterAction.JoinSeedNodes;
                 JoinSeedNodes(js.SeedNodes);
             }
-            else if (message is InternalClusterAction.ISubscriptionMessage)
+            else if (message is InternalClusterAction.ISubscriptionMessage isub)
             {
-                var isub = message as InternalClusterAction.ISubscriptionMessage;
                 _publisher.Forward(isub);
             }
             else if (ReceiveExitingCompleted(message)) { }
@@ -1248,30 +1245,26 @@ namespace Akka.Cluster
                 _log.Debug("[TryingToJoin] Received {0}", message);
             }
 
-            if (message is InternalClusterAction.Welcome)
+            if (message is InternalClusterAction.Welcome w)
             {
-                var w = message as InternalClusterAction.Welcome;
                 Welcome(joinWith, w.From, w.Gossip);
             }
             else if (message is InternalClusterAction.InitJoin)
             {
                 Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
             }
-            else if (message is ClusterUserAction.JoinTo)
+            else if (message is ClusterUserAction.JoinTo jt)
             {
-                var jt = message as ClusterUserAction.JoinTo;
                 BecomeUninitialized();
                 Join(jt.Address);
             }
-            else if (message is InternalClusterAction.JoinSeedNodes)
+            else if (message is InternalClusterAction.JoinSeedNodes js)
             {
-                var js = message as InternalClusterAction.JoinSeedNodes;
                 BecomeUninitialized();
                 JoinSeedNodes(js.SeedNodes);
             }
-            else if (message is InternalClusterAction.ISubscriptionMessage)
+            else if (message is InternalClusterAction.ISubscriptionMessage isub)
             {
-                var isub = message as InternalClusterAction.ISubscriptionMessage;
                 _publisher.Forward(isub);
             }
             else if (message is InternalClusterAction.ITick)
@@ -1316,16 +1309,14 @@ namespace Akka.Cluster
                 _log.Debug("[Initialized] Received {0}", message);
             }
 
-            if (message is GossipEnvelope)
+            if (message is GossipEnvelope ge)
             {
-                var ge = message as GossipEnvelope;
                 var receivedType = ReceiveGossip(ge);
                 if (_cluster.Settings.VerboseGossipReceivedLogging)
                     _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
-            else if (message is GossipStatus)
+            else if (message is GossipStatus gs)
             {
-                var gs = message as GossipStatus;
                 ReceiveGossipStatus(gs);
             }
             else if (message is InternalClusterAction.GossipTick)
@@ -1352,49 +1343,41 @@ namespace Akka.Cluster
             {
                 InitJoin();
             }
-            else if (message is InternalClusterAction.Join)
+            else if (message is InternalClusterAction.Join @join)
             {
-                var join = message as InternalClusterAction.Join;
-                Joining(join.Node, join.Roles);
+                Joining(@join.Node, @join.Roles);
             }
-            else if (message is ClusterUserAction.Down)
+            else if (message is ClusterUserAction.Down down)
             {
-                var down = message as ClusterUserAction.Down;
                 Downing(down.Address);
             }
-            else if (message is ClusterUserAction.Leave)
+            else if (message is ClusterUserAction.Leave leave)
             {
-                var leave = message as ClusterUserAction.Leave;
                 Leaving(leave.Address);
             }
-            else if (message is InternalClusterAction.SendGossipTo)
+            else if (message is InternalClusterAction.SendGossipTo sendGossipTo)
             {
-                var sendGossipTo = message as InternalClusterAction.SendGossipTo;
                 SendGossipTo(sendGossipTo.Address);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
             {
                 _publisher.Forward(message);
             }
-            else if (message is QuarantinedEvent)
+            else if (message is QuarantinedEvent q)
             {
-                var q = message as QuarantinedEvent;
                 Quarantined(new UniqueAddress(q.Address, q.Uid));
             }
-            else if (message is ClusterUserAction.JoinTo)
+            else if (message is ClusterUserAction.JoinTo jt)
             {
-                var jt = message as ClusterUserAction.JoinTo;
                 _log.Info("Trying to join [{0}] when already part of a cluster, ignoring", jt.Address);
             }
-            else if (message is InternalClusterAction.JoinSeedNodes)
+            else if (message is InternalClusterAction.JoinSeedNodes joinSeedNodes)
             {
-                var joinSeedNodes = message as InternalClusterAction.JoinSeedNodes;
                 _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
                     joinSeedNodes.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
             }
-            else if (message is InternalClusterAction.ExitingConfirmed)
+            else if (message is InternalClusterAction.ExitingConfirmed c)
             {
-                var c = (InternalClusterAction.ExitingConfirmed)message;
                 ReceiveExitingConfirmed(c.Address);
             }
             else if (ReceiveExitingCompleted(message)) { }
