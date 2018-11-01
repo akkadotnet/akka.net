@@ -133,7 +133,7 @@ namespace Akka.Remote.Tests
             reg.MarkAsFailed(actorB, farIntheFuture);
             reg.Prune();
 
-            Assert.Equal(null, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
+            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
             Assert.Equal(farIntheFuture, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
         }
 
