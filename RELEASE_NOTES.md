@@ -1,5 +1,36 @@
-#### 1.3.10 August 22 2018 ####
-Placeholder for nightlies
+#### 1.3.10 November 1 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.10 consists mostly of bug fixes and patches to various parts of Akka.NET:
+
+* [Akka.Remote: add support for using installed certificates with thumbprints](https://github.com/akkadotnet/akka.net/issues/3632)
+* [Akka.IO: fix TCP sockets leak](https://github.com/akkadotnet/akka.net/issues/3630)
+* [Akka.DI.Core: Check if Dependency Resolver is configured to avoid a `NullReferenceException`](https://github.com/akkadotnet/akka.net/pull/3619)
+* [Akka.Streams: Interop between Akka.Streams and IObservable](https://github.com/akkadotnet/akka.net/pull/3112)
+* [HOCON: Parse size in bytes format. Parse microseconds and nanoseconds.](https://github.com/akkadotnet/akka.net/pull/3600)
+* [Akka.Cluster: Don't automatically down quarantined nodes](https://github.com/akkadotnet/akka.net/pull/3605)
+
+To [see the full set of changes for Akka.NET 1.3.10, click here](https://github.com/akkadotnet/akka.net/milestone/28).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 887 | 220 | Bartosz Sypytkowski |
+| 5 | 67 | 174 | Aaron Stannard |
+| 4 | 15 | 7 | Caio Proiete |
+| 3 | 7 | 4 | Maciek Misztal |
+| 2 | 60 | 8 | Marcus Weaver |
+| 2 | 57 | 12 | moerwald |
+| 2 | 278 | 16 | Peter Shrosbree |
+| 2 | 2 | 2 | Fábio Beirão |
+| 1 | 71 | 71 | Sean Gilliam |
+| 1 | 6 | 0 | basbossinkdivverence |
+| 1 | 24 | 5 | Ismael Hamed |
+| 1 | 193 | 8 | to11mtm |
+| 1 | 17 | 33 | zbynek001 |
+| 1 | 12 | 3 | Oleksandr Bogomaz |
+| 1 | 1 | 1 | MelnikovIG |
+| 1 | 1 | 1 | Alex Villarreal |
+| 1 | 1 | 0 | Yongjie Ma |
 
 #### 1.3.9 August 22 2018 ####
 **Maintenance Release for Akka.NET 1.3**
