@@ -153,7 +153,7 @@ By default, this graceful leave action will by triggered whenever the `Coordinat
 By default, `CoordinatedShutdown.Run()` will also be executed if a node is removed via `Cluster.Down` (non-graceful exit), but this can be disabled by changing the following Akka.Cluster HOCON setting:
 
 ```
-akka.run-coordinated-shutdown-when-down = off 
+akka.cluster.run-coordinated-shutdown-when-down = off 
 ```
 
 ### Invoking `CoordinatedShutdown.Run()` on Process Exit
