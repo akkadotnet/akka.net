@@ -42,17 +42,4 @@ namespace ChatMessages
         public string Username { get; set; }
         public string Text { get; set; }
     }
-
-    public class ChannelsRequest
-    {
-    }
-
-    public class ChannelsResponse
-    {
-        public IActorRef[] channels { get; set; }
-    }
-
-    public class Disconnect
-    {
-    }
 }

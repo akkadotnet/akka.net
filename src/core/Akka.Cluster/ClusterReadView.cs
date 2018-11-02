@@ -182,8 +182,7 @@ namespace Akka.Cluster
             get
             {
                 return _state.Members.SingleOrDefault(member => member.UniqueAddress == _cluster.SelfUniqueAddress)
-                        .GetOrElse(
-                            Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed));
+                        ?? Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed);
             }
         }
 

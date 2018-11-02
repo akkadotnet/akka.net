@@ -82,6 +82,11 @@ namespace Akka.Cluster
         public UniqueAddress SelfUniqueAddress { get; }
 
         /// <summary>
+        /// Used to retain the <see cref="InfoLogger"/> instance that decorates the cluster.
+        /// </summary>
+        internal InfoLogger CurrentInfoLogger { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Cluster"/> class.
         /// </summary>
         /// <param name="system">The actor system that hosts the cluster.</param>
@@ -100,12 +105,14 @@ namespace Akka.Cluster
 
             _log = Logging.GetLogger(system, "Cluster");
 
+            CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
+
             LogInfo("Starting up...");
 
-            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
+            FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
 
-            _scheduler = CreateScheduler(system);
+            Scheduler = CreateScheduler(system);
 
             // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
             _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
@@ -481,7 +488,7 @@ namespace Akka.Cluster
         /// </summary>
         public ExtendedActorSystem System { get; }
 
-        private Lazy<IDowningProvider> _downingProvider;
+        private readonly Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
 
@@ -490,12 +497,10 @@ namespace Akka.Cluster
         /// </summary>
         internal ClusterReadView ReadView { get { return _readView; } }
 
-        private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
-
         /// <summary>
         /// The set of failure detectors used for monitoring one or more nodes in the cluster.
         /// </summary>
-        public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
+        public DefaultFailureDetectorRegistry<Address> FailureDetector { get; }
 
         /// <summary>
         /// TBD
@@ -506,11 +511,10 @@ namespace Akka.Cluster
         // ===================== WORK DAEMONS =====================
         // ========================================================
 
-        readonly IScheduler _scheduler;
         /// <summary>
         /// TBD
         /// </summary>
-        internal IScheduler Scheduler { get { return _scheduler; } }
+        internal IScheduler Scheduler { get; }
 
         private static IScheduler CreateScheduler(ActorSystem system)
         {
@@ -562,12 +566,64 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Used for logging important messages with the cluster's address appended.
+        /// </summary>
+        internal class InfoLogger
+        {
+            private readonly ILoggingAdapter _log;
+            private readonly ClusterSettings _settings;
+            private readonly Address _selfAddress;
+
+            public InfoLogger(ILoggingAdapter log, ClusterSettings settings, Address selfAddress)
+            {
+                _log = log;
+                _settings = settings;
+                _selfAddress = selfAddress;
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
+            /// </summary>
+            /// <param name="message">The message being logged.</param>
+            internal void LogInfo(string message)
+            {
+                if(_settings.LogInfo)
+                    _log.Info("Cluster Node [{0}] - {1}", _selfAddress, message);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The argument that fills in the template placeholder.</param>
+            internal void LogInfo(string template, object arg1)
+            {
+                if (_settings.LogInfo)
+                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
+            /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
+            internal void LogInfo(string template, object arg1, object arg2)
+            {
+                if (_settings.LogInfo)
+                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1, arg2);
+            }
+        }
+
+        /// <summary>
         /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>
         /// <param name="message">The message being logged.</param>
         internal void LogInfo(string message)
         {
-            _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
+            CurrentInfoLogger.LogInfo(message);
         }
 
         /// <summary>
@@ -577,7 +633,7 @@ namespace Akka.Cluster
         /// <param name="arg1">The argument that fills in the template placeholder.</param>
         internal void LogInfo(string template, object arg1)
         {
-            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
+            CurrentInfoLogger.LogInfo(template, arg1);
         }
 
         /// <summary>
@@ -588,7 +644,7 @@ namespace Akka.Cluster
         /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
         internal void LogInfo(string template, object arg1, object arg2)
         {
-            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
+            CurrentInfoLogger.LogInfo(template, arg1, arg2);
         }
     }
 

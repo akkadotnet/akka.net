@@ -16,7 +16,7 @@ using Akka.Event;
 namespace Akka.Remote.TestKit
 {
     /// <summary>
-    /// 
+    ///
     /// This barrier coordinator gets informed of players connecting (NodeInfo),
     /// players being deliberately removed (RemoveClient) or failing (ClientDisconnected)
     /// by the controller. It also receives EnterBarrier requests, where upon the first
@@ -50,10 +50,10 @@ namespace Akka.Remote.TestKit
 
         public sealed class Data
         {
-            public Data(IEnumerable<Controller.NodeInfo> clients, string barrier, IEnumerable<IActorRef> arrived, Deadline deadline) : 
-                this(clients == null ? ImmutableHashSet.Create<Controller.NodeInfo>() : ImmutableHashSet.Create(clients.ToArray()), 
-                barrier, 
-                arrived == null ? ImmutableHashSet.Create<IActorRef>() : ImmutableHashSet.Create(arrived.ToArray()), 
+            public Data(IEnumerable<Controller.NodeInfo> clients, string barrier, IEnumerable<IActorRef> arrived, Deadline deadline) :
+                this(clients == null ? ImmutableHashSet.Create<Controller.NodeInfo>() : ImmutableHashSet.Create(clients.ToArray()),
+                barrier,
+                arrived == null ? ImmutableHashSet.Create<IActorRef>() : ImmutableHashSet.Create(arrived.ToArray()),
                 deadline)
             {
             }
@@ -77,7 +77,7 @@ namespace Akka.Remote.TestKit
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
                 ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = null)
             {
-                return new Data(clients ?? Clients, 
+                return new Data(clients ?? Clients,
                     barrier ?? Barrier,
                     arrived ?? Arrived,
                     deadline ?? Deadline);
@@ -444,7 +444,7 @@ namespace Akka.Remote.TestKit
             {
                 unchecked
                 {
-                    return ((BarrierData != null ? BarrierData.GetHashCode() : 0) * 397) 
+                    return ((BarrierData != null ? BarrierData.GetHashCode() : 0) * 397)
                         ^ (Client != null ? Client.GetHashCode() : 0);
                 }
             }
@@ -648,7 +648,7 @@ namespace Akka.Remote.TestKit
 
         public Deadline GetDeadline(TimeSpan? timeout)
         {
-            return Deadline.Now + timeout.GetOrElse(TestConductor.Get(Context.System).Settings.BarrierTimeout);
+            return Deadline.Now + (timeout ?? TestConductor.Get(Context.System).Settings.BarrierTimeout);
         }
     }
 }

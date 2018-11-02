@@ -219,7 +219,7 @@ namespace MyActorWorkerRole
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken);
             }
         }
     }

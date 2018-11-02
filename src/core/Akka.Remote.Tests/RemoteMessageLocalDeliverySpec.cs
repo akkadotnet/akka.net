@@ -56,7 +56,7 @@ namespace Akka.Remote.Tests
         public void RemoteActorRefProvider_default_address_must_include_adapter_schemes()
         {
             var localAddress = RARP.For(Sys).Provider.DefaultAddress;
-            Assert.True(localAddress.ToString().StartsWith("akka.trttl.gremlin.tcp://"));
+            Assert.StartsWith("akka.trttl.gremlin.tcp://", localAddress.ToString());
         }
 
         [Fact]
