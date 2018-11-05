@@ -29,7 +29,7 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
-let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else "")
+let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else DateTime.UtcNow.Ticks.ToString())
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix

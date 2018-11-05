@@ -89,7 +89,7 @@ namespace Tutorials.Tutorial4
                 device1.ExpectMsg<ReadTemperature>(read => read.RequestId == 0);
                 device2.ExpectMsg<ReadTemperature>(read => read.RequestId == 0);
 
-                queryActor.Tell(new RespondTemperature(requestId: 0, value: 1.0), device2.Ref);
+                queryActor.Tell(new RespondTemperature(requestId: 0, value: 1.0), device1.Ref);
                 device2.Tell(PoisonPill.Instance);
 
                 requester.ExpectMsg<RespondAllTemperatures>(msg =>
