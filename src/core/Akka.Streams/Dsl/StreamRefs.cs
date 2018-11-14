@@ -323,7 +323,10 @@ namespace Akka.Streams.Dsl
                 _stageActor = GetStageActor(InitialReceive);
                 var initialPartnerRef = _stage._initialPartnerRef;
                 if (initialPartnerRef != null)
+                {
                     ObserveAndValidateSender(initialPartnerRef, "Illegal initialPartnerRef! This would be a bug in the SinkRef usage or impl.");
+                    TryPull();
+                }
 
                 Log.Debug("Created SinkRef, pointing to remote Sink receiver: {0}, local worker: {1}", initialPartnerRef, Self);
 
