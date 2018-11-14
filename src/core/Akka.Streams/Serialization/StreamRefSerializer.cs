@@ -145,7 +145,10 @@ namespace Akka.Streams.Serialization
         {
             var onNext = Proto.Msg.SequencedOnNext.Parser.ParseFrom(bytes);
             var p = onNext.Payload;
-            var payload = _serialization.Deserialize(bytes, p.SerializerId, p.MessageManifest?.ToStringUtf8());
+            var payload = _serialization.Deserialize(
+                p.EnclosedMessage.ToByteArray(), 
+                p.SerializerId, 
+                p.MessageManifest?.ToStringUtf8());
             return new SequencedOnNext(onNext.SeqNr, payload);
         }
 

@@ -175,14 +175,16 @@ namespace Akka.Streams.Dsl
             return new StreamRefSettings(
                 bufferCapacity: config.GetInt("buffer-capacity", 32),
                 demandRedeliveryInterval: config.GetTimeSpan("demand-redelivery-interval", TimeSpan.FromSeconds(1)),
-                subscriptionTimeout: config.GetTimeSpan("subscription-timeout", TimeSpan.FromSeconds(30)));
+                subscriptionTimeout: config.GetTimeSpan("subscription-timeout", TimeSpan.FromSeconds(30)),
+                finalTerminationSignalDeadline: config.GetTimeSpan("final-termination-signal-deadline", TimeSpan.FromSeconds(2)));
         }
 
         public int BufferCapacity { get; }
         public TimeSpan DemandRedeliveryInterval { get; }
         public TimeSpan SubscriptionTimeout { get; }
+        public TimeSpan FinalTerminationSignalDeadline { get; }
 
-        public StreamRefSettings(int bufferCapacity, TimeSpan demandRedeliveryInterval, TimeSpan subscriptionTimeout)
+        public StreamRefSettings(int bufferCapacity, TimeSpan demandRedeliveryInterval, TimeSpan subscriptionTimeout, TimeSpan finalTerminationSignalDeadline)
         {
             BufferCapacity = bufferCapacity;
             DemandRedeliveryInterval = demandRedeliveryInterval;
@@ -197,10 +199,12 @@ namespace Akka.Streams.Dsl
 
         public StreamRefSettings Copy(int? bufferCapacity = null,
             TimeSpan? demandRedeliveryInterval = null,
-            TimeSpan? subscriptionTimeout = null) => new StreamRefSettings(
+            TimeSpan? subscriptionTimeout = null,
+            TimeSpan? finalTerminationSignalDeadline = null) => new StreamRefSettings(
             bufferCapacity: bufferCapacity ?? this.BufferCapacity,
             demandRedeliveryInterval: demandRedeliveryInterval ?? this.DemandRedeliveryInterval,
-            subscriptionTimeout: subscriptionTimeout ?? this.SubscriptionTimeout);
+            subscriptionTimeout: subscriptionTimeout ?? this.SubscriptionTimeout,
+            finalTerminationSignalDeadline: finalTerminationSignalDeadline ?? this.FinalTerminationSignalDeadline);
     }
 
     /// <summary>
@@ -297,6 +301,11 @@ namespace Akka.Streams.Dsl
             #endregion
 
             private Status _completedBeforeRemoteConnected = null;
+            
+            // Some when this side of the stream has completed/failed, and we await the Terminated() signal back from the partner
+            // so we can safely shut down completely; This is to avoid *our* Terminated() signal to reach the partner before the
+            // Complete/Fail message does, which can happen on transports such as Artery which use a dedicated lane for system messages (Terminated)
+            private Exception _failedWithAwaitingPartnerTermination = RemoteStreamRefActorTerminatedException.Default;
 
             public IActorRef Self => _stageActor.Ref;
             public IActorRef PartnerRef
@@ -324,21 +333,20 @@ namespace Akka.Streams.Dsl
                 var initialPartnerRef = _stage._initialPartnerRef;
                 if (initialPartnerRef != null)
                 {
+                    // this will set the `partnerRef`
                     ObserveAndValidateSender(initialPartnerRef, "Illegal initialPartnerRef! This would be a bug in the SinkRef usage or impl.");
                     TryPull();
+                }
+                else
+                {
+                    // only schedule timeout timer if partnerRef has not been resolved yet (i.e. if this instance of the Actor
+                    // has not been provided with a valid initialPartnerRef)
+                    ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
                 }
 
                 Log.Debug("Created SinkRef, pointing to remote Sink receiver: {0}, local worker: {1}", initialPartnerRef, Self);
 
                 _promise.SetResult(new SourceRefImpl<TIn>(Self));
-
-                if (_partnerRef != null)
-                {
-                    _partnerRef.Tell(new OnSubscribeHandshake(Self), Self);
-                    TryPull();
-                }
-
-                ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
             }
 
             private void InitialReceive(Tuple<IActorRef, object> args)
@@ -348,10 +356,16 @@ namespace Akka.Streams.Dsl
 
                 switch (message)
                 {
-                    case Terminated terminated:
-                        if (Equals(terminated.ActorRef, PartnerRef))
-                            FailStage(new RemoteStreamRefActorTerminatedException($"Remote target receiver of data {PartnerRef} terminated. " +
-                                                                                  "Local stream terminating, message loss (on remote side) may have happened."));
+                    case Terminated terminated when Equals(terminated.ActorRef, PartnerRef):
+                        if (_failedWithAwaitingPartnerTermination == null)
+                        {
+                            // other side has terminated (in response to a completion message) so we can safely terminate
+                            CompleteStage();
+                        }
+                        else
+                        {
+                            FailStage(_failedWithAwaitingPartnerTermination);
+                        }
                         break;
                     case CumulativeDemand demand:
                         // the other side may attempt to "double subscribe", which we want to fail eagerly since we're 1:1 pairings
@@ -388,7 +402,7 @@ namespace Akka.Streams.Dsl
                 {
                     // we know the future has been competed by now, since it is in preStart
                     var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [${_promise.Task.Result}], " +
-                                                                       "within subscription timeout: ${PrettyDuration.format(subscriptionTimeout.timeout)}!");
+                                                                       $"within subscription timeout: ${SubscriptionTimeout.Timeout}!");
 
                     throw ex; // this will also log the exception, unlike failStage; this should fail rarely, but would be good to have it "loud"
                 }
@@ -406,8 +420,8 @@ namespace Akka.Streams.Dsl
                 if (_partnerRef != null)
                 {
                     _partnerRef.Tell(new RemoteStreamFailure(cause.ToString()), Self);
-                    _stageActor.Unwatch(_partnerRef);
-                    FailStage(cause);
+                    _failedWithAwaitingPartnerTermination = cause;
+                    SetKeepGoing(true); // we will terminate once partner ref has Terminated (to avoid racing Terminated with completion message)
                 }
                 else
                 {
@@ -423,8 +437,8 @@ namespace Akka.Streams.Dsl
                 if (_partnerRef != null)
                 {
                     _partnerRef.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed), Self);
-                    _stageActor.Unwatch(_partnerRef);
-                    CompleteStage();
+                    _failedWithAwaitingPartnerTermination = null;
+                    SetKeepGoing(true); // we will terminate once partner ref has Terminated (to avoid racing Terminated with completion message)
                 }
                 else
                 {
@@ -439,6 +453,8 @@ namespace Akka.Streams.Dsl
                 if (_partnerRef == null)
                 {
                     _partnerRef = partner;
+                    partner.Tell(new OnSubscribeHandshake(Self), Self);
+                    CancelTimer(SubscriptionTimeoutKey);
                     _stageActor.Watch(_partnerRef);
 
                     switch (_completedBeforeRemoteConnected)
@@ -446,12 +462,14 @@ namespace Akka.Streams.Dsl
                         case Status.Failure failure:
                             Log.Warning("Stream already terminated with exception before remote side materialized, failing now.");
                             partner.Tell(new RemoteStreamFailure(failure.Cause.ToString()), Self);
-                            FailStage(failure.Cause);
+                            _failedWithAwaitingPartnerTermination = failure.Cause;
+                            SetKeepGoing(true);
                             break;
                         case Status.Success _:
                             Log.Warning("Stream already completed before remote side materialized, failing now.");
                             partner.Tell(new RemoteStreamCompleted(_remoteCumulativeDemandConsumed), Self);
-                            CompleteStage();
+                            _failedWithAwaitingPartnerTermination = null;
+                            SetKeepGoing(true);
                             break;
                         case null:
                             if (!Equals(partner, PartnerRef))
@@ -500,6 +518,7 @@ namespace Akka.Streams.Dsl
         {
             private const string SubscriptionTimeoutKey = "SubscriptionTimeoutKey";
             private const string DemandRedeliveryTimerKey = "DemandRedeliveryTimerKey";
+            private const string TerminationDeadlineTimerKey = "TerminationDeadlineTimerKey";
 
             private readonly SourceRefStageImpl<TOut> _stage;
             private readonly TaskCompletionSource<ISinkRef<TOut>> _promise;
@@ -563,6 +582,9 @@ namespace Akka.Streams.Dsl
 
                 _promise.SetResult(new SinkRefImpl<TOut>(Self));
 
+                //this timer will be cancelled if we receive the handshake from the remote SinkRef
+                // either created in this method and provided as self.ref as initialPartnerRef
+                // or as the response to first CumulativeDemand request sent to remote SinkRef
                 ScheduleOnce(SubscriptionTimeoutKey, SubscriptionTimeout.Timeout);
             }
 
@@ -617,6 +639,11 @@ namespace Akka.Streams.Dsl
                         PartnerRef.Tell(new CumulativeDemand(_localCumulativeDemand), Self);
                         ScheduleDemandRedelivery();
                         break;
+                    case TerminationDeadlineTimerKey:
+                        FailStage(new RemoteStreamRefActorTerminatedException(
+                            $"Remote partner [{PartnerRef}] has terminated unexpectedly and no clean completion/failure message was received " +
+                            $"(possible reasons: network partition or subscription timeout triggered termination of partner). Tearing down."));
+                        break;
                 }
             }
 
@@ -656,8 +683,10 @@ namespace Akka.Streams.Dsl
                         break;
                     case Terminated terminated:
                         if (Equals(_partnerRef, terminated.ActorRef))
-                            FailStage(new RemoteStreamRefActorTerminatedException(
-                                $"The remote partner {terminated.ActorRef} has terminated! Tearing down this side of the stream as well."));
+                            // we need to start a delayed shutdown in case we were network partitioned and the final signal complete/fail
+                            // will never reach us; so after the given timeout we need to forcefully terminate this side of the stream ref
+                            // the other (sending) side terminates by default once it gets a Terminated signal so no special handling is needed there.
+                            ScheduleOnce(TerminationDeadlineTimerKey, Settings.FinalTerminationSignalDeadline);
                         else
                             FailStage(new RemoteStreamRefActorTerminatedException(
                                 $"Received UNEXPECTED Terminated({terminated.ActorRef}) message! This actor was NOT our trusted remote partner, which was: {_partnerRef}. Tearing down."));
