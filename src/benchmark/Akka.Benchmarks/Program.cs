@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
 using System.Reflection;
 using BenchmarkDotNet.Running;
 
