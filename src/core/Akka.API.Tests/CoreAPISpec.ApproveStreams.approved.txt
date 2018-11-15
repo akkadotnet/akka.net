@@ -1863,12 +1863,13 @@ namespace Akka.Streams.Dsl
     }
     public sealed class StreamRefSettings
     {
-        public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout) { }
+        public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout, System.TimeSpan finalTerminationSignalDeadline) { }
         public int BufferCapacity { get; }
         public System.TimeSpan DemandRedeliveryInterval { get; }
+        public System.TimeSpan FinalTerminationSignalDeadline { get; }
         public string ProductPrefix { get; }
         public System.TimeSpan SubscriptionTimeout { get; }
-        public Akka.Streams.Dsl.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null) { }
+        public Akka.Streams.Dsl.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null, System.Nullable<System.TimeSpan> finalTerminationSignalDeadline = null) { }
         public static Akka.Streams.Dsl.StreamRefSettings Create(Akka.Configuration.Config config) { }
         public Akka.Streams.Dsl.StreamRefSettings WithBufferCapacity(int value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
