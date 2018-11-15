@@ -70,7 +70,7 @@ namespace Akka.Streams
 
     public sealed class RemoteStreamRefActorTerminatedException : Exception
     {
-        public static readonly RemoteStreamRefActorTerminatedException Default =
+        internal static readonly RemoteStreamRefActorTerminatedException Default =
             new RemoteStreamRefActorTerminatedException("Remote target receiver of data terminated. Local stream terminating, message loss (on remote side) may have happened.");
 
         public RemoteStreamRefActorTerminatedException(string message) : base(message)
