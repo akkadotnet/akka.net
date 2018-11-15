@@ -144,26 +144,11 @@ namespace Akka.Streams.Serialization
         private SequencedOnNext DeserializeSequenceOnNext(byte[] bytes)
         {
             var onNext = Proto.Msg.SequencedOnNext.Parser.ParseFrom(bytes);
-            var serializer = _serialization.GetSerializerById(onNext.Payload.SerializerId);
-            object payload;
-            if (onNext.Payload.MessageManifest != null)
-            {
-                var manifest = Encoding.UTF8.GetString(onNext.Payload.MessageManifest.ToByteArray());
-                if (serializer is SerializerWithStringManifest s)
-                {
-                    payload = s.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), manifest);
-                }
-                else
-                {
-                    var type = Type.GetType(manifest, throwOnError: true);
-                    payload = serializer.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), type);
-                }
-            }
-            else
-            {
-                payload = serializer.FromBinary(onNext.Payload.EnclosedMessage.ToByteArray(), null);
-            }
-
+            var p = onNext.Payload;
+            var payload = _serialization.Deserialize(
+                p.EnclosedMessage.ToByteArray(), 
+                p.SerializerId, 
+                p.MessageManifest?.ToStringUtf8());
             return new SequencedOnNext(onNext.SeqNr, payload);
         }
 

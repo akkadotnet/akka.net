@@ -7,21 +7,19 @@
 //-----------------------------------------------------------------------
 #endregion
 
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.IO;
 using Akka.Streams.Dsl;
-using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using FluentAssertions;
+using System;
+using System.Linq;
+using System.Threading;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
 
 namespace Akka.Streams.Tests
 {
@@ -97,6 +95,12 @@ namespace Akka.Streams.Tests
                          */
                         var sink = StreamRefs.SinkRef<string>().To(Sink.ActorRef<string>(_probe, "<COMPLETE>"))
                             .Run(_materializer);
+                        sink.PipeTo(Sender);
+                        return true;
+                    }
+                case "receive-ignore":
+                    {
+                        var sink = StreamRefs.SinkRef<string>().To(Sink.Ignore<string>()).Run(_materializer);
                         sink.PipeTo(Sender);
                         return true;
                     }
@@ -306,7 +310,35 @@ namespace Akka.Streams.Tests
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
             probe.EnsureSubscription();
             var ex = probe.ExpectError();
-            ex.Message.Should().Contain("has terminated! Tearing down this side of the stream as well.");
+            ex.Message.Should().Contain("has terminated unexpectedly");
+        }
+
+        [Fact]
+        public void SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
+        {
+            _remoteActor.Tell("give-subscribe-timeout");
+            var remoteSource = ExpectMsg<ISourceRef<string>>();
+            // materialize directly and start consuming, timeout is 500ms
+            var eventualString = remoteSource.Source
+                .Throttle(1, 100.Milliseconds(), 1, ThrottleMode.Shaping)
+                .Take(60)
+                .RunWith(Sink.Seq<string>(), Materializer);
+
+            eventualString.Wait(8.Seconds()).Should().BeTrue();
+        }
+
+        [Fact]
+        public void SourceRef_must_not_receive_timeout_when_data_is_being_sent()
+        {
+            _remoteActor.Tell("give-infinite");
+            var remoteSource = ExpectMsg<ISourceRef<string>>();
+
+            var done = remoteSource.Source
+                .Throttle(1, 200.Milliseconds(), 1, ThrottleMode.Shaping)
+                .TakeWithin(5.Seconds()) // which is > than the subscription timeout (so we make sure the timeout was cancelled
+                .RunWith(Sink.Seq<string>(), Materializer);
+
+            done.Wait(8.Seconds()).Should().BeTrue();
         }
 
         [Fact]
@@ -373,6 +405,42 @@ namespace Akka.Streams.Tests
 
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
             probe.ExpectCancellation();
+        }
+
+        [Fact]
+        public void SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
+        {
+            _remoteActor.Tell("receive-subscribe-timeout");
+            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            Source.Repeat("whatever")
+                .Throttle(1, 100.Milliseconds(), 1, ThrottleMode.Shaping)
+                .Take(10)
+                .RunWith(remoteSink.Sink, Materializer);
+
+            for (int i = 0; i < 10; i++)
+            {
+                _probe.ExpectMsg("whatever");
+            }
+
+            _probe.ExpectMsg("<COMPLETE>");
+        }
+
+        [Fact]
+        public void SinkRef_must_not_receive_timeout_while_data_is_being_sent()
+        {
+            _remoteActor.Tell("receive-ignore");
+            var remoteSink = ExpectMsg<ISinkRef<string>>();
+
+            var done =
+                Source.Repeat("hello-24934")
+                    .Throttle(1, 300.Milliseconds(), 1, ThrottleMode.Shaping)
+                    .TakeWithin(5.Seconds()) // which is > than the subscription timeout (so we make sure the timeout was cancelled)
+                    .AlsoToMaterialized(Sink.Last<string>(), Keep.Right)
+                    .To(remoteSink.Sink)
+                    .Run(Materializer);
+
+            done.Wait(8.Seconds()).Should().BeTrue();
+
         }
 
         [Fact(Skip = "FIXME: how to pass test assertions to remote system?")]
