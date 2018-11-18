@@ -131,7 +131,8 @@ namespace Akka.Persistence.Fsm
                     handlersExecutedCounter++;
                     if (handlersExecutedCounter == eventsToPersist.Count)
                     {
-                        base.ApplyState(nextState.Using(nextData));
+                        nextState = nextState.Using(nextData);
+                        base.ApplyState(nextState);
                         CurrentStateTimeout = nextState.Timeout;
                         nextState.AfterTransitionDo?.Invoke(nextState.StateData);
                         if (doSnapshot)
