@@ -16,6 +16,10 @@ img.main-logo{
 h2:before{
     display: none;
 }
+.featured-box-minimal h4:before {
+    height: 0px;
+    margin-top: 0px;
+}
 </style>
 
 <div class="jumbotron">
