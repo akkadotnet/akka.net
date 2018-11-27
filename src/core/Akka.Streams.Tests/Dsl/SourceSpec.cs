@@ -206,7 +206,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 5; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.Should().AllBeEquivalentTo(new[] {0, 1, 2, 3, 4});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2, 3, 4});
             outProbe.ExpectComplete();
         }
 
@@ -235,7 +235,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 3; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.Should().AllBeEquivalentTo(new[] {0, 1, 2});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2});
             outProbe.ExpectComplete();
         }
 
@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 2; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.Should().AllBeEquivalentTo(new[] {0, 1});
+            gotten.Should().BeEquivalentTo(new[] {0, 1});
             outProbe.ExpectComplete();
         }
 
@@ -408,7 +408,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(9)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
                 .AwaitResult()
-                .Should().AllBeEquivalentTo(expected);
+                .Should().BeEquivalentTo(expected);
         }
 
         [Fact]
@@ -454,7 +454,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipN(sources)
                 .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
                 .AwaitResult()
-                .Should().AllBeEquivalentTo(new[]
+                .Should().BeEquivalentTo(new[]
                 {
                     new[] {1, 10, 100},
                     new[] {2, 20, 200},
@@ -475,7 +475,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipWithN(list => list.Sum(), sources)
                 .RunWith(Sink.Seq<int>(), Materializer)
                 .AwaitResult()
-                .Should().AllBeEquivalentTo(new[] {111, 222, 333});
+                .Should().BeEquivalentTo(new[] {111, 222, 333});
         }
 
         [Fact]

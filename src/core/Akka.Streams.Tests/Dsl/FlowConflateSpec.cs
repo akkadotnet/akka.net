@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
             saw4Latch.Ready(TimeSpan.FromSeconds(3));
             sinkSub.Request(1);
 
-            sinkProbe.ExpectNext().Should().AllBeEquivalentTo(new [] {1, 3, 4});
+            sinkProbe.ExpectNext().Should().BeEquivalentTo(new [] {1, 3, 4});
         }
     }
 }

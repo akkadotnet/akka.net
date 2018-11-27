@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
                         .RunWith(Sink.Seq<ByteString>(), Materializer);
 
                     task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-                    task.Result.Should().AllBeEquivalentTo(testSequence);
+                    task.Result.Should().BeEquivalentTo(testSequence);
                 }
             }
         }
@@ -272,7 +272,7 @@ namespace Akka.Streams.Tests.Dsl
                             .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
 
                         task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                        task.Result.Should().AllBeEquivalentTo(encodedFrames);
+                        task.Result.Should().BeEquivalentTo(encodedFrames);
 
                         _helper.WriteLine($"{counter++} from 80 passed");
                     }
@@ -366,7 +366,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(testMessages);
+            task.Result.Should().BeEquivalentTo(testMessages);
         }
 
         [Fact]
