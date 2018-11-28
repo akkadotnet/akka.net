@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(2, 19).ForEach(_ => got.Add(c.ExpectNext()));
                 return NotUsed.Instance;
             });
-            got.Should().AllBeEquivalentTo(Enumerable.Range(1, 20));
+            got.Should().BeEquivalentTo(Enumerable.Range(1, 20));
             c.ExpectComplete();
         }
 
@@ -257,7 +257,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                t.Result.Should().AllBeEquivalentTo(new[] {1, 2});
+                t.Result.Should().BeEquivalentTo(new[] {1, 2});
             }, Materializer);
         }
 

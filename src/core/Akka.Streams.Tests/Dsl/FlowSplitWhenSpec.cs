@@ -325,7 +325,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 

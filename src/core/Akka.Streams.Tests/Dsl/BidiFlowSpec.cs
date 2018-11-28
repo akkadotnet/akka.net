@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(10)
                     .RunWith(Sink.Seq<long>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().AllBeEquivalentTo(new[] {3L, 4L});
+            result.Result.Should().BeEquivalentTo(new[] {3L, 4L});
         }
 
         [Fact]
@@ -197,7 +197,7 @@ namespace Akka.Streams.Tests.Dsl
                 Task.WhenAll(l, m, r).Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 l.Result.Should().Be(1);
                 m.Result.Should().Be(42);
-                r.Result.Should().AllBeEquivalentTo(new [] {3L, 12L});
+                r.Result.Should().BeEquivalentTo(new [] {3L, 12L});
             }, Materializer);
         }
 

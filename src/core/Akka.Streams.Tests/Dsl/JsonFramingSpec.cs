@@ -421,7 +421,7 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             buffer.Offer(ByteString.FromString("}"));
-            buffer.Poll().Value.Should().AllBeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
+            buffer.Poll().Value.Should().BeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
         }
 
         [Fact]

@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().AllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().AllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]

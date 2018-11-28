@@ -287,7 +287,7 @@ namespace Akka.Tests.Routing
             // TODO: wrong actor names
             var expected = new List<string> { "a", "b", "c" }.Select(i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
 
-            received.Should().AllBeEquivalentTo(expected);
+            received.Should().BeEquivalentTo(expected);
             ExpectNoMsg(1.Seconds());
         }
 

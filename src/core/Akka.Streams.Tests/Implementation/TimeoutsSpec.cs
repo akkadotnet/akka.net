@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
         
@@ -87,7 +87,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -143,7 +143,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -199,7 +199,7 @@ namespace Akka.Streams.Tests.Implementation
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
                     .AwaitResult()
-                    .Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -348,7 +348,7 @@ namespace Akka.Streams.Tests.Implementation
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 100));
+                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 

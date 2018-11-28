@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
             })).Run(Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(Enumerable.Range(1, 6));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 6));
         }
 
         [Fact]
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
             })).Run(Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(elements);
+            task.Result.Should().BeEquivalentTo(elements);
         }
 
         [Fact]
@@ -187,9 +187,9 @@ namespace Akka.Streams.Tests.Dsl
             var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-            task.Result[0].Should().AllBeEquivalentTo(new[] {5, 7});
-            task.Result[1].Should().AllBeEquivalentTo(new[] { 3, 5, 7, 7 });
-            task.Result[2].Should().AllBeEquivalentTo(new[] { 3, 5, 7 });
+            task.Result[0].Should().BeEquivalentTo(new[] {5, 7});
+            task.Result[1].Should().BeEquivalentTo(new[] { 3, 5, 7, 7 });
+            task.Result[2].Should().BeEquivalentTo(new[] { 3, 5, 7 });
         }
 
         [Fact]
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
             })).Run(Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(new[] {2, 4, 6, 5, 7, 9});
+            task.Result.Should().BeEquivalentTo(new[] {2, 4, 6, 5, 7, 9});
         }
 
         [Fact]
@@ -265,7 +265,7 @@ namespace Akka.Streams.Tests.Dsl
                     })).Run(Materializer).Item4;
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().AllBeEquivalentTo(new[] {4, 5, 6, 13, 14, 15});
+            task.Result.Should().BeEquivalentTo(new[] {4, 5, 6, 13, 14, 15});
         }
     }
 }

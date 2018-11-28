@@ -56,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result[0].Should().AllBeEquivalentTo(new[] {4, 5});
-                task.Result[1].Should().AllBeEquivalentTo(new[] {1, 2});
-                task.Result[2].Should().AllBeEquivalentTo(new[] {3});
+                task.Result[0].Should().BeEquivalentTo(new[] {4, 5});
+                task.Result[1].Should().BeEquivalentTo(new[] {1, 2});
+                task.Result[2].Should().BeEquivalentTo(new[] {3});
             }, Materializer);
         }
 
@@ -186,7 +186,7 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
                 task.Wait(RemainingOrDefault).Should().BeTrue();
-                task.Result.Should().AllBeEquivalentTo(input);
+                task.Result.Should().BeEquivalentTo(input);
             }, Materializer);
         }
 
