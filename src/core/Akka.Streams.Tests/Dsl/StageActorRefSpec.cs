@@ -1,10 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StageActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
+﻿
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -34,26 +28,23 @@ namespace Akka.Streams.Tests.Dsl
             => new SumTestStage(probe);
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_receive_messages()
+        public async Task A_Graph_stage_ActorRef_must_receive_messages()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             stageRef.Tell(new Add(1));
             stageRef.Tell(new Add(2));
             stageRef.Tell(new Add(3));
-
             stageRef.Tell(StopNow.Instance);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(6);
+
+            (await t.Item2).Should().Be(6);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_be_able_to_be_replied_to()
+        public async Task A_Graph_stage_ActorRef_must_be_able_to_be_replied_to()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             stageRef.Tell(new AddAndTell(1));
@@ -63,15 +54,13 @@ namespace Akka.Streams.Tests.Dsl
             ExpectMsg(10);
 
             stageRef.Tell(StopNow.Instance);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(10);
+            (await t.Item2).Should().Be(10);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_yield_the_same_self_ref_each_time()
+        public async Task A_Graph_stage_ActorRef_must_yield_the_same_self_ref_each_time()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             stageRef.Tell(CallInitStageActorRef.Instance);
@@ -85,16 +74,15 @@ namespace Akka.Streams.Tests.Dsl
             ExpectMsg(6);
 
             stageRef.Tell(StopNow.Instance);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(6);
+
+            (await t.Item2).Should().Be(6);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_be_watchable()
+        public async Task A_Graph_stage_ActorRef_must_be_watchable()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
             var source = t.Item1;
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -102,17 +90,15 @@ namespace Akka.Streams.Tests.Dsl
             stageRef.Tell(new Add(1));
             source.SetResult(0);
 
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(1);
+            (await t.Item2).Should().Be(1);
             ExpectTerminated(stageRef);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_be_able_to_become()
+        public async Task A_Graph_stage_ActorRef_must_be_able_to_become()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
             var source = t.Item1;
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
@@ -123,24 +109,24 @@ namespace Akka.Streams.Tests.Dsl
             ExpectMsg("42");
 
             source.SetResult(0);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(1);
+            (await t.Item2).Should().Be(1);
+            ExpectTerminated(stageRef);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_reply_Terminated_when_terminated_stage_is_watched()
+        public async Task A_Graph_stage_ActorRef_must_reply_Terminated_when_terminated_stage_is_watched()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
             var source = t.Item1;
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
 
-            stageRef.Tell(new Add(1));
+            stageRef.Tell(new AddAndTell(1));
+            ExpectMsg(1);
             source.SetResult(0);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(1);
+
+            (await t.Item2).Should().Be(1);
             ExpectTerminated(stageRef);
 
             var p = CreateTestProbe();
@@ -149,36 +135,35 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_be_unwatchable()
+        public async Task A_Graph_stage_ActorRef_must_be_unwatchable()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
             var source = t.Item1;
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             Watch(stageRef);
             Unwatch(stageRef);
 
-            stageRef.Tell(new Add(1));
+            stageRef.Tell(new AddAndTell(1));
+            ExpectMsg(1);
             source.SetResult(0);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(1);
+
+            (await t.Item2).Should().Be(1);
 
             ExpectNoMsg(100);
         }
 
         [Fact]
-        public void A_Graph_stage_ActorRef_must_ignore_and_log_warnings_for_PoisonPill_and_Kill_messages()
+        public async Task A_Graph_stage_ActorRef_must_ignore_and_log_warnings_for_PoisonPill_and_Kill_messages()
         {
             var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
             var source = t.Item1;
-            var res = t.Item2;
 
             var stageRef = ExpectMsg<IActorRef>();
             stageRef.Tell(new Add(40));
-            
+
             Sys.EventStream.Publish(new Mute(new CustomEventFilter(e => e is Warning)));
-            Sys.EventStream.Subscribe(TestActor, typeof (Warning));
+            Sys.EventStream.Subscribe(TestActor, typeof(Warning));
 
             stageRef.Tell(PoisonPill.Instance);
             var warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
@@ -187,12 +172,12 @@ namespace Akka.Streams.Tests.Dsl
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<PoisonPill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<PoisonPill> message sent to StageActor\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #else
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<PoisonPill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<PoisonPill> message sent to StageActor\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #endif
             stageRef.Tell(Kill.Instance);
             warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
@@ -201,36 +186,17 @@ namespace Akka.Streams.Tests.Dsl
  warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<Kill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<Kill> message sent to StageActor\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #else
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<Kill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<Kill> message sent to StageActor\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #endif
 
             source.SetResult(2);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(42);
-        }
 
-        [Fact]
-        public void A_Graph_stage_ActorRef_must_be_able_to_watch_other_actors()
-        {
-            var killMe = ActorOf(dsl => { }, "KilMe");
-            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
-            var source = t.Item1;
-            var res = t.Item2;
-
-            var stageRef = ExpectMsg<IActorRef>();
-            stageRef.Tell(new WatchMe(killMe));
-            stageRef.Tell(new Add(1));
-            killMe.Tell(PoisonPill.Instance);
-            ExpectMsg<WatcheeTerminated>().Watchee.Should().Be(killMe);
-
-            source.SetResult(0);
-            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            res.Result.Should().Be(1);
+            (await t.Item2).Should().Be(42);
         }
 
         private sealed class Add
@@ -271,37 +237,19 @@ namespace Akka.Streams.Tests.Dsl
             public static readonly StopNow Instance = new StopNow();
             private StopNow() { }
         }
-        private sealed class WatchMe
-        {
-            public WatchMe(IActorRef watchee)
-            {
-                Watchee = watchee;
-            }
-
-            public IActorRef Watchee { get; }
-        }
-        private sealed class WatcheeTerminated
-        {
-            public WatcheeTerminated(IActorRef watchee)
-            {
-                Watchee = watchee;
-            }
-
-            public IActorRef Watchee { get; }
-        }
 
         private class SumTestStage : GraphStageWithMaterializedValue<SinkShape<int>, Task<int>>
         {
             private readonly IActorRef _probe;
 
-#region internal classes
+            #region internal classes
 
             private class Logic : GraphStageLogic
             {
                 private readonly SumTestStage _stage;
                 private readonly TaskCompletionSource<int> _promise;
                 private int _sum;
-                private StageActorRef _self;
+                private IActorRef Self => StageActor.Ref;
 
                 public Logic(SumTestStage stage, TaskCompletionSource<int> promise) : base(stage.Shape)
                 {
@@ -327,8 +275,8 @@ namespace Akka.Streams.Tests.Dsl
                 public override void PreStart()
                 {
                     Pull(_stage._inlet);
-                    _self = GetStageActorRef(Behaviour);
-                    _stage._probe.Tell(_self);
+                    GetStageActor(Behaviour);
+                    _stage._probe.Tell(Self);
                 }
 
                 private void Behaviour(Tuple<IActorRef, object> args)
@@ -336,28 +284,33 @@ namespace Akka.Streams.Tests.Dsl
                     var msg = args.Item2;
                     var sender = args.Item1;
 
-                    msg.Match()
-                        .With<Add>(a => _sum += a.N)
-                        .With<PullNow>(() => Pull(_stage._inlet))
-                        .With<CallInitStageActorRef>(() => sender.Tell(GetStageActorRef(Behaviour), _self))
-                        .With<BecomeStringEcho>(() => GetStageActorRef(tuple => tuple.Item1.Tell(tuple.Item2.ToString())))
-                        .With<StopNow>(() =>
-                        {
+                    switch (msg)
+                    {
+                        case Add add: _sum += add.N; break;
+                        case PullNow _: Pull(_stage._inlet); break;
+                        case CallInitStageActorRef _: sender.Tell(GetStageActor(Behaviour).Ref, Self); break;
+                        case BecomeStringEcho _:
+                            GetStageActor(tuple =>
+                            {
+                                var theSender = tuple.Item1;
+                                var theMsg = tuple.Item2;
+                                theSender.Tell(theMsg.ToString(), Self);
+                            }); break;
+                        case StopNow _:
                             _promise.TrySetResult(_sum);
                             CompleteStage();
-                        }).With<AddAndTell>(a =>
-                        {
-                            _sum += a.N;
-                            sender.Tell(_sum, _self);
-                        })
-                        .With<WatchMe>(w => _self.Watch(w.Watchee))
-                        .With<Terminated>(t => _stage._probe.Tell(new WatcheeTerminated(t.ActorRef)));
+                            break;
+                        case AddAndTell addAndTell:
+                            _sum += addAndTell.N;
+                            sender.Tell(_sum, Self);
+                            break;
+                    }
                 }
             }
-#endregion
+            #endregion
 
             private readonly Inlet<int> _inlet = new Inlet<int>("IntSum.in");
-            
+
             public SumTestStage(IActorRef probe)
             {
                 _probe = probe;

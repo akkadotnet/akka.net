@@ -52,6 +52,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 		protobuf\ClusterShardingMessages.proto = protobuf\ClusterShardingMessages.proto
 		protobuf\ContainerFormats.proto = protobuf\ContainerFormats.proto
 		protobuf\DistributedPubSubMessages.proto = protobuf\DistributedPubSubMessages.proto
+		protobuf\StreamRefMessages.proto = protobuf\StreamRefMessages.proto
 		protobuf\SystemMessageFormats.proto = protobuf\SystemMessageFormats.proto
 		protobuf\TestConductorProtocol.proto = protobuf\TestConductorProtocol.proto
 		protobuf\WireFormats.proto = protobuf\WireFormats.proto
@@ -80,6 +81,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A59BAE84-70E2-46A0-9E26-7413C103E2D7}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\.gitignore = ..\.gitignore
 		Akka.sln.DotSettings = Akka.sln.DotSettings
 		NuGet.Config = NuGet.Config
 	EndProjectSection
