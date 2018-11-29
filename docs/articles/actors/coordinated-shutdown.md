@@ -122,13 +122,13 @@ Tasks should be registered as early as possible, preferably at system startup, i
 ## Running `CoordinatedShutdown` 
 There are a few different ways to start the `CoordinatedShutdown` process.
 
-If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run()`, which will return a `Task<Done>`. 
+If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
 
-```csharp
-CoordinatedShutdown.Get(myActorSystem).Run();
-```
+[!code-csharp[CoordinatedShutdownSpecs.cs](../../examples/DocsExamples/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
 
 It's safe to call this method multiple times as the shutdown process will only be run once and will return the same completion task each time. The `Task<Done>` will complete once all phases have run successfully, or a phase with `recover = off` failed.
+
+> It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination
 By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. However, the CLR process will still be running even though the `ActorSystem` has been terminated.
@@ -148,9 +148,9 @@ If you're using Akka.Cluster, the `CoordinatedShutdown` will automatically regis
 2. Gracefully handing over / terminating ClusterSingleton and Cluster.Sharding instances; and
 3. Terminating the `Cluster` system itself.
 
-By default, this graceful leave action will by triggered whenever the `CoordinatedShutdown.Run()` method is called. Conversely, calling `Cluster.Leave` on a cluster member will also cause the `CoordinatedShutdown` to run and will terminate the `ActorSystem` once the node has left the cluster.
+By default, this graceful leave action will by triggered whenever the `CoordinatedShutdown.Run(Reason)` method is called. Conversely, calling `Cluster.Leave` on a cluster member will also cause the `CoordinatedShutdown` to run and will terminate the `ActorSystem` once the node has left the cluster.
 
-By default, `CoordinatedShutdown.Run()` will also be executed if a node is removed via `Cluster.Down` (non-graceful exit), but this can be disabled by changing the following Akka.Cluster HOCON setting:
+`CoordinatedShutdown.Run()` will also be executed if a node is removed via `Cluster.Down` (non-graceful exit), but this can be disabled by changing the following Akka.Cluster HOCON setting:
 
 ```
 akka.cluster.run-coordinated-shutdown-when-down = off 
