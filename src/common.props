@@ -11,6 +11,7 @@
   <PropertyGroup>
     <XunitVersion>2.3.1</XunitVersion>
     <TestSdkVersion>15.7.2</TestSdkVersion>
+    <HyperionVersion>0.9.8</HyperionVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
