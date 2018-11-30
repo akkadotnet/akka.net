@@ -86,7 +86,7 @@ namespace Akka.Cluster.Sharding
                     /*
                     * delete old events but keep the latest around because
                     *
-                    * it's not safe to delete all events immediate because snapshots are typically stored with a weaker consistency
+                    * it's not safe to delete all events immediately because snapshots are typically stored with a weaker consistency
                     * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
                     * i.e. it will use an older snapshot and then not replay the full sequence of events
                     *
@@ -99,21 +99,22 @@ namespace Akka.Cluster.Sharding
                     }
                     break;
                 case SaveSnapshotFailure m:
-                    Log.Warning("PersistentShard snapshot failure: {0}", m.Cause.Message);
+                    Log.Warning("PersistentShard snapshot failure: [{0}]", m.Cause.Message);
                     break;
                 case DeleteMessagesSuccess m:
-                    Log.Debug("PersistentShard messages to {0} deleted successfully", m.ToSequenceNr);
-                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    var deleteTo = m.ToSequenceNr - 1;
+                    var deleteFrom = Math.Max(0, deleteTo - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter);
+                    Log.Debug("PersistentShard messages to [{0}] deleted successfully. Deleting snapshots from [{1}] to [{2}]", m.ToSequenceNr, deleteFrom, deleteTo);
+                    DeleteSnapshots(new SnapshotSelectionCriteria(deleteTo, DateTime.MaxValue, deleteFrom));
                     break;
-
                 case DeleteMessagesFailure m:
-                    Log.Warning("PersistentShard messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    Log.Warning("PersistentShard messages to [{0}] deletion failure: [{1}]", m.ToSequenceNr, m.Cause.Message);
                     break;
                 case DeleteSnapshotsSuccess m:
-                    Log.Debug("PersistentShard snapshots matching {0} deleted successfully", m.Criteria);
+                    Log.Debug("PersistentShard snapshots matching [{0}] deleted successfully", m.Criteria);
                     break;
                 case DeleteSnapshotsFailure m:
-                    Log.Warning("PersistentShard snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
+                    Log.Warning("PersistentShard snapshots matching [{0}] deletion failure: [{1}]", m.Criteria, m.Cause.Message);
                     break;
                 default:
                     return this.HandleCommand(message);

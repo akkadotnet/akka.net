@@ -45,7 +45,10 @@ If not specified, they default to `SnapshotSelectionCriteria.Latest` which selec
 
 A persistent actor can delete individual snapshots by calling the `DeleteSnapshot` method with the sequence number of when the snapshot was taken.
 
-To bulk-delete a range of snapshots matching `SnapshotSelectionCriteria`, persistent actors should use the `DeleteSnapshots` method.
+To bulk-delete a range of snapshots matching `SnapshotSelectionCriteria`,
+persistent actors should use the `deleteSnapshots` method. Depending on the journal used this might be inefficient. It is
+best practice to do specific deletes with `deleteSnapshot` or to include a `minSequenceNr` as well as a `maxSequenceNr`
+for the `SnapshotSelectionCriteria`.
 
 ## Snapshot status handling
 Saving or deleting snapshots can either succeed or fail – this information is reported back to the persistent actor via status messages as illustrated in the following table.
