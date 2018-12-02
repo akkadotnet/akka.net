@@ -374,14 +374,15 @@ module Linq =
 
     let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
             match f with
-            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
+            | Lambda(_, (Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
             | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
                 Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
             | _ -> failwith "Doesn't match"
  
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
-        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
+        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = 
+            toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
         
 [<RequireQualifiedAccess>]
 module Configuration = 
