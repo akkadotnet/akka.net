@@ -559,13 +559,16 @@ Target "HelpNuget" <| fun _ ->
 Target "BuildRelease" DoNothing
 Target "All" DoNothing
 Target "Nuget" DoNothing
+Target "RunTestsFull" DoNothing
+Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
 "Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
-// "RunTests" step doesn't require Clean ==> "RestorePackages" step
-"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
+// "RunTests" and "RunTestsNetCore" don't use clean / build so they can be run multiple times, successively, without rebuilding
+"Build" ==> "RunTests" ==> "RunTestsFull"
+"Build" ==> "RunTests" ==> "RunTestsNetCoreFull"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
