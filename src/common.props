@@ -9,8 +9,8 @@
     <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.3.1</XunitVersion>
-    <TestSdkVersion>15.7.2</TestSdkVersion>
+    <XunitVersion>2.4.1</XunitVersion>
+    <TestSdkVersion>15.9.0</TestSdkVersion>
     <HyperionVersion>0.9.8</HyperionVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
