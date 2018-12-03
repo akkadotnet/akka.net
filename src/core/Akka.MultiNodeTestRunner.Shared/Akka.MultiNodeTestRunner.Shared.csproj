@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared</AssemblyTitle>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>net452;$(NetStandardLibVersion)</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>

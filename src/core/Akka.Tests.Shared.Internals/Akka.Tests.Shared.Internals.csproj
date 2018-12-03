@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <TargetFrameworks>net452;$(NetStandardLibVersion)</TargetFrameworks>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
