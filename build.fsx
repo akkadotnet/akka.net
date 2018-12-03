@@ -120,17 +120,18 @@ Target "RunTests" (fun _ ->
                getUnitTestProjects Net
     
     let runSingleProject project =
-        let result = ExecProcess(fun info ->
-            info.FileName <- "dotnet"
-            info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f net452 -c Release -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
-        
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+        let arguments =
+            match (hasTeamCity) with
+            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net452 --results-directory %s -- -parallel none -teamcity" (outputTests))
+            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net452 --results-directory %s -- -parallel none" (outputTests))
 
-        // dotnet process will be killed by ExecProcess (or throw if can't) '
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not
-        killProcess "xunit.console"
-        killProcess "dotnet"
+        DotNetCli.Test
+            (fun t -> 
+                { t with 
+                    Project = project
+                    Configuration = configuration
+                    AdditionalArgs = [arguments]
+                })
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -149,17 +150,18 @@ Target "RunTestsNetCore" (fun _ ->
                getUnitTestProjects NetCore
      
     let runSingleProject project =
-        let result = ExecProcess(fun info ->
-            info.FileName <- "dotnet"
-            info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -c Release -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
-        
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+        let arguments =
+            match (hasTeamCity) with
+            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp1.1 --results-directory %s -- -parallel none -teamcity" (outputTests))
+            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp1.1 --results-directory %s -- -parallel none" (outputTests))
 
-        // dotnet process will be killed by FAKE.ExecProcess (or throw if can't)
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not be killed
-        killProcess "xunit.console"
-        killProcess "dotnet"
+        DotNetCli.Test
+            (fun t -> 
+                { t with 
+                    Project = project
+                    Configuration = configuration
+                    AdditionalArgs = [arguments]
+                })
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
