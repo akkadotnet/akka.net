@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests.Performance</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
@@ -16,7 +16,7 @@
     <PackageReference Include="NBench" Version="1.0.1" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworKTestVersion)' ">
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
   </ItemGroup>

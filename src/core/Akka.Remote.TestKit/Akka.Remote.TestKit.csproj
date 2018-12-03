@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote.TestKit</AssemblyTitle>
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
-    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net452;$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -19,7 +19,7 @@
     <PackageReference Include="Google.Protobuf" Version="3.3.0" />
   </ItemGroup>
   
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
   </ItemGroup>
   
@@ -28,7 +28,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
     <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
