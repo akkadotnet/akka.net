@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tests.Performance</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>

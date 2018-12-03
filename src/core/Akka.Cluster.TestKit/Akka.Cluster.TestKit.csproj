@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.TestKit</AssemblyTitle>
     <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
-    <TargetFrameworks>net452;$(NetStandardLibVersion)</TargetFrameworks> <!-- have to target the same .NET framework runtimes as what is supported by XUnit -->
+    <TargetFrameworks>net452;$(NetStandardLibVersion)</TargetFrameworks> 
     <PackageTags>$(AkkaPackageTags);network;cluster;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -14,7 +14,7 @@
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 
