@@ -123,8 +123,8 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net452 --results-directory %s -- -parallel none -teamcity" (outputTests))
-            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net452 --results-directory %s -- -parallel none" (outputTests))
+            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net461 --results-directory %s -- -parallel none -teamcity" (outputTests))
+            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net461 --results-directory %s -- -parallel none" (outputTests))
 
         DotNetCli.Test
             (fun t -> 
@@ -170,7 +170,7 @@ Target "RunTestsNetCore" (fun _ ->
 
 Target "MultiNodeTests" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net461")
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
@@ -343,7 +343,7 @@ Target "PublishMntr" (fun _ ->
                     Project = project
                     Configuration = configuration
                     Runtime = "win7-x64"
-                    Framework = "net452"
+                    Framework = "net461"
                     VersionSuffix = versionSuffix }))
 
     // Windows .NET Core
