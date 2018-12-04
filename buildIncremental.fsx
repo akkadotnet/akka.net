@@ -124,7 +124,7 @@ module IncrementalTests =
 
     let getAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll")
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net461" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->
