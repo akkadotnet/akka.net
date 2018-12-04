@@ -29,7 +29,7 @@ module Serialization =
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinarySerializer()
-        override __.Identifier = 9
+        override __.Identifier = 99
         override __.IncludeManifest = true        
         override __.ToBinary(o) = serializeToBinary fsp o        
         override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
