@@ -23,6 +23,7 @@ module IncrementalTests =
     let SkippedTest name runtime =
         match (name, runtime) with
             | (EndsWith "Sqlite.Tests.csproj", NetCore) -> false
+            | (EndsWith "API.Tests.csproj", NetCore) -> false
             | _ -> true
 
 
