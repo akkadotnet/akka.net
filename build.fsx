@@ -568,7 +568,7 @@ Target "RunTestsNetCoreFull" DoNothing
 // tests dependencies
 // "RunTests" and "RunTestsNetCore" don't use clean / build so they can be run multiple times, successively, without rebuilding
 "Build" ==> "RunTests" ==> "RunTestsFull"
-"Build" ==> "RunTests" ==> "RunTestsNetCoreFull"
+"Build" ==> "RunTestsNetCore" ==> "RunTestsNetCoreFull"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
