@@ -141,6 +141,7 @@ int-prio-mailbox {
 ";
         }
 
+#if FSCHECK
         [Property]
         public Property UnboundedPriorityQueue_should_sort_items_in_expected_order(int[] integers, PositiveInt capacity)
         {
@@ -167,6 +168,7 @@ int-prio-mailbox {
                 expectedOrder.SequenceEqual(actualOrder)
                     .Label($"Expected [{string.Join(";", expectedOrder)}], but was [{string.Join(";", actualOrder)}]");
         }
+#endif
 
         [Fact]
         public void Can_use_unbounded_priority_mailbox()
