@@ -18,7 +18,7 @@ namespace Akka.Benchmarks.Configurations
     {
         public MicroBenchmarkConfig()
         {
-            this.Add(new MemoryDiagnoser());
+            this.Add(MemoryDiagnoser.Default);
             this.Add(MarkdownExporter.GitHub);
         }
     }
@@ -30,6 +30,7 @@ namespace Akka.Benchmarks.Configurations
     {
         public MonitoringConfig()
         {
+            this.Add(MemoryDiagnoser.Default);
             this.Add(MarkdownExporter.GitHub);
         }
     }
