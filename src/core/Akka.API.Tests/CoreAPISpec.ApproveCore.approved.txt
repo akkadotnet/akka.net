@@ -4758,6 +4758,7 @@ namespace Akka.Util
     public class static RuntimeDetector
     {
         public static readonly bool IsMono;
+        public static readonly bool IsWindows;
     }
     public class static StandardOutWriter
     {

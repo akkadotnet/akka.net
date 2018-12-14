@@ -6,10 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Akka.Util
 {
@@ -28,6 +25,25 @@ namespace Akka.Util
         /// Is <c>true</c> if we're running on a Mono VM. <c>false</c> otherwise.
         /// </summary>
         public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+
+        /// <summary>
+        /// Is <c>true</c> if we've detected Windows as a platform.
+        /// </summary>
+        public static readonly bool IsWindows = _IsWindows();
+
+        /// <summary>
+        /// Private implementation method not meant for public consumption
+        /// </summary>
+        /// <returns><c>true</c> if the current runtime is Windows</returns>
+        private static bool _IsWindows()
+        {
+#if CORECLR
+            return System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+#else
+            return System.Environment.OSVersion.Platform != PlatformID.MacOSX &&
+                   System.Environment.OSVersion.Platform != PlatformID.Unix;
+#endif
+        }
     }
 }
 
