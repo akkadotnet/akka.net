@@ -29,7 +29,7 @@ namespace Akka.DistributedData.Serialization
             _serializer =
                 new Hyperion.Serializer(new SerializerOptions(
                     preserveObjectReferences: true,
-                    versionTolerance: false,
+                    versionTolerance: true,
                     surrogates: new[]
                     {
                         akkaSurrogate
