@@ -1366,6 +1366,7 @@ namespace Akka.Actor
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
         public class OneForOneStrategySurrogate : Akka.Util.ISurrogate
         {
             public OneForOneStrategySurrogate() { }
@@ -3754,8 +3755,12 @@ namespace Akka.Pattern
 {
     public class static Backoff
     {
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
     }
     public abstract class BackoffOptions
     {
@@ -3763,6 +3768,7 @@ namespace Akka.Pattern
         public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
         public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
         public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
         public abstract Akka.Pattern.BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
         public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
     }
@@ -3771,6 +3777,7 @@ namespace Akka.Pattern
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped = null) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
         public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
         protected override bool Receive(object message) { }

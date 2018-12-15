@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Pattern
 {
@@ -20,6 +21,7 @@ namespace Akka.Pattern
             ChildName = childName;
             Reset = reset;
             ReplyWhileStopped = replyWhileStopped;
+            Log = Logging.GetLogger(Context.System, GetType());
         }
 
         protected Props ChildProps { get; }
@@ -28,6 +30,8 @@ namespace Akka.Pattern
         protected object ReplyWhileStopped { get; }
         protected IActorRef Child { get; set; }
         protected int RestartCountN { get; set; }
+
+        internal ILoggingAdapter Log { get; }
 
         protected override void PreStart()
         {

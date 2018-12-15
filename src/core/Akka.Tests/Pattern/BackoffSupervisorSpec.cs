@@ -8,12 +8,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
-using Xunit;
 using FluentAssertions;
-using System.Threading;
+using Xunit;
 
 namespace Akka.Tests.Pattern
 {
@@ -77,10 +77,10 @@ namespace Akka.Tests.Pattern
             }
         }
 
-        private BackoffOptions OnStopOptions() => OnStopOptions(Child.Props(TestActor));
-        private BackoffOptions OnStopOptions(Props props) => Backoff.OnStop(props, "c1", 100.Milliseconds(), 3.Seconds(), 0.2);
-        private BackoffOptions OnFailureOptions() => OnFailureOptions(Child.Props(TestActor));
-        private BackoffOptions OnFailureOptions(Props props) => Backoff.OnFailure(props, "c1", 100.Milliseconds(), 3.Seconds(), 0.2);
+        private BackoffOptions OnStopOptions(int maxNrOfRetries = -1) => OnStopOptions(Child.Props(TestActor), maxNrOfRetries);
+        private BackoffOptions OnStopOptions(Props props, int maxNrOfRetries = -1) => Backoff.OnStop(props, "c1", 100.Milliseconds(), 3.Seconds(), 0.2, maxNrOfRetries);
+        private BackoffOptions OnFailureOptions(int maxNrOfRetries = -1) => OnFailureOptions(Child.Props(TestActor), maxNrOfRetries);
+        private BackoffOptions OnFailureOptions(Props props, int maxNrOfRetries = -1) => Backoff.OnFailure(props, "c1", 100.Milliseconds(), 3.Seconds(), 0.2, maxNrOfRetries);
         private IActorRef Create(BackoffOptions options) => Sys.ActorOf(BackoffSupervisor.Props(options));
         #endregion
 
@@ -266,9 +266,8 @@ namespace Akka.Tests.Pattern
         {
             EventFilter.Exception<TestException>().Expect(1, () =>
             {
-                var supervisor = Create(
-                    Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2)
-                        .WithReplyWhileStopped("child was stopped"));
+                var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1)
+                    .WithReplyWhileStopped("child was stopped"));
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
 
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
@@ -295,7 +294,7 @@ namespace Akka.Tests.Pattern
         {
             EventFilter.Exception<TestException>().Expect(1, () =>
             {
-                var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2));
+                var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1));
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
 
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
@@ -338,6 +337,107 @@ namespace Akka.Tests.Pattern
 
             public IEnumerator<object[]> GetEnumerator() => delayTable.GetEnumerator();
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        [Fact]
+        public void BackoffSupervisor_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
+        {
+            var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
+
+            IActorRef WaitForChild()
+            {
+                AwaitCondition(() =>
+                {
+                    supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                    var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                    return !c.IsNobody();
+                }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
+
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                return ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            }
+
+            Watch(supervisor);
+
+            supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+
+            supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            Watch(c1);
+            c1.Tell(PoisonPill.Instance);
+            ExpectTerminated(c1);
+
+            supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+
+            var c2 = WaitForChild();
+            AwaitAssert(() => c2.ShouldNotBe(c1));
+            Watch(c2);
+            c2.Tell(PoisonPill.Instance);
+            ExpectTerminated(c2);
+
+            supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+            ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
+
+            var c3 = WaitForChild();
+            AwaitAssert(() => c3.ShouldNotBe(c2));
+            Watch(c3);
+            c3.Tell(PoisonPill.Instance);
+            ExpectTerminated(c3);
+            ExpectTerminated(supervisor);
+        }
+
+        [Fact]
+        public void BackoffSupervisor_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
+        {
+            EventFilter.Exception<TestException>().Expect(3, () =>
+            {
+                var supervisor = Create(OnFailureOptions(maxNrOfRetries: 2));
+
+                IActorRef WaitForChild()
+                {
+                    AwaitCondition(() =>
+                    {
+                        supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                        var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                        return !c.IsNobody();
+                    }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
+
+                    supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                    return ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                }
+
+                Watch(supervisor);
+
+                supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(0);
+
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                Watch(c1);
+                c1.Tell("boom");
+                ExpectTerminated(c1);
+
+                supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
+
+                var c2 = WaitForChild();
+                AwaitAssert(() => c2.ShouldNotBe(c1));
+                Watch(c2);
+                c2.Tell("boom");
+                ExpectTerminated(c2);
+
+                supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
+                ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
+
+                var c3 = WaitForChild();
+                AwaitAssert(() => c3.ShouldNotBe(c2));
+                Watch(c3);
+                c3.Tell("boom");
+                ExpectTerminated(c3);
+                ExpectTerminated(supervisor);
+            });
         }
     }
 }

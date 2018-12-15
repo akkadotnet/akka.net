@@ -23,9 +23,25 @@ namespace Akka.Pattern
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
+        [Obsolete("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static BackoffOptions OnFailure(Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
         {
-            return new BackoffOptionsImpl(RestartImpliesFailure.Instance, childProps, childName, minBackoff, maxBackoff, randomFactor);
+            return OnFailure(childProps, childName, minBackoff, maxBackoff, randomFactor, -1);
+        }
+
+        /// <summary>
+        /// Back-off options for creating a back-off supervisor actor that expects a child actor to restart on failure.
+        /// </summary>
+        /// <param name="childProps">The <see cref="Akka.Actor.Props"/> of the child actor that will be started and supervised</param>
+        /// <param name="childName">Name of the child actor</param>
+        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
+        /// <param name="maxNrOfRetries">Maximum number of attempts to restart the child actor. The supervisor will terminate itself after the maxNoOfRetries is reached. In order to restart infinitely pass in `-1`</param>
+        public static BackoffOptions OnFailure(Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries)
+        {
+            return new BackoffOptionsImpl(RestartImpliesFailure.Instance, childProps, childName, minBackoff, maxBackoff, randomFactor)
+                .WithMaxNrOfRetries(maxNrOfRetries);
         }
 
         /// <summary>
@@ -36,9 +52,25 @@ namespace Akka.Pattern
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
+        [Obsolete("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static BackoffOptions OnStop(Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
         {
-            return new BackoffOptionsImpl(StopImpliesFailure.Instance, childProps, childName, minBackoff, maxBackoff, randomFactor);
+            return OnStop(childProps, childName, minBackoff, maxBackoff, randomFactor, -1);
+        }
+
+        /// <summary>
+        /// Back-off options for creating a back-off supervisor actor that expects a child actor to stop on failure.
+        /// </summary>
+        /// <param name="childProps">The <see cref="Akka.Actor.Props"/> of the child actor that will be started and supervised</param>
+        /// <param name="childName">Name of the child actor</param>
+        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
+        /// <param name="maxNrOfRetries">Maximum number of attempts to restart the child actor. The supervisor will terminate itself after the maxNoOfRetries is reached. In order to restart infinitely pass in `-1`</param>
+        public static BackoffOptions OnStop(Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries)
+        {
+            return new BackoffOptionsImpl(StopImpliesFailure.Instance, childProps, childName, minBackoff, maxBackoff, randomFactor)
+                .WithMaxNrOfRetries(maxNrOfRetries);
         }
     }
 
@@ -71,6 +103,13 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="replyWhileStopped">The message that the supervisor will send in response to all messages while its child is stopped.</param>
         public abstract BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
+
+        /// <summary>
+        /// Returns a new BackoffOptions with a maximum number of retries to restart the child actor. By default, the supervisor will retry infinitely. With this option, the supervisor will terminate itself after the maxNoOfRetries is reached.
+        /// </summary>
+        /// <param name="maxNrOfRetries">The number of times a child actor is allowed to be restarted, negative value means no limit, if the limit is exceeded the child actor is stopped</param>
+        /// <returns></returns>
+        public abstract BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
 
         /// <summary>
         /// Returns the props to create the back-off supervisor.
@@ -125,12 +164,17 @@ namespace Akka.Pattern
 
         public override BackoffOptions WithDefaultStoppingStrategy()
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, SupervisorStrategy.StoppingStrategy, _replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, new OneForOneStrategy(_strategy.MaxNumberOfRetries, null, SupervisorStrategy.StoppingStrategy.Decider), _replyWhileStopped);            
         }
 
         public override BackoffOptions WithReplyWhileStopped(object replyWhileStopped)
         {
             return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy, replyWhileStopped);
+        }
+
+        public override BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries)
+        {
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy.WithMaxNrOfRetries(maxNrOfRetries), _replyWhileStopped);
         }
 
         internal override Props Props

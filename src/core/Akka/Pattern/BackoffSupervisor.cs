@@ -147,13 +147,22 @@ namespace Akka.Pattern
 
         private bool OnTerminated(object message)
         {
-            var terminated = message as Terminated;
-            if (terminated != null && terminated.ActorRef.Equals(Child))
+            if (message is Terminated terminated && terminated.ActorRef.Equals(Child))
             {
                 Child = null;
-                var restartDelay = CalculateDelay(RestartCountN, _minBackoff, _maxBackoff, _randomFactor);
-                Context.System.Scheduler.ScheduleTellOnce(restartDelay, Self, StartChild.Instance, Self);
-                RestartCountN++;
+                var maxNrOfRetries = _strategy is OneForOneStrategy oneForOne ? oneForOne.MaxNumberOfRetries : -1;
+                var nextRestartCount = RestartCountN + 1;
+                if (maxNrOfRetries == -1 || nextRestartCount <= maxNrOfRetries)
+                {
+                    var restartDelay = CalculateDelay(RestartCountN, _minBackoff, _maxBackoff, _randomFactor);
+                    Context.System.Scheduler.ScheduleTellOnce(restartDelay, Self, StartChild.Instance, Self);
+                    RestartCountN = nextRestartCount;
+                }
+                else
+                {
+                    Log.Debug($"Terminating on restart #{nextRestartCount} which exceeds max allowed restarts ({maxNrOfRetries})");
+                    Context.Stop(Self);
+                }
                 return true;
             }
 
@@ -176,6 +185,35 @@ namespace Akka.Pattern
             double randomFactor)
         {
             return PropsWithSupervisorStrategy(childProps, childName, minBackoff, maxBackoff, randomFactor, Actor.SupervisorStrategy.DefaultStrategy);
+        }
+
+        /// <summary>
+        /// Props for creating a <see cref="BackoffSupervisor"/> actor.
+        /// 
+        /// Exceptions in the child are handled with the default supervision strategy, i.e.
+        /// most exceptions will immediately restart the child. You can define another
+        /// supervision strategy by using [[#propsWithSupervisorStrategy]].
+        /// </summary>
+        /// <param name="childProps">The <see cref="Akka.Actor.Props"/> of the child actor that will be started and supervised</param>
+        /// <param name="childName">Name of the child actor</param>
+        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
+        /// <param name="maxNrOfRetries">Maximum number of attempts to restart the child actor. The supervisor will terminate itself after the maxNoOfRetries is reached. In order to restart infinitely pass in `-1`.</param>
+        /// <returns></returns>
+        public static Props Props(
+            Props childProps,
+            string childName,
+            TimeSpan minBackoff,
+            TimeSpan maxBackoff,
+            double randomFactor,
+            int maxNrOfRetries)
+        {
+            var supervisionStrategy = Actor.SupervisorStrategy.DefaultStrategy is OneForOneStrategy oneForOne
+                ? oneForOne.WithMaxNrOfRetries(maxNrOfRetries)
+                : Actor.SupervisorStrategy.DefaultStrategy;
+
+            return PropsWithSupervisorStrategy(childProps, childName, minBackoff, maxBackoff, randomFactor, supervisionStrategy);
         }
 
         /// <summary>
@@ -205,10 +243,13 @@ namespace Akka.Pattern
             double randomFactor,
             SupervisorStrategy strategy)
         {
-             return Actor.Props.Create(
-                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, null));
+            return Actor.Props.Create(
+               () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, null));
         }
 
+        /// <summary>
+        /// Calculates an exponential back off delay.
+        /// </summary>
         internal static TimeSpan CalculateDelay(
             int restartCount,
             TimeSpan minBackoff,
