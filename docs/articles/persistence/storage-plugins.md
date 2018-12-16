@@ -16,3 +16,23 @@ Snapshot store is a specialized type of actor which exposes an API to handle inc
 
 [!code-json[Main](../../../src/core/Akka.Persistence/persistence.conf#L204-L219)]
 
+### Eager initialization of persistence plugin
+
+By default, persistence plugins are started on-demand, as they are used. In some case, however, it might be beneficial to start a certain plugin eagerly. In order to do that, specify the IDs of plugins you wish to start automatically under `akka.persistence.journal.auto-start-journals` and `akka.persistence.snapshot-store.auto-start-snapshot-stores`.
+
+For example, if you want eager initialization for the sqlite journal and snapshot store plugin, your configuration should look like this:  
+
+```
+akka {
+  persistence {
+    journal {
+      plugin = "akka.persistence.journal.sqlite"
+      auto-start-journals = ["akka.persistence.journal.sqlite"]
+    }
+    snapshot-store {
+      plugin = "akka.persistence.snapshot-store.sqlite"
+      auto-start-snapshot-stores = ["akka.persistence.snapshot-store.sqlite"]
+    }
+  }
+}
+```
