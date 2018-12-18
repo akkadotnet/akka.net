@@ -378,6 +378,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 Sender.Tell(deltaCount);
             });
+            Receive<CountSubscribers>(msg =>
+            {
+                var encTopic = Internal.Utils.EncodeName(msg.Topic); 
+                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path / encTopic), msg, Sender, () =>
+                {
+                    var child = Context.Child(encTopic);
+                    if (!child.IsNobody())
+                    {
+                        child.Tell(Count.Instance, Sender);
+                    }
+                    else
+                    {
+                        Sender.Tell(0);
+                    }
+                });
+            });
         }
 
         private bool OtherHasNewerVersions(IDictionary<Address, long> versions)
