@@ -479,7 +479,11 @@ namespace Akka.DistributedData
 
         private void NormalReceive()
         {
-            Receive<Get>(g => ReceiveGet(g.Key, g.Consistency, g.Request));
+            Receive<Get>(g =>
+            {
+                dynamic request = g;
+                ReceiveGet(request);
+            });
             Receive<Update>(msg => ReceiveUpdate(msg.Key, msg.Modify, msg.Consistency, msg.Request));
             Receive<Read>(r => ReceiveRead(r.Key));
             Receive<Write>(w => ReceiveWrite(w.Key, w.Envelope));
@@ -515,20 +519,24 @@ namespace Akka.DistributedData
 
         private void Ignore<T>(T msg) { }
 
-        private void ReceiveGet(IKey key, IReadConsistency consistency, object req)
+        private void ReceiveGet<T>(Get<T> request) where T : IReplicatedData<T>
         {
+            var key = (IKey<T>)request.Key;
+            var consistency = request.Consistency;
+            var req = request.Request;
+
             var localValue = GetData(key.Id);
 
             _log.Debug("Received get for key {0}, local value {1}, consistency: {2}", key.Id, localValue, consistency);
 
             if (IsLocalGet(consistency))
             {
-                if (localValue == null) Sender.Tell(new NotFound(key, req));
+                if (localValue == null) Sender.Tell(new NotFound<T>(key, req));
                 else if (localValue.Data is DeletedData) Sender.Tell(new DataDeleted(key, req));
-                else Sender.Tell(new GetSuccess(key, req, localValue.Data));
+                else Sender.Tell(new GetSuccess<T>(key, req, (T)localValue.Data));
             }
             else
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _nodes, _unreachable, localValue, Sender)
+                Context.ActorOf(ReadAggregator<T>.Props(key, consistency, req, _nodes, _unreachable, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
         }
 
@@ -867,12 +875,19 @@ namespace Akka.DistributedData
             var envelope = GetData(keyId);
             if (envelope != null)
             {
-                var msg = envelope.Data is DeletedData
-                    ? (object)new DataDeleted(key, null)
-                    : new Changed(key, envelope.Data);
-
-                foreach (var sub in subs) sub.Tell(msg);
+                dynamic tkey = key;
+                PublishNotification(tkey, envelope, subs);
             }
+        }
+
+        private static void PublishNotification<T>(IKey<T> key, DataEnvelope envelope, HashSet<IActorRef> subscribers)
+            where T : IReplicatedData<T>
+        {
+            var msg = envelope.Data is DeletedData
+                ? (object)new DataDeleted(key, null)
+                : new Changed<T>(key, (T)envelope.Data);
+
+            foreach (var sub in subscribers) sub.Tell(msg);
         }
 
         private void ReceiveFlushChanges()

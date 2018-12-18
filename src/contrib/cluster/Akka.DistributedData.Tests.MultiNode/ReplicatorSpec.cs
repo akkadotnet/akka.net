@@ -139,19 +139,19 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Subscribe(KeyX, changedProbe.Ref));
 
                 _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-                ExpectMsg(new NotFound(KeyA, null));
+                ExpectMsg(new NotFound<GCounter>(KeyA, null));
 
                 var c3 = GCounter.Empty.Increment(_cluster, 3);
                 var update = Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 3));
                 _replicator.Tell(update);
                 ExpectMsg(new UpdateSuccess(KeyA, null));
                 _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-                ExpectMsg(new GetSuccess(KeyA, null, c3));
-                changedProbe.ExpectMsg(new Changed(KeyA, c3));
+                ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c3));
+                changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c3));
 
                 var changedProbe2 = CreateTestProbe();
-                _replicator.Tell(new Subscribe(KeyA, changedProbe2.Ref));
-                changedProbe2.ExpectMsg(new Changed(KeyA, c3));
+                _replicator.Tell(new Subscribe<GCounter>(KeyA, changedProbe2.Ref));
+                changedProbe2.ExpectMsg(new Changed<GCounter>(KeyA, c3));
 
 
                 var c4 = c3.Increment(_cluster);
@@ -159,28 +159,28 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyA, _writeTwo, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateTimeout(KeyA, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
                 _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-                ExpectMsg(new GetSuccess(KeyA, null, c4));
-                changedProbe.ExpectMsg(new Changed(KeyA, c4));
+                ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c4));
+                changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c4));
 
                 var c5 = c4.Increment(_cluster);
                 // too strong consistency level
                 _replicator.Tell(Dsl.Update(KeyA, _writeMajority, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyA, null));
                 _replicator.Tell(Dsl.Get(KeyA, _readMajority));
-                ExpectMsg(new GetSuccess(KeyA, null, c5));
-                changedProbe.ExpectMsg(new Changed(KeyA, c5));
+                ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c5));
+                changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c5));
 
                 var c6 = c5.Increment(_cluster);
                 _replicator.Tell(Dsl.Update(KeyA, _writeAll, x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyA, null));
                 _replicator.Tell(Dsl.Get(KeyA, _readAll));
-                ExpectMsg(new GetSuccess(KeyA, null, c6));
-                changedProbe.ExpectMsg(new Changed(KeyA, c6));
+                ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c6));
+                changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c6));
 
                 var c9 = GCounter.Empty.Increment(_cluster, 9);
                 _replicator.Tell(Dsl.Update(KeyX, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 9)));
                 ExpectMsg(new UpdateSuccess(KeyX, null));
-                changedProbe.ExpectMsg(new Changed(KeyX, c9));
+                changedProbe.ExpectMsg(new Changed<GCounter>(KeyX, c9));
                 _replicator.Tell(Dsl.Delete(KeyX, WriteLocal.Instance));
                 ExpectMsg(new DeleteSuccess(KeyX));
                 changedProbe.ExpectMsg(new DataDeleted(KeyX));
@@ -210,7 +210,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var update2 = new Update(KeyJ, new GSet<string>(), WriteLocal.Instance, x => ((GSet<string>)x).Add("c"));
                 _replicator.Tell(update2);
                 ExpectMsg(new UpdateSuccess(KeyJ, null));
-                _replicator.Tell(new Get(KeyJ, ReadLocal.Instance));
+                _replicator.Tell(new Get<GSet<string>>(KeyJ, ReadLocal.Instance));
                 ExpectMsg<GetSuccess>(x => x.Data.Equals(new GSet<string>(new[] { "a", "b", "c" }.ToImmutableHashSet())));
             }, _first);
 
@@ -583,9 +583,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Get(KeyE2, _readAll, 998));
-                ExpectMsg(new GetFailure(KeyE2, 998), _timeOut.Add(TimeSpan.FromSeconds(1)));
+                ExpectMsg(new GetFailure<GCounter>(KeyE2, 998), _timeOut.Add(TimeSpan.FromSeconds(1)));
                 _replicator.Tell(Dsl.Get(KeyE2, Dsl.ReadLocal));
-                ExpectMsg(new NotFound(KeyE2, null));
+                ExpectMsg(new NotFound<GCounter>(KeyE2, null));
             }, _first, _second);
 
             EnterBarrier("read-all-fail-update");

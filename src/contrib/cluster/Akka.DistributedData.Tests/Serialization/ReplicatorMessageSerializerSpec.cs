@@ -44,15 +44,15 @@ namespace Akka.DistributedData.Tests.Serialization
             var ref1 = Sys.ActorOf(Props.Empty, "ref1");
             var data1 = GSet.Create("a");
 
-            CheckSerialization(new Get(_keyA, ReadLocal.Instance));
-            CheckSerialization(new Get(_keyA, new ReadMajority(TimeSpan.FromSeconds(2)), "x"));
-            CheckSerialization(new GetSuccess(_keyA, null, data1));
-            CheckSerialization(new GetSuccess(_keyA, "x", data1));
-            CheckSerialization(new NotFound(_keyA, "x"));
-            CheckSerialization(new GetFailure(_keyA, "x"));
-            CheckSerialization(new Subscribe(_keyA, ref1));
-            CheckSerialization(new Unsubscribe(_keyA, ref1));
-            CheckSerialization(new Changed(_keyA, data1));
+            CheckSerialization(new Get<GSet<string>>(_keyA, ReadLocal.Instance));
+            CheckSerialization(new Get<GSet<string>>(_keyA, new ReadMajority(TimeSpan.FromSeconds(2)), "x"));
+            CheckSerialization(new GetSuccess<GSet<string>>(_keyA, null, data1));
+            CheckSerialization(new GetSuccess<GSet<string>>(_keyA, "x", data1));
+            CheckSerialization(new NotFound<GSet<string>>(_keyA, "x"));
+            CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
+            CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
+            CheckSerialization(new Unsubscribe<GSet<string>>(_keyA, ref1));
+            CheckSerialization(new Changed<GSet<string>>(_keyA, data1));
             CheckSerialization(new DataEnvelope(data1));
             CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new Dictionary<UniqueAddress, IPruningState>
             {

@@ -226,10 +226,9 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private void CheckSerialization<T>(T expected)
         {
-            var g = expected as ORDictionary<string, GSet<string>>.DeltaGroup;
             var serializer = Sys.Serialization.FindSerializerFor(expected);
             var blob = serializer.ToBinary(expected);
-            var actual = serializer.FromBinary(blob, expected.GetType());
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, typeof(T));
 
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets

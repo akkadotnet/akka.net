@@ -119,7 +119,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                });
 
                 r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg(new NotFound(keyA, null));
+                ExpectMsg(new NotFound<GCounter>(keyA, null));
 
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
@@ -265,7 +265,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         });
 
                         r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg(new NotFound(keyA, null));
+                        ExpectMsg(new NotFound<GCounter>(keyA, null));
 
                         r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
                         r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));

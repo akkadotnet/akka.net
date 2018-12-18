@@ -13,12 +13,13 @@ using Akka.Event;
 
 namespace Akka.DistributedData
 {
-    internal class ReadAggregator : ReadWriteAggregator
+    internal class ReadAggregator<T> : ReadWriteAggregator
+        where T : IReplicatedData<T>
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
+        internal static Props Props(IKey<T> key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
+            Actor.Props.Create(() => new ReadAggregator<T>(key, consistency, req, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
 
-        private readonly IKey _key;
+        private readonly IKey <T> _key;
         private readonly IReadConsistency _consistency;
         private readonly object _req;
         private readonly IActorRef _replyTo;
@@ -26,7 +27,7 @@ namespace Akka.DistributedData
         
         private DataEnvelope _result;
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo)
+        public ReadAggregator(IKey<T> key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo)
             : base(nodes, unreachable, consistency.Timeout)
         {
             _key = key;
@@ -98,12 +99,12 @@ namespace Akka.DistributedData
             }
             else if (ok && _result == null)
             {
-                _replyTo.Tell(new NotFound(_key, _req), Context.Parent);
+                _replyTo.Tell(new NotFound<T>(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
             else
             {
-                _replyTo.Tell(new GetFailure(_key, _req), Context.Parent);
+                _replyTo.Tell(new GetFailure<T>(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
         }
@@ -113,7 +114,7 @@ namespace Akka.DistributedData
             {
                 var reply = envelope.Data is DeletedData
                     ? (object)new DataDeleted(_key, null)
-                    : new GetSuccess(_key, _req, envelope.Data);
+                    : new GetSuccess<T>(_key, _req, (T)envelope.Data);
                 _replyTo.Tell(reply, Context.Parent);
                 Context.Stop(Self);
             })

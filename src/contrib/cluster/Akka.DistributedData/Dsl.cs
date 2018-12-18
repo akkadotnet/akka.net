@@ -140,7 +140,7 @@ namespace Akka.DistributedData
         /// </param>
         /// <returns>TBD</returns>
         public static Get Get<T>(IKey<T> key, IReadConsistency consistency = null, object request = null) where T : IReplicatedData =>
-            new Get(key, consistency ?? ReadLocal, request);
+            new Get<T>(key, consistency ?? ReadLocal, request);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -177,7 +177,7 @@ namespace Akka.DistributedData
         /// <param name="subscriber">Actor subscribing to changes under provided <paramref name="key"/>.</param>
         /// <returns>TBD</returns>
         public static Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
-            new Subscribe(key, subscriber);
+            new Subscribe<T>(key, subscriber);
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
@@ -189,6 +189,6 @@ namespace Akka.DistributedData
         /// <param name="subscriber">A subscriber for the <paramref name="key"/>ed value changes.</param>
         /// <returns>TBD</returns>
         public static Unsubscribe Unsubscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
-            new Unsubscribe(key, subscriber);
+            new Unsubscribe<T>(key, subscriber);
     }
 }
