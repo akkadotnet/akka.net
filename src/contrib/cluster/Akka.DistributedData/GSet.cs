@@ -195,7 +195,8 @@ namespace Akka.DistributedData
         public override string ToString()
         {
             var sb = new StringBuilder("GSet(");
-            sb.AppendJoin(", ", Elements);
+            sb.AppendJoin(", ", Elements)
+                .Append(')');
 
             return sb.ToString();
         }

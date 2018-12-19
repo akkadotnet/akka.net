@@ -10,38 +10,66 @@ message Get {
   OtherMessage key = 1;
   sint32 consistency = 2;
   uint32 timeout = 3;
-  OtherMessage request = 4;   
+  OtherMessage request = 4;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message GetSuccess {
   OtherMessage key = 1;
   OtherMessage data = 2;
   OtherMessage request = 4;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message NotFound {
   OtherMessage key = 1;
   OtherMessage request = 2;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message GetFailure {
   OtherMessage key = 1;
   OtherMessage request = 2;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message Subscribe {
   OtherMessage key = 1;
   string ref = 2;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message Unsubscribe {
   OtherMessage key = 1;
   string ref = 2;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message Changed {
   OtherMessage key = 1;
   OtherMessage data = 2;
+
+  /* Type code and CRDT manifest for .NET generics reification */
+  bytes crdtManifest = 10;
+  uint32 typeCode = 11;
 }
 
 message Write {

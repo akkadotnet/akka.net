@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Google.Protobuf;
@@ -15,8 +16,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Akka.DistributedData.Serialization.Proto.Msg;
-using Google.Protobuf.Collections;
 
 namespace Akka.DistributedData.Serialization
 {
@@ -53,8 +52,8 @@ namespace Akka.DistributedData.Serialization
         private const string ORMultiMapManifest = "K";
         private const string ORMultiMapKeyManifest = "k";
         private const string VersionVectorManifest = "L";
-
-        private readonly Akka.Serialization.Serialization _serialization;
+        
+        private readonly TypeMap _mappings;
         private string _protocol;
         public string Protocol
         {
@@ -79,14 +78,14 @@ namespace Akka.DistributedData.Serialization
         public Akka.Serialization.Serialization Serialization
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _serialization;
+            get => system.Serialization;
         }
 
         private readonly byte[] _emptyArray = new byte[0];
 
-        public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
+        public ReplicatedDataSerializer(ExtendedActorSystem system, Config config) : base(system)
         {
-            _serialization = system.Serialization;
+            _mappings = new TypeMap(config.GetConfig("mappings"));
         }
 
         public override string Manifest(object o)
@@ -163,7 +162,10 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary(GSet<long> o) => ToProto(o).ToByteArray();
         private Proto.Msg.GSet ToProto(GSet<long> o)
         {
-            var proto = new Proto.Msg.GSet();
+            var proto = new Proto.Msg.GSet
+            {
+                TypeCode = _mappings[typeof(long)]
+            };
             foreach (var e in o.Elements)
                 proto.LongElements.Add(e);
             return proto;
@@ -172,7 +174,10 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary(GSet<int> o) => ToProto(o).ToByteArray();
         private Proto.Msg.GSet ToProto(GSet<int> o)
         {
-            var proto = new Proto.Msg.GSet();
+            var proto = new Proto.Msg.GSet
+            {
+                TypeCode = _mappings[typeof(int)]
+            };
             foreach (var e in o.Elements)
                 proto.IntElements.Add(e);
             return proto;
@@ -181,7 +186,10 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary(GSet<string> o) => ToProto(o).ToByteArray();
         private Proto.Msg.GSet ToProto(GSet<string> o)
         {
-            var proto = new Proto.Msg.GSet();
+            var proto = new Proto.Msg.GSet
+            {
+                TypeCode = _mappings[typeof(string)]
+            };
             foreach (var e in o.Elements)
                 proto.StringElements.Add(e);
             return proto;
@@ -190,7 +198,10 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary(GSet<IActorRef> o) => ToProto(o).ToByteArray();
         private Proto.Msg.GSet ToProto(GSet<IActorRef> o)
         {
-            var proto = new Proto.Msg.GSet();
+            var proto = new Proto.Msg.GSet
+            {
+                TypeCode = _mappings[typeof(IActorRef)]
+            };
             foreach (var e in o.Elements)
                 proto.ActorRefElements.Add(Akka.Serialization.Serialization.SerializedActorPath(e));
             return proto;
@@ -199,7 +210,10 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<T>(GSet<T> o) => ToProto<T>(o).ToByteArray();
         private Proto.Msg.GSet ToProto<T>(GSet<T> o)
         {
-            var proto = new Proto.Msg.GSet();
+            var proto = new Proto.Msg.GSet
+            {
+                TypeCode = _mappings[typeof(T)]
+            };
             foreach (object e in o.Elements)
                 proto.OtherElements.Add(this.OtherMessageToProto(e));
             return proto;
@@ -214,6 +228,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
+                TypeCode = _mappings[typeof(int)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -230,6 +245,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
+                TypeCode = _mappings[typeof(long)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -246,6 +262,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
+                TypeCode = _mappings[typeof(string)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -262,6 +279,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
+                TypeCode = _mappings[typeof(IActorRef)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -278,6 +296,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
+                TypeCode = _mappings[typeof(T)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -523,6 +542,7 @@ namespace Akka.DistributedData.Serialization
         {
             return new Proto.Msg.LWWRegister
             {
+                TypeCode = _mappings[typeof(T)],
                 Node = o.UpdatedBy.ToProto(),
                 Timestamp = o.Timestamp,
                 State = this.OtherMessageToProto(o.Value)
@@ -536,6 +556,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
+                KeyCode = _mappings[typeof(int)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -556,6 +577,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
+                KeyCode = _mappings[typeof(long)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -576,6 +598,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
+                KeyCode = _mappings[typeof(string)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -596,6 +619,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
+                KeyCode = _mappings[typeof(TKey)],
                 Keys = ToProto<TKey>(o.Underlying.KeySet)
             };
 
@@ -1448,27 +1472,26 @@ namespace Akka.DistributedData.Serialization
             }
             else
             {
-                int i = 0;
-                dynamic elements = null;
-                foreach (var other in proto.OtherElements)
-                {
-                    var value = this.OtherMessageFromProto(other);
-                    if (elements == null)
-                        elements = Array.CreateInstance(value.GetType(), proto.OtherElements.Count);
-                    elements[i] = value;
-                    i++;
-                }
-
-                return DynamicORSet(elements, dots, vvector);
+                // we'll use it only as type marker for dynamic binding
+                dynamic marker = Array.CreateInstance(_mappings[proto.TypeCode], 0);
+                return DynamicORSet(marker, proto, dots, vvector);
             }
         }
 
-        private ORSet<T> DynamicORSet<T>(T[] elements, List<VersionVector> dots, VersionVector vvector)
+        private ORSet<T> DynamicORSet<T>(T[] marker, Proto.Msg.ORSet proto, List<VersionVector> dots, VersionVector vvector)
         {
-            var elementMap = elements
-                .Zip(dots, (value, dot) => new KeyValuePair<T, VersionVector>(value, dot))
-                .ToImmutableDictionary();
-            return new ORSet<T>(elementMap, vvector);
+            if (proto.OtherElements.Count == 0) return ORSet<T>.Empty;
+
+            var builder = ImmutableDictionary.CreateBuilder<T, VersionVector>();
+            int i = 0;
+            foreach (var other in proto.OtherElements)
+            {
+                var dot = dots[i];
+                var value = (T)this.OtherMessageFromProto(other);
+                builder[value] = dot;
+                i++;
+            }
+            return new ORSet<T>(builder.ToImmutable(), vvector);
         }
 
         #endregion
@@ -1528,24 +1551,27 @@ namespace Akka.DistributedData.Serialization
             }
             else
             {
-                var count = proto.OtherElements.Count;
-                dynamic elements = null;
-                var i = 0;
-                foreach (var item in proto.OtherElements)
-                {
-                    var o = this.OtherMessageFromProto(item);
-                    if (elements == null)
-                        elements = Array.CreateInstance(o.GetType(), count);
-                    elements[i] = o;
-                    i++;
-                }
-                return DynamicGSet(elements);
+                dynamic elements = Array.CreateInstance(_mappings[proto.TypeCode], proto.OtherElements.Count);
+                return DynamicGSet(elements, proto);
             }
         }
 
-        private GSet<T> DynamicGSet<T>(T[] elements)
+        private GSet<T> DynamicGSet<T>(T[] elements, Proto.Msg.GSet proto)
         {
-            return GSet.Create<T>(elements);
+            if (elements.Length == 0)
+            {
+                return GSet<T>.Empty;
+            }
+            else
+            {
+                var i = 0;
+                foreach (var element in proto.OtherElements)
+                {
+                    elements[i++] = (T)this.OtherMessageFromProto(element);
+                }
+
+                return GSet.Create<T>(elements);
+            }
         }
 
         #endregion

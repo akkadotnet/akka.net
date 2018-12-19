@@ -14,6 +14,7 @@
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
 
   <ItemGroup>

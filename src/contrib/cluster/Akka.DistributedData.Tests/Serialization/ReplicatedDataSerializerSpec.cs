@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
+using Akka.Serialization;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -226,9 +227,10 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private void CheckSerialization<T>(T expected)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(expected);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(expected);
+            var manifest = serializer.Manifest(expected);
             var blob = serializer.ToBinary(expected);
-            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, typeof(T));
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);
 
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets

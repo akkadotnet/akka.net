@@ -23,90 +23,96 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChhSZXBsaWNhdG9yTWVzc2FnZXMucHJvdG8SLEFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnIsEBCgNHZXQSRwoDa2V5GAEg",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnIukBCgNHZXQSRwoDa2V5GAEg",
             "ASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
             "by5Nc2cuT3RoZXJNZXNzYWdlEhMKC2NvbnNpc3RlbmN5GAIgASgREg8KB3Rp",
             "bWVvdXQYAyABKA0SSwoHcmVxdWVzdBgEIAEoCzI6LkFra2EuRGlzdHJpYnV0",
-            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSLs",
-            "AQoKR2V0U3VjY2VzcxJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
-            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USSAoE",
-            "ZGF0YRgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJLCgdyZXF1ZXN0GAQgASgLMjou",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRIU",
+            "CgxjcmR0TWFuaWZlc3QYCiABKAwSEAoIdHlwZUNvZGUYCyABKA0ilAIKCkdl",
+            "dFN1Y2Nlc3MSRwoDa2V5GAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEkgKBGRhdGEY",
+            "AiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5PdGhlck1lc3NhZ2USSwoHcmVxdWVzdBgEIAEoCzI6LkFra2Eu",
+            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVy",
+            "TWVzc2FnZRIUCgxjcmR0TWFuaWZlc3QYCiABKAwSEAoIdHlwZUNvZGUYCyAB",
+            "KA0iyAEKCE5vdEZvdW5kEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJL",
+            "CgdyZXF1ZXN0GAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEhQKDGNyZHRNYW5pZmVz",
+            "dBgKIAEoDBIQCgh0eXBlQ29kZRgLIAEoDSLKAQoKR2V0RmFpbHVyZRJHCgNr",
+            "ZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5PdGhlck1lc3NhZ2USSwoHcmVxdWVzdBgCIAEoCzI6LkFr",
+            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90",
+            "aGVyTWVzc2FnZRIUCgxjcmR0TWFuaWZlc3QYCiABKAwSEAoIdHlwZUNvZGUY",
+            "CyABKA0iiQEKCVN1YnNjcmliZRJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3Ry",
+            "aWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3Nh",
+            "Z2USCwoDcmVmGAIgASgJEhQKDGNyZHRNYW5pZmVzdBgKIAEoDBIQCgh0eXBl",
+            "Q29kZRgLIAEoDSKLAQoLVW5zdWJzY3JpYmUSRwoDa2V5GAEgASgLMjouQWtr",
+            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3Ro",
+            "ZXJNZXNzYWdlEgsKA3JlZhgCIAEoCRIUCgxjcmR0TWFuaWZlc3QYCiABKAwS",
+            "EAoIdHlwZUNvZGUYCyABKA0ixAEKB0NoYW5nZWQSRwoDa2V5GAEgASgLMjou",
             "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "T3RoZXJNZXNzYWdlIqABCghOb3RGb3VuZBJHCgNrZXkYASABKAsyOi5Ba2th",
-            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhl",
-            "ck1lc3NhZ2USSwoHcmVxdWVzdBgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSKiAQoK",
-            "R2V0RmFpbHVyZRJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0",
-            "YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USSwoHcmVx",
-            "dWVzdBgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSJhCglTdWJzY3JpYmUSRwoDa2V5",
-            "GAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlEgsKA3JlZhgCIAEoCSJjCgtVbnN1YnNj",
-            "cmliZRJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USCwoDcmVmGAIgASgJ",
-            "IpwBCgdDaGFuZ2VkEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJICgRk",
-            "YXRhGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlImIKBVdyaXRlEgsKA2tleRgBIAEo",
-            "CRJMCghlbnZlbG9wZRgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkRhdGFFbnZlbG9wZSIHCgVFbXB0eSIT",
-            "CgRSZWFkEgsKA2tleRgBIAEoCSJaCgpSZWFkUmVzdWx0EkwKCGVudmVsb3Bl",
-            "GAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuRGF0YUVudmVsb3BlIq0ECgxEYXRhRW52ZWxvcGUSSAoEZGF0",
-            "YRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLk90aGVyTWVzc2FnZRJYCgdwcnVuaW5nGAIgAygLMkcuQWtr",
-            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGF0",
-            "YUVudmVsb3BlLlBydW5pbmdFbnRyeRJSCg1kZWx0YVZlcnNpb25zGAMgASgL",
-            "MjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5N",
-            "c2cuVmVyc2lvblZlY3RvchqkAgoMUHJ1bmluZ0VudHJ5ElMKDnJlbW92ZWRB",
-            "ZGRyZXNzGAEgASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
-            "dGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxJRCgxvd25lckFkZHJlc3MY",
-            "AiABKAsyOy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5VbmlxdWVBZGRyZXNzEhEKCXBlcmZvcm1lZBgDIAEoCBJDCgRz",
-            "ZWVuGAQgAygLMjUuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuQWRkcmVzcxIUCgxvYnNvbGV0ZVRpbWUYBSABKBIinQEK",
-            "BlN0YXR1cxINCgVjaHVuaxgBIAEoDRIRCgl0b3RDaHVua3MYAiABKA0SSwoH",
-            "ZW50cmllcxgDIAMoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLlN0YXR1cy5FbnRyeRokCgVFbnRyeRILCgNrZXkY",
-            "ASABKAkSDgoGZGlnZXN0GAIgASgMIssBCgZHb3NzaXASEAoIc2VuZEJhY2sY",
-            "ASABKAgSSwoHZW50cmllcxgCIAMoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRh",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkdvc3NpcC5FbnRyeRpiCgVFbnRy",
+            "T3RoZXJNZXNzYWdlEkgKBGRhdGEYAiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USFAoM",
+            "Y3JkdE1hbmlmZXN0GAogASgMEhAKCHR5cGVDb2RlGAsgASgNImIKBVdyaXRl",
+            "EgsKA2tleRgBIAEoCRJMCghlbnZlbG9wZRgCIAEoCzI6LkFra2EuRGlzdHJp",
+            "YnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkRhdGFFbnZlbG9w",
+            "ZSIHCgVFbXB0eSITCgRSZWFkEgsKA2tleRgBIAEoCSJaCgpSZWFkUmVzdWx0",
+            "EkwKCGVudmVsb3BlGAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
+            "aWFsaXphdGlvbi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlIq0ECgxEYXRhRW52",
+            "ZWxvcGUSSAoEZGF0YRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNl",
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJYCgdwcnVuaW5n",
+            "GAIgAygLMkcuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuRGF0YUVudmVsb3BlLlBydW5pbmdFbnRyeRJSCg1kZWx0YVZl",
+            "cnNpb25zGAMgASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuVmVyc2lvblZlY3RvchqkAgoMUHJ1bmluZ0VudHJ5",
+            "ElMKDnJlbW92ZWRBZGRyZXNzGAEgASgLMjsuQWtrYS5EaXN0cmlidXRlZERh",
+            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxJRCgxv",
+            "d25lckFkZHJlc3MYAiABKAsyOy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEhEKCXBlcmZvcm1l",
+            "ZBgDIAEoCBJDCgRzZWVuGAQgAygLMjUuQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcxIUCgxvYnNvbGV0ZVRp",
+            "bWUYBSABKBIinQEKBlN0YXR1cxINCgVjaHVuaxgBIAEoDRIRCgl0b3RDaHVu",
+            "a3MYAiABKA0SSwoHZW50cmllcxgDIAMoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlN0YXR1cy5FbnRyeRokCgVF",
+            "bnRyeRILCgNrZXkYASABKAkSDgoGZGlnZXN0GAIgASgMIssBCgZHb3NzaXAS",
+            "EAoIc2VuZEJhY2sYASABKAgSSwoHZW50cmllcxgCIAMoCzI6LkFra2EuRGlz",
+            "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkdvc3NpcC5F",
+            "bnRyeRpiCgVFbnRyeRILCgNrZXkYASABKAkSTAoIZW52ZWxvcGUYAiABKAsy",
+            "Oi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
+            "Zy5EYXRhRW52ZWxvcGUi0AIKEERlbHRhUHJvcGFnYXRpb24STQoIZnJvbU5v",
+            "ZGUYASABKAsyOy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzElUKB2VudHJpZXMYAiADKAsyRC5B",
+            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5E",
+            "ZWx0YVByb3BhZ2F0aW9uLkVudHJ5Eg0KBXJlcGx5GAMgASgIGoYBCgVFbnRy",
             "eRILCgNrZXkYASABKAkSTAoIZW52ZWxvcGUYAiABKAsyOi5Ba2thLkRpc3Ry",
             "aWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRhRW52ZWxv",
-            "cGUi0AIKEERlbHRhUHJvcGFnYXRpb24STQoIZnJvbU5vZGUYASABKAsyOy5B",
-            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5V",
-            "bmlxdWVBZGRyZXNzElUKB2VudHJpZXMYAiADKAsyRC5Ba2thLkRpc3RyaWJ1",
-            "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EZWx0YVByb3BhZ2F0",
-            "aW9uLkVudHJ5Eg0KBXJlcGx5GAMgASgIGoYBCgVFbnRyeRILCgNrZXkYASAB",
-            "KAkSTAoIZW52ZWxvcGUYAiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRhRW52ZWxvcGUSEQoJZnJvbVNl",
-            "cU5yGAMgASgDEg8KB3RvU2VxTnIYBCABKAMicgoNVW5pcXVlQWRkcmVzcxJG",
-            "CgdhZGRyZXNzGAEgASgLMjUuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcxILCgN1aWQYAiABKA8SDAoEdWlk",
-            "MhgDIAEoDyIpCgdBZGRyZXNzEhAKCGhvc3RuYW1lGAEgASgJEgwKBHBvcnQY",
-            "AiABKA0iyAEKDVZlcnNpb25WZWN0b3ISUgoHZW50cmllcxgBIAMoCzJBLkFr",
-            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZl",
-            "cnNpb25WZWN0b3IuRW50cnkaYwoFRW50cnkSSQoEbm9kZRgBIAEoCzI7LkFr",
-            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlVu",
-            "aXF1ZUFkZHJlc3MSDwoHdmVyc2lvbhgCIAEoAyJWCgxPdGhlck1lc3NhZ2US",
-            "FwoPZW5jbG9zZWRNZXNzYWdlGAEgASgMEhQKDHNlcmlhbGl6ZXJJZBgCIAEo",
-            "BRIXCg9tZXNzYWdlTWFuaWZlc3QYBCABKAwiHgoKU3RyaW5nR1NldBIQCghl",
-            "bGVtZW50cxgBIAMoCSK5AQoTRHVyYWJsZURhdGFFbnZlbG9wZRJICgRkYXRh",
-            "GAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlElgKB3BydW5pbmcYAiADKAsyRy5Ba2th",
-            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRh",
-            "RW52ZWxvcGUuUHJ1bmluZ0VudHJ5QgJIAWIGcHJvdG8z"));
+            "cGUSEQoJZnJvbVNlcU5yGAMgASgDEg8KB3RvU2VxTnIYBCABKAMicgoNVW5p",
+            "cXVlQWRkcmVzcxJGCgdhZGRyZXNzGAEgASgLMjUuQWtrYS5EaXN0cmlidXRl",
+            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcxILCgN1aWQY",
+            "AiABKA8SDAoEdWlkMhgDIAEoDyIpCgdBZGRyZXNzEhAKCGhvc3RuYW1lGAEg",
+            "ASgJEgwKBHBvcnQYAiABKA0iyAEKDVZlcnNpb25WZWN0b3ISUgoHZW50cmll",
+            "cxgBIAMoCzJBLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlZlcnNpb25WZWN0b3IuRW50cnkaYwoFRW50cnkSSQoEbm9k",
+            "ZRgBIAEoCzI7LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSDwoHdmVyc2lvbhgCIAEoAyJWCgxP",
+            "dGhlck1lc3NhZ2USFwoPZW5jbG9zZWRNZXNzYWdlGAEgASgMEhQKDHNlcmlh",
+            "bGl6ZXJJZBgCIAEoBRIXCg9tZXNzYWdlTWFuaWZlc3QYBCABKAwiHgoKU3Ry",
+            "aW5nR1NldBIQCghlbGVtZW50cxgBIAMoCSK5AQoTRHVyYWJsZURhdGFFbnZl",
+            "bG9wZRJICgRkYXRhGAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
+            "aWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlElgKB3BydW5pbmcY",
+            "AiADKAsyRy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5EYXRhRW52ZWxvcGUuUHJ1bmluZ0VudHJ5QgJIAWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Get), global::Akka.DistributedData.Serialization.Proto.Msg.Get.Parser, new[]{ "Key", "Consistency", "Timeout", "Request" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess), global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess.Parser, new[]{ "Key", "Data", "Request" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.NotFound), global::Akka.DistributedData.Serialization.Proto.Msg.NotFound.Parser, new[]{ "Key", "Request" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure), global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure.Parser, new[]{ "Key", "Request" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Subscribe), global::Akka.DistributedData.Serialization.Proto.Msg.Subscribe.Parser, new[]{ "Key", "Ref" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Unsubscribe), global::Akka.DistributedData.Serialization.Proto.Msg.Unsubscribe.Parser, new[]{ "Key", "Ref" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Changed), global::Akka.DistributedData.Serialization.Proto.Msg.Changed.Parser, new[]{ "Key", "Data" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Get), global::Akka.DistributedData.Serialization.Proto.Msg.Get.Parser, new[]{ "Key", "Consistency", "Timeout", "Request", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess), global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess.Parser, new[]{ "Key", "Data", "Request", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.NotFound), global::Akka.DistributedData.Serialization.Proto.Msg.NotFound.Parser, new[]{ "Key", "Request", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure), global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure.Parser, new[]{ "Key", "Request", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Subscribe), global::Akka.DistributedData.Serialization.Proto.Msg.Subscribe.Parser, new[]{ "Key", "Ref", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Unsubscribe), global::Akka.DistributedData.Serialization.Proto.Msg.Unsubscribe.Parser, new[]{ "Key", "Ref", "CrdtManifest", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Changed), global::Akka.DistributedData.Serialization.Proto.Msg.Changed.Parser, new[]{ "Key", "Data", "CrdtManifest", "TypeCode" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Write), global::Akka.DistributedData.Serialization.Proto.Msg.Write.Parser, new[]{ "Key", "Envelope" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Empty), global::Akka.DistributedData.Serialization.Proto.Msg.Empty.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Read), global::Akka.DistributedData.Serialization.Proto.Msg.Read.Parser, new[]{ "Key" }, null, null, null),
@@ -155,6 +161,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       consistency_ = other.consistency_;
       timeout_ = other.timeout_;
       Request = other.request_ != null ? other.Request.Clone() : null;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -206,6 +214,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Get);
@@ -223,6 +256,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Consistency != other.Consistency) return false;
       if (Timeout != other.Timeout) return false;
       if (!object.Equals(Request, other.Request)) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -233,6 +268,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Consistency != 0) hash ^= Consistency.GetHashCode();
       if (Timeout != 0) hash ^= Timeout.GetHashCode();
       if (request_ != null) hash ^= Request.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -259,6 +296,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(34);
         output.WriteMessage(Request);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -275,6 +320,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (request_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Request);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -301,6 +352,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Request.MergeFrom(other.Request);
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -332,6 +389,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
               request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
             }
             input.ReadMessage(request_);
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -367,6 +432,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       Key = other.key_ != null ? other.Key.Clone() : null;
       Data = other.data_ != null ? other.Data.Clone() : null;
       Request = other.request_ != null ? other.Request.Clone() : null;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -407,6 +474,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as GetSuccess);
@@ -423,6 +515,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (!object.Equals(Key, other.Key)) return false;
       if (!object.Equals(Data, other.Data)) return false;
       if (!object.Equals(Request, other.Request)) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -432,6 +526,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (key_ != null) hash ^= Key.GetHashCode();
       if (data_ != null) hash ^= Data.GetHashCode();
       if (request_ != null) hash ^= Request.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -454,6 +550,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(34);
         output.WriteMessage(Request);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -467,6 +571,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (request_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Request);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -493,6 +603,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Request.MergeFrom(other.Request);
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -523,6 +639,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
               request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
             }
             input.ReadMessage(request_);
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -557,6 +681,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public NotFound(NotFound other) : this() {
       Key = other.key_ != null ? other.Key.Clone() : null;
       Request = other.request_ != null ? other.Request.Clone() : null;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -586,6 +712,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as NotFound);
@@ -601,6 +752,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Key, other.Key)) return false;
       if (!object.Equals(Request, other.Request)) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -609,6 +762,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (key_ != null) hash ^= Key.GetHashCode();
       if (request_ != null) hash ^= Request.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -627,6 +782,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(18);
         output.WriteMessage(Request);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -637,6 +800,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (request_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Request);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -657,6 +826,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Request.MergeFrom(other.Request);
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -680,6 +855,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
               request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
             }
             input.ReadMessage(request_);
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -714,6 +897,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public GetFailure(GetFailure other) : this() {
       Key = other.key_ != null ? other.Key.Clone() : null;
       Request = other.request_ != null ? other.Request.Clone() : null;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -743,6 +928,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as GetFailure);
@@ -758,6 +968,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Key, other.Key)) return false;
       if (!object.Equals(Request, other.Request)) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -766,6 +978,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (key_ != null) hash ^= Key.GetHashCode();
       if (request_ != null) hash ^= Request.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -784,6 +998,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(18);
         output.WriteMessage(Request);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -794,6 +1016,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (request_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Request);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -814,6 +1042,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Request.MergeFrom(other.Request);
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -837,6 +1071,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
               request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
             }
             input.ReadMessage(request_);
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -871,6 +1113,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public Subscribe(Subscribe other) : this() {
       Key = other.key_ != null ? other.Key.Clone() : null;
       ref_ = other.ref_;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -900,6 +1144,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Subscribe);
@@ -915,6 +1184,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Key, other.Key)) return false;
       if (Ref != other.Ref) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -923,6 +1194,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (key_ != null) hash ^= Key.GetHashCode();
       if (Ref.Length != 0) hash ^= Ref.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -941,6 +1214,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(18);
         output.WriteString(Ref);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -951,6 +1232,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (Ref.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Ref);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -968,6 +1255,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (other.Ref.Length != 0) {
         Ref = other.Ref;
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -988,6 +1281,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           }
           case 18: {
             Ref = input.ReadString();
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -1022,6 +1323,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public Unsubscribe(Unsubscribe other) : this() {
       Key = other.key_ != null ? other.Key.Clone() : null;
       ref_ = other.ref_;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1051,6 +1354,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Unsubscribe);
@@ -1066,6 +1394,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Key, other.Key)) return false;
       if (Ref != other.Ref) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -1074,6 +1404,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (key_ != null) hash ^= Key.GetHashCode();
       if (Ref.Length != 0) hash ^= Ref.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -1092,6 +1424,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(18);
         output.WriteString(Ref);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1102,6 +1442,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (Ref.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Ref);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -1119,6 +1465,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (other.Ref.Length != 0) {
         Ref = other.Ref;
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -1139,6 +1491,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           }
           case 18: {
             Ref = input.ReadString();
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
@@ -1173,6 +1533,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public Changed(Changed other) : this() {
       Key = other.key_ != null ? other.Key.Clone() : null;
       Data = other.data_ != null ? other.Data.Clone() : null;
+      crdtManifest_ = other.crdtManifest_;
+      typeCode_ = other.typeCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1202,6 +1564,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "crdtManifest" field.</summary>
+    public const int CrdtManifestFieldNumber = 10;
+    private pb::ByteString crdtManifest_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Type code and CRDT manifest for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString CrdtManifest {
+      get { return crdtManifest_; }
+      set {
+        crdtManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "typeCode" field.</summary>
+    public const int TypeCodeFieldNumber = 11;
+    private uint typeCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint TypeCode {
+      get { return typeCode_; }
+      set {
+        typeCode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Changed);
@@ -1217,6 +1604,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Key, other.Key)) return false;
       if (!object.Equals(Data, other.Data)) return false;
+      if (CrdtManifest != other.CrdtManifest) return false;
+      if (TypeCode != other.TypeCode) return false;
       return true;
     }
 
@@ -1225,6 +1614,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (key_ != null) hash ^= Key.GetHashCode();
       if (data_ != null) hash ^= Data.GetHashCode();
+      if (CrdtManifest.Length != 0) hash ^= CrdtManifest.GetHashCode();
+      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
       return hash;
     }
 
@@ -1243,6 +1634,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(18);
         output.WriteMessage(Data);
       }
+      if (CrdtManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(TypeCode);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1253,6 +1652,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (data_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Data);
+      }
+      if (CrdtManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CrdtManifest);
+      }
+      if (TypeCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
       }
       return size;
     }
@@ -1273,6 +1678,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           data_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Data.MergeFrom(other.Data);
+      }
+      if (other.CrdtManifest.Length != 0) {
+        CrdtManifest = other.CrdtManifest;
+      }
+      if (other.TypeCode != 0) {
+        TypeCode = other.TypeCode;
       }
     }
 
@@ -1296,6 +1707,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
               data_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
             }
             input.ReadMessage(data_);
+            break;
+          }
+          case 82: {
+            CrdtManifest = input.ReadBytes();
+            break;
+          }
+          case 88: {
+            TypeCode = input.ReadUInt32();
             break;
           }
         }
