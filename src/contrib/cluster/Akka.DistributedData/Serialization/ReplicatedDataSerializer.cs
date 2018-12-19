@@ -1549,7 +1549,7 @@ namespace Akka.DistributedData.Serialization
 
         private ORSet<T> DynamicORSet<T>(T[] marker, Proto.Msg.ORSet proto, List<VersionVector> dots, VersionVector vvector)
         {
-            if (proto.OtherElements.Count == 0) return ORSet<T>.Empty;
+            if (proto.OtherElements.Count == 0 && ReferenceEquals(vvector, VersionVector.Empty)) return ORSet<T>.Empty;
 
             var builder = ImmutableDictionary.CreateBuilder<T, VersionVector>();
             int i = 0;
