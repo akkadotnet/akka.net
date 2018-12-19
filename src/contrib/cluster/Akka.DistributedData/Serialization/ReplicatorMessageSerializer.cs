@@ -506,7 +506,7 @@ namespace Akka.DistributedData.Serialization
                 case GetFailureManifest: return GetFailureFromBinary(bytes);
                 case SubscribeManifest: return SubscribeFromBinary(bytes);
                 case UnsubscribeManifest: return UnsubscribeFromBinary(bytes);
-                case GossipManifest: return GossipFromBinary(SerializationSupport.Decompress(bytes));
+                case GossipManifest: return GossipFromBinary(bytes.Decompress());
                 case WriteNackManifest: return WriteNack.Instance;
                 case DeltaNackManifest: return DeltaNack.Instance;
 
@@ -516,14 +516,14 @@ namespace Akka.DistributedData.Serialization
         
         private Gossip GossipFromBinary(byte[] bytes)
         {
-            var proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes);
-            var builder = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
-            foreach (var entry in proto.Entries)
-            {
-                builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
-            }
+                var proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes);
+                var builder = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+                foreach (var entry in proto.Entries)
+                {
+                    builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
+                }
 
-            return new Gossip(builder.ToImmutable(), proto.SendBack);
+                return new Gossip(builder.ToImmutable(), proto.SendBack);
         }
 
         private DataEnvelope DataEnvelopeFromProto(Proto.Msg.DataEnvelope proto)

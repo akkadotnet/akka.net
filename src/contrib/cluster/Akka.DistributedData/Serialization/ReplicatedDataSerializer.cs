@@ -13,6 +13,7 @@ using Google.Protobuf;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -147,7 +148,11 @@ namespace Akka.DistributedData.Serialization
                 case GCounter _: return ToProto((GCounter)o).ToByteArray();
                 case PNCounter _: return ToProto((PNCounter)o).ToByteArray();
                 case Flag _: return ToProto((Flag)o).ToByteArray();
-                    
+                case IKey _:
+                {
+                    dynamic k = o;
+                    return ToBinary(k);
+                }
                 case IReplicatedData _:
                     {
                         dynamic d = o;
@@ -157,8 +162,30 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        #region serialize keys
+
+        private byte[] ToBinary(FlagKey key) => new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id) }.ToByteArray();
+        private byte[] ToBinary(GCounterKey key) => new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id) }.ToByteArray();
+        private byte[] ToBinary(PNCounterKey key) => new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id) }.ToByteArray();
+        private byte[] ToBinary<T>(GSetKey<T> key) => 
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)]}.ToByteArray();
+        private byte[] ToBinary<T>(ORSetKey<T> key) =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+        private byte[] ToBinary<T>(LWWRegisterKey<T> key) =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+        private byte[] ToBinary<T>(PNCounterDictionaryKey<T> key) =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+        private byte[] ToBinary<TKey, TValue>(ORDictionaryKey<TKey, TValue> key) where TValue : IReplicatedData<TValue> =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+        private byte[] ToBinary<TKey, TValue>(LWWDictionaryKey<TKey, TValue> key) =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+        private byte[] ToBinary<TKey, TValue>(ORMultiValueDictionaryKey<TKey, TValue> key) =>
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+
+        #endregion
+
         #region serialize GSet
-        
+
         private byte[] ToBinary(GSet<long> o) => ToProto(o).ToByteArray();
         private Proto.Msg.GSet ToProto(GSet<long> o)
         {
@@ -271,6 +298,7 @@ namespace Akka.DistributedData.Serialization
                 proto.StringElements.Add(e.Key);
                 proto.Dots.Add(e.Value.ToProto());
             }
+
             return proto;
         }
 
@@ -305,6 +333,7 @@ namespace Akka.DistributedData.Serialization
                 proto.OtherElements.Add(this.OtherMessageToProto(e.Key));
                 proto.Dots.Add(e.Value.ToProto());
             }
+
             return proto;
         }
 
@@ -1160,36 +1189,66 @@ namespace Akka.DistributedData.Serialization
             {
                 case DeletedDataManifest: return DeletedData.Instance;
                 case GSetManifest: return FromProto(Proto.Msg.GSet.Parser.ParseFrom(bytes));
-                case GSetKeyManifest: return null;
-                case ORSetManifest: return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
-                case ORSetKeyManifest: return null;
+                case GSetKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(GSetKey<>), 1);
+                case ORSetManifest:
+                {
+                        return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes.Decompress()));
+                }
+                case ORSetKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(ORSetKey<>), 1);
                 case ORSetAddManifest: return ORSetAddFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
                 case ORSetRemoveManifest: return ORSetRemoveFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
                 case ORSetFullManifest: return ORSetFullFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
                 case ORSetDeltaGroupManifest: return FromProto(Proto.Msg.ORSetDeltaGroup.Parser.ParseFrom(bytes));
                 case FlagManifest: return FromProto(Proto.Msg.Flag.Parser.ParseFrom(bytes));
-                case FlagKeyManifest: return null;
+                case FlagKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(FlagKey), 0);
                 case LWWRegisterManifest: return FromProto(Proto.Msg.LWWRegister.Parser.ParseFrom(bytes));
-                case LWWRegisterKeyManifest: return null;
+                case LWWRegisterKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(LWWRegisterKey<>), 1);
                 case GCounterManifest: return FromProto(Proto.Msg.GCounter.Parser.ParseFrom(bytes));
-                case GCounterKeyManifest: return null;
+                case GCounterKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(GCounterKey), 0);
                 case PNCounterManifest: return FromProto(Proto.Msg.PNCounter.Parser.ParseFrom(bytes));
-                case PNCounterKeyManifest: return null;
-                case ORMapManifest: return FromProto(Proto.Msg.ORMap.Parser.ParseFrom(bytes));
-                case ORMapKeyManifest: return null;
+                case PNCounterKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(PNCounterKey), 0);
+                case ORMapManifest:
+                {
+                        return FromProto(Proto.Msg.ORMap.Parser.ParseFrom(bytes.Decompress()));
+                }
+                case ORMapKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(ORDictionaryKey<,>), 2);
                 case ORMapPutManifest: return OrMapPutFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case ORMapRemoveManifest: return OrMapRemoveFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case ORMapRemoveKeyManifest: return OrMapRemoveKeyFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case ORMapUpdateManifest: return OrMapUpdateFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case ORMapDeltaGroupManifest: return OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
-                case LWWMapManifest: return FromProto(Proto.Msg.LWWMap.Parser.ParseFrom(bytes));
-                case LWWMapKeyManifest: return null;
-                case PNCounterMapManifest: return FromProto(Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes));
-                case PNCounterMapKeyManifest: return null;
-                case ORMultiMapManifest: return FromProto(Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes));
-                case ORMultiMapKeyManifest: return null;
+                case LWWMapManifest:
+                {
+                        return FromProto(Proto.Msg.LWWMap.Parser.ParseFrom(bytes.Decompress()));
+                }
+                case LWWMapKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(LWWDictionaryKey<,>), 2);
+                case PNCounterMapManifest:
+                {
+                        return FromProto(Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes.Decompress()));
+                }
+                case PNCounterMapKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(PNCounterDictionaryKey<>), 1);
+                case ORMultiMapManifest:
+                {
+                        return FromProto(Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes.Decompress()));
+                }
+                case ORMultiMapKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(ORMultiValueDictionaryKey<,>), 2);
                 case VersionVectorManifest: return this.VersionVectorFromProto(Proto.Msg.VersionVector.Parser.ParseFrom(bytes));
                 default: throw new NotSupportedException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType().FullName}]");
+            }
+        }
+
+        private object KeyFromProto(Proto.Msg.Key proto, Type destinationType, int arity)
+        {
+            var path = proto.Path.ToStringUtf8();
+            switch (arity)
+            {
+                case 1:
+                    return Activator.CreateInstance(destinationType.MakeGenericType(_mappings[proto.ValueCode]), path);
+                case 2:
+                    var type = destinationType.MakeGenericType(_mappings[proto.KeyCode], _mappings[proto.ValueCode]);
+                    return Activator.CreateInstance(type, path);
+                default:
+                    return Activator.CreateInstance(destinationType, path);
             }
         }
         
@@ -1432,10 +1491,20 @@ namespace Akka.DistributedData.Serialization
 
         private object FromProto(Proto.Msg.ORSet proto)
         {
-            var vvector = this.VersionVectorFromProto(proto.Vvector);
-            var dots = new List<VersionVector>(proto.Dots.Count);
-            foreach (var dot in proto.Dots)
-                dots.Add(this.VersionVectorFromProto(dot));
+            VersionVector vvector = null;
+            List<VersionVector> dots = null;
+
+            if (!(proto.Vvector is null))
+            {
+                vvector = this.VersionVectorFromProto(proto.Vvector);
+            }
+
+            if (!(proto.Dots is null))
+            {
+                dots = new List<VersionVector>(proto.Dots.Count);
+                foreach (var dot in proto.Dots)
+                    dots.Add(this.VersionVectorFromProto(dot));
+            }
 
             if (proto.IntElements.Count != 0)
             {

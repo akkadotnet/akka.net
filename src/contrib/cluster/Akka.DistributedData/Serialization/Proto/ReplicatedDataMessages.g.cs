@@ -37,83 +37,86 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             "cxgFIAMoEkICEAESUQoNb3RoZXJFbGVtZW50cxgGIAMoCzI6LkFra2EuRGlz",
             "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVz",
             "c2FnZRIYChBhY3RvclJlZkVsZW1lbnRzGAcgAygJEhAKCHR5cGVDb2RlGAog",
-            "ASgNIokCCg9PUlNldERlbHRhR3JvdXASVAoHZW50cmllcxgBIAMoCzJDLkFr",
-            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9S",
-            "U2V0RGVsdGFHcm91cC5FbnRyeRqfAQoFRW50cnkSTQoJb3BlcmF0aW9uGAEg",
-            "ASgOMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuT1JTZXREZWx0YU9wEkcKCnVuZGVybHlpbmcYAiABKAsyMy5Ba2th",
-            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PUlNl",
-            "dCIXCgRGbGFnEg8KB2VuYWJsZWQYASABKAgiyAEKC0xXV1JlZ2lzdGVyEhEK",
-            "CXRpbWVzdGFtcBgBIAEoEhJJCgRub2RlGAIgASgLMjsuQWtrYS5EaXN0cmli",
-            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVz",
-            "cxJJCgVzdGF0ZRgDIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRIQCgh0eXBlQ29kZRgK",
-            "IAEoDSK8AQoIR0NvdW50ZXISTQoHZW50cmllcxgBIAMoCzI8LkFra2EuRGlz",
-            "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkdDb3VudGVy",
-            "LkVudHJ5GmEKBUVudHJ5EkkKBG5vZGUYASABKAsyOy5Ba2thLkRpc3RyaWJ1",
-            "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNz",
-            "Eg0KBXZhbHVlGAIgASgMIqMBCglQTkNvdW50ZXISSgoKaW5jcmVtZW50cxgB",
-            "IAEoCzI2LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLkdDb3VudGVyEkoKCmRlY3JlbWVudHMYAiABKAsyNi5Ba2thLkRp",
-            "c3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5HQ291bnRl",
-            "ciKRAwoFT1JNYXASQQoEa2V5cxgBIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0EkoKB2VudHJpZXMY",
-            "AiADKAsyOS5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5PUk1hcC5FbnRyeRIPCgdrZXlDb2RlGAogASgNEhEKCXZhbHVl",
-            "Q29kZRgLIAEoDRrUAQoFRW50cnkSEQoJc3RyaW5nS2V5GAEgASgJEkkKBXZh",
-            "bHVlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEg4KBmludEtleRgDIAEoERIPCgds",
-            "b25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmli",
+            "ASgNIjcKA0tleRIMCgRwYXRoGAEgASgMEhEKCXZhbHVlQ29kZRgCIAEoDRIP",
+            "CgdrZXlDb2RlGAMgASgNIokCCg9PUlNldERlbHRhR3JvdXASVAoHZW50cmll",
+            "cxgBIAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLk9SU2V0RGVsdGFHcm91cC5FbnRyeRqfAQoFRW50cnkSTQoJ",
+            "b3BlcmF0aW9uGAEgASgOMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuT1JTZXREZWx0YU9wEkcKCnVuZGVybHlpbmcY",
+            "AiABKAsyMy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5PUlNldCIXCgRGbGFnEg8KB2VuYWJsZWQYASABKAgiyAEKC0xX",
+            "V1JlZ2lzdGVyEhEKCXRpbWVzdGFtcBgBIAEoEhJJCgRub2RlGAIgASgLMjsu",
+            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "VW5pcXVlQWRkcmVzcxJJCgVzdGF0ZRgDIAEoCzI6LkFra2EuRGlzdHJpYnV0",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRIQ",
+            "Cgh0eXBlQ29kZRgKIAEoDSK8AQoIR0NvdW50ZXISTQoHZW50cmllcxgBIAMo",
+            "CzI8LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLkdDb3VudGVyLkVudHJ5GmEKBUVudHJ5EkkKBG5vZGUYASABKAsyOy5B",
+            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5V",
+            "bmlxdWVBZGRyZXNzEg0KBXZhbHVlGAIgASgMIqMBCglQTkNvdW50ZXISSgoK",
+            "aW5jcmVtZW50cxgBIAEoCzI2LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
+            "bGl6YXRpb24uUHJvdG8uTXNnLkdDb3VudGVyEkoKCmRlY3JlbWVudHMYAiAB",
+            "KAsyNi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3Rv",
+            "Lk1zZy5HQ291bnRlciKRAwoFT1JNYXASQQoEa2V5cxgBIAEoCzIzLkFra2Eu",
+            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0",
+            "EkoKB2VudHJpZXMYAiADKAsyOS5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5PUk1hcC5FbnRyeRIPCgdrZXlDb2RlGAog",
+            "ASgNEhEKCXZhbHVlQ29kZRgLIAEoDRrUAQoFRW50cnkSEQoJc3RyaW5nS2V5",
+            "GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEg4KBmludEtl",
+            "eRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjou",
+            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "T3RoZXJNZXNzYWdlIs8ECg9PUk1hcERlbHRhR3JvdXASVAoHZW50cmllcxgB",
+            "IAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLk9STWFwRGVsdGFHcm91cC5FbnRyeRrXAQoITWFwRW50cnkSEQoJ",
+            "c3RyaW5nS2V5GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmli",
             "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdl",
-            "Is8ECg9PUk1hcERlbHRhR3JvdXASVAoHZW50cmllcxgBIAMoCzJDLkFra2Eu",
-            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9STWFw",
-            "RGVsdGFHcm91cC5FbnRyeRrXAQoITWFwRW50cnkSEQoJc3RyaW5nS2V5GAEg",
-            "ASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
-            "aWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEg4KBmludEtleRgD",
-            "IAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtr",
-            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3Ro",
-            "ZXJNZXNzYWdlGosCCgVFbnRyeRJNCglvcGVyYXRpb24YASABKA4yOi5Ba2th",
-            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PUk1h",
-            "cERlbHRhT3ASRwoKdW5kZXJseWluZxgCIAEoCzIzLkFra2EuRGlzdHJpYnV0",
-            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0Eg8KB3plcm9U",
-            "YWcYAyABKBESWQoJZW50cnlEYXRhGAQgAygLMkYuQWtrYS5EaXN0cmlidXRl",
-            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNYXBEZWx0YUdyb3Vw",
-            "Lk1hcEVudHJ5IpIDCgZMV1dNYXASQQoEa2V5cxgBIAEoCzIzLkFra2EuRGlz",
-            "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0EksK",
-            "B2VudHJpZXMYAiADKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZy5MV1dNYXAuRW50cnkSDwoHa2V5Q29kZRgKIAEo",
-            "DRIRCgl2YWx1ZUNvZGUYCyABKA0a0wEKBUVudHJ5EhEKCXN0cmluZ0tleRgB",
-            "IAEoCRJICgV2YWx1ZRgCIAEoCzI5LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkxXV1JlZ2lzdGVyEg4KBmludEtleRgD",
-            "IAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtr",
-            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3Ro",
-            "ZXJNZXNzYWdlIokDCgxQTkNvdW50ZXJNYXASQQoEa2V5cxgBIAEoCzIzLkFr",
+            "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
+            "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuT3RoZXJNZXNzYWdlGosCCgVFbnRyeRJNCglvcGVyYXRpb24Y",
+            "ASABKA4yOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5PUk1hcERlbHRhT3ASRwoKdW5kZXJseWluZxgCIAEoCzIzLkFr",
             "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9S",
-            "U2V0ElEKB2VudHJpZXMYAiADKAsyQC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QTkNvdW50ZXJNYXAuRW50cnkSDwoH",
-            "a2V5Q29kZRgDIAEoDRrRAQoFRW50cnkSEQoJc3RyaW5nS2V5GAEgASgJEkYK",
-            "BXZhbHVlGAIgASgLMjcuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
-            "dGlvbi5Qcm90by5Nc2cuUE5Db3VudGVyEg4KBmludEtleRgDIAEoERIPCgds",
-            "b25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmli",
-            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdl",
-            "Iq0DCgpPUk11bHRpTWFwEkEKBGtleXMYASABKAsyMy5Ba2thLkRpc3RyaWJ1",
-            "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PUlNldBJPCgdlbnRy",
-            "aWVzGAIgAygLMj4uQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuT1JNdWx0aU1hcC5FbnRyeRIXCg93aXRoVmFsdWVEZWx0",
-            "YXMYAyABKAgSDwoHa2V5Q29kZRgEIAEoDRIRCgl2YWx1ZUNvZGUYBSABKA0a",
-            "zQEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJCCgV2YWx1ZRgCIAEoCzIz",
-            "LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "Lk9SU2V0Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90",
-            "aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
-            "dGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlKi0KDE9SU2V0RGVsdGFPcBIH",
-            "CgNBZGQQABIKCgZSZW1vdmUQARIICgRGdWxsEAIqUgoMT1JNYXBEZWx0YU9w",
-            "EgwKCE9STWFwUHV0EAASDwoLT1JNYXBSZW1vdmUQARISCg5PUk1hcFJlbW92",
-            "ZUtleRACEg8KC09STWFwVXBkYXRlEANCAkgBYgZwcm90bzM="));
+            "U2V0Eg8KB3plcm9UYWcYAyABKBESWQoJZW50cnlEYXRhGAQgAygLMkYuQWtr",
+            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JN",
+            "YXBEZWx0YUdyb3VwLk1hcEVudHJ5IpIDCgZMV1dNYXASQQoEa2V5cxgBIAEo",
+            "CzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLk9SU2V0EksKB2VudHJpZXMYAiADKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5MV1dNYXAuRW50cnkSDwoH",
+            "a2V5Q29kZRgKIAEoDRIRCgl2YWx1ZUNvZGUYCyABKA0a0wEKBUVudHJ5EhEK",
+            "CXN0cmluZ0tleRgBIAEoCRJICgV2YWx1ZRgCIAEoCzI5LkFra2EuRGlzdHJp",
+            "YnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkxXV1JlZ2lzdGVy",
+            "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
+            "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuT3RoZXJNZXNzYWdlIokDCgxQTkNvdW50ZXJNYXASQQoEa2V5",
+            "cxgBIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLk9SU2V0ElEKB2VudHJpZXMYAiADKAsyQC5Ba2thLkRpc3Ry",
+            "aWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QTkNvdW50ZXJN",
+            "YXAuRW50cnkSDwoHa2V5Q29kZRgDIAEoDRrRAQoFRW50cnkSEQoJc3RyaW5n",
+            "S2V5GAEgASgJEkYKBXZhbHVlGAIgASgLMjcuQWtrYS5EaXN0cmlidXRlZERh",
+            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUE5Db3VudGVyEg4KBmludEtl",
+            "eRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjou",
+            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "T3RoZXJNZXNzYWdlIq0DCgpPUk11bHRpTWFwEkEKBGtleXMYASABKAsyMy5B",
+            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5P",
+            "UlNldBJPCgdlbnRyaWVzGAIgAygLMj4uQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNdWx0aU1hcC5FbnRyeRIXCg93",
+            "aXRoVmFsdWVEZWx0YXMYAyABKAgSDwoHa2V5Q29kZRgEIAEoDRIRCgl2YWx1",
+            "ZUNvZGUYBSABKA0azQEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJCCgV2",
+            "YWx1ZRgCIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
+            "b24uUHJvdG8uTXNnLk9SU2V0Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5",
+            "GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERh",
+            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlKi0KDE9S",
+            "U2V0RGVsdGFPcBIHCgNBZGQQABIKCgZSZW1vdmUQARIICgRGdWxsEAIqUgoM",
+            "T1JNYXBEZWx0YU9wEgwKCE9STWFwUHV0EAASDwoLT1JNYXBSZW1vdmUQARIS",
+            "Cg5PUk1hcFJlbW92ZUtleRACEg8KC09STWFwVXBkYXRlEANCAkgBYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatorMessagesReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaOp), }, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GSet), global::Akka.DistributedData.Serialization.Proto.Msg.GSet.Parser, new[]{ "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "TypeCode" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSet), global::Akka.DistributedData.Serialization.Proto.Msg.ORSet.Parser, new[]{ "Vvector", "Dots", "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Key), global::Akka.DistributedData.Serialization.Proto.Msg.Key.Parser, new[]{ "Path", "ValueCode", "KeyCode" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup), global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Types.Entry.Parser, new[]{ "Operation", "Underlying" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Flag), global::Akka.DistributedData.Serialization.Proto.Msg.Flag.Parser, new[]{ "Enabled" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister), global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister.Parser, new[]{ "Timestamp", "Node", "State", "TypeCode" }, null, null, null),
@@ -645,6 +648,179 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
+  internal sealed partial class Key : pb::IMessage<Key> {
+    private static readonly pb::MessageParser<Key> _parser = new pb::MessageParser<Key>(() => new Key());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Key> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key(Key other) : this() {
+      path_ = other.path_;
+      valueCode_ = other.valueCode_;
+      keyCode_ = other.keyCode_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key Clone() {
+      return new Key(this);
+    }
+
+    /// <summary>Field number for the "path" field.</summary>
+    public const int PathFieldNumber = 1;
+    private pb::ByteString path_ = pb::ByteString.Empty;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pb::ByteString Path {
+      get { return path_; }
+      set {
+        path_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "valueCode" field.</summary>
+    public const int ValueCodeFieldNumber = 2;
+    private uint valueCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint ValueCode {
+      get { return valueCode_; }
+      set {
+        valueCode_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "keyCode" field.</summary>
+    public const int KeyCodeFieldNumber = 3;
+    private uint keyCode_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint KeyCode {
+      get { return keyCode_; }
+      set {
+        keyCode_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Key);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Key other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Path != other.Path) return false;
+      if (ValueCode != other.ValueCode) return false;
+      if (KeyCode != other.KeyCode) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Path.Length != 0) hash ^= Path.GetHashCode();
+      if (ValueCode != 0) hash ^= ValueCode.GetHashCode();
+      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Path.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteBytes(Path);
+      }
+      if (ValueCode != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(ValueCode);
+      }
+      if (KeyCode != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(KeyCode);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Path.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Path);
+      }
+      if (ValueCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueCode);
+      }
+      if (KeyCode != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Key other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Path.Length != 0) {
+        Path = other.Path;
+      }
+      if (other.ValueCode != 0) {
+        ValueCode = other.ValueCode;
+      }
+      if (other.KeyCode != 0) {
+        KeyCode = other.KeyCode;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            Path = input.ReadBytes();
+            break;
+          }
+          case 16: {
+            ValueCode = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            KeyCode = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
   internal sealed partial class ORSetDeltaGroup : pb::IMessage<ORSetDeltaGroup> {
     private static readonly pb::MessageParser<ORSetDeltaGroup> _parser = new pb::MessageParser<ORSetDeltaGroup>(() => new ORSetDeltaGroup());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -652,7 +828,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -919,7 +1095,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1036,7 +1212,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1252,7 +1428,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1519,7 +1695,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1676,7 +1852,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2126,7 +2302,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2682,7 +2858,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[9]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[10]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3132,7 +3308,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[10]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3554,7 +3730,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[11]; }
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

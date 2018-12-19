@@ -27,20 +27,26 @@ namespace Akka.DistributedData.Serialization
         public static byte[] Compress(this IMessage msg)
         {
             using (var stream = new MemoryStream(BufferSize))
-            using (var gzip = new GZipStream(stream, CompressionMode.Compress))
             {
-                msg.WriteTo(gzip);
+                using (var gzip = new GZipStream(stream, CompressionMode.Compress))
+                {
+                    msg.WriteTo(gzip);
+                }
+
                 return stream.ToArray();
             }
         }
 
         public static byte[] Decompress(this byte[] bytes)
         {
-            using (var input = new MemoryStream(bytes))
-            using (var gzip = new GZipStream(input, CompressionMode.Decompress))
-            using (var output = new MemoryStream(bytes))
+            using (var output = new MemoryStream(BufferSize))
             {
-                gzip.CopyTo(output, BufferSize);
+                using (var input = new MemoryStream(bytes))
+                using (var gzip = new GZipStream(input, CompressionMode.Decompress))
+                {
+                    gzip.CopyTo(output, BufferSize);
+                }
+
                 return output.ToArray();
             }
         }

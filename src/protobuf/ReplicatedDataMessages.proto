@@ -28,6 +28,12 @@ message ORSet {
   uint32 typeCode = 10;
 }
 
+message Key{
+  bytes path = 1;
+  uint32 valueCode = 2;
+  uint32 keyCode = 3;
+}
+
 message ORSetDeltaGroup {
   message Entry {
     ORSetDeltaOp operation = 1;
