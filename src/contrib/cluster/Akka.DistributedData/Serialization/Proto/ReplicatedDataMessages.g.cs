@@ -24,110 +24,109 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           string.Concat(
             "ChxSZXBsaWNhdGVkRGF0YU1lc3NhZ2VzLnByb3RvEixBa2thLkRpc3RyaWJ1",
             "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZxoYUmVwbGljYXRvck1l",
-            "c3NhZ2VzLnByb3RvItABCgRHU2V0EhYKDnN0cmluZ0VsZW1lbnRzGAEgAygJ",
+            "c3NhZ2VzLnByb3RvItIBCgRHU2V0EhYKDnN0cmluZ0VsZW1lbnRzGAEgAygJ",
             "EhcKC2ludEVsZW1lbnRzGAIgAygRQgIQARIYCgxsb25nRWxlbWVudHMYAyAD",
             "KBJCAhABElEKDW90aGVyRWxlbWVudHMYBCADKAsyOi5Ba2thLkRpc3RyaWJ1",
             "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2US",
-            "GAoQYWN0b3JSZWZFbGVtZW50cxgFIAMoCRIQCgh0eXBlQ29kZRgKIAEoDSLq",
-            "AgoFT1JTZXQSTAoHdnZlY3RvchgBIAEoCzI7LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZlcnNpb25WZWN0b3ISSQoE",
-            "ZG90cxgCIAMoCzI7LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLlZlcnNpb25WZWN0b3ISFgoOc3RyaW5nRWxlbWVudHMY",
-            "AyADKAkSFwoLaW50RWxlbWVudHMYBCADKBFCAhABEhgKDGxvbmdFbGVtZW50",
-            "cxgFIAMoEkICEAESUQoNb3RoZXJFbGVtZW50cxgGIAMoCzI6LkFra2EuRGlz",
-            "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVz",
-            "c2FnZRIYChBhY3RvclJlZkVsZW1lbnRzGAcgAygJEhAKCHR5cGVDb2RlGAog",
-            "ASgNIjcKA0tleRIMCgRwYXRoGAEgASgMEhEKCXZhbHVlQ29kZRgCIAEoDRIP",
-            "CgdrZXlDb2RlGAMgASgNIokCCg9PUlNldERlbHRhR3JvdXASVAoHZW50cmll",
-            "cxgBIAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLk9SU2V0RGVsdGFHcm91cC5FbnRyeRqfAQoFRW50cnkSTQoJ",
-            "b3BlcmF0aW9uGAEgASgOMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuT1JTZXREZWx0YU9wEkcKCnVuZGVybHlpbmcY",
-            "AiABKAsyMy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5PUlNldCIXCgRGbGFnEg8KB2VuYWJsZWQYASABKAgiyAEKC0xX",
-            "V1JlZ2lzdGVyEhEKCXRpbWVzdGFtcBgBIAEoEhJJCgRub2RlGAIgASgLMjsu",
-            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "VW5pcXVlQWRkcmVzcxJJCgVzdGF0ZRgDIAEoCzI6LkFra2EuRGlzdHJpYnV0",
-            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRIQ",
-            "Cgh0eXBlQ29kZRgKIAEoDSK8AQoIR0NvdW50ZXISTQoHZW50cmllcxgBIAMo",
-            "CzI8LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLkdDb3VudGVyLkVudHJ5GmEKBUVudHJ5EkkKBG5vZGUYASABKAsyOy5B",
-            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5V",
-            "bmlxdWVBZGRyZXNzEg0KBXZhbHVlGAIgASgMIqMBCglQTkNvdW50ZXISSgoK",
-            "aW5jcmVtZW50cxgBIAEoCzI2LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLkdDb3VudGVyEkoKCmRlY3JlbWVudHMYAiAB",
-            "KAsyNi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3Rv",
-            "Lk1zZy5HQ291bnRlciKRAwoFT1JNYXASQQoEa2V5cxgBIAEoCzIzLkFra2Eu",
-            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0",
-            "EkoKB2VudHJpZXMYAiADKAsyOS5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5PUk1hcC5FbnRyeRIPCgdrZXlDb2RlGAog",
-            "ASgNEhEKCXZhbHVlQ29kZRgLIAEoDRrUAQoFRW50cnkSEQoJc3RyaW5nS2V5",
-            "GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEg4KBmludEtl",
-            "eRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjou",
-            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "T3RoZXJNZXNzYWdlIs8ECg9PUk1hcERlbHRhR3JvdXASVAoHZW50cmllcxgB",
-            "IAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLk9STWFwRGVsdGFHcm91cC5FbnRyeRrXAQoITWFwRW50cnkSEQoJ",
+            "GAoQYWN0b3JSZWZFbGVtZW50cxgFIAMoCRISCgplbGVtZW50VGFnGAogASgN",
+            "IuwCCgVPUlNldBJMCgd2dmVjdG9yGAEgASgLMjsuQWtrYS5EaXN0cmlidXRl",
+            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVyc2lvblZlY3RvchJJ",
+            "CgRkb3RzGAIgAygLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuVmVyc2lvblZlY3RvchIWCg5zdHJpbmdFbGVtZW50",
+            "cxgDIAMoCRIXCgtpbnRFbGVtZW50cxgEIAMoEUICEAESGAoMbG9uZ0VsZW1l",
+            "bnRzGAUgAygSQgIQARJRCg1vdGhlckVsZW1lbnRzGAYgAygLMjouQWtrYS5E",
+            "aXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJN",
+            "ZXNzYWdlEhgKEGFjdG9yUmVmRWxlbWVudHMYByADKAkSEgoKZWxlbWVudFRh",
+            "ZxgKIAEoDSI1CgNLZXkSDAoEcGF0aBgBIAEoDBIQCgh2YWx1ZVRhZxgCIAEo",
+            "DRIOCgZrZXlUYWcYAyABKA0iiQIKD09SU2V0RGVsdGFHcm91cBJUCgdlbnRy",
+            "aWVzGAEgAygLMkMuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuT1JTZXREZWx0YUdyb3VwLkVudHJ5Gp8BCgVFbnRyeRJN",
+            "CglvcGVyYXRpb24YASABKA4yOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5PUlNldERlbHRhT3ASRwoKdW5kZXJseWlu",
+            "ZxgCIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLk9SU2V0IhcKBEZsYWcSDwoHZW5hYmxlZBgBIAEoCCLKAQoL",
+            "TFdXUmVnaXN0ZXISEQoJdGltZXN0YW1wGAEgASgSEkkKBG5vZGUYAiABKAsy",
+            "Oy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
+            "Zy5VbmlxdWVBZGRyZXNzEkkKBXN0YXRlGAMgASgLMjouQWtrYS5EaXN0cmli",
+            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdl",
+            "EhIKCmVsZW1lbnRUYWcYCiABKA0ivAEKCEdDb3VudGVyEk0KB2VudHJpZXMY",
+            "ASADKAsyPC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5HQ291bnRlci5FbnRyeRphCgVFbnRyeRJJCgRub2RlGAEgASgL",
+            "MjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5N",
+            "c2cuVW5pcXVlQWRkcmVzcxINCgV2YWx1ZRgCIAEoDCKjAQoJUE5Db3VudGVy",
+            "EkoKCmluY3JlbWVudHMYASABKAsyNi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5HQ291bnRlchJKCgpkZWNyZW1lbnRz",
+            "GAIgASgLMjYuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuR0NvdW50ZXIilgMKBU9STWFwEkEKBGtleXMYASABKAsyMy5B",
+            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5P",
+            "UlNldBJKCgdlbnRyaWVzGAIgAygLMjkuQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNYXAuRW50cnkSFQoNdmFsdWVN",
+            "YW5pZmVzdBgKIAEoDBIQCgh2YWx1ZVRhZxgLIAEoDRrUAQoFRW50cnkSEQoJ",
             "c3RyaW5nS2V5GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmli",
             "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdl",
             "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
             "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlGosCCgVFbnRyeRJNCglvcGVyYXRpb24Y",
-            "ASABKA4yOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5PUk1hcERlbHRhT3ASRwoKdW5kZXJseWluZxgCIAEoCzIzLkFr",
-            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9S",
-            "U2V0Eg8KB3plcm9UYWcYAyABKBESWQoJZW50cnlEYXRhGAQgAygLMkYuQWtr",
-            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JN",
-            "YXBEZWx0YUdyb3VwLk1hcEVudHJ5IpIDCgZMV1dNYXASQQoEa2V5cxgBIAEo",
-            "CzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLk9SU2V0EksKB2VudHJpZXMYAiADKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
-            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5MV1dNYXAuRW50cnkSDwoH",
-            "a2V5Q29kZRgKIAEoDRIRCgl2YWx1ZUNvZGUYCyABKA0a0wEKBUVudHJ5EhEK",
-            "CXN0cmluZ0tleRgBIAEoCRJICgV2YWx1ZRgCIAEoCzI5LkFra2EuRGlzdHJp",
-            "YnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkxXV1JlZ2lzdGVy",
-            "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
-            "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlIokDCgxQTkNvdW50ZXJNYXASQQoEa2V5",
-            "cxgBIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLk9SU2V0ElEKB2VudHJpZXMYAiADKAsyQC5Ba2thLkRpc3Ry",
-            "aWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QTkNvdW50ZXJN",
-            "YXAuRW50cnkSDwoHa2V5Q29kZRgDIAEoDRrRAQoFRW50cnkSEQoJc3RyaW5n",
-            "S2V5GAEgASgJEkYKBXZhbHVlGAIgASgLMjcuQWtrYS5EaXN0cmlidXRlZERh",
-            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUE5Db3VudGVyEg4KBmludEtl",
+            "cm90by5Nc2cuT3RoZXJNZXNzYWdlIs8ECg9PUk1hcERlbHRhR3JvdXASVAoH",
+            "ZW50cmllcxgBIAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6",
+            "YXRpb24uUHJvdG8uTXNnLk9STWFwRGVsdGFHcm91cC5FbnRyeRrXAQoITWFw",
+            "RW50cnkSEQoJc3RyaW5nS2V5GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtr",
+            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3Ro",
+            "ZXJNZXNzYWdlEg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwK",
+            "CG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlGosCCgVFbnRyeRJNCglv",
+            "cGVyYXRpb24YASABKA4yOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
+            "emF0aW9uLlByb3RvLk1zZy5PUk1hcERlbHRhT3ASRwoKdW5kZXJseWluZxgC",
+            "IAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLk9SU2V0Eg8KB3plcm9UYWcYAyABKBESWQoJZW50cnlEYXRhGAQg",
+            "AygLMkYuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuT1JNYXBEZWx0YUdyb3VwLk1hcEVudHJ5IoADCgZMV1dNYXASQQoE",
+            "a2V5cxgBIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
+            "b24uUHJvdG8uTXNnLk9SU2V0EksKB2VudHJpZXMYAiADKAsyOi5Ba2thLkRp",
+            "c3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5MV1dNYXAu",
+            "RW50cnkSEAoIdmFsdWVUYWcYCiABKA0a0wEKBUVudHJ5EhEKCXN0cmluZ0tl",
+            "eRgBIAEoCRJICgV2YWx1ZRgCIAEoCzI5LkFra2EuRGlzdHJpYnV0ZWREYXRh",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkxXV1JlZ2lzdGVyEg4KBmludEtl",
             "eRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjou",
             "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "T3RoZXJNZXNzYWdlIq0DCgpPUk11bHRpTWFwEkEKBGtleXMYASABKAsyMy5B",
-            "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5P",
-            "UlNldBJPCgdlbnRyaWVzGAIgAygLMj4uQWtrYS5EaXN0cmlidXRlZERhdGEu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNdWx0aU1hcC5FbnRyeRIXCg93",
-            "aXRoVmFsdWVEZWx0YXMYAyABKAgSDwoHa2V5Q29kZRgEIAEoDRIRCgl2YWx1",
-            "ZUNvZGUYBSABKA0azQEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJCCgV2",
-            "YWx1ZRgCIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk9SU2V0Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5",
-            "GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERh",
-            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlKi0KDE9S",
-            "U2V0RGVsdGFPcBIHCgNBZGQQABIKCgZSZW1vdmUQARIICgRGdWxsEAIqUgoM",
-            "T1JNYXBEZWx0YU9wEgwKCE9STWFwUHV0EAASDwoLT1JNYXBSZW1vdmUQARIS",
-            "Cg5PUk1hcFJlbW92ZUtleRACEg8KC09STWFwVXBkYXRlEANCAkgBYgZwcm90",
-            "bzM="));
+            "T3RoZXJNZXNzYWdlIvgCCgxQTkNvdW50ZXJNYXASQQoEa2V5cxgBIAEoCzIz",
+            "LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
+            "Lk9SU2V0ElEKB2VudHJpZXMYAiADKAsyQC5Ba2thLkRpc3RyaWJ1dGVkRGF0",
+            "YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QTkNvdW50ZXJNYXAuRW50cnka",
+            "0QEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJGCgV2YWx1ZRgCIAEoCzI3",
+            "LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
+            "LlBOQ291bnRlchIOCgZpbnRLZXkYAyABKBESDwoHbG9uZ0tleRgEIAEoEhJM",
+            "CghvdGhlcktleRgFIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
+            "bGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSKbAwoKT1JNdWx0aU1h",
+            "cBJBCgRrZXlzGAEgASgLMjMuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuT1JTZXQSTwoHZW50cmllcxgCIAMoCzI+LkFr",
+            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9S",
+            "TXVsdGlNYXAuRW50cnkSFwoPd2l0aFZhbHVlRGVsdGFzGAMgASgIEhAKCHZh",
+            "bHVlVGFnGAogASgNGs0BCgVFbnRyeRIRCglzdHJpbmdLZXkYASABKAkSQgoF",
+            "dmFsdWUYAiABKAsyMy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0",
+            "aW9uLlByb3RvLk1zZy5PUlNldBIOCgZpbnRLZXkYAyABKBESDwoHbG9uZ0tl",
+            "eRgEIAEoEhJMCghvdGhlcktleRgFIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSotCgxP",
+            "UlNldERlbHRhT3ASBwoDQWRkEAASCgoGUmVtb3ZlEAESCAoERnVsbBACKlIK",
+            "DE9STWFwRGVsdGFPcBIMCghPUk1hcFB1dBAAEg8KC09STWFwUmVtb3ZlEAES",
+            "EgoOT1JNYXBSZW1vdmVLZXkQAhIPCgtPUk1hcFVwZGF0ZRADQgJIAWIGcHJv",
+            "dG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatorMessagesReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaOp), }, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GSet), global::Akka.DistributedData.Serialization.Proto.Msg.GSet.Parser, new[]{ "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "TypeCode" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSet), global::Akka.DistributedData.Serialization.Proto.Msg.ORSet.Parser, new[]{ "Vvector", "Dots", "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "TypeCode" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Key), global::Akka.DistributedData.Serialization.Proto.Msg.Key.Parser, new[]{ "Path", "ValueCode", "KeyCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GSet), global::Akka.DistributedData.Serialization.Proto.Msg.GSet.Parser, new[]{ "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "ElementTag" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSet), global::Akka.DistributedData.Serialization.Proto.Msg.ORSet.Parser, new[]{ "Vvector", "Dots", "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements", "ElementTag" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Key), global::Akka.DistributedData.Serialization.Proto.Msg.Key.Parser, new[]{ "Path", "ValueTag", "KeyTag" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup), global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaGroup.Types.Entry.Parser, new[]{ "Operation", "Underlying" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Flag), global::Akka.DistributedData.Serialization.Proto.Msg.Flag.Parser, new[]{ "Enabled" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister), global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister.Parser, new[]{ "Timestamp", "Node", "State", "TypeCode" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister), global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister.Parser, new[]{ "Timestamp", "Node", "State", "ElementTag" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GCounter), global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Types.Entry.Parser, new[]{ "Node", "Value" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounter), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounter.Parser, new[]{ "Increments", "Decrements" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Parser, new[]{ "Keys", "Entries", "KeyCode", "ValueCode" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Parser, new[]{ "Keys", "Entries", "ValueManifest", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry.Parser, new[]{ "Operation", "Underlying", "ZeroTag", "EntryData" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Parser, new[]{ "Keys", "Entries", "KeyCode", "ValueCode" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Parser, new[]{ "Keys", "Entries", "KeyCode" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Parser, new[]{ "Keys", "Entries", "WithValueDeltas", "KeyCode", "ValueCode" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)})
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Parser, new[]{ "Keys", "Entries", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Parser, new[]{ "Keys", "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Parser, new[]{ "Keys", "Entries", "WithValueDeltas", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)})
           }));
     }
     #endregion
@@ -179,7 +178,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_ = other.longElements_.Clone();
       otherElements_ = other.otherElements_.Clone();
       actorRefElements_ = other.actorRefElements_.Clone();
-      typeCode_ = other.typeCode_;
+      elementTag_ = other.elementTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -240,14 +239,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return actorRefElements_; }
     }
 
-    /// <summary>Field number for the "typeCode" field.</summary>
-    public const int TypeCodeFieldNumber = 10;
-    private uint typeCode_;
+    /// <summary>Field number for the "elementTag" field.</summary>
+    public const int ElementTagFieldNumber = 10;
+    private uint elementTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint TypeCode {
-      get { return typeCode_; }
+    public uint ElementTag {
+      get { return elementTag_; }
       set {
-        typeCode_ = value;
+        elementTag_ = value;
       }
     }
 
@@ -269,7 +268,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if(!longElements_.Equals(other.longElements_)) return false;
       if(!otherElements_.Equals(other.otherElements_)) return false;
       if(!actorRefElements_.Equals(other.actorRefElements_)) return false;
-      if (TypeCode != other.TypeCode) return false;
+      if (ElementTag != other.ElementTag) return false;
       return true;
     }
 
@@ -281,7 +280,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       hash ^= longElements_.GetHashCode();
       hash ^= otherElements_.GetHashCode();
       hash ^= actorRefElements_.GetHashCode();
-      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
+      if (ElementTag != 0) hash ^= ElementTag.GetHashCode();
       return hash;
     }
 
@@ -297,9 +296,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_.WriteTo(output, _repeated_longElements_codec);
       otherElements_.WriteTo(output, _repeated_otherElements_codec);
       actorRefElements_.WriteTo(output, _repeated_actorRefElements_codec);
-      if (TypeCode != 0) {
+      if (ElementTag != 0) {
         output.WriteRawTag(80);
-        output.WriteUInt32(TypeCode);
+        output.WriteUInt32(ElementTag);
       }
     }
 
@@ -311,8 +310,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       size += longElements_.CalculateSize(_repeated_longElements_codec);
       size += otherElements_.CalculateSize(_repeated_otherElements_codec);
       size += actorRefElements_.CalculateSize(_repeated_actorRefElements_codec);
-      if (TypeCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
+      if (ElementTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ElementTag);
       }
       return size;
     }
@@ -327,8 +326,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_.Add(other.longElements_);
       otherElements_.Add(other.otherElements_);
       actorRefElements_.Add(other.actorRefElements_);
-      if (other.TypeCode != 0) {
-        TypeCode = other.TypeCode;
+      if (other.ElementTag != 0) {
+        ElementTag = other.ElementTag;
       }
     }
 
@@ -363,7 +362,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 80: {
-            TypeCode = input.ReadUInt32();
+            ElementTag = input.ReadUInt32();
             break;
           }
         }
@@ -403,7 +402,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_ = other.longElements_.Clone();
       otherElements_ = other.otherElements_.Clone();
       actorRefElements_ = other.actorRefElements_.Clone();
-      typeCode_ = other.typeCode_;
+      elementTag_ = other.elementTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -485,14 +484,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return actorRefElements_; }
     }
 
-    /// <summary>Field number for the "typeCode" field.</summary>
-    public const int TypeCodeFieldNumber = 10;
-    private uint typeCode_;
+    /// <summary>Field number for the "elementTag" field.</summary>
+    public const int ElementTagFieldNumber = 10;
+    private uint elementTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint TypeCode {
-      get { return typeCode_; }
+    public uint ElementTag {
+      get { return elementTag_; }
       set {
-        typeCode_ = value;
+        elementTag_ = value;
       }
     }
 
@@ -516,7 +515,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if(!longElements_.Equals(other.longElements_)) return false;
       if(!otherElements_.Equals(other.otherElements_)) return false;
       if(!actorRefElements_.Equals(other.actorRefElements_)) return false;
-      if (TypeCode != other.TypeCode) return false;
+      if (ElementTag != other.ElementTag) return false;
       return true;
     }
 
@@ -530,7 +529,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       hash ^= longElements_.GetHashCode();
       hash ^= otherElements_.GetHashCode();
       hash ^= actorRefElements_.GetHashCode();
-      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
+      if (ElementTag != 0) hash ^= ElementTag.GetHashCode();
       return hash;
     }
 
@@ -551,9 +550,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_.WriteTo(output, _repeated_longElements_codec);
       otherElements_.WriteTo(output, _repeated_otherElements_codec);
       actorRefElements_.WriteTo(output, _repeated_actorRefElements_codec);
-      if (TypeCode != 0) {
+      if (ElementTag != 0) {
         output.WriteRawTag(80);
-        output.WriteUInt32(TypeCode);
+        output.WriteUInt32(ElementTag);
       }
     }
 
@@ -569,8 +568,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       size += longElements_.CalculateSize(_repeated_longElements_codec);
       size += otherElements_.CalculateSize(_repeated_otherElements_codec);
       size += actorRefElements_.CalculateSize(_repeated_actorRefElements_codec);
-      if (TypeCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
+      if (ElementTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ElementTag);
       }
       return size;
     }
@@ -592,8 +591,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       longElements_.Add(other.longElements_);
       otherElements_.Add(other.otherElements_);
       actorRefElements_.Add(other.actorRefElements_);
-      if (other.TypeCode != 0) {
-        TypeCode = other.TypeCode;
+      if (other.ElementTag != 0) {
+        ElementTag = other.ElementTag;
       }
     }
 
@@ -639,7 +638,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 80: {
-            TypeCode = input.ReadUInt32();
+            ElementTag = input.ReadUInt32();
             break;
           }
         }
@@ -673,8 +672,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public Key(Key other) : this() {
       path_ = other.path_;
-      valueCode_ = other.valueCode_;
-      keyCode_ = other.keyCode_;
+      valueTag_ = other.valueTag_;
+      keyTag_ = other.keyTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -693,25 +692,25 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "valueCode" field.</summary>
-    public const int ValueCodeFieldNumber = 2;
-    private uint valueCode_;
+    /// <summary>Field number for the "valueTag" field.</summary>
+    public const int ValueTagFieldNumber = 2;
+    private uint valueTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint ValueCode {
-      get { return valueCode_; }
+    public uint ValueTag {
+      get { return valueTag_; }
       set {
-        valueCode_ = value;
+        valueTag_ = value;
       }
     }
 
-    /// <summary>Field number for the "keyCode" field.</summary>
-    public const int KeyCodeFieldNumber = 3;
-    private uint keyCode_;
+    /// <summary>Field number for the "keyTag" field.</summary>
+    public const int KeyTagFieldNumber = 3;
+    private uint keyTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint KeyCode {
-      get { return keyCode_; }
+    public uint KeyTag {
+      get { return keyTag_; }
       set {
-        keyCode_ = value;
+        keyTag_ = value;
       }
     }
 
@@ -729,8 +728,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         return true;
       }
       if (Path != other.Path) return false;
-      if (ValueCode != other.ValueCode) return false;
-      if (KeyCode != other.KeyCode) return false;
+      if (ValueTag != other.ValueTag) return false;
+      if (KeyTag != other.KeyTag) return false;
       return true;
     }
 
@@ -738,8 +737,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       if (Path.Length != 0) hash ^= Path.GetHashCode();
-      if (ValueCode != 0) hash ^= ValueCode.GetHashCode();
-      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
+      if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
+      if (KeyTag != 0) hash ^= KeyTag.GetHashCode();
       return hash;
     }
 
@@ -754,13 +753,13 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(10);
         output.WriteBytes(Path);
       }
-      if (ValueCode != 0) {
+      if (ValueTag != 0) {
         output.WriteRawTag(16);
-        output.WriteUInt32(ValueCode);
+        output.WriteUInt32(ValueTag);
       }
-      if (KeyCode != 0) {
+      if (KeyTag != 0) {
         output.WriteRawTag(24);
-        output.WriteUInt32(KeyCode);
+        output.WriteUInt32(KeyTag);
       }
     }
 
@@ -770,11 +769,11 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Path.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeBytesSize(Path);
       }
-      if (ValueCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueCode);
+      if (ValueTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
       }
-      if (KeyCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
+      if (KeyTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyTag);
       }
       return size;
     }
@@ -787,11 +786,11 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (other.Path.Length != 0) {
         Path = other.Path;
       }
-      if (other.ValueCode != 0) {
-        ValueCode = other.ValueCode;
+      if (other.ValueTag != 0) {
+        ValueTag = other.ValueTag;
       }
-      if (other.KeyCode != 0) {
-        KeyCode = other.KeyCode;
+      if (other.KeyTag != 0) {
+        KeyTag = other.KeyTag;
       }
     }
 
@@ -808,11 +807,11 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 16: {
-            ValueCode = input.ReadUInt32();
+            ValueTag = input.ReadUInt32();
             break;
           }
           case 24: {
-            KeyCode = input.ReadUInt32();
+            KeyTag = input.ReadUInt32();
             break;
           }
         }
@@ -1232,7 +1231,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       timestamp_ = other.timestamp_;
       Node = other.node_ != null ? other.Node.Clone() : null;
       State = other.state_ != null ? other.State.Clone() : null;
-      typeCode_ = other.typeCode_;
+      elementTag_ = other.elementTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1273,17 +1272,17 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "typeCode" field.</summary>
-    public const int TypeCodeFieldNumber = 10;
-    private uint typeCode_;
+    /// <summary>Field number for the "elementTag" field.</summary>
+    public const int ElementTagFieldNumber = 10;
+    private uint elementTag_;
     /// <summary>
     /// Type code for .NET generics reification 
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint TypeCode {
-      get { return typeCode_; }
+    public uint ElementTag {
+      get { return elementTag_; }
       set {
-        typeCode_ = value;
+        elementTag_ = value;
       }
     }
 
@@ -1303,7 +1302,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Timestamp != other.Timestamp) return false;
       if (!object.Equals(Node, other.Node)) return false;
       if (!object.Equals(State, other.State)) return false;
-      if (TypeCode != other.TypeCode) return false;
+      if (ElementTag != other.ElementTag) return false;
       return true;
     }
 
@@ -1313,7 +1312,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
       if (node_ != null) hash ^= Node.GetHashCode();
       if (state_ != null) hash ^= State.GetHashCode();
-      if (TypeCode != 0) hash ^= TypeCode.GetHashCode();
+      if (ElementTag != 0) hash ^= ElementTag.GetHashCode();
       return hash;
     }
 
@@ -1336,9 +1335,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(26);
         output.WriteMessage(State);
       }
-      if (TypeCode != 0) {
+      if (ElementTag != 0) {
         output.WriteRawTag(80);
-        output.WriteUInt32(TypeCode);
+        output.WriteUInt32(ElementTag);
       }
     }
 
@@ -1354,8 +1353,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (state_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(State);
       }
-      if (TypeCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TypeCode);
+      if (ElementTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ElementTag);
       }
       return size;
     }
@@ -1380,8 +1379,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         }
         State.MergeFrom(other.State);
       }
-      if (other.TypeCode != 0) {
-        TypeCode = other.TypeCode;
+      if (other.ElementTag != 0) {
+        ElementTag = other.ElementTag;
       }
     }
 
@@ -1412,7 +1411,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 80: {
-            TypeCode = input.ReadUInt32();
+            ElementTag = input.ReadUInt32();
             break;
           }
         }
@@ -1871,8 +1870,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public ORMap(ORMap other) : this() {
       Keys = other.keys_ != null ? other.Keys.Clone() : null;
       entries_ = other.entries_.Clone();
-      keyCode_ = other.keyCode_;
-      valueCode_ = other.valueCode_;
+      valueManifest_ = other.valueManifest_;
+      valueTag_ = other.valueTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1901,28 +1900,28 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return entries_; }
     }
 
-    /// <summary>Field number for the "keyCode" field.</summary>
-    public const int KeyCodeFieldNumber = 10;
-    private uint keyCode_;
+    /// <summary>Field number for the "valueManifest" field.</summary>
+    public const int ValueManifestFieldNumber = 10;
+    private pb::ByteString valueManifest_ = pb::ByteString.Empty;
     /// <summary>
     /// Type codes for .NET generics reification 
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint KeyCode {
-      get { return keyCode_; }
+    public pb::ByteString ValueManifest {
+      get { return valueManifest_; }
       set {
-        keyCode_ = value;
+        valueManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
-    /// <summary>Field number for the "valueCode" field.</summary>
-    public const int ValueCodeFieldNumber = 11;
-    private uint valueCode_;
+    /// <summary>Field number for the "valueTag" field.</summary>
+    public const int ValueTagFieldNumber = 11;
+    private uint valueTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint ValueCode {
-      get { return valueCode_; }
+    public uint ValueTag {
+      get { return valueTag_; }
       set {
-        valueCode_ = value;
+        valueTag_ = value;
       }
     }
 
@@ -1941,8 +1940,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Keys, other.Keys)) return false;
       if(!entries_.Equals(other.entries_)) return false;
-      if (KeyCode != other.KeyCode) return false;
-      if (ValueCode != other.ValueCode) return false;
+      if (ValueManifest != other.ValueManifest) return false;
+      if (ValueTag != other.ValueTag) return false;
       return true;
     }
 
@@ -1951,8 +1950,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (keys_ != null) hash ^= Keys.GetHashCode();
       hash ^= entries_.GetHashCode();
-      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
-      if (ValueCode != 0) hash ^= ValueCode.GetHashCode();
+      if (ValueManifest.Length != 0) hash ^= ValueManifest.GetHashCode();
+      if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
       return hash;
     }
 
@@ -1968,13 +1967,13 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteMessage(Keys);
       }
       entries_.WriteTo(output, _repeated_entries_codec);
-      if (KeyCode != 0) {
-        output.WriteRawTag(80);
-        output.WriteUInt32(KeyCode);
+      if (ValueManifest.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteBytes(ValueManifest);
       }
-      if (ValueCode != 0) {
+      if (ValueTag != 0) {
         output.WriteRawTag(88);
-        output.WriteUInt32(ValueCode);
+        output.WriteUInt32(ValueTag);
       }
     }
 
@@ -1985,11 +1984,11 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Keys);
       }
       size += entries_.CalculateSize(_repeated_entries_codec);
-      if (KeyCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
+      if (ValueManifest.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(ValueManifest);
       }
-      if (ValueCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueCode);
+      if (ValueTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
       }
       return size;
     }
@@ -2006,11 +2005,11 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         Keys.MergeFrom(other.Keys);
       }
       entries_.Add(other.entries_);
-      if (other.KeyCode != 0) {
-        KeyCode = other.KeyCode;
+      if (other.ValueManifest.Length != 0) {
+        ValueManifest = other.ValueManifest;
       }
-      if (other.ValueCode != 0) {
-        ValueCode = other.ValueCode;
+      if (other.ValueTag != 0) {
+        ValueTag = other.ValueTag;
       }
     }
 
@@ -2033,12 +2032,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             entries_.AddEntriesFrom(input, _repeated_entries_codec);
             break;
           }
-          case 80: {
-            KeyCode = input.ReadUInt32();
+          case 82: {
+            ValueManifest = input.ReadBytes();
             break;
           }
           case 88: {
-            ValueCode = input.ReadUInt32();
+            ValueTag = input.ReadUInt32();
             break;
           }
         }
@@ -2877,8 +2876,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public LWWMap(LWWMap other) : this() {
       Keys = other.keys_ != null ? other.Keys.Clone() : null;
       entries_ = other.entries_.Clone();
-      keyCode_ = other.keyCode_;
-      valueCode_ = other.valueCode_;
+      valueTag_ = other.valueTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2907,28 +2905,17 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return entries_; }
     }
 
-    /// <summary>Field number for the "keyCode" field.</summary>
-    public const int KeyCodeFieldNumber = 10;
-    private uint keyCode_;
+    /// <summary>Field number for the "valueTag" field.</summary>
+    public const int ValueTagFieldNumber = 10;
+    private uint valueTag_;
     /// <summary>
     /// Type codes for .NET generics reification 
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint KeyCode {
-      get { return keyCode_; }
+    public uint ValueTag {
+      get { return valueTag_; }
       set {
-        keyCode_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "valueCode" field.</summary>
-    public const int ValueCodeFieldNumber = 11;
-    private uint valueCode_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint ValueCode {
-      get { return valueCode_; }
-      set {
-        valueCode_ = value;
+        valueTag_ = value;
       }
     }
 
@@ -2947,8 +2934,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Keys, other.Keys)) return false;
       if(!entries_.Equals(other.entries_)) return false;
-      if (KeyCode != other.KeyCode) return false;
-      if (ValueCode != other.ValueCode) return false;
+      if (ValueTag != other.ValueTag) return false;
       return true;
     }
 
@@ -2957,8 +2943,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (keys_ != null) hash ^= Keys.GetHashCode();
       hash ^= entries_.GetHashCode();
-      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
-      if (ValueCode != 0) hash ^= ValueCode.GetHashCode();
+      if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
       return hash;
     }
 
@@ -2974,13 +2959,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteMessage(Keys);
       }
       entries_.WriteTo(output, _repeated_entries_codec);
-      if (KeyCode != 0) {
+      if (ValueTag != 0) {
         output.WriteRawTag(80);
-        output.WriteUInt32(KeyCode);
-      }
-      if (ValueCode != 0) {
-        output.WriteRawTag(88);
-        output.WriteUInt32(ValueCode);
+        output.WriteUInt32(ValueTag);
       }
     }
 
@@ -2991,11 +2972,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Keys);
       }
       size += entries_.CalculateSize(_repeated_entries_codec);
-      if (KeyCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
-      }
-      if (ValueCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueCode);
+      if (ValueTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
       }
       return size;
     }
@@ -3012,11 +2990,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         Keys.MergeFrom(other.Keys);
       }
       entries_.Add(other.entries_);
-      if (other.KeyCode != 0) {
-        KeyCode = other.KeyCode;
-      }
-      if (other.ValueCode != 0) {
-        ValueCode = other.ValueCode;
+      if (other.ValueTag != 0) {
+        ValueTag = other.ValueTag;
       }
     }
 
@@ -3040,11 +3015,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 80: {
-            KeyCode = input.ReadUInt32();
-            break;
-          }
-          case 88: {
-            ValueCode = input.ReadUInt32();
+            ValueTag = input.ReadUInt32();
             break;
           }
         }
@@ -3327,7 +3298,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public PNCounterMap(PNCounterMap other) : this() {
       Keys = other.keys_ != null ? other.Keys.Clone() : null;
       entries_ = other.entries_.Clone();
-      keyCode_ = other.keyCode_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3356,20 +3326,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return entries_; }
     }
 
-    /// <summary>Field number for the "keyCode" field.</summary>
-    public const int KeyCodeFieldNumber = 3;
-    private uint keyCode_;
-    /// <summary>
-    /// Type code for .NET generics reification 
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint KeyCode {
-      get { return keyCode_; }
-      set {
-        keyCode_ = value;
-      }
-    }
-
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as PNCounterMap);
@@ -3385,7 +3341,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Keys, other.Keys)) return false;
       if(!entries_.Equals(other.entries_)) return false;
-      if (KeyCode != other.KeyCode) return false;
       return true;
     }
 
@@ -3394,7 +3349,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (keys_ != null) hash ^= Keys.GetHashCode();
       hash ^= entries_.GetHashCode();
-      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
       return hash;
     }
 
@@ -3410,10 +3364,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteMessage(Keys);
       }
       entries_.WriteTo(output, _repeated_entries_codec);
-      if (KeyCode != 0) {
-        output.WriteRawTag(24);
-        output.WriteUInt32(KeyCode);
-      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3423,9 +3373,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Keys);
       }
       size += entries_.CalculateSize(_repeated_entries_codec);
-      if (KeyCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
-      }
       return size;
     }
 
@@ -3441,9 +3388,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         Keys.MergeFrom(other.Keys);
       }
       entries_.Add(other.entries_);
-      if (other.KeyCode != 0) {
-        KeyCode = other.KeyCode;
-      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3463,10 +3407,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           }
           case 18: {
             entries_.AddEntriesFrom(input, _repeated_entries_codec);
-            break;
-          }
-          case 24: {
-            KeyCode = input.ReadUInt32();
             break;
           }
         }
@@ -3750,8 +3690,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       Keys = other.keys_ != null ? other.Keys.Clone() : null;
       entries_ = other.entries_.Clone();
       withValueDeltas_ = other.withValueDeltas_;
-      keyCode_ = other.keyCode_;
-      valueCode_ = other.valueCode_;
+      valueTag_ = other.valueTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3791,28 +3730,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "keyCode" field.</summary>
-    public const int KeyCodeFieldNumber = 4;
-    private uint keyCode_;
-    /// <summary>
-    /// Type codes for .NET generics reification 
-    /// </summary>
+    /// <summary>Field number for the "valueTag" field.</summary>
+    public const int ValueTagFieldNumber = 10;
+    private uint valueTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint KeyCode {
-      get { return keyCode_; }
+    public uint ValueTag {
+      get { return valueTag_; }
       set {
-        keyCode_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "valueCode" field.</summary>
-    public const int ValueCodeFieldNumber = 5;
-    private uint valueCode_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint ValueCode {
-      get { return valueCode_; }
-      set {
-        valueCode_ = value;
+        valueTag_ = value;
       }
     }
 
@@ -3832,8 +3757,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (!object.Equals(Keys, other.Keys)) return false;
       if(!entries_.Equals(other.entries_)) return false;
       if (WithValueDeltas != other.WithValueDeltas) return false;
-      if (KeyCode != other.KeyCode) return false;
-      if (ValueCode != other.ValueCode) return false;
+      if (ValueTag != other.ValueTag) return false;
       return true;
     }
 
@@ -3843,8 +3767,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (keys_ != null) hash ^= Keys.GetHashCode();
       hash ^= entries_.GetHashCode();
       if (WithValueDeltas != false) hash ^= WithValueDeltas.GetHashCode();
-      if (KeyCode != 0) hash ^= KeyCode.GetHashCode();
-      if (ValueCode != 0) hash ^= ValueCode.GetHashCode();
+      if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
       return hash;
     }
 
@@ -3864,13 +3787,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(24);
         output.WriteBool(WithValueDeltas);
       }
-      if (KeyCode != 0) {
-        output.WriteRawTag(32);
-        output.WriteUInt32(KeyCode);
-      }
-      if (ValueCode != 0) {
-        output.WriteRawTag(40);
-        output.WriteUInt32(ValueCode);
+      if (ValueTag != 0) {
+        output.WriteRawTag(80);
+        output.WriteUInt32(ValueTag);
       }
     }
 
@@ -3884,11 +3803,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (WithValueDeltas != false) {
         size += 1 + 1;
       }
-      if (KeyCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyCode);
-      }
-      if (ValueCode != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueCode);
+      if (ValueTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
       }
       return size;
     }
@@ -3908,11 +3824,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (other.WithValueDeltas != false) {
         WithValueDeltas = other.WithValueDeltas;
       }
-      if (other.KeyCode != 0) {
-        KeyCode = other.KeyCode;
-      }
-      if (other.ValueCode != 0) {
-        ValueCode = other.ValueCode;
+      if (other.ValueTag != 0) {
+        ValueTag = other.ValueTag;
       }
     }
 
@@ -3939,12 +3852,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             WithValueDeltas = input.ReadBool();
             break;
           }
-          case 32: {
-            KeyCode = input.ReadUInt32();
-            break;
-          }
-          case 40: {
-            ValueCode = input.ReadUInt32();
+          case 80: {
+            ValueTag = input.ReadUInt32();
             break;
           }
         }

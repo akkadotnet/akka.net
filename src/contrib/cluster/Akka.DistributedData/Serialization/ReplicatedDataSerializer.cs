@@ -168,19 +168,19 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary(GCounterKey key) => new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id) }.ToByteArray();
         private byte[] ToBinary(PNCounterKey key) => new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id) }.ToByteArray();
         private byte[] ToBinary<T>(GSetKey<T> key) => 
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)]}.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueTag = _mappings[typeof(T)]}.ToByteArray();
         private byte[] ToBinary<T>(ORSetKey<T> key) =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueTag = _mappings[typeof(T)] }.ToByteArray();
         private byte[] ToBinary<T>(LWWRegisterKey<T> key) =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueTag = _mappings[typeof(T)] }.ToByteArray();
         private byte[] ToBinary<T>(PNCounterDictionaryKey<T> key) =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueCode = _mappings[typeof(T)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), ValueTag = _mappings[typeof(T)] }.ToByteArray();
         private byte[] ToBinary<TKey, TValue>(ORDictionaryKey<TKey, TValue> key) where TValue : IReplicatedData<TValue> =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyTag = _mappings[typeof(TKey)], ValueTag = _mappings[typeof(TValue)] }.ToByteArray();
         private byte[] ToBinary<TKey, TValue>(LWWDictionaryKey<TKey, TValue> key) =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyTag = _mappings[typeof(TKey)], ValueTag = _mappings[typeof(TValue)] }.ToByteArray();
         private byte[] ToBinary<TKey, TValue>(ORMultiValueDictionaryKey<TKey, TValue> key) =>
-            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyCode = _mappings[typeof(TKey)], ValueCode = _mappings[typeof(TValue)] }.ToByteArray();
+            new Proto.Msg.Key { Path = ByteString.CopyFromUtf8(key.Id), KeyTag = _mappings[typeof(TKey)], ValueTag = _mappings[typeof(TValue)] }.ToByteArray();
 
         #endregion
 
@@ -191,7 +191,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GSet
             {
-                TypeCode = _mappings[typeof(long)]
+                ElementTag = _mappings[typeof(long)]
             };
             foreach (var e in o.Elements)
                 proto.LongElements.Add(e);
@@ -203,7 +203,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GSet
             {
-                TypeCode = _mappings[typeof(int)]
+                ElementTag = _mappings[typeof(int)]
             };
             foreach (var e in o.Elements)
                 proto.IntElements.Add(e);
@@ -215,7 +215,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GSet
             {
-                TypeCode = _mappings[typeof(string)]
+                ElementTag = _mappings[typeof(string)]
             };
             foreach (var e in o.Elements)
                 proto.StringElements.Add(e);
@@ -227,7 +227,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GSet
             {
-                TypeCode = _mappings[typeof(IActorRef)]
+                ElementTag = _mappings[typeof(IActorRef)]
             };
             foreach (var e in o.Elements)
                 proto.ActorRefElements.Add(Akka.Serialization.Serialization.SerializedActorPath(e));
@@ -239,7 +239,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.GSet
             {
-                TypeCode = _mappings[typeof(T)]
+                ElementTag = _mappings[typeof(T)]
             };
             foreach (object e in o.Elements)
                 proto.OtherElements.Add(this.OtherMessageToProto(e));
@@ -255,7 +255,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                TypeCode = _mappings[typeof(int)],
+                ElementTag = _mappings[typeof(int)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -272,7 +272,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                TypeCode = _mappings[typeof(long)],
+                ElementTag = _mappings[typeof(long)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -289,7 +289,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                TypeCode = _mappings[typeof(string)],
+                ElementTag = _mappings[typeof(string)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -307,7 +307,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                TypeCode = _mappings[typeof(IActorRef)],
+                ElementTag = _mappings[typeof(IActorRef)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -324,7 +324,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                TypeCode = _mappings[typeof(T)],
+                ElementTag = _mappings[typeof(T)],
                 Vvector = o.VersionVector.ToProto()
             };
 
@@ -569,13 +569,14 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<T>(LWWRegister<T> o) => ToProto<T>(o).ToByteArray();
         private Proto.Msg.LWWRegister ToProto<T>(LWWRegister<T> o)
         {
-            return new Proto.Msg.LWWRegister
+            var proto = new Proto.Msg.LWWRegister
             {
-                TypeCode = _mappings[typeof(T)],
                 Node = o.UpdatedBy.ToProto(),
                 Timestamp = o.Timestamp,
-                State = this.OtherMessageToProto(o.Value)
+                State = this.OtherMessageToProto(o.Value),
+                ElementTag = _mappings[typeof(T)]
             };
+            return proto;
         }
 
         #region serialize PNCounterDictionary
@@ -585,7 +586,6 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
-                KeyCode = _mappings[typeof(int)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -606,7 +606,6 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
-                KeyCode = _mappings[typeof(long)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -627,7 +626,6 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
-                KeyCode = _mappings[typeof(string)],
                 Keys = ToProto(o.Underlying.KeySet)
             };
 
@@ -648,7 +646,6 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.PNCounterMap
             {
-                KeyCode = _mappings[typeof(TKey)],
                 Keys = ToProto<TKey>(o.Underlying.KeySet)
             };
 
@@ -674,7 +671,8 @@ namespace Akka.DistributedData.Serialization
             dynamic keySet = o.KeySet;
             var proto = new Proto.Msg.ORMap
             {
-                Keys = ToProto(keySet)
+                Keys = ToProto(keySet),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.ValueMap)
@@ -1047,7 +1045,8 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.LWWMap
             {
-                Keys = ToProto(o.Underlying.KeySet)
+                Keys = ToProto(o.Underlying.KeySet),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.Underlying.Entries)
@@ -1065,7 +1064,8 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.LWWMap
             {
-                Keys = ToProto(o.Underlying.KeySet)
+                Keys = ToProto(o.Underlying.KeySet),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.Underlying.Entries)
@@ -1083,7 +1083,8 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.LWWMap
             {
-                Keys = ToProto(o.Underlying.KeySet)
+                Keys = ToProto(o.Underlying.KeySet),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.Underlying.Entries)
@@ -1101,7 +1102,8 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.LWWMap
             {
-                Keys = ToProto<TKey>(o.Underlying.KeySet)
+                Keys = ToProto<TKey>(o.Underlying.KeySet),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.Underlying.Entries)
@@ -1243,9 +1245,9 @@ namespace Akka.DistributedData.Serialization
             switch (arity)
             {
                 case 1:
-                    return Activator.CreateInstance(destinationType.MakeGenericType(_mappings[proto.ValueCode]), path);
+                    return Activator.CreateInstance(destinationType.MakeGenericType(_mappings[proto.ValueTag]), path);
                 case 2:
-                    var type = destinationType.MakeGenericType(_mappings[proto.KeyCode], _mappings[proto.ValueCode]);
+                    var type = destinationType.MakeGenericType(_mappings[proto.KeyTag], _mappings[proto.ValueTag]);
                     return Activator.CreateInstance(type, path);
                 default:
                     return Activator.CreateInstance(destinationType, path);
@@ -1277,15 +1279,88 @@ namespace Akka.DistributedData.Serialization
             throw new NotImplementedException();
         }
 
+        #region deserialize LWWDictionary
+
         private object FromProto(Proto.Msg.LWWMap proto)
         {
-            throw new NotImplementedException();
+            dynamic orset = FromProto(proto.Keys);
+            var type = typeof(LWWRegister<>).MakeGenericType(_mappings[proto.ValueTag]);
+            dynamic values = Array.CreateInstance(type, proto.Entries.Count);
+            return DynamicLWWDictionary(orset, values, proto);
         }
+
+        private LWWDictionary<int, TValue> DynamicLWWDictionary<TValue>(ORSet<int> orset, LWWRegister<TValue>[] values, Proto.Msg.LWWMap proto)
+        {
+            if (proto.Entries.Count == 0) return LWWDictionary<int, TValue>.Empty;
+
+            var keys = new int[proto.Entries.Count];
+            var i = 0;
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (LWWRegister<TValue>)FromProto(entry.Value);
+                keys[i] = entry.IntKey;
+                i++;
+            }
+
+            return new LWWDictionary<int, TValue>(DynamicORDictionary(orset, keys, values));
+        }
+
+        private LWWDictionary<long, TValue> DynamicLWWDictionary<TValue>(ORSet<long> orset, LWWRegister<TValue>[] values, Proto.Msg.LWWMap proto)
+        {
+            if (proto.Entries.Count == 0) return LWWDictionary<long, TValue>.Empty;
+
+            var keys = new long[proto.Entries.Count];
+            var i = 0;
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (LWWRegister<TValue>)FromProto(entry.Value);
+                keys[i] = entry.LongKey;
+                i++;
+            }
+
+            return new LWWDictionary<long, TValue>(DynamicORDictionary(orset, keys, values));
+        }
+
+        private LWWDictionary<string, TValue> DynamicLWWDictionary<TValue>(ORSet<string> orset, LWWRegister<TValue>[] values, Proto.Msg.LWWMap proto)
+        {
+            if (proto.Entries.Count == 0) return LWWDictionary<string, TValue>.Empty;
+
+            var keys = new string[proto.Entries.Count];
+            var i = 0;
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (LWWRegister<TValue>)FromProto(entry.Value);
+                keys[i] = entry.StringKey;
+                i++;
+            }
+
+            return new LWWDictionary<string, TValue>(DynamicORDictionary(orset, keys, values));
+        }
+
+        private LWWDictionary<TKey, TValue> DynamicLWWDictionary<TKey, TValue>(ORSet<TKey> orset, LWWRegister<TValue>[] values, Proto.Msg.LWWMap proto)
+        {
+            if (proto.Entries.Count == 0) return LWWDictionary<TKey, TValue>.Empty;
+
+            var keys = new TKey[proto.Entries.Count];
+            var i = 0;
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (LWWRegister<TValue>)FromProto(entry.Value);
+                keys[i] = (TKey)this.OtherMessageFromProto(entry.OtherKey);
+                i++;
+            }
+
+            return new LWWDictionary<TKey, TValue>(DynamicORDictionary(orset, keys, values));
+        }
+
+        #endregion
 
         private object FromProto(Proto.Msg.ORMultiMap proto)
         {
             throw new NotImplementedException();
         }
+
+        #region deserialize PNCounterDictionary
 
         private object FromProto(Proto.Msg.PNCounterMap proto)
         {
@@ -1293,44 +1368,63 @@ namespace Akka.DistributedData.Serialization
             return DynamicPNCounterDictionary(orset, proto.Entries);
         }
 
-        private PNCounterDictionary<T> DynamicPNCounterDictionary<T>(ORSet<T> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
+        private PNCounterDictionary<string> DynamicPNCounterDictionary(ORSet<string> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
         {
-            dynamic keys = null;
+            var keys = new string[entries.Count];
             var values = new PNCounter[entries.Count];
             var i = 0;
             foreach (var entry in entries)
             {
                 values[i] = FromProto(entry.Value);
+                keys[i] = entry.StringKey;
+                i++;
+            }
 
-                if (entry.StringKey != null)
-                {
-                    var key = entry.StringKey;
-                    if (keys == null)
-                        keys = new string[entries.Count];
-                    keys[i] = key;
-                }
-                else if (entry.OtherKey != null)
-                {
-                    var key = entry.OtherKey;
-                    if (keys == null)
-                        keys = Array.CreateInstance(key.GetType(), entries.Count);
-                    keys[i] = key;
-                }
-                else if (entry.LongKey != default(long))
-                {
-                    var key = entry.LongKey;
-                    if (keys == null)
-                        keys = new long[entries.Count];
-                    keys[i] = key;
-                }
-                else if (entry.IntKey != default(int))
-                {
-                    var key = entry.IntKey;
-                    if (keys == null)
-                        keys = new int[entries.Count];
-                    keys[i] = key;
-                }
+            var ormap = DynamicORDictionary(orset, keys, values);
+            return new PNCounterDictionary<string>(ormap);
+        }
+        
+        private PNCounterDictionary<int> DynamicPNCounterDictionary(ORSet<int> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
+        {
+            var keys = new int[entries.Count];
+            var values = new PNCounter[entries.Count];
+            var i = 0;
+            foreach (var entry in entries)
+            {
+                values[i] = FromProto(entry.Value);
+                keys[i] = entry.IntKey;
+                i++;
+            }
 
+            var ormap = DynamicORDictionary(orset, keys, values);
+            return new PNCounterDictionary<int>(ormap);
+        }
+
+        private PNCounterDictionary<long> DynamicPNCounterDictionary(ORSet<long> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
+        {
+            var keys = new long[entries.Count];
+            var values = new PNCounter[entries.Count];
+            var i = 0;
+            foreach (var entry in entries)
+            {
+                values[i] = FromProto(entry.Value);
+                keys[i] = entry.LongKey;
+                i++;
+            }
+
+            var ormap = DynamicORDictionary(orset, keys, values);
+            return new PNCounterDictionary<long>(ormap);
+        }
+
+        private PNCounterDictionary<T> DynamicPNCounterDictionary<T>(ORSet<T> orset, IList<Proto.Msg.PNCounterMap.Types.Entry> entries)
+        {
+            var keys = new T[entries.Count];
+            var values = new PNCounter[entries.Count];
+            var i = 0;
+            foreach (var entry in entries)
+            {
+                values[i] = FromProto(entry.Value);
+                keys[i] = (T)this.OtherMessageFromProto(entry.OtherKey);
                 i++;
             }
 
@@ -1338,48 +1432,69 @@ namespace Akka.DistributedData.Serialization
             return new PNCounterDictionary<T>(ormap);
         }
 
+        #endregion
+
+        #region deserialize ORDictionary
+
         private object FromProto(Proto.Msg.ORMap proto)
         {
             dynamic orset = FromProto(proto.Keys);
-            dynamic keys = null;
-            dynamic values = null;
+            dynamic values = Array.CreateInstance(_mappings[proto.ValueTag], proto.Entries.Count);
+
+            return CreateORDictionary(orset, values, proto);
+        }
+
+        private ORDictionary<int, TValue> CreateORDictionary<TValue>(ORSet<int> orset, TValue[] values, Proto.Msg.ORMap proto)
+            where TValue : IReplicatedData<TValue>
+        {
             var i = 0;
+            var keys = new int[proto.Entries.Count];
             foreach (var entry in proto.Entries)
             {
-                var value = this.OtherMessageFromProto(entry.Value);
-                if (values == null)
-                    values = Array.CreateInstance(value.GetType(), proto.Entries.Count);
-                values[i] = value;
+                values[i] = (TValue)this.OtherMessageFromProto(entry.Value);
+                keys[i] = entry.IntKey;
+                i++;
+            }
+            return DynamicORDictionary(orset, keys, values);
+        }
 
-                if (entry.StringKey != null)
-                {
-                    var key = entry.StringKey;
-                    if (keys == null)
-                        keys = new string[proto.Entries.Count];
-                    keys[i] = key;
-                }
-                else if (entry.OtherKey != null)
-                {
-                    var key = entry.OtherKey;
-                    if (keys == null)
-                        keys = Array.CreateInstance(key.GetType(), proto.Entries.Count);
-                    keys[i] = key;
-                }
-                else if (entry.LongKey != default(long))
-                {
-                    var key = entry.LongKey;
-                    if (keys == null)
-                        keys = new long[proto.Entries.Count];
-                    keys[i] = key;
-                }
-                else if (entry.IntKey != default(int))
-                {
-                    var key = entry.IntKey;
-                    if (keys == null)
-                        keys = new int[proto.Entries.Count];
-                    keys[i] = key;
-                }
+        private ORDictionary<long, TValue> CreateORDictionary<TValue>(ORSet<long> orset, TValue[] values, Proto.Msg.ORMap proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            var i = 0;
+            var keys = new long[proto.Entries.Count];
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (TValue)this.OtherMessageFromProto(entry.Value);
+                keys[i] = entry.LongKey;
+                i++;
+            }
+            return DynamicORDictionary(orset, keys, values);
+        }
 
+        private ORDictionary<string, TValue> CreateORDictionary<TValue>(ORSet<string> orset, TValue[] values, Proto.Msg.ORMap proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            var i = 0;
+            var keys = new string[proto.Entries.Count];
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (TValue)this.OtherMessageFromProto(entry.Value);
+                keys[i] = entry.StringKey;
+                i++;
+            }
+            return DynamicORDictionary(orset, keys, values);
+        }
+
+        private ORDictionary<TKey, TValue> CreateORDictionary<TKey, TValue>(ORSet<TKey> orset, TValue[] values, Proto.Msg.ORMap proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            var i = 0;
+            var keys = new TKey[proto.Entries.Count];
+            foreach (var entry in proto.Entries)
+            {
+                values[i] = (TValue)this.OtherMessageFromProto(entry.Value);
+                keys[i] = (TKey)this.OtherMessageFromProto(entry.OtherKey);
                 i++;
             }
             return DynamicORDictionary(orset, keys, values);
@@ -1396,6 +1511,8 @@ namespace Akka.DistributedData.Serialization
             
             return new ORDictionary<TKey,TValue>(keySet, builder.ToImmutable());
         }
+
+        #endregion
 
         private PNCounter FromProto(Proto.Msg.PNCounter proto) => 
             new PNCounter(FromProto(proto.Increments), FromProto(proto.Decrements));
@@ -1415,15 +1532,11 @@ namespace Akka.DistributedData.Serialization
         private object FromProto(Proto.Msg.LWWRegister proto)
         {
             var node = this.UniqueAddressFromProto(proto.Node);
-            dynamic state = this.OtherMessageFromProto(proto.State);
-            return DynamicLWWRegister(node, state, proto.Timestamp);
+            object state = this.OtherMessageFromProto(proto.State);
+            var type = typeof(LWWRegister<>).MakeGenericType(_mappings[proto.ElementTag]);
+            return Activator.CreateInstance(type, node, state, proto.Timestamp);
         }
-
-        private LWWRegister<T> DynamicLWWRegister<T>(Akka.Cluster.UniqueAddress node, T state, long timestamp)
-        {
-            return new LWWRegister<T>(node, state, timestamp);
-        }
-
+        
         private Flag FromProto(Proto.Msg.Flag proto) => proto.Enabled ? Flag.True : Flag.False;
 
         #region deserialize ORSet
@@ -1542,7 +1655,7 @@ namespace Akka.DistributedData.Serialization
             else
             {
                 // we'll use it only as type marker for dynamic binding
-                dynamic marker = Array.CreateInstance(_mappings[proto.TypeCode], 0);
+                dynamic marker = Array.CreateInstance(_mappings[proto.ElementTag], 0);
                 return DynamicORSet(marker, proto, dots, vvector);
             }
         }
@@ -1620,7 +1733,7 @@ namespace Akka.DistributedData.Serialization
             }
             else
             {
-                dynamic elements = Array.CreateInstance(_mappings[proto.TypeCode], proto.OtherElements.Count);
+                dynamic elements = Array.CreateInstance(_mappings[proto.ElementTag], proto.OtherElements.Count);
                 return DynamicGSet(elements, proto);
             }
         }

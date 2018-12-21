@@ -14,7 +14,7 @@ message GSet {
   repeated sint64 longElements = 3 [packed=true];
   repeated OtherMessage otherElements = 4;
   repeated string actorRefElements = 5; // added in Akka 2.5.14
-  uint32 typeCode = 10;
+  uint32 elementTag = 10;
 }
 
 message ORSet {
@@ -25,13 +25,13 @@ message ORSet {
   repeated sint64 longElements = 5 [packed=true];
   repeated OtherMessage otherElements = 6;
   repeated string actorRefElements = 7; // added in Akka 2.5.14
-  uint32 typeCode = 10;
+  uint32 elementTag = 10;
 }
 
 message Key{
   bytes path = 1;
-  uint32 valueCode = 2;
-  uint32 keyCode = 3;
+  uint32 valueTag = 2;
+  uint32 keyTag = 3;
 }
 
 message ORSetDeltaGroup {
@@ -59,7 +59,7 @@ message LWWRegister {
   OtherMessage state = 3;
 
   /* Type code for .NET generics reification */
-  uint32 typeCode = 10;
+  uint32 elementTag = 10;
 }
 
 message GCounter {
@@ -89,8 +89,8 @@ message ORMap {
   repeated Entry entries = 2;
 
   /* Type codes for .NET generics reification */
-  uint32 keyCode = 10;
-  uint32 valueCode = 11;
+  bytes valueManifest = 10;
+  uint32 valueTag = 11;
 }
 
 message ORMapDeltaGroup {
@@ -131,8 +131,7 @@ message LWWMap {
   repeated Entry entries = 2;
 
   /* Type codes for .NET generics reification */
-  uint32 keyCode = 10;
-  uint32 valueCode = 11;
+  uint32 valueTag = 10;
 }
 
 message PNCounterMap {
@@ -146,9 +145,6 @@ message PNCounterMap {
   
   ORSet keys = 1;
   repeated Entry entries = 2;
-
-  /* Type code for .NET generics reification */
-  uint32 keyCode = 3;
 }
 
 message ORMultiMap {
@@ -164,9 +160,7 @@ message ORMultiMap {
    repeated Entry entries = 2;
    bool withValueDeltas = 3;
 
-   /* Type codes for .NET generics reification */
-   uint32 keyCode = 4;
-   uint32 valueCode = 5;
+   uint32 valueTag = 10;
  }
 
 
