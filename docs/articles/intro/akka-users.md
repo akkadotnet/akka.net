@@ -43,3 +43,12 @@ Scale up, scale out, fault-tolerance / HA
 #### Complex Event Stream Processing
 
 * [MarkedUp Analytics: Real-time Marketing Automation with Distributed Actor Systems and Akka.NET](http://www.aaronstannard.com/markedup-akkadotnet/)
+
+#### Blockchain
+NEO is the use of blockchain technology and digital identity to digitize assets, the use of smart contracts for digital assets to be self-managed, to achieve "smart economy" with a distributed network.
+
+* [Website](https://neo.org/)
+* [Documentation](https://neo.org/)
+* [Github](https://github.com/neo-project)
+* [Protocol](https://github.com/neo-project/neo)
+* [Video](https://www.youtube.com/channel/UCl1AwEDN0w5lTmfJEMsY5Vw)
