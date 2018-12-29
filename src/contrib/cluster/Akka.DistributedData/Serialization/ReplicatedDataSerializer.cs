@@ -22,6 +22,10 @@ namespace Akka.DistributedData.Serialization
 {
     public sealed class ReplicatedDataSerializer : SerializerWithStringManifest, IWithSerializationSupport
     {
+        public struct Marker<T> { }
+
+        private static readonly Type MarkerType = typeof(Marker<>);
+
         private const string DeletedDataManifest = "A";
         private const string GSetManifest = "B";
         private const string GSetKeyManifest = "b";
@@ -123,6 +127,7 @@ namespace Akka.DistributedData.Serialization
         private static string Manifest<T>(ORSet<T>.DeltaGroup _) => ORSetDeltaGroupManifest;
         private static string Manifest<T>(ORSet<T>.FullStateDeltaOperation _) => ORSetFullManifest;
         private static string Manifest<TKey, TVal>(ORDictionary<TKey, TVal> _) where TVal: IReplicatedData<TVal> => ORMapManifest;
+        private static string Manifest<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup _) where TVal: IReplicatedData<TVal> => ORMapDeltaGroupManifest;
         private static string Manifest<TKey, TVal>(ORDictionary<TKey, TVal>.PutDeltaOperation _) where TVal : IReplicatedData<TVal> => ORMapPutManifest;
         private static string Manifest<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveDeltaOperation _) where TVal : IReplicatedData<TVal> => ORMapRemoveManifest;
         private static string Manifest<TKey, TVal>(ORDictionary<TKey, TVal>.RemoveKeyDeltaOperation _) where TVal : IReplicatedData<TVal> => ORMapRemoveKeyManifest;
@@ -767,7 +772,11 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TVal>(ORDictionary<int, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
         private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<int, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-            var proto = new Proto.Msg.ORMapDeltaGroup();
+            var proto = new Proto.Msg.ORMapDeltaGroup
+            {
+                KeyTag = _mappings[typeof(int)],
+                ValueTag = _mappings[typeof(TVal)]
+            };
             foreach (var op in ops)
             {
                 Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
@@ -825,7 +834,11 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TVal>(ORDictionary<long, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
         private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<long, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-            var proto = new Proto.Msg.ORMapDeltaGroup();
+            var proto = new Proto.Msg.ORMapDeltaGroup
+            {
+                KeyTag = _mappings[typeof(long)],
+                ValueTag = _mappings[typeof(TVal)]
+            };
             foreach (var op in ops)
             {
                 Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
@@ -883,7 +896,11 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TVal>(ORDictionary<string, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
         private Proto.Msg.ORMapDeltaGroup ToProto<TVal>(params ORDictionary<string, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-            var proto = new Proto.Msg.ORMapDeltaGroup();
+            var proto = new Proto.Msg.ORMapDeltaGroup
+            {
+                KeyTag = _mappings[typeof(string)],
+                ValueTag = _mappings[typeof(TVal)]
+            };
             foreach (var op in ops)
             {
                 Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
@@ -941,7 +958,11 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
         private Proto.Msg.ORMapDeltaGroup ToProto<TKey, TVal>(params ORDictionary<TKey, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-            var proto = new Proto.Msg.ORMapDeltaGroup();
+            var proto = new Proto.Msg.ORMapDeltaGroup
+            {
+                KeyTag = _mappings[typeof(TKey)],
+                ValueTag = _mappings[typeof(TVal)]
+            };
             foreach (var op in ops)
             {
                 Proto.Msg.ORMapDeltaGroup.Types.Entry entry = null;
@@ -1126,7 +1147,8 @@ namespace Akka.DistributedData.Serialization
             dynamic keys = o.Underlying.KeySet;
             var proto = new Proto.Msg.ORMultiMap
             {
-                Keys = ToProto(keys)
+                Keys = ToProto(keys),
+                ValueTag = _mappings[typeof(TVal)]
             };
 
             foreach (var entry in o.Underlying.Entries)
@@ -1214,10 +1236,10 @@ namespace Akka.DistributedData.Serialization
                         return FromProto(Proto.Msg.ORMap.Parser.ParseFrom(bytes.Decompress()));
                 }
                 case ORMapKeyManifest: return KeyFromProto(Proto.Msg.Key.Parser.ParseFrom(bytes), typeof(ORDictionaryKey<,>), 2);
-                case ORMapPutManifest: return OrMapPutFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
-                case ORMapRemoveManifest: return OrMapRemoveFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
-                case ORMapRemoveKeyManifest: return OrMapRemoveKeyFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
-                case ORMapUpdateManifest: return OrMapUpdateFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapPutManifest: return OrMapDeltaFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapRemoveManifest: return OrMapDeltaFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapRemoveKeyManifest: return OrMapDeltaFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
+                case ORMapUpdateManifest: return OrMapDeltaFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case ORMapDeltaGroupManifest: return OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes));
                 case LWWMapManifest:
                 {
@@ -1253,31 +1275,246 @@ namespace Akka.DistributedData.Serialization
                     return Activator.CreateInstance(destinationType, path);
             }
         }
-        
+
+        #region deserialize ORDictionary.DeltaGroup
         private object OrMapDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup proto)
         {
-            throw new NotImplementedException();
+            dynamic keyMarker = MarkerFor(proto.KeyTag);
+            dynamic valueMarker = MarkerFor(proto.ValueTag);
+            return CreateOrMapDeltaGroup(keyMarker, valueMarker, proto);
         }
 
-        private object OrMapUpdateFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        private object CreateOrMapDeltaGroup<TValue>(Marker<int> _, Marker<TValue> valueMarker, Proto.Msg.ORMapDeltaGroup proto)
+            where TValue : IReplicatedData<TValue>
         {
-            throw new NotImplementedException();
-        }
-        
-        private object OrMapRemoveKeyFromProto(Proto.Msg.ORMapDeltaGroup proto)
-        {
-            throw new NotImplementedException();
+            var list = new List<ORDictionary<int, TValue>.IDeltaOperation>(proto.Entries.Count);
+            foreach (var entry in proto.Entries)
+            {
+                var orset = (ORSet<int>)FromProto(entry.Underlying);
+                var op = ORDictionaryDeltaOperationFromProto<TValue>(orset, valueMarker, entry);
+                list.Add(op);
+            }
+
+            return new ORDictionary<int, TValue>.DeltaGroup(list);
         }
 
-        private object OrMapRemoveFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        private object CreateOrMapDeltaGroup<TValue>(Marker<long> _, Marker<TValue> valueMarker, Proto.Msg.ORMapDeltaGroup proto)
+            where TValue : IReplicatedData<TValue>
         {
-            throw new NotImplementedException();
+            var list = new List<ORDictionary<long, TValue>.IDeltaOperation>(proto.Entries.Count);
+            foreach (var entry in proto.Entries)
+            {
+                var orset = (ORSet<long>)FromProto(entry.Underlying);
+                var op = ORDictionaryDeltaOperationFromProto<TValue>(orset, valueMarker, entry);
+                list.Add(op);
+            }
+
+            return new ORDictionary<long, TValue>.DeltaGroup(list);
         }
 
-        private object OrMapPutFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        private object CreateOrMapDeltaGroup<TValue>(Marker<string> _, Marker<TValue> valueMarker, Proto.Msg.ORMapDeltaGroup proto)
+            where TValue : IReplicatedData<TValue>
         {
-            throw new NotImplementedException();
+            var list = new List<ORDictionary<string, TValue>.IDeltaOperation>(proto.Entries.Count);
+            foreach (var entry in proto.Entries)
+            {
+                var orset = (ORSet<string>)FromProto(entry.Underlying);
+                var op = ORDictionaryDeltaOperationFromProto<TValue>(orset, valueMarker, entry);
+                list.Add(op);
+            }
+
+            return new ORDictionary<string, TValue>.DeltaGroup(list);
         }
+
+        private object CreateOrMapDeltaGroup<TKey, TValue>(Marker<TKey> _, Marker<TValue> valueMarker, Proto.Msg.ORMapDeltaGroup proto)
+            where TValue: IReplicatedData<TValue>
+        {
+            var list = new List<ORDictionary<TKey, TValue>.IDeltaOperation>(proto.Entries.Count);
+            foreach (var entry in proto.Entries)
+            {
+                var orset = (ORSet<TKey>)FromProto(entry.Underlying);
+                var op = ORDictionaryDeltaOperationFromProto<TKey, TValue>(orset, valueMarker, entry);
+                list.Add(op);
+            }
+
+            return new ORDictionary<TKey, TValue>.DeltaGroup(list);
+        }
+
+        #endregion
+
+        private object MarkerFor(uint tag) => Activator.CreateInstance(MarkerType.MakeGenericType(_mappings[tag]));
+
+        private object OrMapDeltaFromProto(Proto.Msg.ORMapDeltaGroup proto)
+        {
+#if DEBUG
+            if (proto.Entries.Count != 1)
+                throw new ArgumentException($"ORMapDeltaGroup for ORDictionary operation must have a single entry");
+#endif
+            var entry = proto.Entries[0];
+            dynamic orset = FromProto(entry.Underlying);
+            dynamic marker = MarkerFor(proto.ValueTag);
+            return ORDictionaryDeltaOperationFromProto(orset, marker, entry);
+        }
+
+        #region deserialize generic ormap delta op
+
+        private ORDictionary<int, TValue>.IDeltaOperation ORDictionaryDeltaOperationFromProto<TValue>(ORSet<int> orset, Marker<TValue> marker, Proto.Msg.ORMapDeltaGroup.Types.Entry proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            switch (proto.Operation)
+            {
+                case Proto.Msg.ORMapDeltaOp.OrmapPut:
+                    {
+                        var entry = proto.EntryData[0];
+                        var value = (TValue)this.OtherMessageFromProto(entry.Value);
+                        var key = entry.IntKey;
+                        return new ORDictionary<int, TValue>.PutDeltaOperation(new ORSet<int>.AddDeltaOperation(orset), key, value);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemove:
+                    {
+                        return new ORDictionary<int, TValue>.RemoveDeltaOperation(new ORSet<int>.RemoveDeltaOperation(orset));
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemoveKey:
+                    {
+                        var entry = proto.EntryData[0];
+                        var key = entry.IntKey;
+                        return new ORDictionary<int, TValue>.RemoveKeyDeltaOperation(new ORSet<int>.RemoveDeltaOperation(orset), key);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapUpdate:
+                    {
+                        var builder = ImmutableDictionary<int, IReplicatedData>.Empty.ToBuilder();
+                        foreach (var entry in proto.EntryData)
+                        {
+                            var key = entry.IntKey;
+                            var value = (IReplicatedData)this.OtherMessageFromProto(entry.Value);
+                            builder[key] = value;
+                        }
+
+                        return new ORDictionary<int, TValue>.UpdateDeltaOperation(new ORSet<int>.AddDeltaOperation(orset), builder.ToImmutable());
+                    }
+                default:
+                    throw new NotSupportedException($"Operation of type [{proto.Operation}] is not supported by {this.GetType()}.");
+            }
+        }
+
+        private ORDictionary<long, TValue>.IDeltaOperation ORDictionaryDeltaOperationFromProto<TValue>(ORSet<long> orset, Marker<TValue> marker, Proto.Msg.ORMapDeltaGroup.Types.Entry proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            switch (proto.Operation)
+            {
+                case Proto.Msg.ORMapDeltaOp.OrmapPut:
+                    {
+                        var entry = proto.EntryData[0];
+                        var value = (TValue)this.OtherMessageFromProto(entry.Value);
+                        var key = entry.LongKey;
+                        return new ORDictionary<long, TValue>.PutDeltaOperation(new ORSet<long>.AddDeltaOperation(orset), key, value);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemove:
+                    {
+                        return new ORDictionary<long, TValue>.RemoveDeltaOperation(new ORSet<long>.RemoveDeltaOperation(orset));
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemoveKey:
+                    {
+                        var entry = proto.EntryData[0];
+                        var key = entry.LongKey;
+                        return new ORDictionary<long, TValue>.RemoveKeyDeltaOperation(new ORSet<long>.RemoveDeltaOperation(orset), key);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapUpdate:
+                    {
+                        var builder = ImmutableDictionary<long, IReplicatedData>.Empty.ToBuilder();
+                        foreach (var entry in proto.EntryData)
+                        {
+                            var key = entry.LongKey;
+                            var value = (IReplicatedData)this.OtherMessageFromProto(entry.Value);
+                            builder[key] = value;
+                        }
+
+                        return new ORDictionary<long, TValue>.UpdateDeltaOperation(new ORSet<long>.AddDeltaOperation(orset), builder.ToImmutable());
+                    }
+                default:
+                    throw new NotSupportedException($"Operation of type [{proto.Operation}] is not supported by {this.GetType()}.");
+            }
+        }
+
+        private ORDictionary<string, TValue>.IDeltaOperation ORDictionaryDeltaOperationFromProto<TValue>(ORSet<string> orset, Marker<TValue> marker, Proto.Msg.ORMapDeltaGroup.Types.Entry proto)
+            where TValue : IReplicatedData<TValue>
+        {
+            switch (proto.Operation)
+            {
+                case Proto.Msg.ORMapDeltaOp.OrmapPut:
+                    {
+                        var entry = proto.EntryData[0];
+                        var value = (TValue)this.OtherMessageFromProto(entry.Value);
+                        var key = entry.StringKey;
+                        return new ORDictionary<string, TValue>.PutDeltaOperation(new ORSet<string>.AddDeltaOperation(orset), key, value);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemove:
+                    {
+                        return new ORDictionary<string, TValue>.RemoveDeltaOperation(new ORSet<string>.RemoveDeltaOperation(orset));
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemoveKey:
+                    {
+                        var entry = proto.EntryData[0];
+                        var key = entry.StringKey;
+                        return new ORDictionary<string, TValue>.RemoveKeyDeltaOperation(new ORSet<string>.RemoveDeltaOperation(orset), key);
+                    }
+                case Proto.Msg.ORMapDeltaOp.OrmapUpdate:
+                    {
+                        var builder = ImmutableDictionary<string, IReplicatedData>.Empty.ToBuilder();
+                        foreach (var entry in proto.EntryData)
+                        {
+                            var key = entry.StringKey;
+                            var value = (IReplicatedData)this.OtherMessageFromProto(entry.Value);
+                            builder[key] = value;
+                        }
+
+                        return new ORDictionary<string, TValue>.UpdateDeltaOperation(new ORSet<string>.AddDeltaOperation(orset), builder.ToImmutable());
+                    }
+                default:
+                    throw new NotSupportedException($"Operation of type [{proto.Operation}] is not supported by {this.GetType()}.");
+            }
+        }
+
+        private ORDictionary<TKey, TValue>.IDeltaOperation ORDictionaryDeltaOperationFromProto<TKey, TValue>(ORSet<TKey> orset, Marker<TValue> marker, Proto.Msg.ORMapDeltaGroup.Types.Entry proto)
+            where TValue: IReplicatedData<TValue>
+        {
+            switch (proto.Operation)
+            {
+                case Proto.Msg.ORMapDeltaOp.OrmapPut:
+                {
+                    var entry = proto.EntryData[0];
+                    var value = (TValue)this.OtherMessageFromProto(entry.Value);
+                    var key = (TKey)this.OtherMessageFromProto(entry.OtherKey);
+                    return new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation(orset), key, value);
+                }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemove:
+                {
+                    return new ORDictionary<TKey, TValue>.RemoveDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation(orset));
+                }
+                case Proto.Msg.ORMapDeltaOp.OrmapRemoveKey:
+                {
+                    var entry = proto.EntryData[0];
+                    var key = (TKey)this.OtherMessageFromProto(entry.OtherKey);
+                    return new ORDictionary<TKey, TValue>.RemoveKeyDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation(orset), key);
+                }
+                case Proto.Msg.ORMapDeltaOp.OrmapUpdate:
+                {
+                    var builder = ImmutableDictionary<TKey, IReplicatedData>.Empty.ToBuilder();
+                    foreach (var entry in proto.EntryData)
+                    {
+                        var key = (TKey)this.OtherMessageFromProto(entry.OtherKey);
+                        var value = (IReplicatedData)this.OtherMessageFromProto(entry.Value);
+                        builder[key] = value;
+                    }
+
+                    return new ORDictionary<TKey, TValue>.UpdateDeltaOperation(new ORSet<TKey>.AddDeltaOperation(orset), builder.ToImmutable());
+                }
+                default:
+                    throw new NotSupportedException($"Operation of type [{proto.Operation}] is not supported by {this.GetType()}.");
+            }
+        }
+
+        #endregion
 
         #region deserialize LWWDictionary
 
@@ -1355,10 +1592,68 @@ namespace Akka.DistributedData.Serialization
 
         #endregion
 
+        #region deserialize ORMultiValueDictionary
         private object FromProto(Proto.Msg.ORMultiMap proto)
         {
-            throw new NotImplementedException();
+            var valueType = typeof(ORSet<>).MakeGenericType(_mappings[proto.ValueTag]);
+            dynamic values = Array.CreateInstance(valueType, 0);
+            dynamic orset = FromProto(proto.Keys);
+            return CreateORMultiValueDictionary(orset, values, proto);
         }
+
+        private object CreateORMultiValueDictionary<TValue>(ORSet<int> orset, ORSet<TValue>[] _, Proto.Msg.ORMultiMap proto)
+        {
+            var builder = ImmutableDictionary<int, ORSet<TValue>>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var value = (ORSet<TValue>)FromProto(entry.Value);
+                var key = entry.IntKey;
+                builder[key] = value;
+            }
+            var ormap = new ORDictionary<int, ORSet<TValue>>(orset, builder.ToImmutable());
+            return new ORMultiValueDictionary<int, TValue>(ormap, proto.WithValueDeltas);
+        }
+
+        private object CreateORMultiValueDictionary<TValue>(ORSet<long> orset, ORSet<TValue>[] _, Proto.Msg.ORMultiMap proto)
+        {
+            var builder = ImmutableDictionary<long, ORSet<TValue>>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var value = (ORSet<TValue>)FromProto(entry.Value);
+                var key = entry.LongKey;
+                builder[key] = value;
+            }
+            var ormap = new ORDictionary<long, ORSet<TValue>>(orset, builder.ToImmutable());
+            return new ORMultiValueDictionary<long, TValue>(ormap, proto.WithValueDeltas);
+        }
+
+        private object CreateORMultiValueDictionary<TValue>(ORSet<string> orset, ORSet<TValue>[] _, Proto.Msg.ORMultiMap proto)
+        {
+            var builder = ImmutableDictionary<string, ORSet<TValue>>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var value = (ORSet<TValue>)FromProto(entry.Value);
+                var key = entry.StringKey;
+                builder[key] = value;
+            }
+            var ormap = new ORDictionary<string, ORSet<TValue>>(orset, builder.ToImmutable());
+            return new ORMultiValueDictionary<string, TValue>(ormap, proto.WithValueDeltas);
+        }
+
+        private object CreateORMultiValueDictionary<TKey, TValue>(ORSet<TKey> orset, ORSet<TValue>[] _, Proto.Msg.ORMultiMap proto)
+        {
+            var builder = ImmutableDictionary<TKey, ORSet<TValue>>.Empty.ToBuilder();
+            foreach (var entry in proto.Entries)
+            {
+                var value = (ORSet<TValue>)FromProto(entry.Value);
+                var key = (TKey)this.OtherMessageFromProto(entry.OtherKey);
+                builder[key] = value;
+            }
+            var ormap = new ORDictionary<TKey,ORSet<TValue>>(orset, builder.ToImmutable());
+            return new ORMultiValueDictionary<TKey, TValue>(ormap, proto.WithValueDeltas);
+        }
+
+        #endregion
 
         #region deserialize PNCounterDictionary
 
@@ -1655,12 +1950,12 @@ namespace Akka.DistributedData.Serialization
             else
             {
                 // we'll use it only as type marker for dynamic binding
-                dynamic marker = Array.CreateInstance(_mappings[proto.ElementTag], 0);
+                dynamic marker = MarkerFor(proto.ElementTag);
                 return DynamicORSet(marker, proto, dots, vvector);
             }
         }
 
-        private ORSet<T> DynamicORSet<T>(T[] marker, Proto.Msg.ORSet proto, List<VersionVector> dots, VersionVector vvector)
+        private ORSet<T> DynamicORSet<T>(Marker<T> marker, Proto.Msg.ORSet proto, List<VersionVector> dots, VersionVector vvector)
         {
             if (proto.OtherElements.Count == 0 && ReferenceEquals(vvector, VersionVector.Empty)) return ORSet<T>.Empty;
 

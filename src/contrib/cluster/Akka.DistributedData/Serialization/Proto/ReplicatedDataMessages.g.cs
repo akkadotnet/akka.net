@@ -57,59 +57,59 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             "EkoKCmluY3JlbWVudHMYASABKAsyNi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
             "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5HQ291bnRlchJKCgpkZWNyZW1lbnRz",
             "GAIgASgLMjYuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuR0NvdW50ZXIilgMKBU9STWFwEkEKBGtleXMYASABKAsyMy5B",
+            "cm90by5Nc2cuR0NvdW50ZXIi/wIKBU9STWFwEkEKBGtleXMYASABKAsyMy5B",
             "a2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5P",
             "UlNldBJKCgdlbnRyaWVzGAIgAygLMjkuQWtrYS5EaXN0cmlidXRlZERhdGEu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNYXAuRW50cnkSFQoNdmFsdWVN",
-            "YW5pZmVzdBgKIAEoDBIQCgh2YWx1ZVRhZxgLIAEoDRrUAQoFRW50cnkSEQoJ",
-            "c3RyaW5nS2V5GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtrYS5EaXN0cmli",
-            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdl",
-            "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
-            "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlIs8ECg9PUk1hcERlbHRhR3JvdXASVAoH",
-            "ZW50cmllcxgBIAMoCzJDLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLk9STWFwRGVsdGFHcm91cC5FbnRyeRrXAQoITWFw",
-            "RW50cnkSEQoJc3RyaW5nS2V5GAEgASgJEkkKBXZhbHVlGAIgASgLMjouQWtr",
-            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3Ro",
-            "ZXJNZXNzYWdlEg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwK",
-            "CG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlGosCCgVFbnRyeRJNCglv",
-            "cGVyYXRpb24YASABKA4yOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZy5PUk1hcERlbHRhT3ASRwoKdW5kZXJseWluZxgC",
-            "IAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLk9SU2V0Eg8KB3plcm9UYWcYAyABKBESWQoJZW50cnlEYXRhGAQg",
-            "AygLMkYuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuT1JNYXBEZWx0YUdyb3VwLk1hcEVudHJ5IoADCgZMV1dNYXASQQoE",
-            "a2V5cxgBIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk9SU2V0EksKB2VudHJpZXMYAiADKAsyOi5Ba2thLkRp",
-            "c3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5MV1dNYXAu",
-            "RW50cnkSEAoIdmFsdWVUYWcYCiABKA0a0wEKBUVudHJ5EhEKCXN0cmluZ0tl",
-            "eRgBIAEoCRJICgV2YWx1ZRgCIAEoCzI5LkFra2EuRGlzdHJpYnV0ZWREYXRh",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkxXV1JlZ2lzdGVyEg4KBmludEtl",
-            "eRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjou",
-            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "T3RoZXJNZXNzYWdlIvgCCgxQTkNvdW50ZXJNYXASQQoEa2V5cxgBIAEoCzIz",
-            "LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "Lk9SU2V0ElEKB2VudHJpZXMYAiADKAsyQC5Ba2thLkRpc3RyaWJ1dGVkRGF0",
-            "YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QTkNvdW50ZXJNYXAuRW50cnka",
-            "0QEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJGCgV2YWx1ZRgCIAEoCzI3",
-            "LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "LlBOQ291bnRlchIOCgZpbnRLZXkYAyABKBESDwoHbG9uZ0tleRgEIAEoEhJM",
-            "CghvdGhlcktleRgFIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSKbAwoKT1JNdWx0aU1h",
-            "cBJBCgRrZXlzGAEgASgLMjMuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuT1JTZXQSTwoHZW50cmllcxgCIAMoCzI+LkFr",
-            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9S",
-            "TXVsdGlNYXAuRW50cnkSFwoPd2l0aFZhbHVlRGVsdGFzGAMgASgIEhAKCHZh",
-            "bHVlVGFnGAogASgNGs0BCgVFbnRyeRIRCglzdHJpbmdLZXkYASABKAkSQgoF",
-            "dmFsdWUYAiABKAsyMy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0",
-            "aW9uLlByb3RvLk1zZy5PUlNldBIOCgZpbnRLZXkYAyABKBESDwoHbG9uZ0tl",
-            "eRgEIAEoEhJMCghvdGhlcktleRgFIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSotCgxP",
-            "UlNldERlbHRhT3ASBwoDQWRkEAASCgoGUmVtb3ZlEAESCAoERnVsbBACKlIK",
-            "DE9STWFwRGVsdGFPcBIMCghPUk1hcFB1dBAAEg8KC09STWFwUmVtb3ZlEAES",
-            "EgoOT1JNYXBSZW1vdmVLZXkQAhIPCgtPUk1hcFVwZGF0ZRADQgJIAWIGcHJv",
-            "dG8z"));
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JNYXAuRW50cnkSEAoIdmFsdWVU",
+            "YWcYCiABKA0a1AEKBUVudHJ5EhEKCXN0cmluZ0tleRgBIAEoCRJJCgV2YWx1",
+            "ZRgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLk90aGVyTWVzc2FnZRIOCgZpbnRLZXkYAyABKBESDwoHbG9u",
+            "Z0tleRgEIAEoEhJMCghvdGhlcktleRgFIAEoCzI6LkFra2EuRGlzdHJpYnV0",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSLx",
+            "BAoPT1JNYXBEZWx0YUdyb3VwElQKB2VudHJpZXMYASADKAsyQy5Ba2thLkRp",
+            "c3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PUk1hcERl",
+            "bHRhR3JvdXAuRW50cnkSDgoGa2V5VGFnGAogASgNEhAKCHZhbHVlVGFnGAsg",
+            "ASgNGtcBCghNYXBFbnRyeRIRCglzdHJpbmdLZXkYASABKAkSSQoFdmFsdWUY",
+            "AiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5PdGhlck1lc3NhZ2USDgoGaW50S2V5GAMgASgREg8KB2xvbmdL",
+            "ZXkYBCABKBISTAoIb3RoZXJLZXkYBSABKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2UaiwIK",
+            "BUVudHJ5Ek0KCW9wZXJhdGlvbhgBIAEoDjI6LkFra2EuRGlzdHJpYnV0ZWRE",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9STWFwRGVsdGFPcBJHCgp1",
+            "bmRlcmx5aW5nGAIgASgLMjMuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuT1JTZXQSDwoHemVyb1RhZxgDIAEoERJZCgll",
+            "bnRyeURhdGEYBCADKAsyRi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
+            "emF0aW9uLlByb3RvLk1zZy5PUk1hcERlbHRhR3JvdXAuTWFwRW50cnkigAMK",
+            "BkxXV01hcBJBCgRrZXlzGAEgASgLMjMuQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT1JTZXQSSwoHZW50cmllcxgCIAMo",
+            "CzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLkxXV01hcC5FbnRyeRIQCgh2YWx1ZVRhZxgKIAEoDRrTAQoFRW50cnkS",
+            "EQoJc3RyaW5nS2V5GAEgASgJEkgKBXZhbHVlGAIgASgLMjkuQWtrYS5EaXN0",
+            "cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuTFdXUmVnaXN0",
+            "ZXISDgoGaW50S2V5GAMgASgREg8KB2xvbmdLZXkYBCABKBISTAoIb3RoZXJL",
+            "ZXkYBSABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5PdGhlck1lc3NhZ2Ui+AIKDFBOQ291bnRlck1hcBJBCgRr",
+            "ZXlzGAEgASgLMjMuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuT1JTZXQSUQoHZW50cmllcxgCIAMoCzJALkFra2EuRGlz",
+            "dHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBOQ291bnRl",
+            "ck1hcC5FbnRyeRrRAQoFRW50cnkSEQoJc3RyaW5nS2V5GAEgASgJEkYKBXZh",
+            "bHVlGAIgASgLMjcuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuUE5Db3VudGVyEg4KBmludEtleRgDIAEoERIPCgdsb25n",
+            "S2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5EaXN0cmlidXRl",
+            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlIpsD",
+            "CgpPUk11bHRpTWFwEkEKBGtleXMYASABKAsyMy5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PUlNldBJPCgdlbnRyaWVz",
+            "GAIgAygLMj4uQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuT1JNdWx0aU1hcC5FbnRyeRIXCg93aXRoVmFsdWVEZWx0YXMY",
+            "AyABKAgSEAoIdmFsdWVUYWcYCiABKA0azQEKBUVudHJ5EhEKCXN0cmluZ0tl",
+            "eRgBIAEoCRJCCgV2YWx1ZRgCIAEoCzIzLkFra2EuRGlzdHJpYnV0ZWREYXRh",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0Eg4KBmludEtleRgDIAEo",
+            "ERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5GAUgASgLMjouQWtrYS5E",
+            "aXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJN",
+            "ZXNzYWdlKi0KDE9SU2V0RGVsdGFPcBIHCgNBZGQQABIKCgZSZW1vdmUQARII",
+            "CgRGdWxsEAIqUgoMT1JNYXBEZWx0YU9wEgwKCE9STWFwUHV0EAASDwoLT1JN",
+            "YXBSZW1vdmUQARISCg5PUk1hcFJlbW92ZUtleRACEg8KC09STWFwVXBkYXRl",
+            "EANCAkgBYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatorMessagesReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaOp), }, new pbr::GeneratedClrTypeInfo[] {
@@ -121,8 +121,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister), global::Akka.DistributedData.Serialization.Proto.Msg.LWWRegister.Parser, new[]{ "Timestamp", "Node", "State", "ElementTag" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GCounter), global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.GCounter.Types.Entry.Parser, new[]{ "Node", "Value" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounter), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounter.Parser, new[]{ "Increments", "Decrements" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Parser, new[]{ "Keys", "Entries", "ValueManifest", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Parser, new[]{ "Keys", "Entries", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Parser, new[]{ "Entries", "KeyTag", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.MapEntry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry.Parser, new[]{ "Operation", "Underlying", "ZeroTag", "EntryData" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Parser, new[]{ "Keys", "Entries", "ValueTag" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Parser, new[]{ "Keys", "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
@@ -1870,7 +1870,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public ORMap(ORMap other) : this() {
       Keys = other.keys_ != null ? other.Keys.Clone() : null;
       entries_ = other.entries_.Clone();
-      valueManifest_ = other.valueManifest_;
       valueTag_ = other.valueTag_;
     }
 
@@ -1900,22 +1899,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return entries_; }
     }
 
-    /// <summary>Field number for the "valueManifest" field.</summary>
-    public const int ValueManifestFieldNumber = 10;
-    private pb::ByteString valueManifest_ = pb::ByteString.Empty;
-    /// <summary>
-    /// Type codes for .NET generics reification 
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pb::ByteString ValueManifest {
-      get { return valueManifest_; }
-      set {
-        valueManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
     /// <summary>Field number for the "valueTag" field.</summary>
-    public const int ValueTagFieldNumber = 11;
+    public const int ValueTagFieldNumber = 10;
     private uint valueTag_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public uint ValueTag {
@@ -1940,7 +1925,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Keys, other.Keys)) return false;
       if(!entries_.Equals(other.entries_)) return false;
-      if (ValueManifest != other.ValueManifest) return false;
       if (ValueTag != other.ValueTag) return false;
       return true;
     }
@@ -1950,7 +1934,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       int hash = 1;
       if (keys_ != null) hash ^= Keys.GetHashCode();
       hash ^= entries_.GetHashCode();
-      if (ValueManifest.Length != 0) hash ^= ValueManifest.GetHashCode();
       if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
       return hash;
     }
@@ -1967,12 +1950,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteMessage(Keys);
       }
       entries_.WriteTo(output, _repeated_entries_codec);
-      if (ValueManifest.Length != 0) {
-        output.WriteRawTag(82);
-        output.WriteBytes(ValueManifest);
-      }
       if (ValueTag != 0) {
-        output.WriteRawTag(88);
+        output.WriteRawTag(80);
         output.WriteUInt32(ValueTag);
       }
     }
@@ -1984,9 +1963,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Keys);
       }
       size += entries_.CalculateSize(_repeated_entries_codec);
-      if (ValueManifest.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(ValueManifest);
-      }
       if (ValueTag != 0) {
         size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
       }
@@ -2005,9 +1981,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         Keys.MergeFrom(other.Keys);
       }
       entries_.Add(other.entries_);
-      if (other.ValueManifest.Length != 0) {
-        ValueManifest = other.ValueManifest;
-      }
       if (other.ValueTag != 0) {
         ValueTag = other.ValueTag;
       }
@@ -2032,11 +2005,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             entries_.AddEntriesFrom(input, _repeated_entries_codec);
             break;
           }
-          case 82: {
-            ValueManifest = input.ReadBytes();
-            break;
-          }
-          case 88: {
+          case 80: {
             ValueTag = input.ReadUInt32();
             break;
           }
@@ -2319,6 +2288,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public ORMapDeltaGroup(ORMapDeltaGroup other) : this() {
       entries_ = other.entries_.Clone();
+      keyTag_ = other.keyTag_;
+      valueTag_ = other.valueTag_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2336,6 +2307,31 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       get { return entries_; }
     }
 
+    /// <summary>Field number for the "keyTag" field.</summary>
+    public const int KeyTagFieldNumber = 10;
+    private uint keyTag_;
+    /// <summary>
+    /// Type codes for .NET generics reification 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint KeyTag {
+      get { return keyTag_; }
+      set {
+        keyTag_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "valueTag" field.</summary>
+    public const int ValueTagFieldNumber = 11;
+    private uint valueTag_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint ValueTag {
+      get { return valueTag_; }
+      set {
+        valueTag_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as ORMapDeltaGroup);
@@ -2350,6 +2346,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         return true;
       }
       if(!entries_.Equals(other.entries_)) return false;
+      if (KeyTag != other.KeyTag) return false;
+      if (ValueTag != other.ValueTag) return false;
       return true;
     }
 
@@ -2357,6 +2355,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       hash ^= entries_.GetHashCode();
+      if (KeyTag != 0) hash ^= KeyTag.GetHashCode();
+      if (ValueTag != 0) hash ^= ValueTag.GetHashCode();
       return hash;
     }
 
@@ -2368,12 +2368,26 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
       entries_.WriteTo(output, _repeated_entries_codec);
+      if (KeyTag != 0) {
+        output.WriteRawTag(80);
+        output.WriteUInt32(KeyTag);
+      }
+      if (ValueTag != 0) {
+        output.WriteRawTag(88);
+        output.WriteUInt32(ValueTag);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
       size += entries_.CalculateSize(_repeated_entries_codec);
+      if (KeyTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(KeyTag);
+      }
+      if (ValueTag != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ValueTag);
+      }
       return size;
     }
 
@@ -2383,6 +2397,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         return;
       }
       entries_.Add(other.entries_);
+      if (other.KeyTag != 0) {
+        KeyTag = other.KeyTag;
+      }
+      if (other.ValueTag != 0) {
+        ValueTag = other.ValueTag;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2395,6 +2415,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           case 10: {
             entries_.AddEntriesFrom(input, _repeated_entries_codec);
+            break;
+          }
+          case 80: {
+            KeyTag = input.ReadUInt32();
+            break;
+          }
+          case 88: {
+            ValueTag = input.ReadUInt32();
             break;
           }
         }

@@ -88,9 +88,7 @@ message ORMap {
   ORSet keys = 1;
   repeated Entry entries = 2;
 
-  /* Type codes for .NET generics reification */
-  bytes valueManifest = 10;
-  uint32 valueTag = 11;
+  uint32 valueTag = 10;
 }
 
 message ORMapDeltaGroup {
@@ -109,6 +107,10 @@ message ORMapDeltaGroup {
   }
 
   repeated Entry entries = 1;
+
+  /* Type codes for .NET generics reification */
+  uint32 keyTag = 10;
+  uint32 valueTag = 11;
 }
 
 enum ORMapDeltaOp {
