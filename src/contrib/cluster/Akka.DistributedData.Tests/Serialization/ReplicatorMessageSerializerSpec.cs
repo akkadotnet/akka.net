@@ -25,7 +25,7 @@ namespace Akka.DistributedData.Tests.Serialization
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {
-                provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                provider=cluster
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
