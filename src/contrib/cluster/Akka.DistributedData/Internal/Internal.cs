@@ -552,7 +552,9 @@ namespace Akka.DistributedData.Internal
 
             foreach (var entry in Pruning)
             {
-                if (!Equals(entry.Value, other.Pruning[entry.Key])) return false;
+                if (!other.Pruning.TryGetValue(entry.Key, out var otherVal)) return false;
+
+                if (!Equals(entry.Value, otherVal)) return false;
             }
 
             return true;

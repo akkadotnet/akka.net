@@ -174,7 +174,7 @@ namespace Akka.DistributedData.Serialization
         public Akka.Serialization.Serialization Serialization
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _serialization;
+            get => system.Serialization;
         }
 
         public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) : base(system)
@@ -335,7 +335,7 @@ namespace Akka.DistributedData.Serialization
             {
                 case PruningPerformed performed:
                     proto.Performed = true;
-                    proto.ObsoleteTime = performed.ObsoleteTime.Ticks / TimeSpan.TicksPerMillisecond;
+                    proto.ObsoleteTime = performed.ObsoleteTime.Ticks;
                     break;
                 case PruningInitialized init:
                     proto.Performed = false;
@@ -354,8 +354,8 @@ namespace Akka.DistributedData.Serialization
         {
             return new Proto.Msg.Changed
             {
-                Key = this.OtherMessageToProto(msg),
-                Data = this.OtherMessageToProto(msg)
+                Key = this.OtherMessageToProto(msg.Key),
+                Data = this.OtherMessageToProto(msg.Data)
             };
         }
 
@@ -364,7 +364,7 @@ namespace Akka.DistributedData.Serialization
             var proto = new Proto.Msg.GetSuccess
             {
                 Key = this.OtherMessageToProto(msg.Key),
-                Data = this.OtherMessageToProto(msg.Key)
+                Data = this.OtherMessageToProto(msg.Data)
             };
 
             if (!ReferenceEquals(null, msg.Request))
@@ -553,7 +553,7 @@ namespace Akka.DistributedData.Serialization
                     var removed = this.UniqueAddressFromProto(entry.RemovedAddress);
                     if (entry.Performed)
                     {
-                        builder.Add(removed, new PruningPerformed(new DateTime(entry.ObsoleteTime * TimeSpan.TicksPerMillisecond)));
+                        builder.Add(removed, new PruningPerformed(new DateTime(entry.ObsoleteTime)));
                     }
                     else
                     {
@@ -608,7 +608,7 @@ namespace Akka.DistributedData.Serialization
             return DynamicGetFailure(key, request);
         }
 
-        private GetFailure DynamicGetFailure<T>(dynamic key, object request) where T : IReplicatedData
+        private GetFailure DynamicGetFailure<T>(IKey<T> key, object request) where T : IReplicatedData
         {
             return new GetFailure<T>(key, request);
         }
