@@ -1528,6 +1528,7 @@ namespace Akka.Streams.Dsl
     }
     public class static RestartFlow
     {
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
     }
     public class static RestartSink
@@ -1536,6 +1537,7 @@ namespace Akka.Streams.Dsl
     }
     public class static RestartSource
     {
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
     }
     public class static Retry
