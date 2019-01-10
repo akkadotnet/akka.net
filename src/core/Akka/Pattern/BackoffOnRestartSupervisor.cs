@@ -11,6 +11,10 @@ using Akka.Event;
 
 namespace Akka.Pattern
 {
+    /// <summary>
+    /// Back-off supervisor that stops and starts a child actor when the child actor restarts. 
+    /// This back-off supervisor is created by using <see cref="BackoffSupervisor.Props"/> with <see cref="Backoff.OnFailure"/>
+    /// </summary>
     internal sealed class BackoffOnRestartSupervisor : BackoffSupervisorBase
     {
         private readonly TimeSpan _minBackoff;
@@ -26,7 +30,8 @@ namespace Akka.Pattern
             TimeSpan maxBackoff,
             IBackoffReset reset,
             double randomFactor,
-            OneForOneStrategy strategy) : base(childProps, childName, reset)
+            OneForOneStrategy strategy,
+            object replyWhileStopped = null) : base(childProps, childName, reset, replyWhileStopped)
         {
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
