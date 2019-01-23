@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Event;
 
@@ -15,12 +16,13 @@ namespace Akka.Pattern
     /// </summary>
     public abstract class BackoffSupervisorBase : ActorBase
     {
-        internal BackoffSupervisorBase(Props childProps, string childName, IBackoffReset reset, object replyWhileStopped = null)
+        internal BackoffSupervisorBase(Props childProps, string childName, IBackoffReset reset, object replyWhileStopped = null, Func<object, bool> finalStopMessage = null)
         {
             ChildProps = childProps;
             ChildName = childName;
             Reset = reset;
             ReplyWhileStopped = replyWhileStopped;
+            FinalStopMessage = finalStopMessage;
             Log = Logging.GetLogger(Context.System, GetType());
         }
 
@@ -28,8 +30,11 @@ namespace Akka.Pattern
         protected string ChildName { get; }
         protected IBackoffReset Reset { get; }
         protected object ReplyWhileStopped { get; }
+        protected Func<object, bool> FinalStopMessage { get; }
+
         protected IActorRef Child { get; set; }
         protected int RestartCountN { get; set; }
+        protected bool FinalStopMessageReceived { get; set; }
 
         internal ILoggingAdapter Log { get; }
 
@@ -49,68 +54,73 @@ namespace Akka.Pattern
 
         protected bool HandleBackoff(object message)
         {
-            if (message is BackoffSupervisor.StartChild)
+            switch (message)
             {
-                StartChild();
-                var backoffReset = Reset as AutoReset;
-                if (backoffReset != null)
-                {
-                    Context.System.Scheduler.ScheduleTellOnce(backoffReset.ResetBackoff, Self,
-                        new BackoffSupervisor.ResetRestartCount(RestartCountN), Self);
-                }
-            }
-            else if (message is BackoffSupervisor.Reset)
-            {
-                if (Reset is ManualReset)
-                {
+                case BackoffSupervisor.StartChild _:
+                    {
+                        StartChild();
+                        if (Reset is AutoReset backoffReset)
+                        {
+                            Context.System.Scheduler.ScheduleTellOnce(backoffReset.ResetBackoff, Self, new BackoffSupervisor.ResetRestartCount(RestartCountN), Self);
+                        }
+                        break;
+                    }
+                case BackoffSupervisor.Reset _ when Reset is ManualReset:
                     RestartCountN = 0;
-                }
-                else
-                {
+                    break;
+                case BackoffSupervisor.Reset _:
                     Unhandled(message);
-                }
-            }
-            else if (message is BackoffSupervisor.ResetRestartCount)
-            {
-                var restartCount = (BackoffSupervisor.ResetRestartCount)message;
-                if (restartCount.Current == RestartCountN)
-                {
-                    RestartCountN = 0;
-                }
-            }
-            else if (message is BackoffSupervisor.GetRestartCount)
-            {
-                Sender.Tell(new BackoffSupervisor.RestartCount(RestartCountN));
-            }
-            else if (message is BackoffSupervisor.GetCurrentChild)
-            {
-                Sender.Tell(new BackoffSupervisor.CurrentChild(Child));
-            }
-            else
-            {
-                if (Child != null)
-                {
-                    if (Child.Equals(Sender))
+                    break;
+                case BackoffSupervisor.ResetRestartCount count:
                     {
-                        // use the BackoffSupervisor as sender
-                        Context.Parent.Tell(message);
+                        if (count.Current == RestartCountN)
+                        {
+                            RestartCountN = 0;
+                        }
+                        break;
                     }
-                    else
+                case BackoffSupervisor.GetRestartCount _:
+                    Sender.Tell(new BackoffSupervisor.RestartCount(RestartCountN));
+                    break;
+                case BackoffSupervisor.GetCurrentChild _:
+                    Sender.Tell(new BackoffSupervisor.CurrentChild(Child));
+                    break;
+                default:
                     {
-                        Child.Forward(message);
+                        if (Child != null)
+                        {
+                            if (Child.Equals(Sender))
+                            {
+                                // use the BackoffSupervisor as sender
+                                Context.Parent.Tell(message);
+                            }
+                            else
+                            {
+                                Child.Forward(message);
+                                if (!FinalStopMessageReceived && FinalStopMessage != null)
+                                {
+                                    FinalStopMessageReceived = FinalStopMessage(message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (ReplyWhileStopped != null)
+                            {
+                                Sender.Tell(ReplyWhileStopped);
+                            }
+                            else
+                            {
+                                Context.System.DeadLetters.Forward(message);
+                            }
+
+                            if (FinalStopMessage != null && FinalStopMessage(message))
+                            {
+                                Context.Stop(Self);
+                            }
+                        }
+                        break;
                     }
-                }
-                else
-                {
-                    if (ReplyWhileStopped != null)
-                    {
-                        Sender.Tell(ReplyWhileStopped);
-                    }
-                    else
-                    {
-                        Context.System.DeadLetters.Forward(message);
-                    }
-                }
             }
 
             return true;
