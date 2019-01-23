@@ -12,6 +12,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2;
 using FluentAssertions;
 using Xunit;
 
@@ -262,7 +263,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_reply_to_sender_if_replyWhileStopped_is_specified()
+        public void BackoffSupervisor_must_reply_to_sender_if_replyWhileStopped_is_specified()
         {
             EventFilter.Exception<TestException>().Expect(1, () =>
             {
@@ -290,7 +291,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
+        public void BackoffSupervisor_must_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
         {
             EventFilter.Exception<TestException>().Expect(1, () =>
             {
@@ -317,7 +318,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Theory, ClassData(typeof(DelayTable))]
-        public void BackoffSupervisor_correctly_calculate_the_delay(int restartCount, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, TimeSpan expectedResult)
+        public void BackoffSupervisor_must_correctly_calculate_the_delay(int restartCount, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, TimeSpan expectedResult)
         {
             Assert.Equal(expectedResult, BackoffSupervisor.CalculateDelay(restartCount, minBackoff, maxBackoff, randomFactor));
         }
@@ -340,7 +341,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
+        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
         {
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
 
@@ -389,7 +390,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
+        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
         {
             EventFilter.Exception<TestException>().Expect(3, () =>
             {
@@ -438,6 +439,44 @@ namespace Akka.Tests.Pattern
                 ExpectTerminated(c3);
                 ExpectTerminated(supervisor);
             });
+        }
+
+        [Fact]
+        public void BackoffSupervisor_must_stop_restarting_the_child_if_final_stop_message_received_using_BackOff_OnStop()
+        {
+            const string stopMessage = "stop";
+            var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
+            supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            Watch(c1);
+            Watch(supervisor);
+
+            supervisor.Tell(stopMessage);
+            ExpectMsg("stop");
+            c1.Tell(PoisonPill.Instance);
+            ExpectTerminated(c1);
+            ExpectTerminated(supervisor);
+        }
+
+        [Fact]
+        public void BackoffSupervisor_must_not_stop_when_final_stop_message_has_not_been_received()
+        {
+            const string stopMessage = "stop";
+            var supervisorWatcher = new TestProbe(Sys, new XunitAssertions());
+            var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
+            supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+            var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            Watch(c1);
+            Watch(supervisor);
+            supervisorWatcher.Watch(supervisor);
+
+            c1.Tell(PoisonPill.Instance);
+            ExpectTerminated(c1);
+            supervisor.Tell("ping");
+            supervisorWatcher.ExpectNoMsg(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
+
+            supervisor.Tell(stopMessage);
+            ExpectTerminated(supervisor);
         }
     }
 }
