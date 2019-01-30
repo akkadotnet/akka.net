@@ -6,11 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.ComponentModel;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Pattern
 {
@@ -127,7 +125,8 @@ namespace Akka.Pattern
             IBackoffReset reset,
             double randomFactor,
             SupervisorStrategy strategy,
-            object replyWhileStopped = null) : base(childProps, childName, reset, replyWhileStopped)
+            object replyWhileStopped = null,
+            Func<object, bool> finalStopMessage = null) : base(childProps, childName, reset, replyWhileStopped, finalStopMessage)
         {
             _minBackoff = minBackoff;
             _maxBackoff = maxBackoff;
@@ -150,18 +149,25 @@ namespace Akka.Pattern
             if (message is Terminated terminated && terminated.ActorRef.Equals(Child))
             {
                 Child = null;
-                var maxNrOfRetries = _strategy is OneForOneStrategy oneForOne ? oneForOne.MaxNumberOfRetries : -1;
-                var nextRestartCount = RestartCountN + 1;
-                if (maxNrOfRetries == -1 || nextRestartCount <= maxNrOfRetries)
+                if (FinalStopMessageReceived)
                 {
-                    var restartDelay = CalculateDelay(RestartCountN, _minBackoff, _maxBackoff, _randomFactor);
-                    Context.System.Scheduler.ScheduleTellOnce(restartDelay, Self, StartChild.Instance, Self);
-                    RestartCountN = nextRestartCount;
+                    Context.Stop(Self);
                 }
                 else
                 {
-                    Log.Debug($"Terminating on restart #{nextRestartCount} which exceeds max allowed restarts ({maxNrOfRetries})");
-                    Context.Stop(Self);
+                    var maxNrOfRetries = _strategy is OneForOneStrategy oneForOne ? oneForOne.MaxNumberOfRetries : -1;
+                    var nextRestartCount = RestartCountN + 1;
+                    if (maxNrOfRetries == -1 || nextRestartCount <= maxNrOfRetries)
+                    {
+                        var restartDelay = CalculateDelay(RestartCountN, _minBackoff, _maxBackoff, _randomFactor);
+                        Context.System.Scheduler.ScheduleTellOnce(restartDelay, Self, StartChild.Instance, Self);
+                        RestartCountN = nextRestartCount;
+                    }
+                    else
+                    {
+                        Log.Debug($"Terminating on restart #{nextRestartCount} which exceeds max allowed restarts ({maxNrOfRetries})");
+                        Context.Stop(Self);
+                    }
                 }
                 return true;
             }
@@ -244,7 +250,7 @@ namespace Akka.Pattern
             SupervisorStrategy strategy)
         {
             return Actor.Props.Create(
-               () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, null));
+                () => new BackoffSupervisor(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, strategy, null, null));
         }
 
         /// <summary>

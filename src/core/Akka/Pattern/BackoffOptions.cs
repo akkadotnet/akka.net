@@ -112,6 +112,11 @@ namespace Akka.Pattern
         public abstract BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
 
         /// <summary>
+        /// Predicate evaluated for each message, if it returns true and the supervised actor is stopped then the supervisor will stop its self. If it returns true while the supervised actor is running then it will be forwarded to the supervised actor and when the supervised actor stops itself the supervisor will stop itself.
+        /// </summary>
+        public abstract BackoffOptions WithFinalStopMessage(Func<object, bool> isFinalStopMessage);
+
+        /// <summary>
         /// Returns the props to create the back-off supervisor.
         /// </summary>
         internal abstract Props Props { get; }
@@ -128,13 +133,14 @@ namespace Akka.Pattern
         private readonly IBackoffReset _reset;
         private readonly OneForOneStrategy _strategy;
         private readonly object _replyWhileStopped;
+        private readonly Func<object, bool> _finalStopMessage;
 
         public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset = null) 
             : this(backoffType, childProps, childName, minBackoff, maxBackoff, randomFactor, reset, new OneForOneStrategy(SupervisorStrategy.DefaultDecider))
         {
         }
 
-        public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset, OneForOneStrategy strategy, object replyWhileStopped = null)
+        public BackoffOptionsImpl(IBackoffType backoffType, Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IBackoffReset reset, OneForOneStrategy strategy, object replyWhileStopped = null, Func<object, bool> finalStopMessage = null)
         {
             _backoffType = backoffType ?? RestartImpliesFailure.Instance;
             _childProps = childProps;
@@ -145,36 +151,42 @@ namespace Akka.Pattern
             _reset = reset ?? new AutoReset(_minBackoff);
             _strategy = strategy;
             _replyWhileStopped = replyWhileStopped;
+            _finalStopMessage = finalStopMessage;
         }
 
         public override BackoffOptions WithAutoReset(TimeSpan resetBackoff)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new AutoReset(resetBackoff), _strategy, _replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new AutoReset(resetBackoff), _strategy, _replyWhileStopped, _finalStopMessage);
         }
 
         public override BackoffOptions WithManualReset()
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new ManualReset(), _strategy, _replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, new ManualReset(), _strategy, _replyWhileStopped, _finalStopMessage);
         }
 
         public override BackoffOptions WithSupervisorStrategy(OneForOneStrategy supervisorStrategy)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, supervisorStrategy, _replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, supervisorStrategy, _replyWhileStopped, _finalStopMessage);
         }
 
         public override BackoffOptions WithDefaultStoppingStrategy()
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, new OneForOneStrategy(_strategy.MaxNumberOfRetries, null, SupervisorStrategy.StoppingStrategy.Decider), _replyWhileStopped);            
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, new OneForOneStrategy(_strategy.MaxNumberOfRetries, null, SupervisorStrategy.StoppingStrategy.Decider), _replyWhileStopped, _finalStopMessage);
         }
 
         public override BackoffOptions WithReplyWhileStopped(object replyWhileStopped)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy, replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy, replyWhileStopped, _finalStopMessage);
         }
 
         public override BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries)
         {
-            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy.WithMaxNrOfRetries(maxNrOfRetries), _replyWhileStopped);
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy.WithMaxNrOfRetries(maxNrOfRetries), _replyWhileStopped, _finalStopMessage);
+        }
+
+        public override BackoffOptions WithFinalStopMessage(Func<object, bool> isFinalStopMessage)
+        {
+            return new BackoffOptionsImpl(_backoffType, _childProps, _childName, _minBackoff, _maxBackoff, _randomFactor, _reset, _strategy, _replyWhileStopped, isFinalStopMessage);
         }
 
         internal override Props Props
@@ -198,9 +210,9 @@ namespace Akka.Pattern
                 switch (_backoffType)
                 {
                     case RestartImpliesFailure _:
-                        return Props.Create(() => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped));
+                        return Props.Create(() => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
                     case StopImpliesFailure _:
-                        return Props.Create(() => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped));
+                        return Props.Create(() => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
                     default:
                         return Props.Empty;
                 }
