@@ -183,7 +183,7 @@ namespace Akka.Serialization
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
 
             return serializer.FromBinary(bytes, type);
@@ -204,7 +204,7 @@ namespace Akka.Serialization
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
 
             if (serializer is SerializerWithStringManifest)
