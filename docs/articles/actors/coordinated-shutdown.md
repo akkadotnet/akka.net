@@ -105,7 +105,7 @@ The default phases are defined in a linear order, but in practice the phases are
 
 ## Registering Tasks to a Phase
 
-For instance, if you're using [Akka.Cluster](../clustering/cluster-overview) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
+For instance, if you're using [Akka.Cluster](../clustering/cluster-overview.md) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
 
 ```
 var coordShutdown = CoordinatedShutdown.Get(myActorSystem);
