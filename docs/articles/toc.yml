@@ -118,8 +118,6 @@
     href: streams/builtinstages.md
   - name: Streams Cookbook
     href: streams/cookbook.md
-  - name: Configuration
-    href: streams/configuration.md
 - name: Networking
   items:
   - name: I/O
