@@ -130,4 +130,4 @@ var propsResolver = new NinjectDependencyResolver(container,system);
 
 Support for additional dependency injection frameworks may be added in the
 future, but you can easily implement your own by implementing an
-[Actor Producer Extension](xref:di-core).
+[Actor Producer Extension](https://github.com/AkkaNetContrib/Akka.DI.SimpleInjector).
