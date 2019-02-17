@@ -67,7 +67,7 @@ public class MvcApplication : System.Web.HttpApplication
 As you can see the main point here is keeping a static reference to your `ActorSystem` . This ensures it won't be accidentally garbage collected and gets disposed and created with the start and stop events of your web application. 
 
 > [!WARNING]
-> Although hosting inside an ASP.NET Application is easy. A **word of caution**: When you are hosting inside of `IIS` the applicationpool your app lives in could be stopped and started at the whim of `IIS`. This in turn means your `ActorSystem` could be stopped at any given time.
+> When you are hosting inside of `IIS`, the applicationpool your app lives in could be stopped and started at the whim of `IIS`. This means your `ActorSystem` could be stopped at any given time.
 
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a seperate Windows Service via Akka.Remote / Akka.Cluster
 
@@ -89,12 +89,10 @@ public class SomeController  : ApiController
 
 ## Windows Service
 
-For windows service deployment its recommended to use
-[TopShelf](http://topshelf.readthedocs.org/en/latest/index.html)
+For windows service deployment it is recommended to use [TopShelf](http://topshelf.readthedocs.org/en/latest/index.html)
 to build your Windows Services. It radically simplifies hosting Windows Services.
 
-The quickest way to get started with TopShelf is by creating a Console
-Application. Which would look like this:
+The quickest way to get started with TopShelf is by creating a Console Application. Which would look like this:
 
 #### Program.cs
 ```csharp
@@ -143,14 +141,11 @@ public class MyActorService
 }
 ```
 
-The above example is the simplest way imaginable. However there are also other
-styles of integration with TopShelf that give you more control.
+The above example is the simplest way imaginable, but there are other styles of integration with TopShelf that give you more control.
 
-Installing with Topshelf is as easy as calling `myConsoleApp.exe install` on
-the command line.
+Installing with Topshelf is as easy as calling `myConsoleApp.exe install` on the command line.
 
-For all the options and settings check out their
-[docs](http://topshelf.readthedocs.org/en/latest/index.html).
+For all the options and settings check out their [docs](http://topshelf.readthedocs.org/en/latest/index.html).
 
 ## Azure PaaS Worker Role
 
