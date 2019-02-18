@@ -20,9 +20,10 @@ var system = ActorSystem.Create("example");
 var manager = system.Tcp();
 ```
 
-### TCP Driver
+## TCP Driver
 
-#### Client Connection
+### Client Connection
+
 To create a connection an actor sends a `Tcp.Connect` message to the TCP Manager.
 Once the connection is established the connection actor sends a `Tcp.Connected` message to the `commander`, which registers the `connection handler` by replying with a `Tcp.Register` message.
 
@@ -36,7 +37,8 @@ The following example shows a simple Telnet client. The client send lines entere
 
 [!code-csharp[Main](../../examples/DocsExamples/Networking/IO/TelnetClient.cs?range=10-63)]
 
-#### Server Connection
+### Server Connection
+
 To accept connections, an actor sends an `Tcp.Bind` message to the TCP manager, passing the `bind handler` in the message.
 The `bind commander` will receive a `Tcp.Bound` message when the connection is listening.
 
@@ -50,4 +52,4 @@ The following code example shows a simple server that echo's data received from 
 
 [!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoServer.cs?range=8-29)]
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoConnection.cs?range=6-27)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoConnection.cs?range=7-28)]

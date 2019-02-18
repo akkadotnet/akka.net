@@ -171,9 +171,9 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         Assert.Equal(3, Cluster.Get(Sys).ReadView.Members.Count);
-                        Assert.True(
-                            Cluster.Get(Sys)
-                                .ReadView.Members.Any(m => m.Address.Equals(SecondUniqueAddress.Address) && m.UniqueAddress.Uid != SecondUniqueAddress.Uid));
+                        Assert.Contains(
+                            Cluster.Get(Sys).ReadView.Members,
+                            m => m.Address.Equals(SecondUniqueAddress.Address) && m.UniqueAddress.Uid != SecondUniqueAddress.Uid);
                     });
                 }, _config.First, _config.Third);
 

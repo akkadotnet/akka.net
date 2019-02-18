@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("123b83e9-21f8-49a8-888a-3b1212ff21dc")]
@@ -641,6 +642,7 @@ namespace Akka.Streams
     }
     public class static KillSwitches
     {
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, T>, Akka.NotUsed> AsFlow<T>(this System.Threading.CancellationToken cancellationToken, bool cancelGracefully = False) { }
         public static Akka.Streams.SharedKillSwitch Shared(string name) { }
         public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, T>, Akka.Streams.UniqueKillSwitch> Single<T>() { }
         public static Akka.Streams.IGraph<Akka.Streams.BidiShape<T1, T1, T2, T2>, Akka.Streams.UniqueKillSwitch> SingleBidi<T1, T2>() { }
@@ -1031,7 +1033,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Async() { }
         public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> Atop<TOut12, TIn21, TMat2>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi) { }
-        public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> AtopMat<TOut12, TIn21, TMat2, TMat3>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, System.Func<TMat, TMat2, TMat3> combine) { }
+        public Akka.Streams.Dsl.BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat3> AtopMat<TOut12, TIn21, TMat2, TMat3>(Akka.Streams.Dsl.BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, System.Func<TMat, TMat2, TMat3> combine) { }
         public Akka.Streams.Dsl.Flow<TIn1, TOut2, TMat> Join<TMat2>(Akka.Streams.Dsl.Flow<TOut1, TIn2, TMat2> flow) { }
         public Akka.Streams.Dsl.Flow<TIn1, TOut2, TMat3> JoinMat<TMat2, TMat3>(Akka.Streams.Dsl.Flow<TOut1, TIn2, TMat2> flow, System.Func<TMat, TMat2, TMat3> combine) { }
         public Akka.Streams.IGraph<Akka.Streams.BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Named(string name) { }
@@ -1327,6 +1329,11 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Inlet<TIn> In(int id) { }
         public override string ToString() { }
     }
+    public class static IntervalBasedRateLimiter
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.IGraph<Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>>, Akka.NotUsed> Create<T>(System.TimeSpan minInterval, int maxBatchSize) { }
+    }
     public interface IRunnableGraph<out TMat> : Akka.Streams.IGraph<Akka.Streams.ClosedShape>, Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat>
     {
         Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes);
@@ -1356,6 +1363,14 @@ namespace Akka.Streams.Dsl
         public static TLeft Left<TLeft, TRight>(TLeft left, TRight right) { }
         public static Akka.NotUsed None<TLeft, TRight>(TLeft left, TRight right) { }
         public static TRight Right<TLeft, TRight>(TLeft left, TRight right) { }
+    }
+    public class KeepAliveConcat<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    {
+        public KeepAliveConcat(int keepAliveFailoverSize, System.TimeSpan interval, System.Func<T, System.Collections.Generic.IEnumerable<T>> extrapolate) { }
+        public Akka.Streams.Inlet<T> In { get; }
+        public Akka.Streams.Outlet<T> Out { get; }
+        public override Akka.Streams.FlowShape<T, T> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public class LastElement<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<T, T>, System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>>
     {
@@ -1461,6 +1476,17 @@ namespace Akka.Streams.Dsl
     {
         public OutputTruncationException() { }
     }
+    public class static PagedSource
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Create<T, TKey>(TKey firstKey, System.Func<TKey, System.Threading.Tasks.Task<Akka.Streams.Dsl.PagedSource.Page<T, TKey>>> pageFactory) { }
+        public class Page<T, TKey>
+        {
+            public Page(System.Collections.Generic.IEnumerable<T> items, Akka.Streams.Util.Option<TKey> nextKey) { }
+            public System.Collections.Generic.IEnumerable<T> Items { get; }
+            public Akka.Streams.Util.Option<TKey> NextKey { get; }
+        }
+    }
     public sealed class Partition<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
     {
         public readonly Akka.Streams.Inlet<T> In;
@@ -1502,15 +1528,22 @@ namespace Akka.Streams.Dsl
     }
     public class static RestartFlow
     {
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
     }
     public class static RestartSink
     {
         public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Sink<T, TMat>> sinkFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Sink<T, TMat>> sinkFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
     }
     public class static RestartSource
     {
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
     }
     public class static Retry
     {
@@ -1575,6 +1608,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, Akka.Actor.IActorRef> ActorSubscriber<TIn>(Akka.Actor.Props props) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TOut>> Aggregate<TIn, TOut>(TOut zero, System.Func<TOut, TIn, TOut> aggregate) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TOut>> AggregateAsync<TIn, TOut>(TOut zero, System.Func<TOut, TIn, System.Threading.Tasks.Task<TOut>> aggregate) { }
+        public static Akka.Streams.Dsl.Sink<T, System.IObservable<T>> AsObservable<T>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> AsPublisher<TIn>(bool fanout) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
@@ -1608,6 +1642,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Sink<TIn2, TMat> ContraMap<TIn2>(System.Func<TIn2, TIn> function) { }
         public Akka.Streams.Dsl.Sink<TIn, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> fn) { }
         public Akka.Streams.Dsl.Sink<TIn, TMat> Named(string name) { }
+        public System.Tuple<TMat, Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SourceShape<TIn>, TMat2> source, Akka.Streams.IMaterializer materializer) { }
         public override string ToString() { }
         public Akka.Streams.Dsl.Sink<TIn, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
@@ -1618,6 +1653,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.IActorRef> ActorRef<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Reactive.Streams.ISubscriber<T>> AsSubscriber<T>() { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> Combine<T, TOut2>(Akka.Streams.Dsl.Source<T, Akka.NotUsed> first, Akka.Streams.Dsl.Source<T, Akka.NotUsed> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, params Akka.Streams.Dsl.Source<, >[] rest) { }
+        public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Akka.Streams.Dsl.Source<T, TMat1> first, Akka.Streams.Dsl.Source<T, TMat2> second, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Cycle<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Empty<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Failed<T>(System.Exception cause) { }
@@ -1626,6 +1662,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<TDelegate, T>(System.Func<System.Action<T>, TDelegate> conversion, System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<T>(System.Action<System.EventHandler<T>> addHandler, System.Action<System.EventHandler<T>> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, TMat> FromGraph<T, TMat>(Akka.Streams.IGraph<Akka.Streams.SourceShape<T>, TMat> source) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromObservable<T>(System.IObservable<T> observable, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromPublisher<T>(Reactive.Streams.IPublisher<T> publisher) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
         public static Akka.Streams.Dsl.Source<TOut, System.Threading.Tasks.Task<TMat>> Lazily<TOut, TMat>(System.Func<Akka.Streams.Dsl.Source<TOut, TMat>> create) { }
@@ -1654,6 +1691,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializedFunction) { }
         public Akka.Streams.Dsl.Source<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Named(string name) { }
+        public System.Tuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Streams.IMaterializer materializer) { }
@@ -1668,6 +1706,13 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<System.Collections.Immutable.IImmutableList<T>, Akka.NotUsed> ZipN<T>(System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
         public Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> ZipWithN<T, TOut2>(System.Func<System.Collections.Immutable.IImmutableList<T>, TOut2> zipper, System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
     }
+    public class static SourceGen
+    {
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<TOut, TMat> UnfoldFlow<TState, TOut, TMat>(TState seed, Akka.Streams.IGraph<Akka.Streams.FlowShape<TState, System.Tuple<TState, TOut>>, TMat> flow, System.TimeSpan timeout) { }
+        [Akka.Annotations.ApiMayChangeAttribute()]
+        public static Akka.Streams.Dsl.Source<TOut, TMat> UnfoldFlowWith<TOut, TState, TFlowOut, TMat>(TState seed, Akka.Streams.IGraph<Akka.Streams.FlowShape<TState, TFlowOut>, TMat> flow, System.Func<TFlowOut, Akka.Streams.Util.Option<System.Tuple<TState, TOut>>> unfoldWith, System.TimeSpan timeout) { }
+    }
     public class static SourceOperations
     {
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Aggregate<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> fold) { }
@@ -1679,6 +1724,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> BatchWeighted<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Buffer<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Akka.Streams.Dsl.Source<T, TMat1> flow, Akka.Streams.Dsl.Source<T, TMat2> other, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> CompletionTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Concat<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> ConcatMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -2477,14 +2523,6 @@ namespace Akka.Streams.Implementation
         public abstract Akka.Streams.Implementation.EnumerableActorName Copy(string newPrefix);
         public static Akka.Streams.Implementation.EnumerableActorName Create(string prefix) { }
         public abstract string Next();
-    }
-    [Akka.Annotations.InternalApiAttribute()]
-    public sealed class EventSourceStage<TDelegate, TEventArgs> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TEventArgs>>
-    {
-        public EventSourceStage(System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, System.Func<System.Action<TEventArgs>, TDelegate> conversion, int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
-        public Akka.Streams.Outlet<TEventArgs> Out { get; }
-        public override Akka.Streams.SourceShape<TEventArgs> Shape { get; }
-        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public abstract class ExposedPublisherReceive
     {

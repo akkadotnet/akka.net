@@ -83,6 +83,7 @@ namespace Akka.API.Tests
             var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
             Approvals.Verify(publicApi);
         }
+
         [Fact]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveStreams()

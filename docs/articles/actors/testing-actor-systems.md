@@ -74,8 +74,8 @@ Since an integration test does not allow to the internal processing of the parti
 
 If a number of occurrences is specific --as demonstrated above-- then `intercept` will block until that number of matching messages have been received or the timeout configured in `akka.test.filter-leeway` is used up (time starts counting after the passed-in block of code returns). In case of a timeout the test fails.
 
->[NOTE]
->By default the TestKit already loads the TestEventListener as a logger. Be aware that if you want to specify your own config. Use the `DefaultConfig` property to apply overrides.
+> [!NOTE]
+> By default the TestKit already loads the TestEventListener as a logger. Be aware that if you want to specify your own config. Use the `DefaultConfig` property to apply overrides.
 
 ## Timing Assertions
 Another important part of functional testing concerns timing: certain events must not happen immediately (like a timer), others need to happen before a deadline. Therefore, all examination methods accept an upper time limit within the positive or negative result must be obtained. Lower time limits need to be checked external to the examination, which is facilitated by a new construct for managing time constraints:
@@ -121,8 +121,8 @@ Probes may also be equipped with custom assertions to make your test code even m
 
 You have complete flexibility here in mixing and matching the `TestKit` facilities with your own checks and choosing an intuitive name for it. In real life your code will probably be a bit more complicated than the example given above; just use the power!
 
->[WARNING]
->Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
+> [!WARNING]
+> Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
 
 ###Watching Other Actors from probes
 A `TestProbe` can register itself for DeathWatch of any other actor:
@@ -263,7 +263,7 @@ Testing the business logic inside `Actor` classes can be divided into two parts:
 Normally, the `IActorRef` shields the underlying `Actor` instance from the outside, the only communications channel is the actor's mailbox. This restriction is an impediment to unit testing, which led to the inception of the `TestActorRef`. This special type of reference is designed specifically for test purposes and allows access to the actor in two ways: either by obtaining a reference to the underlying actor instance, or by invoking or querying the actor's behaviour (receive). Each one warrants its own section below.
 
 > [!NOTE]
-> It is highly recommended to stick to traditional behavioural testing (using messaging to ask the `Actor` to reply with the state you want to run assertions against), instead of using `TestActorRef` whenever possible.
+> It is highly recommended to stick to traditional behavioral testing (using messaging to ask the `Actor` to reply with the state you want to run assertions against), instead of using `TestActorRef` whenever possible.
 
 ## Obtaining a Reference to an Actor
 Having access to the actual `Actor` object allows application of all traditional unit testing techniques on the contained methods. Obtaining a reference is done like this:

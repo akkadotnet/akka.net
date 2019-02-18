@@ -88,7 +88,7 @@ namespace Akka.Tests.Configuration
             var config = ConfigurationFactory.FromObject(source);
 
             Assert.Equal("aaa", config.GetString("StringProperty"));
-            Assert.Equal(true, config.GetBoolean("BoolProperty"));
+            Assert.True(config.GetBoolean("BoolProperty"));
 
             Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntegerArray").ToArray());
         }

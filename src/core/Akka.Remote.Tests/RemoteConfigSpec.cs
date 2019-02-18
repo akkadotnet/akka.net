@@ -37,7 +37,7 @@ namespace Akka.Remote.Tests
             Assert.False(remoteSettings.LogReceive);
             Assert.False(remoteSettings.LogSend);
             Assert.False(remoteSettings.UntrustedMode);
-            Assert.Equal(0, remoteSettings.TrustedSelectionPaths.Count);
+            Assert.Empty(remoteSettings.TrustedSelectionPaths);
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.ShutdownTimeout);
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.FlushWait);
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.StartupTimeout);
@@ -52,7 +52,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineDuration);
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
-            Assert.Equal(1, remoteSettings.Transports.Length);
+            Assert.Single(remoteSettings.Transports);
             Assert.Equal(typeof(TcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
@@ -72,7 +72,7 @@ namespace Akka.Remote.Tests
             var remoteSettingsAdapters =
                 remoteSettings.Adapters.Select(kv => new KeyValuePair<string, Type>(kv.Key, Type.GetType(kv.Value)));
 
-            Assert.Equal(0, remoteSettingsAdapters.Except(remoteSettingsAdaptersStandart).Count());
+            Assert.Empty(remoteSettingsAdapters.Except(remoteSettingsAdaptersStandart));
 
             remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
@@ -102,7 +102,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(4096, s.Backlog);
             Assert.True(s.TcpNoDelay);
             Assert.True(s.TcpKeepAlive);
-            Assert.True(s.TcpReuseAddr);
+            Assert.Equal("off-for-windows", c.GetString("tcp-reuse-addr"));
             Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
             Assert.Null(s.PublicPort);
             Assert.Equal(2, s.ServerSocketWorkerPoolSize);

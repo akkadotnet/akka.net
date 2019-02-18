@@ -26,7 +26,7 @@ namespace Akka.Tests.MatchHandler
 
             var result = builder.CreateArgumentValuesArray(emptyArguments);
             Assert.NotNull(result);
-            Assert.Equal(0, result.Length);
+            Assert.Empty(result);
         }
 
 
@@ -39,7 +39,7 @@ namespace Akka.Tests.MatchHandler
 
             var result = builder.CreateArgumentValuesArray(arguments);
             Assert.NotNull(result);
-            Assert.Equal(1, result.Length);
+            Assert.Single(result);
             Assert.Same(argument.Value, result[0]);
         }
 

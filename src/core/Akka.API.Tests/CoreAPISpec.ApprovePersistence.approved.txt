@@ -77,7 +77,7 @@ namespace Akka.Persistence
             public Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery IncrementedCopy() { }
             public override string ToString() { }
         }
-        public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout
+        public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout, Akka.Event.IDeadLetterSuppression
         {
             public static Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance { get; }
             public override bool Equals(object obj) { }
@@ -1137,7 +1137,7 @@ namespace Akka.Persistence.Snapshot
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
         protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
-        protected override async System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
     }
     public sealed class NoSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
     {

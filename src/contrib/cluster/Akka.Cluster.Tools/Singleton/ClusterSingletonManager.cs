@@ -463,7 +463,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// broadcast its existence when it is started.
     /// </para>
     /// <para>
-    /// Use factory method <see cref="ClusterSingletonManager.Props"/> to create the <see cref="Actor.Props"/> for the actor.
+    /// Use one of the factory methods <see cref="ClusterSingletonManager.Props(Actor.Props, ClusterSingletonManagerSettings)">ClusterSingletonManager.Props</see> to create the <see cref="Actor.Props"/> for the actor.
     /// </para>
     /// </summary>
     public sealed class ClusterSingletonManager : FSM<ClusterSingletonState, IClusterSingletonData>
@@ -571,11 +571,24 @@ namespace Akka.Cluster.Tools.Singleton
         private void SetupCoordinatedShutdown()
         {
             var self = Self;
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-singleton-exiting", () => _memberExitingProgress.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-singleton-exiting", () =>
+            {
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                    return Task.FromResult(Done.Instance);
+                else
+                    return _memberExitingProgress.Task;
+            });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-2", () =>
             {
-                var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                }
             });
         }
 
@@ -751,7 +764,8 @@ namespace Akka.Cluster.Tools.Singleton
                     // transition when OldestChanged
                     return Stay().Using(new YoungerData(null));
                 }
-                else if (e.FsmEvent is HandOverToMe) {
+                else if (e.FsmEvent is HandOverToMe)
+                {
                     // this node was probably quickly restarted with same hostname:port,
                     // confirm that the old singleton instance has been stopped
                     Sender.Tell(HandOverDone.Instance);
@@ -902,6 +916,12 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is HandOverToMe && e.StateData is OldestData oldest)
                 {
                     return GoToHandingOver(oldest.Singleton, oldest.SingletonTerminated, Sender);
+                }
+                else if (e.FsmEvent is TakeOverFromMe)
+                {
+                    // already oldest, so confirm and continue like that
+                    Sender.Tell(HandOverToMe.Instance);
+                    return Stay();
                 }
                 else if (e.FsmEvent is Terminated terminated && e.StateData is OldestData o && terminated.ActorRef.Equals(o.Singleton))
                 {

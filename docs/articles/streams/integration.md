@@ -406,6 +406,55 @@ The numbers in parenthesis illustrates how many calls that are in progress at
 the same time. Here the downstream demand and thereby the number of concurrent
 calls are limited by the buffer size (4) of the `ActorMaterializerSettings`.
 
+### Integrating with Observables
+
+Starting from version 1.3.2, Akka.Streams offers integration with observables - both as possible sources and sinks for incoming events. In order to expose Akka.Streams runnable graph as an observable, use `Sink.AsObservable<T>` method. Example:
+
+```csharp
+IObservable<int> observable = Source.From(new []{ 1, 2, 3 })
+    .RunWith(Sink.AsObservable<int>(), materializer);
+```
+
+In order to use an observable as an input source to Akka graph, you may want to use `Source.FromObservable<T>` method. Example:
+
+```csharp
+await Source.FromObservable(observable, maxBufferCapacity: 128, overflowStrategy: OverflowStrategy.DropHead)
+    .RunForEach(Console.WriteLine, materializer);
+```
+
+You may notice two extra parameters here. One of the advantages of Akka.Streams (and reactive streams in general) over Reactive Extensions is notion of backpressure - absent in Rx.NET. This puts a constraint of rate limiting the events incoming form upstream. If an observable will be producing events faster, than downstream is able to consume them, source stage will start to buffer them up to a provided `maxBufferCapacity` limit. Once that limit is reached, an overflow strategy will be applied. There are several different overflow strategies to choose from:
+
+- `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
+- `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.
+- `OverflowStrategy.DropNew` will cause current event to be dropped. This effectivelly will cause dropping any new incoming events until a buffer will get some free space.
+- `OverflowStrategy.Fail` will cause a `BufferOverflowException` to be send as an error signal.
+- `OverflowStrategy.DropBuffer` will cause a whole buffer to be cleared once it's limit has been reached.
+
+Any other `OverflowStrategy` option is not supported by `Source.FromObservable` stage.
+
+### Integrating with event handlers
+
+C# events can also be used as a potential source of an Akka.NET stream. It's possible using `Source.FromEvent` methods. Example:
+
+```csharp
+Source.FromEvent<RoutedEventArgs>(
+    addHandler: h => button.Click += h, 
+    removeHandler: h => button.Click -= h,
+    maxBufferCapacity: 128,
+    overflowStrategy: OverflowStrategy.DropHead)
+    .RunForEach(e => Console.WriteLine($"Captured click from {e.Source}"), materializer);
+
+// using custom delegate adapter
+Source.FromEvent<EventHandler<RoutedEventArgs>, RoutedEventArgs>(
+    conversion: onNext => (sender, eventArgs) => onNext(eventArgs),
+    addHandler: h => button.Click += h, 
+    removeHandler: h => button.Click -= h)
+    .RunForEach(e => Console.WriteLine($"Captured click from {e.Source}"), materializer);
+```
+
+Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optional parameters used to configure buffering strategy applied for incoming events.
+
+
 ### Integrating with Reactive Streams
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.

@@ -82,4 +82,4 @@ akka {
 This tells the role leader for `crawlerV1` to not mark any of those nodes as up until at least three nodes with role `crawlerV1` have joined the cluster.
 
 ## Additional Resources
-- [`Cluster.conf`](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Cluster/Configuration/Cluster.conf): the full set of configuration options
+- [Cluster.conf](../configuration/akka.cluster.md): the full set of configuration options

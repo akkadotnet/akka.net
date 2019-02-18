@@ -1,5 +1,188 @@
-#### 1.3.8 May 15 2018 ####
-*Placeholder*
+#### 1.3.12 December 18 2018 ####
+*Placeholder for nightlies*
+
+#### 1.3.11 December 17 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.11 is a bugfix patch primarily aimed at solving the following issue: [DotNetty Remote Transport Issues with .NET Core 2.1](https://github.com/akkadotnet/akka.net/issues/3506).
+
+.NET Core 2.1 exposed some issues with the DotNetty connection methods in DotNetty v0.4.8 that have since been fixed in subsequent releases. In Akka.NET v1.3.11 we've resolved this issue by upgrading to DotNetty v0.6.0.
+
+In addition to the above, we've introduced some additional fixes and changes in Akka.NET v1.3.11:
+
+* [Akka.FSharp: Akka.Fsharp spawning an actor results in Exception](https://github.com/akkadotnet/akka.net/issues/3402)
+* [Akka.Remote: tcp-reuse-addr = off-for-windows prevents actorsystem from starting](https://github.com/akkadotnet/akka.net/issues/3293)
+* [Akka.Remote: tcp socket address reuse - default configuration](https://github.com/akkadotnet/akka.net/issues/2477)
+* [Akka.Cluster.Tools: 
+Actor still receiving messages from mediator after termination](https://github.com/akkadotnet/akka.net/issues/3658)
+* [Akka.Persistence: Provide minSequenceNr for snapshot deletion](https://github.com/akkadotnet/akka.net/pull/3641)
+
+To [see the full set of changes for Akka.NET 1.3.11, click here](https://github.com/akkadotnet/akka.net/milestone/29)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 123 | 71 | Aaron Stannard |
+| 3 | 96 | 10 | Ismael Hamed |
+| 2 | 4 | 3 | Oleksandr Kobylianskyi |
+| 1 | 5 | 1 | Ruben Mamo |
+| 1 | 23 | 6 | Chris Hoare |
+
+#### 1.3.10 November 1 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.10 consists mostly of bug fixes and patches to various parts of Akka.NET:
+
+* [Akka.Remote: add support for using installed certificates with thumbprints](https://github.com/akkadotnet/akka.net/issues/3632)
+* [Akka.IO: fix TCP sockets leak](https://github.com/akkadotnet/akka.net/issues/3630)
+* [Akka.DI.Core: Check if Dependency Resolver is configured to avoid a `NullReferenceException`](https://github.com/akkadotnet/akka.net/pull/3619)
+* [Akka.Streams: Interop between Akka.Streams and IObservable](https://github.com/akkadotnet/akka.net/pull/3112)
+* [HOCON: Parse size in bytes format. Parse microseconds and nanoseconds.](https://github.com/akkadotnet/akka.net/pull/3600)
+* [Akka.Cluster: Don't automatically down quarantined nodes](https://github.com/akkadotnet/akka.net/pull/3605)
+
+To [see the full set of changes for Akka.NET 1.3.10, click here](https://github.com/akkadotnet/akka.net/milestone/28).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 887 | 220 | Bartosz Sypytkowski |
+| 5 | 67 | 174 | Aaron Stannard |
+| 4 | 15 | 7 | Caio Proiete |
+| 3 | 7 | 4 | Maciek Misztal |
+| 2 | 60 | 8 | Marcus Weaver |
+| 2 | 57 | 12 | moerwald |
+| 2 | 278 | 16 | Peter Shrosbree |
+| 2 | 2 | 2 | Fábio Beirão |
+| 1 | 71 | 71 | Sean Gilliam |
+| 1 | 6 | 0 | basbossinkdivverence |
+| 1 | 24 | 5 | Ismael Hamed |
+| 1 | 193 | 8 | to11mtm |
+| 1 | 17 | 33 | zbynek001 |
+| 1 | 12 | 3 | Oleksandr Bogomaz |
+| 1 | 1 | 1 | MelnikovIG |
+| 1 | 1 | 1 | Alex Villarreal |
+| 1 | 1 | 0 | Yongjie Ma |
+
+#### 1.3.9 August 22 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.9 features some major changes to Akka.Cluster.Sharding, additional Akka.Streams stages, and some general bug fixes across the board.
+
+**Akka.Cluster.Sharding Improvements**
+The [Akka.Cluster.Sharding documentation](http://getakka.net/articles/clustering/cluster-sharding.html#quickstart) already describes some of the major changes in Akka.NET v1.3.9, but we figured it would be worth calling special attention to those changes here.
+
+**Props Factory for Entity Actors**
+
+> In some cases, the actor may need to know the `entityId` associated with it. This can be achieved using the `entityPropsFactory` parameter to `ClusterSharding.Start` or `ClusterSharding.StartAsync`. The entity ID will be passed to the factory as a parameter, which can then be used in the creation of the actor.
+
+In addition to the existing APIs we've always had for defining sharded entities via `Props`, Akka.NET v1.3.9 introduces [a new method overload for `Start`](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_Start_System_String_System_Func_System_String_Akka_Actor_Props__Akka_Cluster_Sharding_ClusterShardingSettings_Akka_Cluster_Sharding_ExtractEntityId_Akka_Cluster_Sharding_ExtractShardId_) and [`StartAsync`](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_StartAsync_System_String_System_Func_System_String_Akka_Actor_Props__Akka_Cluster_Sharding_ClusterShardingSettings_Akka_Cluster_Sharding_ExtractEntityId_Akka_Cluster_Sharding_ExtractShardId_) which allows users to pass in the `entityId` of each entity actor as a constructor argument to those entities when they start.
+
+For example:
+
+```
+var anotherCounterShard = ClusterSharding.Get(Sys).Start(
+	                        typeName: "AnotherCounter",
+	                        entityProps: Props.Create<AnotherCounter>(),
+	                        typeName: AnotherCounter.ShardingTypeName,
+	                        entityPropsFactory: entityId => AnotherCounter.Props(entityId),
+	                        settings: ClusterShardingSettings.Create(Sys),
+	                        extractEntityId: Counter.ExtractEntityId,
+	                        extractShardId: Counter.ExtractShardId);
+```
+
+This will give you the opportunity to pass in the `entityId` for each actor as a constructor argument into the `Props` of your entity actor and possibly other use cases too. 
+
+**Improvements to Starting and Querying Existing Shard Entity Types**
+Two additional major usability improvements to Cluster.Sharding come from some API additions and changes.
+
+The first is that it's now possible to look up all of the currently registered shard types via the [`ClusterSharding.ShardTypeNames` property](http://getakka.net/api/Akka.Cluster.Sharding.ClusterSharding.html#Akka_Cluster_Sharding_ClusterSharding_ShardTypeNames). So long as a `ShardRegion` of that type has been started in the cluster, that entity type name will be added to the collection exposed by this property.
+
+The other major usability improvement is a change to the `ClusterSharding.Start` property itself. Historically, you used to have to know whether or not the node you wanted to use sharding on was going to be hosting shards (call `ClusterSharding.Start`) or simply communicated with shards hosted on a different cluster role type (call `ClusterSharding.StartProxy`). Going forward, it's safe to call `ClusterSharding.Start` on any node and you will either receive an `IActorRef` to active `ShardRegion` or a `ShardRegion` running in "proxy only" mode; this is determined by looking at the `ClusterShardingSettings` and determining if the current node is in a role that is allowed to host shards of this type.
+
+* [Akka.Cluster.Sharding: Sharding API Updates](https://github.com/akkadotnet/akka.net/pull/3524)
+* [Akka.Cluster.Sharding: sharding rebalance fix](https://github.com/akkadotnet/akka.net/pull/3518)
+* [Akka.Cluster.Sharding: log formatting fix](https://github.com/akkadotnet/akka.net/pull/3554)
+* [Akka.Cluster.Sharding: `RestartShard` escapes into userspace](https://github.com/akkadotnet/akka.net/pull/3509)
+
+**Akka.Streams Additions and Changes**
+In Akka.NET v1.3.9 we've added some new built-in stream stages and API methods designed to help improve developer productivity and ease of use.
+
+* [Akka.Streams: add CombineMaterialized method to Source](https://github.com/akkadotnet/akka.net/pull/3489)
+* [Akka.Streams: 
+KillSwitches: flow stage from CancellationToken](https://github.com/akkadotnet/akka.net/pull/3568)
+* [Akka.Streams: Port KeepAliveConcat and UnfoldFlow](https://github.com/akkadotnet/akka.net/pull/3560)
+* [Akka.Streams: Port PagedSource & IntervalBasedRateLimiter](https://github.com/akkadotnet/akka.net/pull/3570)
+
+**Other Updates, Additions, and Bugfixes**
+* [Akka.Cluster: cluster coordinated leave fix for empty cluster](https://github.com/akkadotnet/akka.net/pull/3516)
+* [Akka.Cluster.Tools: bumped ClusterClient message drop log messages from DEBUG to WARNING](https://github.com/akkadotnet/akka.net/pull/3513)
+* [Akka.Cluster.Tools: Singleton - confirm TakeOverFromMe when singleton already in oldest state](https://github.com/akkadotnet/akka.net/pull/3553)
+* [Akka.Remote: RemoteWatcher race-condition fix](https://github.com/akkadotnet/akka.net/pull/3519)
+* [Akka: fix concurrency bug in CircuitBreaker](https://github.com/akkadotnet/akka.net/pull/3505)
+* [Akka: Fixed ReceiveTimeout not triggered in some case when combined with NotInfluenceReceiveTimeout messages](https://github.com/akkadotnet/akka.net/pull/3555)
+* [Akka.Persistence: Optimized recovery](https://github.com/akkadotnet/akka.net/pull/3549)
+* [Akka.Persistence: Allow persisting events when recovery has completed](https://github.com/akkadotnet/akka.net/pull/3366)
+
+To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.com/akkadotnet/akka.net/milestone/27).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 28 | 2448 | 5691 | Aaron Stannard |
+| 11 | 1373 | 230 | zbynek001 |
+| 8 | 4590 | 577 | Bartosz Sypytkowski |
+| 4 | 438 | 99 | Ismael Hamed |
+| 4 | 230 | 240 | Sean Gilliam |
+| 2 | 1438 | 0 | Oleksandr Bogomaz |
+| 1 | 86 | 79 | Nick Polideropoulos |
+| 1 | 78 | 0 | v1rusw0rm |
+| 1 | 4 | 4 | Joshua Garnett |
+| 1 | 32 | 17 | Jarl Sveinung Flø Rasmussen |
+| 1 | 27 | 1 | Sam13 |
+| 1 | 250 | 220 | Maxim Cherednik |
+| 1 | 184 | 124 | Josh Taylor |
+| 1 | 14 | 0 | Peter Shrosbree |
+| 1 | 1278 | 42 | Marc Piechura |
+| 1 | 1 | 1 | Vasily Kirichenko |
+| 1 | 1 | 1 | Samuel Kelemen |
+| 1 | 1 | 1 | Nyola Mike |
+| 1 | 1 | 1 | Fábio Beirão |
+
+#### 1.3.8 June 04 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.8 is a minor patch consisting mostly of bug fixes as well as an upgrade to DotNetty v0.4.8.
+
+**DotNetty v0.4.8 Upgrade**
+You can [read the release notes for DotNetty v0.4.8 here](https://github.com/Azure/DotNetty/blob/5eee925b7597c6b07689f25f328966e330ff58f9/RELEASE_NOTES.md) - but here are the major improvements as they pertain to Akka.NET:
+
+1. DotNetty length-frame decoding is now fully-supported on .NET Core on Linux and
+2. Socket shutdown code has been improved, which fixes a potential "port exhaustion" issue reported by Akka.Remote users.
+
+If you've been affected by either of these issues, we strongly encourage that you upgrade your applications to Akka.NET v1.3.8 as soon as possible.
+
+**Updates and Additions**
+1. [Akka.Streams: add PreMaterialize support for Sources](https://github.com/akkadotnet/akka.net/pull/3476)
+2. [Akka.Streams: add PreMaterialize support for Sinks](https://github.com/akkadotnet/akka.net/pull/3477)
+3. [Akka.Streams: 
+Port Pulse, DelayFlow and Valve streams-contrib stages](https://github.com/akkadotnet/akka.net/pull/3421)
+4. [Akka.FSharp: Unit test Akka.FSharp.System.create with extensions](https://github.com/akkadotnet/akka.net/pull/3407)
+
+Relevant documentation for Akka.Streams pre-materialization, for those who are interested: http://getakka.net/articles/streams/basics.html#source-pre-materialization
+
+**Bugfixes**
+1. [Akka.Remote: ActorSelection fails for ActorPath from remotely deployed actors](https://github.com/akkadotnet/akka.net/issues/1544)
+2. [Akka.Remote: WilcardCard ActorSelections that fail to match any actors don't deliver messages into DeadLetters](https://github.com/akkadotnet/akka.net/issues/3420)
+3. [Akka.Cluster: SplitBrainResolver logs "network partition detected" after change in cluster membership, even when no unreachable nodes](https://github.com/akkadotnet/akka.net/issues/3450)
+4. [Akka: SynchronizationLockException in user-defined mailboxes](https://github.com/akkadotnet/akka.net/issues/3459)
+5. [Akka: UnhandledMessageForwarder crashes and restarted every time the app is starting](https://github.com/akkadotnet/akka.net/issues/3267)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 498 | 171 | Aaron Stannard |
+| 4 | 1054 | 23 | Bartosz Sypytkowski |
+| 2 | 2 | 2 | Fábio Beirão |
+| 2 | 16 | 2 | Aaron Palmer |
+| 1 | 1063 | 4 | Oleksandr Bogomaz |
+| 1 | 1 | 1 | Ismael Hamed |
+| 1 | 1 | 1 | Gauthier Segay |
 
 #### 1.3.7 May 15 2018 ####
 **Maintenance Release for Akka.NET 1.3**

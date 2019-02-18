@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using Akka.Actor;
@@ -112,7 +113,16 @@ namespace Akka.Remote
         /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            throw new NotImplementedException();
+            var items = name.ToList();
+            switch (items.FirstOrDefault())
+            {
+                case null:
+                    return this;
+                case "..":
+                    return Parent.GetChild(items.Skip(1));
+                default:
+                    return new RemoteActorRef(Remote, LocalAddressToUse, Path / items, ActorRefs.Nobody, Props.None, Deploy.None);
+            }
         }
 
         /// <summary>

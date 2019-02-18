@@ -246,7 +246,7 @@ namespace Akka.Cluster.TestKit
             if (ClusterView.Members.IsEmpty)
             {
                 Cluster.Join(GetAddress(Myself));
-                AwaitAssert(() => Assert.True(ClusterView.Members.Select(m => m.Address).Contains(GetAddress(Myself))));
+                AwaitAssert(() => Assert.Contains(GetAddress(Myself), ClusterView.Members.Select(m => m.Address)));
             }
         }
 

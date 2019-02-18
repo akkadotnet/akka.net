@@ -154,8 +154,8 @@ our device actor:
 We maintain the current temperature, initially set to `null`, and we simply report it back if queried. We also
 added fields for the ID of the device and the group it belongs to, which we will use later.
 
-We can already write a simple test for this functionality @scala[(we use ScalaTest but any other test framework can be
-used with the Akka.NET Testkit)]:
+We can already write a simple test for this functionality (we are using xUnit but any other test framework can be
+used with the Akka.NET Testkit):
 
 [!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceSpec.cs?name=device-read-test)]
 

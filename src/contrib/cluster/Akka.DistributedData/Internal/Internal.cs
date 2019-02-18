@@ -830,7 +830,7 @@ namespace Akka.DistributedData.Internal
         /// and thereby violating <see cref="IRequireCausualDeliveryOfDeltas"/>.
         /// 
         /// This is used as a placeholder for such `null` delta. It's filtered out
-        /// in <see cref="CreateDeltaPropagation"/>, i.e. never sent to the other replicas.
+        /// in <see cref="DeltaPropagationSelector.CreateDeltaPropagation(ImmutableDictionary{string, Tuple{IReplicatedData, long, long}})"/>, i.e. never sent to the other replicas.
         /// </summary>
         public static readonly IReplicatedDelta NoDeltaPlaceholder = NoDelta.Instance;
 
