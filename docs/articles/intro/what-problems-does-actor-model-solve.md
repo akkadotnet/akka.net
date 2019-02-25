@@ -1,6 +1,6 @@
 ---
 uid: what-are-actors
-title: What Are Actors
+title: What problems does the actor model solve?
 ---
 # What problems does the actor model solve?
 
