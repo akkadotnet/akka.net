@@ -1,8 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BugFix3724Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -13,16 +16,12 @@ using Xunit.Abstractions;
 namespace Akka.Cluster.Tests.Serialization
 {
     /// <summary>
-    /// https://github.com/akkadotnet/akka.net/issues/3724
-    ///
-    /// Used to validate that `akka.actor.serialize-messages = on` works while
-    /// using Akka.Cluster
+    ///     https://github.com/akkadotnet/akka.net/issues/3724
+    ///     Used to validate that `akka.actor.serialize-messages = on` works while
+    ///     using Akka.Cluster
     /// </summary>
     public class BugFix3724Spec : AkkaSpec
     {
-        private readonly Address _selfAddress;
-        private readonly Cluster _cluster;
-
         public BugFix3724Spec(ITestOutputHelper helper)
             : base(@"akka.actor.provider = cluster
                      akka.actor.serialize-messages = on", helper)
@@ -31,10 +30,14 @@ namespace Akka.Cluster.Tests.Serialization
             _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
         }
 
+        private readonly Address _selfAddress;
+        private readonly Cluster _cluster;
+
         [Fact(DisplayName = "Should be able to use 'akka.actor.serialize-messages' while running Akka.Cluster")]
         public void Should_serialize_all_AkkaCluster_messages()
         {
-            _cluster.Subscribe(TestActor, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.MemberUp));
+            _cluster.Subscribe(TestActor, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
+                typeof(ClusterEvent.MemberUp));
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 EventFilter.Exception<Exception>().Expect(0, () =>
