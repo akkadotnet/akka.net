@@ -55,8 +55,6 @@
   - name: Fault Tolerance
     href: actors/fault-tolerance.md
   - name: Dependency Injection
-    href: actors/dependency-injection.
-  - name: Dependency Injection
     href: actors/dependency-injection.md
   - name: Dependency Injection Core
     href: actors/di-core.md
