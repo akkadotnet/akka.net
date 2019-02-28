@@ -2,8 +2,8 @@
   items:
   - name: What is Akka.NET?
     href: intro/what-is-akka.md
-  - name: What are actors?
-    href: intro/what-are-actors.md
+  - name: What Problems does the Actor Model Solve?
+    href: intro/what-problems-does-actor-model-solve.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
   - name: Part 1. Top-level Architecture
