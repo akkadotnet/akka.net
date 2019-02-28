@@ -58,8 +58,8 @@
     href: actors/dependency-injection.
   - name: Dependency Injection
     href: actors/dependency-injection.md
-  - name: DI Core
-    href: di-core.md
+  - name: Dependency Injection Core
+    href: actors/di-core.md
   - name: Testing Actor Systems
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
