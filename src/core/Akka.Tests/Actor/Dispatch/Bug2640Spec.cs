@@ -1,8 +1,12 @@
-﻿using System;
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="Bug2640Spec.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
-using FluentAssertions;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -10,26 +14,33 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Dispatch
 {
     /// <summary>
-    /// Bugfix and verification spec for https://github.com/akkadotnet/akka.net/issues/2640
-    ///
-    /// Used to verify that the <see cref="ForkJoinExecutor"/> gets properly disposed upon shutdown.
+    ///     Bugfix and verification spec for https://github.com/akkadotnet/akka.net/issues/2640
+    ///     Used to verify that the <see cref="ForkJoinExecutor" /> gets properly disposed upon shutdown.
     /// </summary>
     public class Bug2640Spec : AkkaSpec
     {
-        class GetThread
+        public Bug2640Spec(ITestOutputHelper helper) : base(DispatcherConfig, helper)
+        {
+        }
+
+        private class GetThread
         {
             public static readonly GetThread Instance = new GetThread();
-            private GetThread() { }
+
+            private GetThread()
+            {
+            }
         }
 
         /// <summary>
-        /// Used to pass back data on the current thread.
+        ///     Used to pass back data on the current thread.
         /// </summary>
         public class ThreadReporterActor : ReceiveActor
         {
@@ -52,22 +63,24 @@ namespace Akka.Tests.Actor.Dispatch
             }
         ";
 
-        public Bug2640Spec(ITestOutputHelper helper) : base(DispatcherConfig, helper) { }
-
-        [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
-        public void PinnedDispatcherShouldShutdownUponActorTermination()
+        [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon ActorSystem.Terminate")]
+        public async Task ForkJoinExecutorShouldShutdownUponActorSystemTermination()
         {
             var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
-                .WithDispatcher("myapp.my-pinned-dispatcher"));
+                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
 
+            Dictionary<int, Thread> threads = null;
             Watch(actor);
-            actor.Tell(GetThread.Instance);
-            var thread = ExpectMsg<Thread>();
-            thread.IsAlive.Should().BeTrue();
+            for (var i = 0; i < 100; i++)
+                actor.Tell(GetThread.Instance);
 
-            Sys.Stop(actor);
-            ExpectTerminated(actor);
-            AwaitCondition(() => !thread.IsAlive); // wait for thread to terminate
+            threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+                .ToDictionary(x => x.Key, grouping => grouping.First());
+            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
+
+            await Sys.Terminate();
+            AwaitAssert(() =>
+                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
         }
 
         [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
@@ -87,26 +100,24 @@ namespace Akka.Tests.Actor.Dispatch
 
             Sys.Stop(actor);
             ExpectTerminated(actor);
-            AwaitAssert(() => threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+            AwaitAssert(() =>
+                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
         }
 
-        [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon ActorSystem.Terminate")]
-        public async Task ForkJoinExecutorShouldShutdownUponActorSystemTermination()
+        [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
+        public void PinnedDispatcherShouldShutdownUponActorTermination()
         {
             var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
-                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
+                .WithDispatcher("myapp.my-pinned-dispatcher"));
 
-            Dictionary<int, Thread> threads = null;
             Watch(actor);
-            for (var i = 0; i < 100; i++)
-                actor.Tell(GetThread.Instance);
+            actor.Tell(GetThread.Instance);
+            var thread = ExpectMsg<Thread>();
+            thread.IsAlive.Should().BeTrue();
 
-            threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
-                .ToDictionary(x => x.Key, grouping => grouping.First());
-            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
-
-            await Sys.Terminate();
-            AwaitAssert(() => threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+            Sys.Stop(actor);
+            ExpectTerminated(actor);
+            AwaitCondition(() => !thread.IsAlive); // wait for thread to terminate
         }
     }
 }
