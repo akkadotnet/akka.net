@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using FluentAssertions;
 using System.Threading;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,7 +73,40 @@ namespace Akka.Tests.Actor.Dispatch
         [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
         public void ForkJoinExecutorShouldShutdownUponAllActorsTerminating()
         {
+            var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
+                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
 
+            Dictionary<int, Thread> threads = null;
+            Watch(actor);
+            for (var i = 0; i < 100; i++)
+                actor.Tell(GetThread.Instance);
+
+            threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+                .ToDictionary(x => x.Key, grouping => grouping.First());
+            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
+
+            Sys.Stop(actor);
+            ExpectTerminated(actor);
+            AwaitAssert(() => threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+        }
+
+        [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon ActorSystem.Terminate")]
+        public async Task ForkJoinExecutorShouldShutdownUponActorSystemTermination()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
+                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
+
+            Dictionary<int, Thread> threads = null;
+            Watch(actor);
+            for (var i = 0; i < 100; i++)
+                actor.Tell(GetThread.Instance);
+
+            threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+                .ToDictionary(x => x.Key, grouping => grouping.First());
+            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
+
+            await Sys.Terminate();
+            AwaitAssert(() => threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
         }
     }
 }
