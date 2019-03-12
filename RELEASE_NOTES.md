@@ -1,5 +1,31 @@
-#### 1.3.11 November 2 2018 ####
-*Placholder for nightlies*
+#### 1.3.12 December 18 2018 ####
+*Placeholder for nightlies*
+
+#### 1.3.11 December 17 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.11 is a bugfix patch primarily aimed at solving the following issue: [DotNetty Remote Transport Issues with .NET Core 2.1](https://github.com/akkadotnet/akka.net/issues/3506).
+
+.NET Core 2.1 exposed some issues with the DotNetty connection methods in DotNetty v0.4.8 that have since been fixed in subsequent releases. In Akka.NET v1.3.11 we've resolved this issue by upgrading to DotNetty v0.6.0.
+
+In addition to the above, we've introduced some additional fixes and changes in Akka.NET v1.3.11:
+
+* [Akka.FSharp: Akka.Fsharp spawning an actor results in Exception](https://github.com/akkadotnet/akka.net/issues/3402)
+* [Akka.Remote: tcp-reuse-addr = off-for-windows prevents actorsystem from starting](https://github.com/akkadotnet/akka.net/issues/3293)
+* [Akka.Remote: tcp socket address reuse - default configuration](https://github.com/akkadotnet/akka.net/issues/2477)
+* [Akka.Cluster.Tools: 
+Actor still receiving messages from mediator after termination](https://github.com/akkadotnet/akka.net/issues/3658)
+* [Akka.Persistence: Provide minSequenceNr for snapshot deletion](https://github.com/akkadotnet/akka.net/pull/3641)
+
+To [see the full set of changes for Akka.NET 1.3.11, click here](https://github.com/akkadotnet/akka.net/milestone/29)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 123 | 71 | Aaron Stannard |
+| 3 | 96 | 10 | Ismael Hamed |
+| 2 | 4 | 3 | Oleksandr Kobylianskyi |
+| 1 | 5 | 1 | Ruben Mamo |
+| 1 | 23 | 6 | Chris Hoare |
 
 #### 1.3.10 November 1 2018 ####
 **Maintenance Release for Akka.NET 1.3**

@@ -468,7 +468,8 @@ namespace Akka.Cluster.Sharding.Tests
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
-                    0.1).WithDeploy(Deploy.Local);
+                    0.1, 
+                    -1).WithDeploy(Deploy.Local);
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,
