@@ -115,13 +115,12 @@ Target "RunTests" (fun _ ->
             | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net461 --results-directory %s -- -parallel none -teamcity" (outputTests))
             | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework net461 --results-directory %s -- -parallel none" (outputTests))
 
-        DotNetCli.Test
-            (fun t -> 
-                { t with 
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = [arguments]
-                })
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
+        
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result  
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
