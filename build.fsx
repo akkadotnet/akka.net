@@ -142,8 +142,8 @@ Target "RunTestsNetCore" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp2.1 --results-directory %s -- -parallel none -teamcity" (outputTests))
-            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp2.1 --results-directory %s -- -parallel none" (outputTests))
+            | true -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp1.1 --results-directory %s -- -parallel none -teamcity" (outputTests))
+            | false -> (sprintf "--no-build --logger:\"console;verbosity=normal\" --framework netcoreapp1.1 --results-directory %s -- -parallel none" (outputTests))
 
         DotNetCli.Test
             (fun t -> 
