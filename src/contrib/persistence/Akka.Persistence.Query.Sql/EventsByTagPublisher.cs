@@ -194,7 +194,7 @@ namespace Akka.Persistence.Query.Sql
             if (highestSequenceNr < ToOffset)
                 _toOffset = highestSequenceNr;
 
-            if (Buffer.IsEmpty && CurrentOffset > ToOffset)
+            if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
                 OnCompleteThenStop();
             else
                 Self.Tell(EventsByTagPublisher.Continue.Instance);

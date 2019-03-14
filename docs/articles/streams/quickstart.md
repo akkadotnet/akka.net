@@ -4,6 +4,13 @@ title: Quickstart
 ---
 
 # Streams Quickstart Guide
+
+To use Akka Streams, an additional module is required, so we first make sure ```Akka.Streams``` is added to our project:
+
+```
+Install-Package Akka.Streams
+```
+
 A stream usually begins at a source, so this is also how we start an Akka Stream. Before we create one, we import the full complement of streaming tools:
 
 ```csharp

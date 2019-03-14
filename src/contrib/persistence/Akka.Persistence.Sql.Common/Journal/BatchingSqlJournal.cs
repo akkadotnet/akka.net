@@ -570,7 +570,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     SELECT m.{conventions.SequenceNrColumnName} as SeqNr FROM {conventions.FullMetaTableName} m WHERE m.{conventions.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
-                DELETE FROM {conventions.FullJournalTableName} 
+                DELETE FROM {conventions.FullJournalTableName}
+                WHERE {conventions.PersistenceIdColumnName} = @PersistenceId AND {conventions.SequenceNrColumnName} <= @ToSequenceNr;
+                DELETE FROM {conventions.FullMetaTableName}
                 WHERE {conventions.PersistenceIdColumnName} = @PersistenceId AND {conventions.SequenceNrColumnName} <= @ToSequenceNr;";
 
             UpdateSequenceNrSql = $@"
@@ -908,8 +910,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 command.CommandText = DeleteBatchSql;
                 command.Parameters.Clear();
-                AddParameter(command, "PersistenceId", DbType.String, persistenceId);
-                AddParameter(command, "ToSequenceNr", DbType.Int64, toSequenceNr);
+                AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+                AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
                 await command.ExecuteNonQueryAsync();
 

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Persistence.Serialization;
 
 namespace Akka.Persistence
@@ -296,7 +297,7 @@ namespace Akka.Persistence
         }
 
         [Serializable]
-        public sealed class RedeliveryTick : INotInfluenceReceiveTimeout
+        public sealed class RedeliveryTick : INotInfluenceReceiveTimeout, IDeadLetterSuppression
         {
             /// <summary>
             /// The singleton instance of the redelivery tick
@@ -378,7 +379,8 @@ namespace Akka.Persistence
 
         private void StartRedeliverTask()
         {
-            var interval = new TimeSpan(RedeliverInterval.Ticks/2);
+            if (_redeliverScheduleCancelable != null) return;
+            var interval = new TimeSpan(RedeliverInterval.Ticks / 2);
             _redeliverScheduleCancelable = _context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, interval, _context.Self,
                 RedeliveryTick.Instance, _context.Self);
         }
@@ -429,6 +431,7 @@ namespace Akka.Persistence
         {
             var before = _unconfirmed;
             _unconfirmed = _unconfirmed.Remove(deliveryId);
+            if (_unconfirmed.IsEmpty) Cancel();
             return _unconfirmed.Count < before.Count;
         }
 
@@ -462,11 +465,9 @@ namespace Akka.Persistence
 
         private void Send(long deliveryId, Delivery delivery, DateTime timestamp)
         {
-            ActorSelection destination = _context.ActorSelection(delivery.Destination);
-            destination.Tell(delivery.Message);
-
-            _unconfirmed = _unconfirmed.SetItem(deliveryId,
-                new Delivery(delivery.Destination, delivery.Message, timestamp, delivery.Attempt + 1));
+            _context.ActorSelection(delivery.Destination).Tell(delivery.Message);
+            _unconfirmed = _unconfirmed.SetItem(deliveryId, new Delivery(delivery.Destination, delivery.Message, timestamp, delivery.Attempt + 1));
+            StartRedeliverTask();
         }
 
         /// <summary>
@@ -513,6 +514,7 @@ namespace Akka.Persistence
         {
             // need a null check here, in case actor is terminated before StartRedeliverTask() is called
             _redeliverScheduleCancelable?.Cancel();
+            _redeliverScheduleCancelable = null;
         }
 
 
@@ -521,6 +523,7 @@ namespace Akka.Persistence
         /// </summary>
         public void OnReplaySuccess()
         {
+            if (_unconfirmed.IsEmpty) return;
             RedeliverOverdue();
             StartRedeliverTask();
         }
