@@ -481,14 +481,12 @@ Target "DocFx" (fun _ ->
 )
 
 FinalTarget "KillCreatedProcesses" (fun _ ->
-    log "Killing processes started by FAKE:"
-    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
-    killAllCreatedProcesses()
-    log "Killing any remaining dotnet and xunit.console.exe processes:"
-    getProcessesByName "dotnet" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
-    killProcess "dotnet"
-    getProcessesByName "xunit.console" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
-    killProcess "xunit.console"
+    log "Shutting down dotnet build-server"
+    let result = ExecProcess(fun info -> 
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- __SOURCE_DIRECTORY__
+            info.Arguments <- "build-server shutdown") (System.TimeSpan.FromMinutes 2.0)
+    if result <> 0 then failwithf "dotnet build-server shutdown failed"
 )
 
 //--------------------------------------------------------------------------------
