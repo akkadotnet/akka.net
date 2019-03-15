@@ -14,8 +14,8 @@
     <HyperionVersion>0.9.8</HyperionVersion>
     <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
-    <NetStandardLibVersion>netstandard1.6</NetStandardLibVersion>
-    <NetFrameworkLibVersion>net45</NetFrameworkLibVersion>
+    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
