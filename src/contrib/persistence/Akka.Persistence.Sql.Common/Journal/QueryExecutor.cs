@@ -329,7 +329,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     SELECT m.{Configuration.SequenceNrColumnName} as SeqNr FROM {Configuration.FullMetaTableName} m WHERE m.{Configuration.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
-                DELETE FROM {Configuration.FullJournalTableName} 
+                DELETE FROM {Configuration.FullJournalTableName}
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;
+                DELETE FROM {Configuration.FullMetaTableName}
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;";
 
             UpdateSequenceNrSql = $@"
