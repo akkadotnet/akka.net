@@ -3,7 +3,8 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sqlite.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetCoreTestVersion)</TargetFrameworks>
+    <RuntimeIdentifier Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>
   </PropertyGroup>
  
   <ItemGroup>
