@@ -204,9 +204,8 @@ namespace Akka.Streams.TestKit.Tests
                 var marker = new object();
                 var u = Upstream.ReceiveWhile(oneMilli, filter: msg =>
                 {
-                    if (msg is TestPublisher.RequestMore)
+                    if (msg is TestPublisher.RequestMore more)
                     {
-                        var more = (TestPublisher.RequestMore)msg;
                         DebugLog($"Operation requests {more.NrOfElements}");
                         _pendingRequests += more.NrOfElements;
                         return marker;

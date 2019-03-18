@@ -134,7 +134,7 @@ module IncrementalTests =
     
     let getNetCoreAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp2.1" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->
