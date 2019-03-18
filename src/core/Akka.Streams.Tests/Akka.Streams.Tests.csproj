@@ -37,12 +37,12 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <DefineConstants>TRACE;DEBUG;SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;NET452;NET452</DefineConstants>
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
+    <!--<DefineConstants>TRACE;DEBUG;SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;NET452;NET452</DefineConstants>-->
     <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;AKKAIO</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 
