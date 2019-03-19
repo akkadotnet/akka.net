@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\xunit.runner.json" Link="xunit.runner.json">
+    <!--<Content Include="..\..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </Content>-->
     <Content Include="App.config" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
@@ -34,10 +34,6 @@
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
