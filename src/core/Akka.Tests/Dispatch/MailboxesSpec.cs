@@ -348,6 +348,49 @@ stable-prio-mailbox{
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }
+
+        [Fact]
+        public void Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
+        {
+            var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
+            var values = new int[10];
+            var increment = (int)(UInt32.MaxValue / values.Length);
+
+            for (var i = 0; i < values.Length; i++)
+                values[i] = Int32.MinValue + increment * i;
+
+            // tell the actor in order
+            foreach (var value in values)
+            {
+                actor.Tell(value);
+                actor.Tell(value);
+                actor.Tell(value);
+            }
+
+            actor.Tell(new StashingActor.Start());
+
+            //resume mailbox, this prevents the mailbox from running to early
+            actor.SendSystemMessage(new Resume(null));
+
+            this.Within(5.Seconds(), () =>
+            {
+                // expect the messages in the original order
+                foreach (var value in values)
+                {
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                }
+            });
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
     }
 }
 
