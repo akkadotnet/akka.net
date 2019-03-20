@@ -42,14 +42,14 @@ In response, you should receive `Replicator.IGetResponse` message. There are sev
 
 - `GetSuccess` when a value for provided key has been received successfully. To get the value, you need to call `response.Get(key)` with the key, you've sent with the request.
 - `NotFound` when no value was found under provided key.
-- `GetFailure` when a replicator failed to retrieve value withing specified consistency and timeout constraints.
+- `GetFailure` when a replicator failed to retrieve value within specified consistency and timeout constraints.
 - `DataDeleted` when a value for the provided key has been deleted.
 
-All `Get` requests follows the read-your-own-write rule - if you updated the data, and want to read the state under the same key immediatelly after, you'll always retrieve modified value, even if the `IGetResponse` message will arrive before `IUpdateResponse`.
+All `Get` requests follows the read-your-own-write rule - if you updated the data, and want to read the state under the same key immediately after, you'll always retrieve modified value, even if the `IGetResponse` message will arrive before `IUpdateResponse`.
 
 #### Read consistency
 
-What is a mentioned read consistency? As we said at the beginning, all updates perfomed within distributed data module will eventually converge. This means, we're not speaking about immediate consistency of a given value across all nodes. Therefore we can precise, what degree of consistency are we expecting:
+What is a mentioned read consistency? As we said at the beginning, all updates performed within distributed data module will eventually converge. This means, we're not speaking about immediate consistency of a given value across all nodes. Therefore we can precise, what degree of consistency are we expecting:
 
 - `ReadLocal` - we take value based on replica living on a current node.
 - `ReadFrom` - value will be merged from states retrieved from some number of nodes, including local one.
@@ -79,17 +79,17 @@ Just like in case of reads, there are several possible responses:
 
 - `UpdateSuccess` when a value for provided key has been replicated successfully within provided write consistency constraints.
 - `ModifyFailure` when update failed because of an exception within modify function used inside `Update` command.
-- `UpdateTimeout` when a write consistency constraints has not been fulfilled on time. **Warning**: this doesn't mean, that update has been rolled back! Provided value will eventually propage its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
+- `UpdateTimeout` when a write consistency constraints has not been fulfilled on time. **Warning**: this doesn't mean, that update has been rolled back! Provided value will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
 - `DataDeleted` when a value under provided key has been deleted.
 
 You'll always see updates done on local node. When you perform two updates on the same key, second modify function will always see changes done by the first one.
 
 #### Write consistency
 
-Just like in case of reads, write consistency allows us to specify level of certainity of our updates before proceeding:
+Just like in case of reads, write consistency allows us to specify level of certainty of our updates before proceeding:
 
-- `WriteLocal` - while value will be disseminated later using gossip, the response will return immediatelly after local replica update has been acknowledged.
-- `WriteTo` - update will immediatelly be propagated to a given number of replicas, including local one.
+- `WriteLocal` - while value will be disseminated later using gossip, the response will return immediately after local replica update has been acknowledged.
+- `WriteTo` - update will immediately be propagated to a given number of replicas, including local one.
 - `WriteMajority` - update will propagate to more than a half nodes in a cluster (or nodes given a configured role) before response will be emitted.
 - `WriteAll` - update will propagate to all nodes in a cluster (or nodes given a configured role) before response will be emitted.
 
@@ -112,7 +112,7 @@ Delete may return one of the 3 responses:
 
 - `DeleteSuccess` when key deletion succeeded within provided consistency constraints.
 - `DataDeleted` when data has been deleted already. Once deleted, key can no longer be reused and `DataDeleted` response will be send to all subsequent requests (either reads, updates or deletes). This message will also be used as notification for subscribers.
-- `ReplicationDeleteFailure` when operation failed to satisfy specified consistency constraints. **Warning**: this doesn't mean, that delete has been rolled back! Provided operation will eventually propage its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
+- `ReplicationDeleteFailure` when operation failed to satisfy specified consistency constraints. **Warning**: this doesn't mean, that delete has been rolled back! Provided operation will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
 
 Deletes doesn't specify it's own consistency - it uses the same `IWriteConsistency` interface as updates.
 
@@ -148,12 +148,12 @@ All subscribers are removed automatically when terminated. This can be also done
 
 ## Available replicated data types
 
-Akka.DistributedData specifies several data types, sharing the same `IReplicatedData` interface. All of them share some common members, such as (default) empty value or `Merge` method used to merge two replicas of the same data with automatic conflic resolution. All of those values are also immutable - this means, that any operations, which are supposed to change their state, produce new instance in result:
+Akka.DistributedData specifies several data types, sharing the same `IReplicatedData` interface. All of them share some common members, such as (default) empty value or `Merge` method used to merge two replicas of the same data with automatic conflict resolution. All of those values are also immutable - this means, that any operations, which are supposed to change their state, produce new instance in result:
 
 - `Flag` is a boolean CRDT flag, which default value is always `false`. When a merging replicas have conflicting state, `true` will always win over `false`.
 - `GCounter` (also known as growing-only counter) allows only for addition/increment of its state. Trying to add a negative value is forbidden here. Total value of the counter is a sum of values across all of the replicas. In case of conflicts during merge operation, a copy of replica with greater value will always win.
-- `PNCounter` allows for both increments and decrements. A total value of the counter is a sum of increments across all replcias decreased by the sum of all decrements.
-- `GSet` is an add-only set, which disallows to remove elements once added to it. Merges of GSets are simple unions of their elements. This data type doesn't produce any garbadge.
+- `PNCounter` allows for both increments and decrements. A total value of the counter is a sum of increments across all replicas decreased by the sum of all decrements.
+- `GSet` is an add-only set, which disallows to remove elements once added to it. Merges of GSets are simple unions of their elements. This data type doesn't produce any garbage.
 - `ORSet` is implementation of an observed remove add-wins set. It allows to both add and remove its elements any number of times. In case of conflicts when merging replicas, added elements always wins over removed ones.
 - `ORDictionary` (also knowns as OR-Map or Observed Remove Map) has similar semantics to OR-Set, however it allows to merge values (which must be CRDTs themselves) in case of concurrent updates.
 - `ORMultiDictionary` is a multi-map implementation based on `ORDictionary`, where values are represented as OR-Sets. Use `AddItem` or `RemoveItem` to add or remove elements to the bucket under specified keys.
@@ -165,7 +165,7 @@ Keep in mind, that most of the replicated collections add/remove methods require
 
 ## Tombstones
 
-One of the issue of CRDTs, is that they accumulate history of changes (including removed elements), producing a garbadge, that effectivelly pile up in memory. While this is still a problem, it can be limited by replicator, which is able to remove data associated with nodes, that no longer exist in the cluster. This process is known as a pruning.
+One of the issue of CRDTs, is that they accumulate history of changes (including removed elements), producing a garbage, that effectively pile up in memory. While this is still a problem, it can be limited by replicator, which is able to remove data associated with nodes, that no longer exist in the cluster. This process is known as a pruning.
 
 ## Settings 
 

@@ -198,6 +198,16 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void KeepOldest_when_downIfAlone_must_keep_oldest_up_if_is_reachable_and_only_node_in_cluster()
+        {
+            var unreachable = Members();
+            var remaining = Members(Member(a, upNumber: 1));
+
+            var strategy = new KeepOldest(downIfAlone: true);
+            strategy.Apply(new NetworkPartitionContext(unreachable, remaining)).Should().Equal(unreachable);
+        }
+
+        [Fact]
         public void KeepReferee_must_down_remaining_if_referee_node_was_unreachable()
         {
             var referee = a;

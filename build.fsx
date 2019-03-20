@@ -29,7 +29,7 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
-let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else "")
+let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else DateTime.UtcNow.Ticks.ToString())
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
@@ -298,15 +298,6 @@ Target "NBench" <| fun _ ->
 // Nuget targets 
 //--------------------------------------------------------------------------------
 
-let overrideVersionSuffix (project:string) =
-    match project with
-    | p when p.Contains("Akka.Serialization.Wire") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Serialization.Hyperion") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Cluster.Sharding") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData.LightningDB") -> preReleaseVersionSuffix
-    | _ -> versionSuffix
-
 Target "CreateNuget" (fun _ ->    
     let projects = !! "src/**/*.*sproj"
                    -- "src/**/*.Tests*.*sproj"
@@ -323,7 +314,7 @@ Target "CreateNuget" (fun _ ->
                     Project = project
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = overrideVersionSuffix project
+                    VersionSuffix = versionSuffix
                     OutputPath = outputNuGet })
 
     projects |> Seq.iter (runSingleProject)
@@ -380,7 +371,7 @@ Target "CreateMntrNuget" (fun _ ->
                     Project = project
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = overrideVersionSuffix project
+                    VersionSuffix = versionSuffix
                     OutputPath = outputNuGet } )
     )
 

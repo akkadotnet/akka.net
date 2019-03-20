@@ -76,7 +76,7 @@ namespace Akka.Serialization
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
             var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            
+
             foreach (var kvp in serializersConfig)
             {
                 var serializerTypeName = kvp.Value.GetString();
@@ -109,7 +109,7 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                
+
                 if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
@@ -124,7 +124,7 @@ namespace Akka.Serialization
         {
             if (name == null)
                 return null;
-           
+
             _serializersByName.TryGetValue(name, out Serializer serializer);
             return serializer;
         }
@@ -183,9 +183,9 @@ namespace Akka.Serialization
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
-            
+
             return serializer.FromBinary(bytes, type);
         }
 
@@ -204,9 +204,9 @@ namespace Akka.Serialization
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
- 
+
             if (serializer is SerializerWithStringManifest)
                 return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
             if (string.IsNullOrEmpty(manifest))
@@ -269,7 +269,7 @@ namespace Akka.Serialization
                 }
             }
 
-            if (serializer == null)  
+            if (serializer == null)
                 serializer = GetSerializerByName(defaultSerializerName);
 
             // do a final check for the "object" serializer
@@ -327,7 +327,7 @@ namespace Akka.Serialization
             {
                 var provider = originalSystem.Provider;
                 var res =
-                    path.ToSerializationFormatWithAddress(provider.GetExternalAddressFor(address).GetOrElse(provider.DefaultAddress));
+                    path.ToSerializationFormatWithAddress(provider.GetExternalAddressFor(address) ?? provider.DefaultAddress);
                 return res;
             }
         }

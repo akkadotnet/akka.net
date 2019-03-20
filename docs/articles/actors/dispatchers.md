@@ -69,100 +69,100 @@ system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-acto
 
 Some dispatcher configurations are available out-of-the-box for convenience. You can use them during actor deployment, [as described above](#configuring-dispatchers).
 
-* **default-dispatcher** - A configuration that uses the [ThreadPoolDispatcher](#ThreadPoolDispatcher). As the name says, this is the default dispatcher configuration used by the global dispatcher, and you don't need to define anything during deployment to use it.
-* **task-dispatcher** - A configuration that uses the [TaskDispatcher](#TaskDispatcher).
-* **default-fork-join-dispatcher** - A configuration that uses the [ForkJoinDispatcher].
-* **synchronized-dispatcher** - A configuration that uses the [SynchronizedDispatcher](#SynchronizedDispatcher).
+* **default-dispatcher** - A configuration that uses the [ThreadPoolDispatcher](#threadpooldispatcher). As the name says, this is the default dispatcher configuration used by the global dispatcher, and you don't need to define anything during deployment to use it.
+* **task-dispatcher** - A configuration that uses the [TaskDispatcher](#taskdispatcher).
+* **default-fork-join-dispatcher** - A configuration that uses the [ForkJoinDispatcher](#forkjoindispatcher).
+* **synchronized-dispatcher** - A configuration that uses the [SynchronizedDispatcher](#synchronizeddispatcher).
 
 ## Built-in Dispatchers
 
 These are the underlying dispatchers built-in to Akka.NET:
 
-* ### ThreadPoolDispatcher
+### ThreadPoolDispatcher
 
-  It schedules code to run in the [.NET Thread Pool](https://msdn.microsoft.com/en-us/library/System.Threading.ThreadPool.aspx), which is ***good enough* for most cases.**
+It schedules code to run in the [.NET Thread Pool](https://msdn.microsoft.com/en-us/library/System.Threading.ThreadPool.aspx), which is ***good enough* for most cases.**
 
-  The `type` used in the HOCON configuration for this dispatcher is just `Dispatcher`.
+The `type` used in the HOCON configuration for this dispatcher is just `Dispatcher`.
 
-  ```hocon
-  custom-dispatcher {
-    type = Dispatcher
-    throughput = 100
-  }
-  ```
+```hocon
+custom-dispatcher {
+type = Dispatcher
+throughput = 100
+}
+```
 
 > [!NOTE]
 > While each configuration can have it's own throughput settings, all dispatchers using this type will run in the same default .NET Thread Pool.
 
-* ### TaskDispatcher
+### TaskDispatcher
 
-  The TaskDispatcher uses the [TPL](https://msdn.microsoft.com/en-us/library/dd460717.aspx) infrastructure to schedule code execution. This dispatcher is very similar to the Thread PoolDispatcher, but may be used in some rare scenarios where the thread pool isn't available.
+The TaskDispatcher uses the [TPL](https://msdn.microsoft.com/en-us/library/dd460717.aspx) infrastructure to schedule code execution. This dispatcher is very similar to the Thread PoolDispatcher, but may be used in some rare scenarios where the thread pool isn't available.
 
-  ```hocon
-  custom-task-dispatcher {
-      type = TaskDispatcher
-      throughput = 100
+```hocon
+custom-task-dispatcher {
+  type = TaskDispatcher
+  throughput = 100
+}
+```
+
+### PinnedDispatcher
+
+The `PinnedDispatcher` uses a single dedicated thread to schedule code executions. Ideally, this dispatcher should be using sparingly.
+
+```hocon
+custom-dedicated-dispatcher {
+  type = PinnedDispatcher
+}
+```
+
+### ForkJoinDispatcher
+
+The ForkJoinDispatcher uses a dedicated threadpool to schedule code execution. You can use this scheduler isolate some actors from the rest of the system. Each dispatcher configuration will have it's own thread pool.
+
+This is the configuration for the [*default-fork-join-dispatcher*](#built-in-dispatcher-configurations).  You may use this as example for custom fork-join dispatchers.
+
+```hocon
+default-fork-join-dispatcher {
+  type = ForkJoinDispatcher
+  throughput = 100
+  dedicated-thread-pool {
+	  thread-count = 3
+	  deadlock-timeout = 3s
+	  threadtype = background
   }
-  ```
+}
+```
 
-* ### PinnedDispatcher
+* `thread-count` - The number of threads dedicated to this dispatcher.
+* `deadlock-timeout` - The amount of time to wait before considering the thread as deadlocked. By default no timeout is set, meaning code can run in the threads for as long as they need. If you set a value, once the timeout is reached the thread will be aborted and a new threads will take it's place. Set this value carefully, as very low values may cause loss of work.
+* `threadtype` - Must be `background` or `foreground`. This setting helps define [how .NET handles](https://msdn.microsoft.com/en-us/library/system.threading.thread.isbackground.aspx) the thread.
 
-  The `PinnedDispatcher` uses a single dedicated thread to schedule code executions. Ideally, this dispatcher should be using sparingly.
+### SynchronizedDispatcher
 
-  ```hocon
-  custom-dedicated-dispatcher {
-      type = PinnedDispatcher
-  }
-  ```
+The `SynchronizedDispatcher` uses the *current* [SynchronizationContext](https://msdn.microsoft.com/en-us/magazine/gg598924.aspx) to schedule executions.
 
-* ### ForkJoinDispatcher
-
-  The ForkJoinDispatcher uses a dedicated threadpool to schedule code execution. You can use this scheduler isolate some actors from the rest of the system. Each dispatcher configuration will have it's own thread pool.
-
-  This is the configuration for the [*default-fork-join-dispatcher*](#built-in-dispatcher-configurations).  You may use this as example for custom fork-join dispatchers.
-
-  ```hocon
-  default-fork-join-dispatcher {
-      type = ForkJoinDispatcher
-      throughput = 100
-      dedicated-thread-pool {
-          thread-count = 3
-          deadlock-timeout = 3s
-          threadtype = background
-      }
-  }
-  ```
-
-  * `thread-count` - The number of threads dedicated to this dispatcher.
-  * `deadlock-timeout` - The amount of time to wait before considering the thread as deadlocked. By default no timeout is set, meaning code can run in the threads for as long as they need. If you set a value, once the timeout is reached the thread will be aborted and a new threads will take it's place. Set this value carefully, as very low values may cause loss of work.
-  * `threadtype` - Must be `background` or `foreground`. This setting helps define [how .NET handles](https://msdn.microsoft.com/en-us/library/system.threading.thread.isbackground.aspx) the thread.
-
-* ### SynchronizedDispatcher
-
-  The `SynchronizedDispatcher` uses the *current* [SynchronizationContext](https://msdn.microsoft.com/en-us/magazine/gg598924.aspx) to schedule executions.
-
-  You may use this dispatcher to create actors that update UIs in a reactive manner. An application that displays real-time updates of stock prices may have a dedicated actor to update the UI controls directly for example.
+You may use this dispatcher to create actors that update UIs in a reactive manner. An application that displays real-time updates of stock prices may have a dedicated actor to update the UI controls directly for example.
 
 > [!NOTE]
 > As a general rule, actors running in this dispatcher shouldn't do much work. Avoid doing any extra work that may be done by actors running in other pools.
 
-  This is the configuration for the [*synchronized-dispatcher*](#built-in-dispatcher-configurations).  You may use this as example for custom fork-join dispatchers.
+This is the configuration for the [*synchronized-dispatcher*](#built-in-dispatcher-configurations).  You may use this as example for custom fork-join dispatchers.
 
-  ```hocon
-  synchronized-dispatcher {
-      type = "SynchronizedDispatcher"
-      throughput = 10
-  }
-  ```
+```hocon
+synchronized-dispatcher {
+  type = "SynchronizedDispatcher"
+  throughput = 10
+}
+```
 
-  In order to use this dispatcher, you must create the actor from the syncrhonization context you want to run-it. For example:
+In order to use this dispatcher, you must create the actor from the synchronization context you want to run-it. For example:
 
-  ```cs
-  private void Form1_Load(object sender, System.EventArgs e)
-  {
-      system.ActorOf(Props.Create<UIWorker>().WithDispatcher("synchronized-dispatcher"), "ui-worker");
-  }
-  ```
+```csharp
+private void Form1_Load(object sender, System.EventArgs e)
+{
+  system.ActorOf(Props.Create<UIWorker>().WithDispatcher("synchronized-dispatcher"), "ui-worker");
+}
+```
 
 #### Common Dispatcher Configuration
 

@@ -262,6 +262,7 @@ namespace Akka.Actor
     }
     public class static ActorRefExtensions
     {
+        public static Akka.Actor.IActorRef GetOrElse(this Akka.Actor.IActorRef actorRef, System.Func<Akka.Actor.IActorRef> elseValue) { }
         public static bool IsNobody(this Akka.Actor.IActorRef actorRef) { }
     }
     public class static ActorRefFactoryExtensions
@@ -503,12 +504,35 @@ namespace Akka.Actor
         public const string PhaseServiceRequestsDone = "service-requests-done";
         public const string PhaseServiceStop = "service-stop";
         public const string PhaseServiceUnbind = "service-unbind";
+        public Akka.Actor.CoordinatedShutdown.Reason ShutdownReason { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        [System.ObsoleteAttribute("Use the method with \'reason\' parameter instead")]
         public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
+        public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class Reason
+        {
+            protected Reason() { }
+        }
+        public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
     {
@@ -1342,6 +1366,7 @@ namespace Akka.Actor
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
         public class OneForOneStrategySurrogate : Akka.Util.ISurrogate
         {
             public OneForOneStrategySurrogate() { }
@@ -3730,22 +3755,30 @@ namespace Akka.Pattern
 {
     public class static Backoff
     {
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
     }
     public abstract class BackoffOptions
     {
         protected BackoffOptions() { }
         public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
         public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
+        public abstract Akka.Pattern.BackoffOptions WithFinalStopMessage(System.Func<object, bool> isFinalStopMessage);
         public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
+        public abstract Akka.Pattern.BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
         public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
     }
     public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
-        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped = null, System.Func<object, bool> finalStopMessage = null) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
         public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
         protected override bool Receive(object message) { }
@@ -3787,6 +3820,9 @@ namespace Akka.Pattern
         protected Akka.Actor.IActorRef Child { get; set; }
         protected string ChildName { get; }
         protected Akka.Actor.Props ChildProps { get; }
+        protected System.Func<object, bool> FinalStopMessage { get; }
+        protected bool FinalStopMessageReceived { get; set; }
+        protected object ReplyWhileStopped { get; }
         protected Akka.Pattern.IBackoffReset Reset { get; }
         protected int RestartCountN { get; set; }
         protected bool HandleBackoff(object message) { }
@@ -4735,6 +4771,7 @@ namespace Akka.Util
     public class static RuntimeDetector
     {
         public static readonly bool IsMono;
+        public static readonly bool IsWindows;
     }
     public class static StandardOutWriter
     {
@@ -4857,7 +4894,6 @@ namespace Akka.Util.Internal
         public static System.Collections.Generic.IEnumerable<T> Drop<T>(this System.Collections.Generic.IEnumerable<T> self, int count) { }
         public static void ForEach<T>(this System.Collections.Generic.IEnumerable<T> source, System.Action<T> action) { }
         public static TValue GetOrElse<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue elseValue) { }
-        public static T GetOrElse<T>(this T obj, T elseValue) { }
         public static T Head<T>(this System.Collections.Generic.IEnumerable<T> self) { }
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }

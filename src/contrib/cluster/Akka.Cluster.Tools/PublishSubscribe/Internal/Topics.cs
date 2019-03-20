@@ -111,6 +111,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     Context.Parent.Tell(NewSubscriberArrived.Instance);
                 }
             }
+            else if (message is Count)
+            {
+                Sender.Tell(Subscribers.Count);
+            }
             else
             {
                 foreach (var subscriber in Subscribers)
@@ -137,7 +141,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return Business(message) || DefaultReceive(message);
         }
 
-        private void Remove(IActorRef actorRef)
+        protected void Remove(IActorRef actorRef)
         {
             Subscribers.Remove(actorRef);
 
@@ -233,6 +237,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 var terminated = (Terminated)message;
                 var key = Utils.MakeKey(terminated.ActorRef);
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
+                Remove(terminated.ActorRef);
             }
             else return false;
             return true;

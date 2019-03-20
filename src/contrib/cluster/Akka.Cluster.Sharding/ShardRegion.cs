@@ -379,8 +379,15 @@ namespace Akka.Cluster.Sharding
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
             {
-                self.Tell(GracefulShutdown.Instance);
-                return _gracefulShutdownProgress.Task;
+                if (Cluster.IsTerminated || Cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    self.Tell(GracefulShutdown.Instance);
+                    return _gracefulShutdownProgress.Task;
+                }
             });
         }
 
@@ -423,10 +430,18 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+
         /// <inheritdoc cref="ActorBase.PreStart"/>
+        /// <summary>
+        /// Subscribe to MemberEvent, re-subscribe when restart
+        /// </summary>
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+            if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero)
+            {
+                Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]"); 
+            }
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
