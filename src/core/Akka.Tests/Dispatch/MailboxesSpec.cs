@@ -47,6 +47,27 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class TestStablePriorityMailbox : UnboundedStablePriorityMailbox
+    {
+        protected override int PriorityGenerator(object message)
+        {
+            if (message is string)
+                return 1;
+            if (message is bool)
+                return 2;
+            if (message is int)
+                return 3;
+            if (message is double)
+                return 4;
+
+            return 5;
+        }
+
+        public TestStablePriorityMailbox(Settings settings, Config config) : base(settings, config)
+        {
+        }
+    }
+
     public class IntPriorityMailbox : UnboundedPriorityMailbox
     {
         protected override int PriorityGenerator(object message)
@@ -138,6 +159,9 @@ string-prio-mailbox {
 int-prio-mailbox {
     mailbox-type : """ + typeof(IntPriorityMailbox).AssemblyQualifiedName + @"""
 }
+stable-prio-mailbox{
+    mailbox-type : """ + typeof(TestStablePriorityMailbox).AssemblyQualifiedName + @"""
+}
 ";
         }
 
@@ -204,7 +228,45 @@ int-prio-mailbox {
             ExpectMsg(2.0);
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
-        }       
+        }
+
+        [Fact]
+        public void Can_use_unbounded_stable_priority_mailbox()
+        {
+            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            // wait until we can confirm that the mailbox is suspended before we begin sending messages
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
+            actor.Tell(true);
+            for (var i = 0; i < 30; i++)
+            {
+                actor.Tell(i);
+            }
+            actor.Tell("a");
+            actor.Tell(2.0);
+            for (var i = 0; i < 30; i++)
+            {
+                actor.Tell(i + 30);
+            }
+            actor.SendSystemMessage(new Resume(null));
+
+            //resume mailbox, this prevents the mailbox from running to early
+            //priority mailbox is best effort only
+
+            ExpectMsg("a");
+            ExpectMsg(true);
+            for (var i = 0; i < 60; i++)
+            {
+                ExpectMsg(i);
+            }
+            ExpectMsg(2.0);
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
 
         [Fact]
         public void Priority_mailbox_keeps_ordering_with_many_priority_values()

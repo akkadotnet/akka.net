@@ -1,8 +1,12 @@
-﻿using System;
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="StableListPriorityQueueSpec.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util;
 using FsCheck;
@@ -35,18 +39,12 @@ namespace Akka.Tests.Util
                 .SelectMany(x => x).ToList();
             var pq = new StableListPriorityQueue(10, Priority);
 
-            foreach (var i in values.Select(x => x.Item))
-            {
-                pq.Enqueue(new Envelope(i, ActorRefs.NoSender));
-            }
+            foreach (var i in values.Select(x => x.Item)) pq.Enqueue(new Envelope(i, ActorRefs.NoSender));
 
             var isConsistent = pq.IsConsistent().ToProperty().Label("Expected queue to be consistent, but was not.");
 
             var queueValues = new List<string>();
-            while (pq.Count() > 0)
-            {
-                queueValues.Add((string)pq.Dequeue().Message);
-            }
+            while (pq.Count() > 0) queueValues.Add((string)pq.Dequeue().Message);
 
             var sequenceEqual = queueValues.SequenceEqual(sortedValues).ToProperty().Label(
                 $"Expected output to be [{string.Join(",", sortedValues)}] but was [{string.Join(",", queueValues)}]");
