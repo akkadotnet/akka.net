@@ -200,7 +200,7 @@ namespace Akka.Streams.TestKit.Tests
 
             public bool ShakeIt()
             {
-                var oneMilli = TimeSpan.FromMilliseconds(1);
+                var oneMilli = TimeSpan.FromMilliseconds(10);
                 var marker = new object();
                 var u = Upstream.ReceiveWhile(oneMilli, filter: msg =>
                 {
