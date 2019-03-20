@@ -76,7 +76,6 @@ namespace Akka.Tests.Actor.Dispatch
 
             threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
-            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
 
             await Sys.Terminate();
             AwaitAssert(() =>
