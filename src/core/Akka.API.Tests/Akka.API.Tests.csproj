@@ -5,17 +5,7 @@
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="CoreAPISpec.ApproveCluster.approved.txt" />
-    <None Remove="CoreAPISpec.ApproveClusterTools.approved.txt" />
-    <None Remove="CoreAPISpec.ApproveCore.approved.txt" />
-    <None Remove="CoreAPISpec.ApprovePersistence.approved.txt" />
-    <None Remove="CoreAPISpec.ApprovePersistenceQuery.approved.txt" />
-    <None Remove="CoreAPISpec.ApproveRemote.approved.txt" />
-    <None Remove="CoreAPISpec.ApproveStreams.approved.txt" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <Content Include="CoreAPISpec.ApproveCluster.approved.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -58,10 +48,6 @@
     <PackageReference Include="ApprovalTests" Version="3.0.10" />
     <PackageReference Include="ApprovalUtilities" Version="3.0.10" />
     <PackageReference Include="Mono.Cecil" Version="0.9.6.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
