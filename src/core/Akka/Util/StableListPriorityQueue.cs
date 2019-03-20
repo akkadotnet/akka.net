@@ -149,9 +149,12 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Checks the integrity of the StableListPriorityQueue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the list is consistent, false otherwise.</returns>
+        /// <remarks>
+        /// WARNING: high performance impact. Call during testing only.
+        /// </remarks>
         public bool IsConsistent()
         {
             // is the heap property true for all data?
