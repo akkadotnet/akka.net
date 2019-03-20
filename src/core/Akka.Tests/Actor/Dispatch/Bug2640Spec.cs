@@ -91,13 +91,12 @@ namespace Akka.Tests.Actor.Dispatch
 
             Dictionary<int, Thread> threads = null;
             Watch(actor);
-            var msgCount = 10000;
+            var msgCount = 100;
             for (var i = 0; i < msgCount; i++)
                 actor.Tell(GetThread.Instance);
 
             threads = ReceiveN(msgCount).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
-            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
 
             Sys.Stop(actor);
             ExpectTerminated(actor);
