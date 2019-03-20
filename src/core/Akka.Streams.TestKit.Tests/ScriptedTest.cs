@@ -210,6 +210,7 @@ namespace Akka.Streams.TestKit.Tests
                         _pendingRequests += more.NrOfElements;
                         return marker;
                     }
+                    DebugLog($"Operation received {msg}");
                     return null;
                 });
                 var d = Downstream.ReceiveWhile(oneMilli, filter: msg => msg.Match()
@@ -222,6 +223,7 @@ namespace Akka.Streams.TestKit.Tests
                     })
                     .With<TestSubscriber.OnComplete>(complete =>
                     {
+                        DebugLog("Operation complete.");
                         _currentScript = _currentScript.Complete();
                     })
                     .With<TestSubscriber.OnError>(error =>
