@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -34,9 +35,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = GenInput(0, 10);
             var expectedOffsets = Enumerable.Range(0, 10).Select(ix => new Offset(ix)).ToArray();
+            expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();
             
             Func<Record, Record> f = record => new Record(record.Key, record.Value + 1);
-            var expectedRecords = ToRecords(input).Select(f);
+            var expectedRecords = ToRecords(input).Select(f).ToArray();
 
             var src = CreateSourceWithContext(input)
                 .Select(f)
@@ -47,10 +49,9 @@ namespace Akka.Streams.Tests.Dsl
             src.Select(t => t.Item1)
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
 
-            var s = probe.ExpectSubscription();
-            s.Request(input.Length);
-            probe.ExpectNextN(expectedRecords);
-            probe.ExpectComplete();
+            probe.Request(input.Length)
+                .ExpectNextN(expectedRecords)
+                .ExpectComplete();
 
             src.Select(t => t.Item2)
                 .ToMaterialized(_commitOffsets, Keep.Right)
@@ -68,6 +69,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<Record, bool> f = record => record.Key.EndsWith("2");
             
             var expectedOffsets = input.Where(cm => f(cm.Record)).Select(cm => new Offset(cm.Offset.Offset)).ToArray();
+            expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();
             var expectedRecords = ToRecords(input).Where(f);
 
             var src = CreateSourceWithContext(input)
@@ -100,7 +102,8 @@ namespace Akka.Streams.Tests.Dsl
             Func<Record, IEnumerable<Record>> f = record => new[]{record,record,record};
             
             var expectedOffsets = Enumerable.Range(0,10).Select(x => new Offset(x)).ToArray();
-            var expectedRecords = ToRecords(input).SelectMany(f);
+            expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();
+            var expectedRecords = ToRecords(input).SelectMany(f).ToArray();
 
             var src = CreateSourceWithContext(input)
                 .SelectConcat(f)
@@ -112,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
 
             var s = probe.ExpectSubscription();
-            s.Request(input.Length);
+            s.Request(expectedRecords.Length);
             probe.ExpectNextN(expectedRecords);
             probe.ExpectComplete();
 
@@ -133,7 +136,8 @@ namespace Akka.Streams.Tests.Dsl
             Func<Record, IEnumerable<Record>> f = record => new[]{record,record,record};
             
             var expectedOffsets = Enumerable.Range(0,10).Grouped(groupSize).Select(x => new Offset(x.Last())).ToArray();
-            var expectedRecords = ToRecords(input).Grouped(groupSize).Select(r => new MultiRecord(r.ToArray()));
+            expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();
+            var expectedRecords = ToRecords(input).Grouped(groupSize).Select(r => new MultiRecord(r.ToArray())).ToArray();
 
             var src = CreateSourceWithContext(input)
                 .Grouped(groupSize)
@@ -147,7 +151,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
 
             var s = probe.ExpectSubscription();
-            s.Request(input.Length);
+            s.Request(expectedRecords.Length);
             probe.ExpectNextN(expectedRecords);
             probe.ExpectComplete();
 
@@ -170,7 +174,8 @@ namespace Akka.Streams.Tests.Dsl
             // the SelectConcat creates bigger lists than the groups, which is why all offsets are seen.
             // (The mapContext selects the last offset in a group)
             var expectedOffsets = Enumerable.Range(0,10).Select(x => new Offset(x)).ToArray();
-            var expectedRecords = ToRecords(input).SelectMany(f).Grouped(groupSize).Select(r => new MultiRecord(r.ToArray()));
+            expectedOffsets = expectedOffsets.Take(expectedOffsets.Length - 1).ToArray();
+            var expectedRecords = ToRecords(input).SelectMany(f).Grouped(groupSize).Select(r => new MultiRecord(r.ToArray())).ToArray();
 
             var src = CreateSourceWithContext(input)
                 .SelectConcat(f)
@@ -185,7 +190,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
 
             var s = probe.ExpectSubscription();
-            s.Request(input.Length);
+            s.Request(expectedRecords.Length);
             probe.ExpectNextN(expectedRecords);
             probe.ExpectComplete();
 
@@ -215,17 +220,19 @@ namespace Akka.Streams.Tests.Dsl
                 .StartContextPropagation(m => new Offset(m.Offset.Offset))
                 .Select(m => m.Record);
 
-        private Sink<TCtx, TestSubscriber.Probe<TCtx>> Commit<TCtx>(TCtx context) where TCtx: IEquatable<TCtx>
+        private Sink<TCtx, TestSubscriber.Probe<TCtx>> Commit<TCtx>(TCtx uninitialized) where TCtx: IEquatable<TCtx>
         {
             var testSink = this.CreateSubscriberProbe<TCtx>();
             return Flow.Create<TCtx>()
                 .MapMaterializedValue(_ => testSink)
                 .StatefulSelectMany<TCtx, TCtx, TCtx, TestSubscriber.Probe<TCtx>>(() =>
                 {
-                    var prev = context;
+                    var prev = uninitialized;
                     return ctx =>
                     {
-                        var res = (!prev.Equals(context) && !ctx.Equals(prev)) ? new[] { prev } : Enumerable.Empty<TCtx>();
+                        var res = (!prev.Equals(uninitialized) && !ctx.Equals(prev)) 
+                            ? new[] { prev } 
+                            : Enumerable.Empty<TCtx>();
                         prev = ctx;
                         return res;
                     };
@@ -234,7 +241,7 @@ namespace Akka.Streams.Tests.Dsl
 
         #region internal classes
 
-        struct Offset : IEquatable<Offset>
+        sealed class Offset : IEquatable<Offset>
         {
             public static readonly Offset Uninitialized = new Offset(-1);
             public int Value { get; }
@@ -255,13 +262,11 @@ namespace Akka.Streams.Tests.Dsl
                 return obj is Offset other && Equals(other);
             }
 
-            public override int GetHashCode()
-            {
-                return Value;
-            }
+            public override int GetHashCode() => Value;
+            public override string ToString() => $"Offset({Value})";
         }
 
-        struct Record : IEquatable<Record>
+        sealed class Record : IEquatable<Record>
         {
             public string Key { get; }
             public string Value { get; }
@@ -290,9 +295,11 @@ namespace Akka.Streams.Tests.Dsl
                     return ((Key != null ? Key.GetHashCode() : 0) * 397) ^ (Value != null ? Value.GetHashCode() : 0);
                 }
             }
+            
+            public override string ToString() => $"Record(key:{Key}, value:{Value})";
         }
 
-        struct Committed<T>
+        sealed class Committed<T>
         {
             public T Record { get; }
             public Offset Offset { get; }
@@ -302,15 +309,44 @@ namespace Akka.Streams.Tests.Dsl
                 Record = record;
                 Offset = offset;
             }
+            public override string ToString() => $"Committed(record:{Record}, offset:{Offset})";
         }
 
-        struct MultiRecord
+        sealed class MultiRecord : IEquatable<MultiRecord>
         {
             public IReadOnlyList<Record> Records { get; }
 
             public MultiRecord(IReadOnlyList<Record> records)
             {
                 Records = records;
+            }
+
+            public override string ToString() => $"MultiRecord({string.Join(", ", Records)})";
+
+            public bool Equals(MultiRecord other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                if (Records.Count != other.Records.Count) return false;
+                
+                for (int i = 0; i < Records.Count; i++)
+                {
+                    if (Records[i] != other.Records[i]) return false;
+                }
+
+                return true;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is MultiRecord other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Records != null ? Records.GetHashCode() : 0);
             }
         }
 
@@ -324,7 +360,7 @@ namespace Akka.Streams.Tests.Dsl
             int Offset { get; }
         }
 
-        struct CommittableOffsetImpl : ICommittableOffset
+        sealed class CommittableOffsetImpl : ICommittableOffset
         {
             public CommittableOffsetImpl(int offset)
             {
@@ -334,6 +370,7 @@ namespace Akka.Streams.Tests.Dsl
             public void Commit() { }
 
             public int Offset { get; }
+            public override string ToString() => $"CommittableOffsetImpl({Offset})";
         }
 
         sealed class CommittableMessage<T>
@@ -346,6 +383,8 @@ namespace Akka.Streams.Tests.Dsl
                 Record = record;
                 Offset = offset;
             }
+
+            public override string ToString() => $"CommittableMessage(record:{Record}, offset:{Offset})";
         }
 
         static class CommittableConsumer
