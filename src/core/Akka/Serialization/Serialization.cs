@@ -71,8 +71,11 @@ namespace Akka.Serialization
     /// </summary>
     public class Serialization
     {
+        /// <summary>
+        /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
+        /// </summary>
         [ThreadStatic]
-        private static Information _currentTransportInformation;
+        internal static Information CurrentTransportInformation;
 
         /// <summary>
         /// TBD
@@ -84,13 +87,13 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
-            _currentTransportInformation = new Information()
+            CurrentTransportInformation = new Information()
             {
                 System = system,
                 Address = address
             };
             var res = action();
-            _currentTransportInformation = null;
+            CurrentTransportInformation = null;
             return res;
         }
 
@@ -338,7 +341,7 @@ namespace Akka.Serialization
                 originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
-            if (_currentTransportInformation == null)
+            if (CurrentTransportInformation == null)
             {
                 if (originalSystem == null)
                 {
@@ -354,8 +357,8 @@ namespace Akka.Serialization
             }
 
             //CurrentTransportInformation exists
-            var system = _currentTransportInformation.System;
-            var address = _currentTransportInformation.Address;
+            var system = CurrentTransportInformation.System;
+            var address = CurrentTransportInformation.Address;
             if (originalSystem == null || originalSystem == system)
             {
                 var res = path.ToSerializationFormatWithAddress(address);
