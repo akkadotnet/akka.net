@@ -13,23 +13,61 @@ using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
     /// <summary>
+    /// INTERNAL API.
+    /// 
     /// Serialization information needed for serializing local actor refs.
     /// </summary>
-    internal class Information
+    [InternalApi]
+    public sealed class Information : IEquatable<Information>
     {
         public Address Address { get; set; }
 
         public ActorSystem System { get; set; }
+
+        public bool Equals(Information other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Address.Equals(other.Address) && System.Equals(other.System);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Information)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Address.GetHashCode() * 397) ^ System.GetHashCode();
+            }
+        }
+
+        public static bool operator ==(Information left, Information right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Information left, Information right)
+        {
+            return !Equals(left, right);
+        }
     }
 
     /// <summary>
-    /// TBD
+    /// The serialization system used by Akka.NET to serialize and deserialize objects
+    /// per the <see cref="ActorSystem"/>'s serialization configuration.
     /// </summary>
     public class Serialization
     {

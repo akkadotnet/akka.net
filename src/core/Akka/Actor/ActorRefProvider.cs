@@ -10,18 +10,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// The Actor Reference Provider API.
+    ///
+    /// The factory used to produce and create <see cref="IActorRef"/> instances used inside an <see cref="ActorSystem"/>.
     /// </summary>
     public interface IActorRefProvider
     {
@@ -133,6 +137,12 @@ namespace Akka.Actor
 
         /// <summary>Gets the external address of the default transport. </summary>
         Address DefaultAddress { get; }
+
+        /// <summary>
+        /// INTERNAL API.
+        /// </summary>
+        [InternalApi]
+        Information SerializationInformation { get; }
     }
 
     /// <summary>
