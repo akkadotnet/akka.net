@@ -499,7 +499,7 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            // using thread local LRU cache, which will call InternalRresolveActorRef
+            // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {
