@@ -27,9 +27,15 @@ namespace Akka.Serialization
     [InternalApi]
     public sealed class Information : IEquatable<Information>
     {
-        public Address Address { get; set; }
+        public Information(Address address, ActorSystem system)
+        {
+            Address = address;
+            System = system;
+        }
 
-        public ActorSystem System { get; set; }
+        public Address Address { get; }
+
+        public ActorSystem System { get; }
 
         public bool Equals(Information other)
         {
@@ -75,7 +81,27 @@ namespace Akka.Serialization
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
         [ThreadStatic]
-        internal static Information CurrentTransportInformation;
+        internal static Information CurrentTransportInfo;
+
+        /// <summary>
+        ///  Retrieves the <see cref="Information"/> used for serializing and deserializing
+        /// <see cref="IActorRef"/> instances in all serializers.
+        /// </summary>
+        public static Information CurrentTransportInformation
+        {
+            get
+            {
+                if (CurrentTransportInfo == null)
+                {
+                    throw new InvalidOperationException(
+                        "CurrentTransportInformation is not set. Use Serialization.WithTransport<T>.");
+                }
+
+                return CurrentTransportInfo;
+            }
+        }
+
+        private Information SerializationInfo { get; }
 
         /// <summary>
         /// TBD
@@ -85,16 +111,49 @@ namespace Akka.Serialization
         /// <param name="address">TBD</param>
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Obsoloete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
         public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
-            CurrentTransportInformation = new Information()
-            {
-                System = system,
-                Address = address
-            };
+            CurrentTransportInfo = new Information(address, system);
             var res = action();
-            CurrentTransportInformation = null;
+            CurrentTransportInfo = null;
             return res;
+        }
+
+        /// <summary>
+        /// Performs the requested serialization function while also setting
+        /// the <see cref="CurrentTransportInformation"/> based on available data
+        /// from the <see cref="ActorSystem"/>. Useful when serializing <see cref="IActorRef"/>s.
+        /// </summary>
+        /// <typeparam name="T">The type of message being serialized.</typeparam>
+        /// <param name="system">The <see cref="ActorSystem"/> performing serialization.</param>
+        /// <param name="action">The serialization function.</param>
+        /// <returns>The serialization output.</returns>
+        public static T SerializeWithTransport<T>(ExtendedActorSystem system, Func<T> action)
+        {
+            var info = system.Provider.SerializationInformation;
+            if (CurrentTransportInfo == info)
+            {
+                CurrentTransportInfo = info;
+                return action();
+            }
+
+            return action();
+        }
+
+        private T SerializeWithTransport<T>(Func<T> action)
+        {
+            var oldInfo = CurrentTransportInfo;
+            try
+            {
+                if (oldInfo == null)
+                    CurrentTransportInfo = SerializationInfo;
+                return action();
+            }
+            finally
+            {
+                CurrentTransportInfo = oldInfo;
+            }
         }
 
         private readonly Serializer _nullSerializer;
@@ -110,7 +169,7 @@ namespace Akka.Serialization
         public Serialization(ExtendedActorSystem system)
         {
             System = system;
-
+            SerializationInfo = system.Provider.SerializationInformation;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null",_nullSerializer);
 
@@ -248,8 +307,8 @@ namespace Akka.Serialization
                     $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
 
-            if (serializer is SerializerWithStringManifest)
-                return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
+            if (serializer is SerializerWithStringManifest stringManifest)
+                return stringManifest.FromBinary(bytes, manifest);
             if (string.IsNullOrEmpty(manifest))
                 return serializer.FromBinary(bytes, null);
             Type type;
@@ -341,7 +400,7 @@ namespace Akka.Serialization
                 originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
-            if (CurrentTransportInformation == null)
+            if (CurrentTransportInfo == null)
             {
                 if (originalSystem == null)
                 {
@@ -357,8 +416,8 @@ namespace Akka.Serialization
             }
 
             //CurrentTransportInformation exists
-            var system = CurrentTransportInformation.System;
-            var address = CurrentTransportInformation.Address;
+            var system = CurrentTransportInfo.System;
+            var address = CurrentTransportInfo.Address;
             if (originalSystem == null || originalSystem == system)
             {
                 var res = path.ToSerializationFormatWithAddress(address);

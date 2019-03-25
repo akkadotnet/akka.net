@@ -91,7 +91,7 @@ namespace Akka.Remote.Tests.Serialization
 
         private void VerifyTransportInfo()
         {
-            switch (Akka.Serialization.Serialization.CurrentTransportInformation)
+            switch (Akka.Serialization.Serialization.CurrentTransportInfo)
             {
                 case null:
                     throw new InvalidOperationException("CurrentTransportInformation was not set");

@@ -582,12 +582,30 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The default address of the current <see cref="ActorSystem"/>.
         /// </summary>
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
+        private Information _seraliazationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_seraliazationInformationCache != null)
+                    return _seraliazationInformationCache;
+
+                if (_system == null)
+                    throw new InvalidOperationException("Too early access of SerializationInformation");
+
+                var info = new Information(_rootPath.Address, _system);
+                _seraliazationInformationCache = info;
+                return info;
+            }
+        }
+
         /// <summary>
-        /// TBD
+        /// The built-in logger for the ActorRefProvider
         /// </summary>
         public ILoggingAdapter Log { get { return _log; } }
     }
