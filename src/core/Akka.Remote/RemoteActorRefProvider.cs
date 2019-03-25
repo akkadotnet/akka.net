@@ -19,6 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -187,6 +188,24 @@ namespace Akka.Remote
 
         /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+
+        private Information _seraliazationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_seraliazationInformationCache != null)
+                    return _seraliazationInformationCache;
+
+                if (Transport == null || Transport.DefaultAddress == null)
+                    return _local.SerializationInformation; // address not know yet, access before complete init and binding
+
+                var info = new Information(Transport.DefaultAddress, Transport.System);
+                _seraliazationInformationCache = info;
+                return info;
+            }
+        }
 
         /// <inheritdoc/>
         public Settings Settings { get { return _local.Settings; } }

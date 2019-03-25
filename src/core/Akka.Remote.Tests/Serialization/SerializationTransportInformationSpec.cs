@@ -81,7 +81,7 @@ namespace Akka.Remote.Tests.Serialization
                     return new TestMessage(from, to);
             }
 
-            throw new ApplicationException($"Unrecognized message type {manifest}");
+            throw new Exception($"Unrecognized message type {manifest}");
         }
 
         public override string Manifest(object o)
