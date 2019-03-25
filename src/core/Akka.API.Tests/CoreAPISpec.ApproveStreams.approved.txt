@@ -546,6 +546,18 @@ namespace Akka.Streams
             public Akka.Streams.IGraph<TShape, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
         }
     }
+    public abstract class GraphDelegate<TShape, TMat> : Akka.Streams.IGraph<TShape>, Akka.Streams.IGraph<TShape, TMat>
+        where TShape : Akka.Streams.Shape
+    {
+        protected readonly Akka.Streams.IGraph<TShape, TMat> Inner;
+        protected GraphDelegate(Akka.Streams.IGraph<TShape, TMat> inner) { }
+        public Akka.Streams.Implementation.IModule Module { get; }
+        public TShape Shape { get; }
+        public Akka.Streams.IGraph<TShape, TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
+        public Akka.Streams.IGraph<TShape, TMat> Async() { }
+        public Akka.Streams.IGraph<TShape, TMat> Named(string name) { }
+        public Akka.Streams.IGraph<TShape, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
+    }
     public interface IFlowMonitor
     {
         Akka.Streams.FlowMonitor.IStreamState State { get; }
@@ -1208,6 +1220,31 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, T3, TMat> ZipWith<TIn, T1, T2, T3, TMat>(this Akka.Streams.Dsl.Flow<TIn, T1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<T2>, TMat> other, System.Func<T1, T2, T3> combine) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Tuple<TOut, long>, TMat> ZipWithIndex<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow) { }
     }
+    public class static FlowWithContext
+    {
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TIn, Akka.NotUsed> Create<TCtx, TIn>() { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat> From<TCtxIn, TIn, TCtxOut, TOut, TMat>(Akka.Streams.Dsl.Flow<System.Tuple<TIn, TCtxIn>, System.Tuple<TOut, TCtxOut>, TMat> flow) { }
+    }
+    public sealed class FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat> : Akka.Streams.GraphDelegate<Akka.Streams.FlowShape<System.Tuple<TIn, TCtxIn>, System.Tuple<TOut, TCtxOut>>, TMat>
+    {
+        public Akka.Streams.Dsl.Flow<System.Tuple<TIn, TCtxIn>, System.Tuple<TOut, TCtxOut>, TMat> AsFlow() { }
+        public Akka.Streams.Dsl.FlowWithContext<TCtxIn, TIn, TCtx2, TOut2, TMat> Via<TCtx2, TOut2, TMat2>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtxOut>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow) { }
+        public Akka.Streams.Dsl.FlowWithContext<TCtxIn, TIn, TCtx2, TOut2, TMat3> ViaMaterialized<TCtx2, TOut2, TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtxOut>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow, System.Func<TMat, TMat2, TMat3> combine) { }
+    }
+    public class static FlowWithContextOperations
+    {
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> Collect<TCtx, TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, System.Collections.Generic.IReadOnlyList<TCtx>, System.Collections.Generic.IReadOnlyList<TOut>, TMat> Grouped<TCtx, TIn, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, int n) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> Select<TCtx, TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TOut, TOut2> fn) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> SelectAsync<TCtx, TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, int parallelism, System.Func<TOut, System.Threading.Tasks.Task<TOut2>> fn) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> SelectConcat<TCtx, TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TOut, System.Collections.Generic.IEnumerable<TOut2>> fn) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx2, TOut, TMat> SelectContext<TCtx, TIn, TCtx2, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TCtx, TCtx2> mapContext) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, System.Collections.Generic.IReadOnlyList<TCtx>, System.Collections.Generic.IReadOnlyList<TOut>, TMat> Sliding<TCtx, TIn, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, int n, int step = 1) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> StatefulSelectConcat<TCtx, TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<System.Func<TOut, System.Collections.Generic.IEnumerable<TOut2>>> fn) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> Where<TCtx, TIn, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TOut, bool> predicate) { }
+        public static Akka.Streams.Dsl.FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> WhereNot<TCtx, TIn, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TCtx flow, System.Func<TOut, bool> predicate) { }
+    }
     public class static ForwardOps
     {
         public static Akka.Streams.Dsl.GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this Akka.Streams.Dsl.GraphDsl.ForwardOps<TOut, TMat> ops, Akka.Streams.Inlet<TIn> inlet)
@@ -1784,6 +1821,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitAfter<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.SubstreamCancelStrategy substreamCancelStrategy, System.Func<TOut, bool> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> StartContextPropagation<TCtx, TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TCtx> fn) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> StatefulSelectMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<System.Func<TOut1, System.Collections.Generic.IEnumerable<TOut2>>> mapConcaterFactory) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Sum<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TOut, TOut> reduce) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Take<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long n) { }
@@ -1799,6 +1837,27 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<System.Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this Akka.Streams.Dsl.Source<T1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<T2>, TMat> other) { }
         public static Akka.Streams.Dsl.Source<T3, TMat> ZipWith<T1, T2, T3, TMat>(this Akka.Streams.Dsl.Source<T1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<T2>, TMat> other, System.Func<T1, T2, T3> combine) { }
         public static Akka.Streams.Dsl.Source<System.Tuple<TOut1, long>, TMat> ZipWithIndex<TOut1, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow) { }
+    }
+    public sealed class SourceWithContext<TCtx, TOut, TMat> : Akka.Streams.GraphDelegate<Akka.Streams.SourceShape<System.Tuple<TOut, TCtx>>, TMat>
+    {
+        public SourceWithContext(Akka.Streams.Dsl.Source<System.Tuple<TOut, TCtx>, TMat> source) { }
+        public Akka.Streams.Dsl.Source<System.Tuple<TOut, TCtx>, TMat> EndContextPropagation() { }
+        public Akka.Streams.Dsl.SourceWithContext<TCtx2, TOut2, TMat> Via<TCtx2, TOut2, TMat2>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtx>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow) { }
+        public Akka.Streams.Dsl.SourceWithContext<TCtx2, TOut2, TMat3> ViaMaterialized<TCtx2, TOut2, TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtx>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow, System.Func<TMat, TMat2, TMat3> combine) { }
+    }
+    public class static SourceWithContextOperations
+    {
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut2, TMat> Collect<TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.SourceWithContext<System.Collections.Generic.IReadOnlyList<TCtx>, System.Collections.Generic.IReadOnlyList<TOut>, TMat> Grouped<TCtx, TOut, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, int n) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut2, TMat> Select<TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TOut, TOut2> fn) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut2, TMat> SelectAsync<TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, int parallelism, System.Func<TOut, System.Threading.Tasks.Task<TOut2>> fn) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut2, TMat> SelectConcat<TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TOut, System.Collections.Generic.IEnumerable<TOut2>> fn) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx2, TOut, TMat> SelectContext<TCtx, TCtx2, TOut, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TCtx, TCtx2> mapContext) { }
+        public static Akka.Streams.Dsl.SourceWithContext<System.Collections.Generic.IReadOnlyList<TCtx>, System.Collections.Generic.IReadOnlyList<TOut>, TMat> Sliding<TCtx, TOut, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, int n, int step = 1) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut2, TMat> StatefulSelectConcat<TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<System.Func<TOut, System.Collections.Generic.IEnumerable<TOut2>>> fn) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> Where<TCtx, TOut, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> WhereNot<TCtx, TOut, TMat>(this Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
     }
     public class static StreamConverters
     {
