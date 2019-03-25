@@ -171,7 +171,7 @@ namespace Akka.Serialization
             System = system;
             SerializationInfo = system.Provider.SerializationInformation;
             _nullSerializer = new NullSerializer(system);
-            AddSerializer("null",_nullSerializer);
+            AddSerializer("null", _nullSerializer);
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -270,6 +270,16 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// Serializes the given message into an array of bytes using whatever serializer is currently configured.
+        /// </summary>
+        /// <param name="o">The message being serialized.</param>
+        /// <returns>A byte array containing the serialized message.</returns>
+        public byte[] Serialize(object o)
+        {
+            return SerializeWithTransport(() => FindSerializerFor(o).ToBinary(o));
+        }
+
+        /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
         /// <param name="bytes">TBD</param>
@@ -281,12 +291,15 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
-            if (!_serializersById.TryGetValue(serializerId, out var serializer))
-                throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
-                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+            return SerializeWithTransport(() =>
+            {
+                if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                    throw new SerializationException(
+                        $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
+                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
 
-            return serializer.FromBinary(bytes, type);
+                return serializer.FromBinary(bytes, type);
+            });
         }
 
         /// <summary>
@@ -302,25 +315,31 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
-            if (!_serializersById.TryGetValue(serializerId, out var serializer))
-                throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
-                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+            return SerializeWithTransport(() =>
+            {
 
-            if (serializer is SerializerWithStringManifest stringManifest)
-                return stringManifest.FromBinary(bytes, manifest);
-            if (string.IsNullOrEmpty(manifest))
-                return serializer.FromBinary(bytes, null);
-            Type type;
-            try
-            {
-                type = TypeCache.GetType(manifest);
-            }
-            catch(Exception ex)
-            {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
-            }
-            return serializer.FromBinary(bytes, type);
+                if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                    throw new SerializationException(
+                        $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
+                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+
+                if (serializer is SerializerWithStringManifest stringManifest)
+                    return stringManifest.FromBinary(bytes, manifest);
+                if (string.IsNullOrEmpty(manifest))
+                    return serializer.FromBinary(bytes, null);
+                Type type;
+                try
+                {
+                    type = TypeCache.GetType(manifest);
+                }
+                catch (Exception ex)
+                {
+                    throw new SerializationException(
+                        $"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
+                }
+
+                return serializer.FromBinary(bytes, type);
+            });
         }
 
         /// <summary>
@@ -409,9 +428,16 @@ namespace Akka.Serialization
                 }
                 else
                 {
-                    var defaultAddress = originalSystem.Provider.DefaultAddress;
-                    var res = path.ToSerializationFormatWithAddress(defaultAddress);
-                    return res;
+                    try
+                    {
+                        var defaultAddress = originalSystem.Provider.DefaultAddress;
+                        var res = path.ToSerializationFormatWithAddress(defaultAddress);
+                        return res;
+                    }
+                    catch
+                    {
+                        return path.ToSerializationFormat();
+                    }
                 }
             }
 
