@@ -7,7 +7,7 @@ title: Actors
 
 The previous section about [Actor Systems](xref:actor-systems) explained how actors form hierarchies and are the smallest unit when building an application. This section looks at one such actor in isolation, explaining the concepts you encounter while implementing it. For a more in depth reference with all the details please refer to F# API or C# API.
 
-An actor is a container for [State](#state), [Behavior](#behavior), a [Mailbox](#mailbox), [Children](#children) and a [Supervisor Strategy](#supervisor-strategy). All of this is encapsulated behind an [Actor Reference](#actor-reference). One noteworthy aspect is that actors have an explicit lifecycle, they are not automatically destroyed when no longer referenced; after having created one, it is your responsibility to make sure that it will eventually be terminated as well—which also gives you control over how resources are released [When an Actor Terminates](#when-an-actor-terminates).
+An actor is a container for [State](#state), [Behavior](#behavior), a [Mailbox](#mailbox), [Children](#child-actors) and a [Supervisor Strategy](#supervisor-strategy). All of this is encapsulated behind an [Actor Reference](#actor-reference). One noteworthy aspect is that actors have an explicit lifecycle, they are not automatically destroyed when no longer referenced; after having created one, it is your responsibility to make sure that it will eventually be terminated as well—which also gives you control over how resources are released [When an Actor Terminates](#when-an-actor-terminates).
 
 ![Actor](/images/actor.png)
 
