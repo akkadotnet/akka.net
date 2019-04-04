@@ -47,6 +47,27 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class TestStablePriorityMailbox : UnboundedStablePriorityMailbox
+    {
+        protected override int PriorityGenerator(object message)
+        {
+            if (message is string)
+                return 1;
+            if (message is bool)
+                return 2;
+            if (message is int)
+                return 3;
+            if (message is double)
+                return 4;
+
+            return 5;
+        }
+
+        public TestStablePriorityMailbox(Settings settings, Config config) : base(settings, config)
+        {
+        }
+    }
+
     public class IntPriorityMailbox : UnboundedPriorityMailbox
     {
         protected override int PriorityGenerator(object message)
@@ -138,6 +159,9 @@ string-prio-mailbox {
 int-prio-mailbox {
     mailbox-type : """ + typeof(IntPriorityMailbox).AssemblyQualifiedName + @"""
 }
+stable-prio-mailbox{
+    mailbox-type : """ + typeof(TestStablePriorityMailbox).AssemblyQualifiedName + @"""
+}
 ";
         }
 
@@ -206,7 +230,45 @@ int-prio-mailbox {
             ExpectMsg(2.0);
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
-        }       
+        }
+
+        [Fact]
+        public void Can_use_unbounded_stable_priority_mailbox()
+        {
+            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            // wait until we can confirm that the mailbox is suspended before we begin sending messages
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
+            actor.Tell(true);
+            for (var i = 0; i < 30; i++)
+            {
+                actor.Tell(i);
+            }
+            actor.Tell("a");
+            actor.Tell(2.0);
+            for (var i = 0; i < 30; i++)
+            {
+                actor.Tell(i + 30);
+            }
+            actor.SendSystemMessage(new Resume(null));
+
+            //resume mailbox, this prevents the mailbox from running to early
+            //priority mailbox is best effort only
+
+            ExpectMsg("a");
+            ExpectMsg(true);
+            for (var i = 0; i < 60; i++)
+            {
+                ExpectMsg(i);
+            }
+            ExpectMsg(2.0);
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
 
         [Fact]
         public void Priority_mailbox_keeps_ordering_with_many_priority_values()
@@ -285,6 +347,49 @@ int-prio-mailbox {
                     ExpectMsg(value);
                 }
             }); 
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
+
+        [Fact]
+        public void Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
+        {
+            var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.SendSystemMessage(new Suspend());
+
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
+
+            var values = new int[10];
+            var increment = (int)(UInt32.MaxValue / values.Length);
+
+            for (var i = 0; i < values.Length; i++)
+                values[i] = Int32.MinValue + increment * i;
+
+            // tell the actor in order
+            foreach (var value in values)
+            {
+                actor.Tell(value);
+                actor.Tell(value);
+                actor.Tell(value);
+            }
+
+            actor.Tell(new StashingActor.Start());
+
+            //resume mailbox, this prevents the mailbox from running to early
+            actor.SendSystemMessage(new Resume(null));
+
+            this.Within(5.Seconds(), () =>
+            {
+                // expect the messages in the original order
+                foreach (var value in values)
+                {
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                    ExpectMsg(value);
+                }
+            });
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }

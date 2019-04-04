@@ -2612,6 +2612,14 @@ namespace Akka.Dispatch
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
     }
+    public abstract class UnboundedStablePriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedStablePriorityMessageQueue>
+    {
+        public const int DefaultCapacity = 11;
+        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public int InitialCapacity { get; }
+        public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
+        protected abstract int PriorityGenerator(object message);
+    }
 }
 namespace Akka.Dispatch.MessageQueues
 {
@@ -2682,6 +2690,14 @@ namespace Akka.Dispatch.MessageQueues
             "lCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
+        protected override int LockedCount { get; }
+        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
+        protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
+    }
+    public class UnboundedStablePriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
+    {
+        public UnboundedStablePriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
@@ -4772,6 +4788,16 @@ namespace Akka.Util
     {
         public static readonly bool IsMono;
         public static readonly bool IsWindows;
+    }
+    public sealed class StableListPriorityQueue
+    {
+        public StableListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
+        public int Count() { }
+        public Akka.Actor.Envelope Dequeue() { }
+        public void Enqueue(Akka.Actor.Envelope item) { }
+        public bool IsConsistent() { }
+        public Akka.Actor.Envelope Peek() { }
+        public override string ToString() { }
     }
     public class static StandardOutWriter
     {
