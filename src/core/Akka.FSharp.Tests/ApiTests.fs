@@ -122,6 +122,22 @@ let ``actor that accepts _ will receive string message`` () =
         response
         |> equals "SomethingToReturn"
 
+
+
+type TestActor() =
+    inherit UntypedActor()
+
+    override x.OnReceive msg = ()
+
+[<Fact>]
+let ``can spawn actor from expression`` () =
+    
+    let system = Configuration.load() |> System.create "test"
+    let actor = spawnObj system "test-actor" <@ fun () -> TestActor() @>
+
+    ()
+
+
 //[<Fact>]
 // FAILS
 let ``actor that accepts unit will receive unit message`` () =    

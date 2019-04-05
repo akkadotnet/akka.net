@@ -17,6 +17,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation
 {
@@ -123,7 +124,7 @@ namespace Akka.Streams.Implementation
                     if (_pendingOffer != null)
                     {
                         Push(_stage.Out, _pendingOffer.Element);
-                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                        _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
                         _pendingOffer = null;
                         if (_terminating)
                         {
@@ -153,7 +154,7 @@ namespace Akka.Streams.Implementation
             {
                 if (_pendingOffer != null)
                 {
-                    _pendingOffer.CompletionSource.SetResult(QueueOfferResult.QueueClosed.Instance);
+                    _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.QueueClosed.Instance);
                     _pendingOffer = null;
                 }
                 _completion.SetResult(new object());
@@ -175,7 +176,7 @@ namespace Akka.Streams.Implementation
                     if (offer != null)
                     {
                         var promise = offer.CompletionSource;
-                        promise.SetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
+                        promise.NonBlockingTrySetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
                     }
                 });
             }
@@ -183,7 +184,7 @@ namespace Akka.Streams.Implementation
             private void EnqueueAndSuccess(Offer<TOut> offer)
             {
                 _buffer.Enqueue(offer.Element);
-                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
             }
 
             private void BufferElement(Offer<TOut> offer)
@@ -207,18 +208,18 @@ namespace Akka.Streams.Implementation
                             EnqueueAndSuccess(offer);
                             break;
                         case OverflowStrategy.DropNew:
-                            offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                            offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                             break;
                         case OverflowStrategy.Fail:
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
-                            offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
                         case OverflowStrategy.Backpressure:
                             if (_pendingOffer != null)
-                                offer.CompletionSource.SetException(
+                                offer.CompletionSource.NonBlockingTrySetException(
                                     new IllegalStateException(
                                         "You have to wait for previous offer to be resolved to send another request."));
                             else
@@ -245,7 +246,7 @@ namespace Akka.Streams.Implementation
                             else if (IsAvailable(_stage.Out))
                             {
                                 Push(_stage.Out, offer.Element);
-                                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
                             }
                             else if (_pendingOffer == null)
                                 _pendingOffer = offer;
@@ -255,15 +256,15 @@ namespace Akka.Streams.Implementation
                                 {
                                     case OverflowStrategy.DropHead:
                                     case OverflowStrategy.DropBuffer:
-                                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                                         _pendingOffer = offer;
                                         break;
                                     case OverflowStrategy.DropTail:
                                     case OverflowStrategy.DropNew:
-                                        offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                                         break;
                                     case OverflowStrategy.Backpressure:
-                                        offer.CompletionSource.SetException(
+                                        offer.CompletionSource.NonBlockingTrySetException(
                                             new IllegalStateException(
                                                 "You have to wait for previous offer to be resolved to send another request"));
                                         break;
@@ -271,7 +272,7 @@ namespace Akka.Streams.Implementation
                                         var bufferOverflowException =
                                             new BufferOverflowException(
                                                 $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
-                                        offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
                                         break;
@@ -331,7 +332,7 @@ namespace Akka.Streams.Implementation
             /// <returns>TBD</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
             {
-                var promise = new TaskCompletionSource<IQueueOfferResult>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<IQueueOfferResult>(); // new TaskCompletionSource<IQueueOfferResult>();
                 _invokeLogic(new Offer<TOut>(element, promise));
                 return promise.Task;
             }

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2018 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.3.11</VersionPrefix>
+    <VersionPrefix>1.4.0</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -11,12 +11,13 @@
   <PropertyGroup>
     <XunitVersion>2.3.1</XunitVersion>
     <TestSdkVersion>15.7.2</TestSdkVersion>
+    <HyperionVersion>0.9.8</HyperionVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placholder for nightlies*</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
   </PropertyGroup>
 </Project>

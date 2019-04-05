@@ -29,6 +29,27 @@ namespace Akka.Remote.Transport.DotNetty
             return Create(system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
         }
 
+        /// <summary>
+        /// Adds support for the "off-for-windows" option per https://github.com/akkadotnet/akka.net/issues/3293
+        /// </summary>
+        /// <param name="hoconTcpReuseAddr">The HOCON string for the akka.remote.dot-netty.tcp.reuse-addr option</param>
+        /// <returns><c>true</c> if we should enable REUSE_ADDR for tcp. <c>false</c> otherwise.</returns>
+        internal static bool ResolveTcpReuseAddrOption(string hoconTcpReuseAddr)
+        {
+            switch (hoconTcpReuseAddr.ToLowerInvariant())
+            {
+                case "off-for-windows" when RuntimeDetector.IsWindows:
+                    return false;
+                case "off-for-windows":
+                    return true;
+                case "on":
+                    return true;
+                case "off":
+                default:
+                    return false;
+            }
+        }
+
         public static DotNettyTransportSettings Create(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
@@ -61,7 +82,7 @@ namespace Akka.Remote.Transport.DotNetty
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size")) ?? 128000,
                 ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
-                tcpReuseAddr: config.GetBoolean("tcp-reuse-addr", true),
+                tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
                 tcpNoDelay: config.GetBoolean("tcp-nodelay", true),
                 backlog: config.GetInt("backlog", 4096),

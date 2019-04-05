@@ -228,6 +228,123 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact]
+        public void A_restart_with_backoff_source_should_stop_on_completion_if_it_should_only_be_restarted_in_failures()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var created = new AtomicCounter(0);
+                var probe = RestartSource.OnFailuresWithBackoff(() =>
+                {
+                    created.IncrementAndGet();
+                    var enumerable = new List<string> { "a", "b", "c" }.Select(c =>
+                    {
+                        switch (c)
+                        {
+                            case "c": return created.Current == 1 ? throw new ArgumentException("failed") : "c";
+                            default: return c;
+                        }
+                    });
+                    return Source.From(enumerable);
+                }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0).RunWith(this.SinkProbe<string>(), Materializer);
+
+                probe.RequestNext("a");
+                probe.RequestNext("b");
+                // will fail, and will restart
+                probe.RequestNext("a");
+                probe.RequestNext("b");
+                probe.RequestNext("c");
+
+                created.Current.Should().Be(2);
+
+                probe.Cancel();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_restart_with_backoff_source_should_restart_on_failure_when_only_due_to_failures_should_be_restarted()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var created = new AtomicCounter(0);
+                var probe = RestartSource.OnFailuresWithBackoff(() =>
+                {
+                    created.IncrementAndGet();
+                    var enumerable = new List<string> { "a", "b", "c" }.Select(c =>
+                    {
+                        if (c == "c")
+                            throw new ArgumentException("failed");
+                        return c;
+                    });
+                    return Source.From(enumerable);
+                }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0).RunWith(this.SinkProbe<string>(), Materializer);
+
+                probe.RequestNext("a");
+                probe.RequestNext("b");
+                probe.RequestNext("a");
+                probe.RequestNext("b");
+                probe.RequestNext("a");
+
+                created.Current.Should().Be(3);
+
+                probe.Cancel();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var created = new AtomicCounter(0);
+                var probe = RestartSource.WithBackoff(() =>
+                {
+                    created.IncrementAndGet();
+                    return Source.Single("a");
+                }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0, maxRestarts: 1).RunWith(this.SinkProbe<string>(), Materializer);
+
+                probe.RequestNext("a");
+                probe.RequestNext("a");
+                probe.ExpectComplete();
+
+                created.Current.Should().Be(2);
+
+                probe.Cancel();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_restart_with_backoff_source_should_reset_maxRestarts_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var created = new AtomicCounter(0);
+                var probe = RestartSource.WithBackoff(() =>
+                {
+                    created.IncrementAndGet();
+                    return Source.Single("a");
+                }, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3), 0, maxRestarts: 2).RunWith(this.SinkProbe<string>(), Materializer);
+
+                probe.RequestNext("a");
+                // There should be minBackoff delay
+                probe.RequestNext("a");
+                // The probe should now be backing off again with with increased backoff
+
+                // Now wait for the delay to pass, then it will start the new source, we also want to wait for the
+                // subsequent backoff to pass
+                const int minBackoff = 1000;
+                Thread.Sleep((minBackoff + (minBackoff * 2) + minBackoff + 500));
+
+                probe.RequestNext("a");
+                // We now are able to trigger the third restart, since enough time has elapsed to reset the counter
+                probe.RequestNext("a");
+
+                created.Current.Should().Be(4);
+
+                probe.Cancel();
+            }, Materializer);
+        }
+
         //
         // Sink
         //
@@ -408,7 +525,18 @@ namespace Akka.Streams.Tests.Dsl
         // Flow
         //
 
-        private Tuple<AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>> SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff)
+        /// <summary>
+        /// Helps reuse all the SetupFlow code for both methods: WithBackoff, and OnlyOnFailuresWithBackoff
+        /// </summary>
+        private static Flow<TIn, TOut, NotUsed> RestartFlowFactory<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts, bool onlyOnFailures)
+        {
+            // choose the correct backoff method
+            return onlyOnFailures
+                ? RestartFlow.OnFailuresWithBackoff(flowFactory, minBackoff, maxBackoff, randomFactor, maxRestarts)
+                : RestartFlow.WithBackoff(flowFactory, minBackoff, maxBackoff, randomFactor, maxRestarts);
+        }
+
+        private Tuple<AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>> SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff, int maxRestarts = -1, bool onlyOnFailures = false)
         {
             var created = new AtomicCounter(0);
             var probe1 = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -420,7 +548,7 @@ namespace Akka.Streams.Tests.Dsl
 
             // We can't just use ordinary probes here because we're expecting them to get started/restarted. Instead, we
             // simply use the probes as a message bus for feeding and capturing events.
-            var probe3 = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
+            var probe3 = this.SourceProbe<string>().ViaMaterialized(RestartFlowFactory(() =>
                 {
                     created.IncrementAndGet();
                     var snk = Flow.Create<string>()
@@ -451,7 +579,7 @@ namespace Akka.Streams.Tests.Dsl
                     });
 
                     return Flow.FromSinkAndSource(snk, src);
-                }, minBackoff, maxBackoff, 0), Keep.Left)
+                }, minBackoff, maxBackoff, 0, maxRestarts, onlyOnFailures), Keep.Left)
                 .ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
             var source = probe3.Item1;
             var sink = probe3.Item2;
@@ -468,7 +596,7 @@ namespace Akka.Streams.Tests.Dsl
                 var tuple = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
                 {
                     created.IncrementAndGet();
-                    return Flow.Create<string>(); ;
+                    return Flow.Create<string>();
                 }, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(20), 0), Keep.Left).ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
                 var source = tuple.Item1;
                 var sink = tuple.Item2;
@@ -667,6 +795,84 @@ namespace Akka.Streams.Tests.Dsl
             source.ExpectCancellation();
 
             created.Current.Should().Be(1);
+        }
+
+        // onlyOnFailures 
+        [Fact]
+        public void A_restart_with_backoff_flow_should_stop_on_cancellation_when_using_onlyOnFailuresWithBackoff()
+        {
+            var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40), -1, true);
+            var created = tuple.Item1;
+            var source = tuple.Item2;
+            var flowInProbe = tuple.Item3;
+            var flowOutProbe = tuple.Item4;
+            var sink = tuple.Item5;
+
+            source.SendNext("a");
+            flowInProbe.RequestNext("a");
+            flowOutProbe.SendNext("b");
+            sink.RequestNext("b");
+
+            source.SendNext("cancel");
+            // This will complete the flow in probe and cancel the flow out probe
+            flowInProbe.Request(2);
+            flowInProbe.ExpectNext("in complete");
+
+            source.ExpectCancellation();
+
+            created.Current.Should().Be(1);
+        }
+
+        [Fact]
+        public void A_restart_with_backoff_flow_should_stop_on_completion_when_using_onlyOnFailuresWithBackoff()
+        {
+            var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40), -1, true);
+            var created = tuple.Item1;
+            var source = tuple.Item2;
+            var flowInProbe = tuple.Item3;
+            var flowOutProbe = tuple.Item4;
+            var sink = tuple.Item5;
+
+            source.SendNext("a");
+            flowInProbe.RequestNext("a");
+            flowOutProbe.SendNext("b");
+            sink.RequestNext("b");
+
+            flowOutProbe.SendNext("complete");
+            sink.Request(1);
+            sink.ExpectComplete();
+
+            created.Current.Should().Be(1);
+        }
+
+        [Fact]
+        public void A_restart_with_backoff_flow_should_restart_on_failure_when_using_onlyOnFailuresWithBackoff()
+        {
+            var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40), -1, true);
+            var created = tuple.Item1;
+            var source = tuple.Item2;
+            var flowInProbe = tuple.Item3;
+            var flowOutProbe = tuple.Item4;
+            var sink = tuple.Item5;
+
+            source.SendNext("a");
+            flowInProbe.RequestNext("a");
+            flowOutProbe.SendNext("b");
+            sink.RequestNext("b");
+
+            sink.Request(1);
+            flowOutProbe.SendNext("error");
+
+            // This should complete the in probe
+            flowInProbe.RequestNext("in complete");
+
+            // and it should restart
+            source.SendNext("c");
+            flowInProbe.RequestNext("c");
+            flowOutProbe.SendNext("d");
+            sink.RequestNext("d");
+
+            created.Current.Should().Be(2);
         }
     }
 }

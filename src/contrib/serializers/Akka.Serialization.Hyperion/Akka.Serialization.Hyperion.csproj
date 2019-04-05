@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
-    <PackageReference Include="Hyperion" Version="0.9.8" />
+    <PackageReference Include="Hyperion" Version="$(HyperionVersion)" />
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
