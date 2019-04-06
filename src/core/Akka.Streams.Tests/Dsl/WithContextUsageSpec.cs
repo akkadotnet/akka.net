@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var src = CreateSourceWithContext(input)
                 .Select(f)
-                .EndContextPropagation();
+                .AsSource();
 
             var probe = this.CreateSubscriberProbe<Record>();
             
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var src = CreateSourceWithContext(input)
                 .Where(f)
-                .EndContextPropagation();
+                .AsSource();
 
             var probe = this.CreateSubscriberProbe<Record>();
             
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var src = CreateSourceWithContext(input)
                 .SelectConcat(f)
-                .EndContextPropagation();
+                .AsSource();
 
             var probe = this.CreateSubscriberProbe<Record>();
             
@@ -143,7 +143,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(groupSize)
                 .Select(r => new MultiRecord(r))
                 .SelectContext(x => x.Last())
-                .EndContextPropagation();
+                .AsSource();
 
             var probe = this.CreateSubscriberProbe<MultiRecord>();
             
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(groupSize)
                 .Select(r => new MultiRecord(r))
                 .SelectContext(x => x.Last())
-                .EndContextPropagation();
+                .AsSource();
 
             var probe = this.CreateSubscriberProbe<MultiRecord>();
             
@@ -217,7 +217,7 @@ namespace Akka.Streams.Tests.Dsl
         private static SourceWithContext<Offset, Record, NotUsed> CreateSourceWithContext(
             params CommittableMessage<Record>[] messages) =>
             CommittableConsumer.CommittableSource(messages)
-                .StartContextPropagation(m => new Offset(m.Offset.Offset))
+                .AsSourceWithContext(m => new Offset(m.Offset.Offset))
                 .Select(m => m.Record);
 
         private Sink<TCtx, TestSubscriber.Probe<TCtx>> Commit<TCtx>(TCtx uninitialized) where TCtx: IEquatable<TCtx>

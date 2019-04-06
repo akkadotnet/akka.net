@@ -61,15 +61,15 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SourceWithContext_must_get_created_from_StartContextPropagation()
+        public void SourceWithContext_must_get_created_from_AsSourceWithContext()
         {
             var msg = new Message("a", 1);
 
             var sink = this.CreateSubscriberProbe<Tuple<Message, long>>();
 
             Source.From(new[] { msg })
-                .StartContextPropagation(x => x.Offset)
-                .EndContextPropagation()
+                .AsSourceWithContext(x => x.Offset)
+                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();
@@ -86,8 +86,8 @@ namespace Akka.Streams.Tests.Dsl
             var sink = this.CreateSubscriberProbe<Message>();
 
             Source.From(new[] { msg })
-                .StartContextPropagation(x => x.Offset)
-                .EndContextPropagation()
+                .AsSourceWithContext(x => x.Offset)
+                .AsSource()
                 .Select(t => t.Item1)
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
@@ -109,11 +109,11 @@ namespace Akka.Streams.Tests.Dsl
                     new Message("D", 3),
                     new Message("C", 4),
                 })
-                .StartContextPropagation(x => x.Offset)
+                .AsSourceWithContext(x => x.Offset)
                 .Select(m => m.Data.ToLower())
                 .Where(x => x != "b")
                 .WhereNot(x => x == "d")
-                .EndContextPropagation()
+                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();
@@ -133,10 +133,10 @@ namespace Akka.Streams.Tests.Dsl
             var sink = this.CreateSubscriberProbe<Tuple<string, long>>();
 
             Source.From(new[] { msg })
-                .StartContextPropagation(x => x.Offset)
+                .AsSourceWithContext(x => x.Offset)
                 .Select(x => x.Data)
                 .Via(flowWithContext.Select(s => s + "b"))
-                .EndContextPropagation()
+                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();
@@ -153,10 +153,10 @@ namespace Akka.Streams.Tests.Dsl
             var sink = this.CreateSubscriberProbe<Tuple<string, long>>();
 
             Source.From(new[] { msg })
-                .StartContextPropagation(x => x.Offset)
+                .AsSourceWithContext(x => x.Offset)
                 .Select(x => x.Data)
                 .SelectConcat(str => new[] { 1, 2, 3 }.Select(i => $"{str}-{i}"))
-                .EndContextPropagation()
+                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();
@@ -175,11 +175,11 @@ namespace Akka.Streams.Tests.Dsl
             var sink = this.CreateSubscriberProbe<Tuple<IReadOnlyList<string>, IReadOnlyList<long>>>();
 
             Source.From(new[] { msg })
-                .StartContextPropagation(x => x.Offset)
+                .AsSourceWithContext(x => x.Offset)
                 .Select(x => x.Data)
                 .SelectConcat(str => new[] { 1, 2, 3, 4 }.Select(i => $"{str}-{i}"))
                 .Grouped(2)
-                .EndContextPropagation()
+                .AsSource()
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();

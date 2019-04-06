@@ -1821,7 +1821,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitAfter<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.SubstreamCancelStrategy substreamCancelStrategy, System.Func<TOut, bool> predicate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, bool> predicate) { }
-        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> StartContextPropagation<TCtx, TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TCtx> fn) { }
+        public static Akka.Streams.Dsl.SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TCtx> fn) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> StatefulSelectMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<System.Func<TOut1, System.Collections.Generic.IEnumerable<TOut2>>> mapConcaterFactory) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Sum<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TOut, TOut> reduce) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Take<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long n) { }
@@ -1841,7 +1841,7 @@ namespace Akka.Streams.Dsl
     public sealed class SourceWithContext<TCtx, TOut, TMat> : Akka.Streams.GraphDelegate<Akka.Streams.SourceShape<System.Tuple<TOut, TCtx>>, TMat>
     {
         public SourceWithContext(Akka.Streams.Dsl.Source<System.Tuple<TOut, TCtx>, TMat> source) { }
-        public Akka.Streams.Dsl.Source<System.Tuple<TOut, TCtx>, TMat> EndContextPropagation() { }
+        public Akka.Streams.Dsl.Source<System.Tuple<TOut, TCtx>, TMat> AsSource() { }
         public Akka.Streams.Dsl.SourceWithContext<TCtx2, TOut2, TMat> Via<TCtx2, TOut2, TMat2>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtx>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow) { }
         public Akka.Streams.Dsl.SourceWithContext<TCtx2, TOut2, TMat3> ViaMaterialized<TCtx2, TOut2, TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.FlowShape<System.Tuple<TOut, TCtx>, System.Tuple<TOut2, TCtx2>>, TMat2> viaFlow, System.Func<TMat, TMat2, TMat3> combine) { }
     }

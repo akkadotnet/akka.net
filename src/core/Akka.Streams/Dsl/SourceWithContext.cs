@@ -58,7 +58,7 @@ namespace Akka.Streams.Dsl
         ///Stops automatic context propagation from here and converts this to a regular
         ///stream of a pair of (data, context).
         ///</summary>
-        public Source<Tuple<TOut, TCtx>, TMat> EndContextPropagation() => 
+        public Source<Tuple<TOut, TCtx>, TMat> AsSource() => 
             Inner is Source<Tuple<TOut, TCtx>, TMat>  source ? source : Source.FromGraph(Inner);
     }
 }
