@@ -60,9 +60,11 @@ namespace Akka.Tests.Dispatch
             "); }
         }
 
+        #endregion
+
         public DispatchersSpec() : base(DispatcherConfiguration) { }
 
-        #endregion
+        
 
         #region Tests
 
