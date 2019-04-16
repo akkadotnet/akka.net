@@ -718,7 +718,7 @@ namespace Akka.Remote.Transport
     internal class ForbiddenUidReason { }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
     /// </summary>
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
