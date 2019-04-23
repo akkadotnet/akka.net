@@ -609,6 +609,19 @@ namespace Akka.Remote.Transport
         public string RemoveScheme(string scheme) { }
         public Akka.Actor.Address RemoveScheme(Akka.Actor.Address address) { }
     }
+    public sealed class SetThrottle
+    {
+        public SetThrottle(Akka.Actor.Address address, Akka.Remote.Transport.ThrottleTransportAdapter.Direction direction, Akka.Remote.Transport.ThrottleMode mode) { }
+        public Akka.Actor.Address Address { get; }
+        public Akka.Remote.Transport.ThrottleTransportAdapter.Direction Direction { get; }
+        public Akka.Remote.Transport.ThrottleMode Mode { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class SetThrottleAck
+    {
+        public static Akka.Remote.Transport.SetThrottleAck Instance { get; }
+    }
     public sealed class ShutdownAttempt : Akka.Remote.Transport.Activity
     {
         public ShutdownAttempt(Akka.Actor.Address boundAddress) { }
