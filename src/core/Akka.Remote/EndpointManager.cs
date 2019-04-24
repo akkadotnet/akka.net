@@ -773,17 +773,16 @@ namespace Akka.Remote
                 //Stop writers
                 var policy =
                 Tuple.Create(_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
-                if (policy.Item1 is Pass && policy.Item2 == null)
+                if (policy.Item1 is Pass pass && policy.Item2 == null)
                 {
-                    var endpoint = policy.Item1.AsInstanceOf<Pass>().Endpoint;
+                    var endpoint = pass.Endpoint;
                     Context.Stop(endpoint);
                     _log.Warning("Association to [{0}] with unknown UID is reported as quarantined, but " +
                     "address cannot be quarantined without knowing the UID, gating instead for {1} ms.", quarantine.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
                     _endpoints.MarkAsFailed(endpoint, Deadline.Now + _settings.RetryGateClosedFor);
                 }
-                else if (policy.Item1 is Pass && policy.Item2 != null)
+                else if (policy.Item1 is Pass pass && policy.Item2 != null)
                 {
-                    var pass = (Pass)policy.Item1;
                     var uidOption = pass.Uid;
                     var quarantineUid = policy.Item2;
                     if (uidOption == quarantineUid)
@@ -803,9 +802,8 @@ namespace Akka.Remote
                         //the quarantine uid has lost the race with some failure, do nothing
                     }
                 }
-                else if (policy.Item1 is WasGated && policy.Item2 != null)
+                else if (policy.Item1 is WasGated wg && policy.Item2 != null)
                 {
-                    var wg = (WasGated)policy.Item1;
                     if (wg.RefuseUid == policy.Item2)
                         _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, policy.Item2.Value);
                 }
