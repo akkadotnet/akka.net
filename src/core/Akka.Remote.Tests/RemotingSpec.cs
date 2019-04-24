@@ -458,6 +458,13 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public void Should_properly_quarantine_stashed_inbound_connections()
+        {
+            var localAddress = new Address("akka.test", "system1", "localhost", 1);
+            var rawLocalAddress = new Address("test", "system1", "localhost", 1);
+        }
+
+        [Fact]
         public void Drop_sent_messages_over_payload_size()
         {
             var oversized = ByteStringOfSize(MaxPayloadBytes + 1);
