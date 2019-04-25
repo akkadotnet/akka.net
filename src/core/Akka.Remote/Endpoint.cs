@@ -132,9 +132,9 @@ namespace Akka.Remote
                     _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
                         payload.GetType());
                 }
-                else if (payload is ISystemMessage)
+                else if (payload is ISystemMessage systemMessage)
                 {
-                    recipient.SendSystemMessage((ISystemMessage)payload);
+                    recipient.SendSystemMessage(systemMessage);
                 }
                 else
                 {
@@ -454,7 +454,13 @@ namespace Akka.Remote
             Reset(); // needs to be called at startup
             _writer = CreateWriter(); // need to create writer at startup
             Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
-            UidConfirmed = Uid.HasValue;
+            UidConfirmed = Uid.HasValue && (Uid != _refuseUid);
+
+            if (Uid.HasValue && Uid == _refuseUid)
+                throw new HopelessAssociation(localAddress, remoteAddress, Uid,
+                    new InvalidOperationException(
+                        $"The remote system [{remoteAddress}] has a UID [{Uid}] that has been quarantined. Association aborted."));
+
             Receiving();
             _autoResendTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.SysResendTimeout, _settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
                     Self);
@@ -626,6 +632,7 @@ namespace Akka.Remote
             {
                 _writer.Forward(stopped); //forward the request
             });
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         private void GoToIdle()
@@ -736,6 +743,7 @@ namespace Akka.Remote
             });
             Receive<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         /// <summary>
