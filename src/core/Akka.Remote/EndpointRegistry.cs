@@ -176,7 +176,18 @@ namespace Akka.Remote
             // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
             // known fact that it is quarantined.
             var policy = WritableEndpointWithPolicyFor(address) as EndpointManager.Quarantined;
-            return policy?.Uid == uid;
+            switch (policy)
+            {
+                case EndpointManager.Quarantined q when q.Uid == uid:
+                    return true;
+                default:
+                    if (_addressToRefuseUid.ContainsKey(address))
+                    {
+                        return _addressToRefuseUid[address].Item1 == uid;
+                    }
+
+                    return false;
+            }
         }
 
         /// <summary>

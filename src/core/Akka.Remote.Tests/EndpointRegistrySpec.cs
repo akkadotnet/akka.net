@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -196,7 +197,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void EndpointRegister_should_not_report_endpoint_as_writable_if_no_Pass_policy()
+        public void EndpointRegistry_should_not_report_endpoint_as_writable_if_no_Pass_policy()
         {
             var reg = new EndpointRegistry();
             var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
@@ -211,6 +212,37 @@ namespace Akka.Remote.Tests
             Assert.True(reg.IsWritable(TestActor)); // pass
             reg.MarkAsQuarantined(address1, 43, deadline);
             Assert.False(reg.HasWritableEndpointFor(address1)); // Quarantined
+        }
+
+        [Fact]
+        public void EndpointRegistry_should_keep_refuseUid_after_register_new_Endpoint()
+        {
+            var reg = new EndpointRegistry();
+            var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
+
+            reg.RegisterWritableEndpoint(address1, actorA, null);
+            reg.MarkAsQuarantined(address1, 42, deadline);
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
+
+            reg.UnregisterEndpoint(actorA);
+            // Quarantined marker is kept so far
+            var policy = reg.WritableEndpointWithPolicyFor(address1);
+            policy.Should().BeOfType<EndpointManager.Quarantined>();
+            policy.AsInstanceOf<EndpointManager.Quarantined>().Uid.Should().Be(42);
+            policy.AsInstanceOf<EndpointManager.Quarantined>().Deadline.Should().Be(deadline);
+
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
+
+            reg.RegisterWritableEndpoint(address1, actorB, null);
+            // Quarantined marker is gone
+            var policy2 = reg.WritableEndpointWithPolicyFor(address1);
+            policy2.Should().BeOfType<EndpointManager.Pass>();
+            policy2.AsInstanceOf<EndpointManager.Pass>().Endpoint.Should().Be(actorB);
+            // but we still have the refuseUid
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
         }
     }
 }
