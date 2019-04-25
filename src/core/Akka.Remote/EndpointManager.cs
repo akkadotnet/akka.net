@@ -520,11 +520,32 @@ namespace Akka.Remote
         {
             return new OneForOneStrategy(ex =>
             {
-                var directive = Directive.Stop;
-
-                ex.Match()
-                    .With<InvalidAssociation>(ia =>
+                Directive Hopeless(HopelessAssociation e)
+                {
+                    switch (e)
                     {
+                        case HopelessAssociation h when h.Uid != null:
+                            _log.Error(e.InnerException ?? e, "Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.", h.RemoteAddress, h.Uid);
+                            if (_settings.QuarantineDuration.HasValue && _settings.QuarantineDuration != TimeSpan.MaxValue)
+                            {
+                                // have a finite quarantine duration specified in settings.
+                                // If we don't have one specified, don't bother quarantining - it's disabled.
+                                _endpoints.MarkAsQuarantined(h.RemoteAddress, h.Uid.Value, Deadline.Now + _settings.QuarantineDuration);
+                                _eventPublisher.NotifyListeners(new QuarantinedEvent(h.RemoteAddress, h.Uid.Value));
+                            }
+
+                            return Directive.Stop;
+                        default: // no UID found
+                            _log.Warning("Association to [{0}] with unknown UID is irrecoverably failed. Address cannot be quarantined without knowing the UID, gating instead for {1} ms.",
+                                e.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
+                            _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
+                            return Directive.Stop;
+                    }
+                }
+
+                switch (ex)
+                {
+                    case InvalidAssociation ia:
                         KeepQuarantinedOr(ia.RemoteAddress, () =>
                         {
                             var causedBy = ia.InnerException == null
@@ -537,56 +558,28 @@ namespace Akka.Remote
 
                         if (ia.DisassociationInfo.HasValue && ia.DisassociationInfo == DisassociateInfo.Quarantined)
                             Context.System.EventStream.Publish(new ThisActorSystemQuarantinedEvent(ia.LocalAddress, ia.RemoteAddress));
-
-                        directive = Directive.Stop;
-                    })
-                    .With<ShutDownAssociation>(shutdown =>
-                    {
+                        return Directive.Stop;
+                    case ShutDownAssociation shutdown:
                         KeepQuarantinedOr(shutdown.RemoteAddress, () =>
                         {
                             _log.Debug("Remote system with address [{0}] has shut down. Address is now gated for {1}ms, all messages to this address will be delivered to dead letters.",
-                                 shutdown.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
+                                shutdown.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
                             _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
                         });
-                        directive = Directive.Stop;
-                    })
-                    .With<HopelessAssociation>(hopeless =>
-                    {
-                        if (hopeless.Uid.HasValue)
-                        {
-                            _log.Error(hopeless.InnerException, "Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.",
-                                hopeless.RemoteAddress, hopeless.Uid);
-                            if (_settings.QuarantineDuration.HasValue)
-                            {
-                                _endpoints.MarkAsQuarantined(hopeless.RemoteAddress, hopeless.Uid.Value,
-                               Deadline.Now + _settings.QuarantineDuration.Value);
-                                _eventPublisher.NotifyListeners(new QuarantinedEvent(hopeless.RemoteAddress,
-                                    hopeless.Uid.Value));
-                            }
-                        }
-                        else
-                        {
-                            _log.Warning("Association to [{0}] with unknown UID is irrecoverably failed. Address cannot be quarantined without knowing the UID, gating instead for {1} ms.",
-                                hopeless.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
-                            _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
-                        }
-                        directive = Directive.Stop;
-                    })
-                    .Default(msg =>
-                    {
-                        if (msg is EndpointDisassociatedException || msg is EndpointAssociationException) { } //no logging
+                        return Directive.Stop;
+                    case HopelessAssociation h:
+                        return Hopeless(h);
+                    case ActorInitializationException i when i.InnerException is HopelessAssociation h2:
+                        return Hopeless(h2);
+                    default:
+                        if (ex is EndpointDisassociatedException || ex is EndpointAssociationException) { } //no logging
                         else { _log.Error(ex, ex.Message); }
                         _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
-                        directive = Directive.Stop;
-                    });
-
-                return directive;
+                        return Directive.Stop;
+                }
             }, false);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PreStart()
         {
             if (PruneTimerCancelleable != null)
@@ -594,9 +587,6 @@ namespace Akka.Remote
             base.PreStart();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PostStop()
         {
             if (PruneTimerCancelleable != null)

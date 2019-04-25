@@ -241,14 +241,7 @@ namespace Akka.Remote
                     }
                     else if (policy is EndpointManager.Pass)
                     {
-                        _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease,
-                            policy.AsInstanceOf<EndpointManager.Pass>().RefuseUid);
-                        _writableToAddress.Remove(endpoint);
-                    }
-                    else if (policy is EndpointManager.WasGated)
-                    {
-                        _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease,
-                            policy.AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
+                        _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease);
                         _writableToAddress.Remove(endpoint);
                     }
                     else if (policy is EndpointManager.Gated)
@@ -258,7 +251,7 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease, null);
+                    _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease);
                     _writableToAddress.Remove(endpoint);
                 }
             }
