@@ -480,7 +480,67 @@ namespace Akka.Remote.Tests
             }").WithFallback(_remoteSystem.Settings.Config);
 
             var thisSystem = ActorSystem.Create("this-system", config);
-            
+            MuteSystem(thisSystem);
+
+            try
+            {
+                // Set up a mock remote system using the test transport
+                var registry = AssociationRegistry.Get("JMeMndLLsw");
+                var remoteTransport = new TestTransport(rawRemoteAddress, registry);
+                var remoteTransportProbe = CreateTestProbe();
+
+                registry.RegisterTransport(remoteTransport, Task.FromResult<IAssociationEventListener>
+                    (new ActorAssociationEventListener(remoteTransportProbe)));
+
+                // Hijack associations through the test transport
+                AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                testTransport.WriteBehavior.PushConstant(true);
+
+                // Force an outbound associate on the real system (which we will hijack)
+                // we send no handshake packet, so this remains a pending connection
+                var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
+                dummySelection.Tell("ping", Sys.DeadLetters);
+
+                var remoteHandle = remoteTransportProbe.ExpectMsg<InboundAssociation>();
+                remoteHandle.Association.ReadHandlerSource.TrySetResult((IHandleEventListener)(new ActionHandleEventListener(ev => {})));
+
+                // Now we initiate an emulated inbound connection to the real system
+                var inboundHandleProbe = CreateTestProbe();
+                var inboundHandleTask = remoteTransport.Associate(rawLocalAddress);
+                inboundHandleTask.Wait(TimeSpan.FromSeconds(3));
+                var inboundHandle = inboundHandleTask.Result;
+                inboundHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(inboundHandleProbe));
+
+                AwaitAssert(() =>
+                {
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>());
+                });
+
+                var pduCodec = new AkkaPduProtobuffCodec(thisSystem);
+
+                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(remoteAddress, remoteUID));
+
+                // Finish the inbound handshake so now it is handed up to Remoting
+                inboundHandle.Write(handshakePacket);
+
+                // No disassociation now, the connection is still stashed
+                inboundHandleProbe.ExpectNoMsg(1000);
+
+                // Quarantine unrelated connection
+                RARP.For(thisSystem).Provider.Quarantine(remoteAddress, -1);
+                inboundHandleProbe.ExpectNoMsg(1000);
+
+                // Quarantine the connection
+                RARP.For(thisSystem).Provider.Quarantine(remoteAddress, remoteUID);
+
+                // Even though the connection is stashed it will be disassociated
+                inboundHandleProbe.ExpectMsg<Disassociated>();
+            }
+            finally
+            {
+                Shutdown(thisSystem);
+            }
         }
 
         [Fact]
@@ -752,6 +812,23 @@ namespace Akka.Remote.Tests
             public T Resolve<T>(object[] args)
             {
                 return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
+            }
+        }
+
+        class ActionHandleEventListener : IAssociationEventListener
+        {
+            private readonly Action<IAssociationEvent> _handler;
+
+            public ActionHandleEventListener() : this(ev => { }) { }
+
+            public ActionHandleEventListener(Action<IAssociationEvent> handler)
+            {
+                _handler = handler;
+            }
+
+            public void Notify(IAssociationEvent ev)
+            {
+                _handler(ev);
             }
         }
 
