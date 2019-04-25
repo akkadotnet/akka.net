@@ -1067,7 +1067,7 @@ namespace Akka.Remote
                 _pendingReadHandoffs.Remove(takingOverFrom);
                 _eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound: true));
                 var endpoint = CreateEndpoint(handle.RemoteAddress, handle.LocalAddress,
-                    _transportMapping[handle.LocalAddress], _settings, false, handle, refuseUid: null);
+                    _transportMapping[handle.LocalAddress], _settings, false, handle);
                 _endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint, handle.HandshakeInfo.Uid);
             }
         }
