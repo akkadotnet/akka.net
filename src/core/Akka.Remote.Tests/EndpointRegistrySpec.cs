@@ -213,7 +213,7 @@ namespace Akka.Remote.Tests
             reg.RegisterWritableEndpoint(address1, TestActor, 43, 42); // restarted
             Assert.True(reg.IsWritable(TestActor)); // pass
             reg.MarkAsQuarantined(address1, 43, deadline);
-            Assert.False(reg.HasWriteableEndpointFor(address1)); // Quarantined
+            Assert.False(reg.HasWritableEndpointFor(address1)); // Quarantined
         }
     }
 }

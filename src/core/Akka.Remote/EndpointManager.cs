@@ -1134,7 +1134,7 @@ namespace Akka.Remote
 
         private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle, int? refuseUid)
         {
-            var writing = _settings.UsePassiveConnections && !_endpoints.HasWriteableEndpointFor(handle.RemoteAddress);
+            var writing = _settings.UsePassiveConnections && !_endpoints.HasWritableEndpointFor(handle.RemoteAddress);
             _eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, true));
             var endpoint = CreateEndpoint(
                 handle.RemoteAddress,
@@ -1152,7 +1152,7 @@ namespace Akka.Remote
             else
             {
                 _endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint, handle.HandshakeInfo.Uid);
-                if (!_endpoints.HasWriteableEndpointFor(handle.RemoteAddress))
+                if (!_endpoints.HasWritableEndpointFor(handle.RemoteAddress))
                     _endpoints.RemovePolicy(handle.RemoteAddress);
             }
         }
