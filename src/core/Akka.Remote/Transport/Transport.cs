@@ -333,10 +333,10 @@ namespace Akka.Remote.Transport
     public abstract class AssociationHandle
     {
         /// <summary>
-        /// TBD
+        /// Creates a handle to an association between two remote addresses.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
+        /// <param name="localAddress">The local address to use.</param>
+        /// <param name="remoteAddress">The remote address to use.</param>
         protected AssociationHandle(Address localAddress, Address remoteAddress)
         {
             LocalAddress = localAddress;
@@ -384,7 +384,27 @@ namespace Akka.Remote.Transport
         /// 
         /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
         /// </summary>
+        [Obsolete("Use the method that states reasons to make sure disassociation reasons are logged.")]
         public abstract void Disassociate();
+
+        /// <summary>
+        /// Closes the underlying transport link, if needed. Some transports might not need an explicit teardown (UDP) and some
+        /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not
+        /// guaranteed.
+        /// 
+        /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
+        /// </summary>
+        public void Disassociate(string reason, ILoggingAdapter log)
+        {
+            if (log.IsDebugEnabled)
+            {
+                log.Debug("Association between local [{0}] and remote [{1}] was disassociated because {2}", LocalAddress, RemoteAddress, reason);
+            }
+
+#pragma warning disable 618
+            Disassociate();
+#pragma warning restore 618
+        }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
