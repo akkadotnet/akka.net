@@ -41,8 +41,6 @@ namespace Akka.Remote.Tests
 
             _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
             _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-
-            AtStartup();
         }
 
         private static string GetConfig()
@@ -646,7 +644,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        private void AtStartup()
+        protected override void AtStartup()
         {
             MuteSystem(Sys);
             _remoteSystem.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
@@ -815,18 +813,18 @@ namespace Akka.Remote.Tests
             }
         }
 
-        class ActionHandleEventListener : IAssociationEventListener
+        class ActionHandleEventListener : IHandleEventListener
         {
-            private readonly Action<IAssociationEvent> _handler;
+            private readonly Action<IHandleEvent> _handler;
 
             public ActionHandleEventListener() : this(ev => { }) { }
 
-            public ActionHandleEventListener(Action<IAssociationEvent> handler)
+            public ActionHandleEventListener(Action<IHandleEvent> handler)
             {
                 _handler = handler;
             }
 
-            public void Notify(IAssociationEvent ev)
+            public void Notify(IHandleEvent ev)
             {
                 _handler(ev);
             }
