@@ -41,6 +41,8 @@ namespace Akka.Remote.Tests
 
             _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
             _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -643,8 +645,12 @@ namespace Akka.Remote.Tests
                 bigBounceOther.Tell(PoisonPill.Instance);
             }
         }
-
-        protected override void AtStartup()
+        
+        /// <summary>
+        /// Have to hide other method otherwise we get an NRE due to base class
+        /// constructor being called first.
+        /// </summary>
+        protected new void AtStartup()
         {
             MuteSystem(Sys);
             _remoteSystem.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
