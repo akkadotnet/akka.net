@@ -919,15 +919,16 @@ namespace Akka.Remote
             {
                 var endpoint = readonlyEndpoint.Item1;
                 if (_pendingReadHandoffs.TryGetValue(endpoint, out var protocolHandle))
-                    protocolHandle.Disassociate();
+                    protocolHandle.Disassociate("the existing readOnly association was replaced by a new incoming one", _log);
 
-                _pendingReadHandoffs.AddOrSet(endpoint, handle);
+                _pendingReadHandoffs[endpoint] = handle;
                 endpoint.Tell(new EndpointWriter.TakeOver(handle, Self));
-                _endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
-                    .With<Pass>(pass =>
-                    {
+                switch (_endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress))
+                {
+                    case Pass pass:
                         pass.Endpoint.Tell(new ReliableDeliverySupervisor.Ungate());
-                    });
+                        break;
+                }
             }
             else
             {
@@ -936,41 +937,46 @@ namespace Akka.Remote
                 else
                 {
                     var policy = _endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress);
-                    var pass = policy as Pass;
-                    if (pass != null && !pass.Uid.HasValue)
+                    switch (policy)
                     {
-                        // Idle writer will never send a GotUid or a Terminated so we need to "provoke it"
-                        // to get an unstash event
-                        if (!writerIsIdle)
-                        {
-                            pass.Endpoint.Tell(ReliableDeliverySupervisor.IsIdle.Instance);
-                            var stashedInboundForEp = _stashedInbound.GetOrElse(pass.Endpoint,
-                                new List<InboundAssociation>());
-                            stashedInboundForEp.Add(ia);
-                            _stashedInbound[pass.Endpoint] = stashedInboundForEp;
-                        }
-                        else
-                            CreateAndRegisterEndpoint(handle, _endpoints.RefuseUid(handle.RemoteAddress));
+                        case Pass pass when !pass.Uid.HasValue: // pass, but UID is unknown
+                            // Idle writer will never send a GotUid or a Terminated so we need to "provoke it"
+                            // to get an unstash event
+                            if (!writerIsIdle)
+                            {
+                                pass.Endpoint.Tell(ReliableDeliverySupervisor.IsIdle.Instance);
+
+                                // BUG: does this wipe out existing stashed inbound connections? Need to look up Scala getOrElse behavior
+                                var stashedInboundForEp = _stashedInbound.GetOrElse(pass.Endpoint,
+                                    new List<InboundAssociation>());
+                                stashedInboundForEp.Add(ia);
+                                _stashedInbound[pass.Endpoint] = stashedInboundForEp;
+                            }
+                            else
+                                CreateAndRegisterEndpoint(handle);
+                            break;
+                        case Pass pWithUid: // pass with known UID
+                            if (handle.HandshakeInfo.Uid == pWithUid.Uid)
+                            {
+                                _pendingReadHandoffs.GetOrElse(pWithUid.Endpoint, null)?.Disassociate("the existing writable association was replaced by a new incoming one", _log);
+                                _pendingReadHandoffs[pWithUid.Endpoint] = handle;
+                                pWithUid.Endpoint.Tell(new EndpointWriter.StopReading(pWithUid.Endpoint, Self));
+                                pWithUid.Endpoint.Tell(new ReliableDeliverySupervisor.Ungate());
+                            }
+                            else
+                            {
+                                Context.Stop(pWithUid.Endpoint);
+                                _endpoints.UnregisterEndpoint(pWithUid.Endpoint);
+                                _pendingReadHandoffs.Remove(pWithUid.Endpoint);
+                                _endpoints.MarkAsQuarantined(handle.RemoteAddress, pWithUid.Uid.Value, Deadline.Now + _settings.QuarantineDuration);
+                                CreateAndRegisterEndpoint(handle);
+                            }
+
+                            break;
+                        default:
+                            CreateAndRegisterEndpoint(handle);
+                            break;
                     }
-                    else if (pass != null) // has a UID value
-                    {
-                        if (handle.HandshakeInfo.Uid == pass.Uid)
-                        {
-                            _pendingReadHandoffs.GetOrElse(pass.Endpoint, null)?.Disassociate();
-                            _pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
-                            pass.Endpoint.Tell(new EndpointWriter.StopReading(pass.Endpoint, Self));
-                            pass.Endpoint.Tell(new ReliableDeliverySupervisor.Ungate());
-                        }
-                        else
-                        {
-                            Context.Stop(pass.Endpoint);
-                            _endpoints.UnregisterEndpoint(pass.Endpoint);
-                            _pendingReadHandoffs.Remove(pass.Endpoint);
-                            CreateAndRegisterEndpoint(handle, pass.Uid);
-                        }
-                    }
-                    else
-                        CreateAndRegisterEndpoint(handle, _endpoints.RefuseUid(handle.RemoteAddress));
                 }
             }
         }
@@ -1072,7 +1078,7 @@ namespace Akka.Remote
                 _pendingReadHandoffs.Remove(takingOverFrom);
         }
 
-        private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle, int? refuseUid)
+        private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle)
         {
             var writing = _settings.UsePassiveConnections && !_endpoints.HasWritableEndpointFor(handle.RemoteAddress);
             _eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, true));
@@ -1082,12 +1088,11 @@ namespace Akka.Remote
                 _transportMapping[handle.LocalAddress],
                 _settings,
                 writing,
-                handle,
-                refuseUid);
+                handle);
 
             if (writing)
             {
-                _endpoints.RegisterWritableEndpoint(handle.RemoteAddress, endpoint, handle.HandshakeInfo.Uid, refuseUid);
+                _endpoints.RegisterWritableEndpoint(handle.RemoteAddress, endpoint, handle.HandshakeInfo.Uid);
             }
             else
             {
@@ -1103,12 +1108,12 @@ namespace Akka.Remote
             AkkaProtocolTransport transport,
             RemoteSettings endpointSettings,
             bool writing,
-            AkkaProtocolHandle handleOption = null,
-            int? refuseUid = null)
+            AkkaProtocolHandle handleOption = null)
         {
             System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
             // refuseUid is ignored for read-only endpoints since the UID of the remote system is already known and has passed
             // quarantine checks
+            var refuseUid = _endpoints.RefuseUid(remoteAddress);
 
             IActorRef endpointActor;
 
@@ -1121,8 +1126,7 @@ namespace Akka.Remote
                             remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System),
                             _receiveBuffers, endpointSettings.Dispatcher)
                             .WithDeploy(Deploy.Local)),
-                        string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
-                            _endpointId.Next()));
+                        $"reliableEndpointWriter-{AddressUrlEncoder.Encode(remoteAddress)}-{_endpointId.Next()}");
             }
             else
             {
@@ -1133,7 +1137,7 @@ namespace Akka.Remote
                             transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System), _receiveBuffers,
                             reliableDeliverySupervisor: null)
                             .WithDeploy(Deploy.Local)),
-                        string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), _endpointId.Next()));
+                        $"endpointWriter-{AddressUrlEncoder.Encode(remoteAddress)}-{_endpointId.Next()}");
             }
 
             Context.Watch(endpointActor);
