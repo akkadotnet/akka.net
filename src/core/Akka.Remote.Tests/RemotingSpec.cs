@@ -512,14 +512,14 @@ namespace Akka.Remote.Tests
                 var inboundHandleTask = remoteTransport.Associate(rawLocalAddress);
                 inboundHandleTask.Wait(TimeSpan.FromSeconds(3));
                 var inboundHandle = inboundHandleTask.Result;
-                inboundHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(inboundHandleProbe));
+                inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 AwaitAssert(() =>
                 {
                     registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
                 });
 
-                var pduCodec = new AkkaPduProtobuffCodec(thisSystem);
+                var pduCodec = new AkkaPduProtobuffCodec(Sys);
 
                 var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(remoteAddress, remoteUID));
 

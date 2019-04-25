@@ -946,7 +946,6 @@ namespace Akka.Remote
                             {
                                 pass.Endpoint.Tell(ReliableDeliverySupervisor.IsIdle.Instance);
 
-                                // BUG: does this wipe out existing stashed inbound connections? Need to look up Scala getOrElse behavior
                                 var stashedInboundForEp = _stashedInbound.GetOrElse(pass.Endpoint,
                                     new List<InboundAssociation>());
                                 stashedInboundForEp.Add(ia);

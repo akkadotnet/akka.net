@@ -203,9 +203,9 @@ namespace Akka.Remote.Transport
             _settings = settings;
         }
 
-        private Transport _wrappedTransport;
+        private readonly Transport _wrappedTransport;
 
-        private AkkaProtocolSettings _settings;
+        private readonly AkkaProtocolSettings _settings;
 
         /// <summary>
         /// The <see cref="AkkaProtocolTransport"/> does not handle recovery of associations, this task is implemented
@@ -229,9 +229,9 @@ namespace Akka.Remote.Transport
         /// <param name="message">TBD</param>
         protected override void Ready(object message)
         {
-            message.Match()
-                .With<InboundAssociation>(ia => //need to create an Inbound ProtocolStateActor
-                {
+            switch (message)
+            {
+                case InboundAssociation ia:
                     var handle = ia.Association;
                     var stateActorLocalAddress = LocalAddress;
                     var stateActorAssociationListener = AssociationListener;
@@ -244,9 +244,17 @@ namespace Akka.Remote.Transport
                         stateActorSettings,
                         new AkkaPduProtobuffCodec(Context.System),
                         failureDetector)), ActorNameFor(handle.RemoteAddress));
-                })
-                .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbound ProtocolStateActor
-                .With<AssociateUnderlyingRefuseUid>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusCompletionSource, au.RefuseUid));
+                    break;
+                case AssociateUnderlying au:
+                    CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null);
+                    break;
+                case AssociateUnderlyingRefuseUid aur:
+                    CreateOutboundStateActor(aur.RemoteAddress, aur.StatusCompletionSource, aur.RefuseUid);
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
+            }
         }
 
 #endregion
@@ -278,7 +286,7 @@ namespace Akka.Remote.Transport
 
         private FailureDetector CreateTransportFailureDetector()
         {
-            return FailureDetectorLoader.LoadFailureDetector(Context, _settings.TransportFailureDetectorImplementationClass,
+            return Context.LoadFailureDetector(_settings.TransportFailureDetectorImplementationClass,
                 _settings.TransportFailureDetectorConfig);
         }
 
