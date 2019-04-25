@@ -65,12 +65,12 @@ namespace Akka.Remote
             /// <summary>
             /// The actor who owns the current endpoint
             /// </summary>
-            public IActorRef Endpoint { get; private set; }
+            public IActorRef Endpoint { get; }
 
             /// <summary>
             /// The endpoint UID, if it's currently known
             /// </summary>
-            public int? Uid { get; private set; }
+            public int? Uid { get; }
         }
 
         /// <summary>
@@ -79,21 +79,13 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Gated : EndpointPolicy
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="deadline">TBD</param>
-            /// <param name="refuseUid">TBD</param>
             public Gated(Deadline deadline)
                 : base(true)
             {
                 TimeOfRelease = deadline;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Deadline TimeOfRelease { get; private set; }
+            public Deadline TimeOfRelease { get; }
         }
 
         /// <summary>
@@ -101,11 +93,6 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Quarantined : EndpointPolicy
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="uid">TBD</param>
-            /// <param name="deadline">TBD</param>
             public Quarantined(int uid, Deadline deadline)
                 : base(true)
             {
@@ -113,15 +100,9 @@ namespace Akka.Remote
                 Deadline = deadline;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int Uid { get; private set; }
+            public int Uid { get; }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Deadline Deadline { get; private set; }
+            public Deadline Deadline { get; }
         }
 
         #endregion
@@ -436,10 +417,10 @@ namespace Akka.Remote
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="EndpointManager"/> instance.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="config">The HOCON configuration for the current <see cref="ActorSystem"/>.</param>
+        /// <param name="log">The "remoting" logging source.</param>
         public EndpointManager(Config config, ILoggingAdapter log)
         {
             _conf = config;
@@ -474,10 +455,7 @@ namespace Akka.Remote
 
         private readonly ConcurrentDictionary<Link, ResendState> _receiveBuffers = new ConcurrentDictionary<Link, ResendState>();
 
-        private bool RetryGateEnabled
-        {
-            get { return _settings.RetryGateClosedFor > TimeSpan.Zero; }
-        }
+        private bool RetryGateEnabled => _settings.RetryGateClosedFor > TimeSpan.Zero;
 
         private TimeSpan PruneInterval
         {
@@ -538,10 +516,6 @@ namespace Akka.Remote
 
         #region ActorBase overrides
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(ex =>
