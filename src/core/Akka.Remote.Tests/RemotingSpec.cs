@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
+using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
@@ -40,6 +41,8 @@ namespace Akka.Remote.Tests
 
             _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
             _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -458,10 +461,26 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Should_properly_quarantine_stashed_inbound_connections()
+        public void Properly_quarantine_stashed_inbound_connections()
         {
             var localAddress = new Address("akka.test", "system1", "localhost", 1);
             var rawLocalAddress = new Address("test", "system1", "localhost", 1);
+            var remoteAddress = new Address("akka.test", "system2", "localhost", 2);
+            var rawRemoteAddress = new Address("test", "system2", "localhost", 2);
+            var remoteUID = 16;
+
+            var config = ConfigurationFactory.ParseString(@"
+                  akka.remote.enabled-transports = [""akka.remote.test""]
+                  akka.remote.retry-gate-closed-for = 5s     
+                  akka.remote.log-remote-lifecycle-events = on
+     
+            akka.remote.test {
+                registry-key = JMeMndLLsw
+                local-address = """ + $"test://{localAddress.System}@{localAddress.Host}:{localAddress.Port}" + @"""
+            }").WithFallback(_remoteSystem.Settings.Config);
+
+            var thisSystem = ActorSystem.Create("this-system", config);
+            
         }
 
         [Fact]
@@ -569,10 +588,17 @@ namespace Akka.Remote.Tests
 
         private void AtStartup()
         {
-            //TODO need to implement test filters first
+            MuteSystem(Sys);
+            _remoteSystem.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
+            _remoteSystem.EventStream.Publish(EventFilter.Exception<EndpointException>().Mute());
         }
 
-
+        private void MuteSystem(ActorSystem system)
+        {
+            system.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
+            system.EventStream.Publish(EventFilter.Warning(start: "AssociationError").Mute());
+            system.EventStream.Publish(EventFilter.Warning(contains: "dead letter").Mute());
+        }
 
         private Address Addr(ActorSystem system, string proto)
         {
