@@ -781,18 +781,18 @@ namespace Akka.Remote
                     "address cannot be quarantined without knowing the UID, gating instead for {1} ms.", quarantine.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds);
                     _endpoints.MarkAsFailed(endpoint, Deadline.Now + _settings.RetryGateClosedFor);
                 }
-                else if (policy.Item1 is Pass pass && policy.Item2 != null)
+                else if (policy.Item1 is Pass p && policy.Item2 != null)
                 {
-                    var uidOption = pass.Uid;
+                    var uidOption = p.Uid;
                     var quarantineUid = policy.Item2;
                     if (uidOption == quarantineUid)
                     {
                         _endpoints.MarkAsQuarantined(quarantine.RemoteAddress, quarantineUid.Value, Deadline.Now + _settings.QuarantineDuration);
                         _eventPublisher.NotifyListeners(new QuarantinedEvent(quarantine.RemoteAddress, quarantineUid.Value));
-                        Context.Stop(pass.Endpoint);
+                        Context.Stop(p.Endpoint);
                     }
                     // or it does not match with the UID to be quarantined
-                    else if (!uidOption.HasValue && pass.RefuseUid != quarantineUid)
+                    else if (!uidOption.HasValue && p.RefuseUid != quarantineUid)
                     {
                         // the quarantine uid may be got fresh by cluster gossip, so update refuseUid for late handle when the writer got uid
                         _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, quarantineUid.Value);
