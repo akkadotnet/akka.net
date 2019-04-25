@@ -17,10 +17,12 @@ using Akka.TestKit;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Google.Protobuf;
 using Xunit;
 using Xunit.Abstractions;
 using Nito.AsyncEx;
+using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 
 namespace Akka.Remote.Tests
 {
@@ -514,7 +516,7 @@ namespace Akka.Remote.Tests
 
                 AwaitAssert(() =>
                 {
-                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>());
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
                 });
 
                 var pduCodec = new AkkaPduProtobuffCodec(thisSystem);

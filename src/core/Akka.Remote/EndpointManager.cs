@@ -30,7 +30,7 @@ namespace Akka.Remote
         #region Policy definitions
 
         /// <summary>
-        /// TBD
+        /// Defines how we're going to treat incoming and outgoing connections for specific endpoints
         /// </summary>
         public abstract class EndpointPolicy
         {
@@ -39,10 +39,6 @@ namespace Akka.Remote
             /// </summary>
             public readonly bool IsTombstone;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="isTombstone">TBD</param>
             protected EndpointPolicy(bool isTombstone)
             {
                 IsTombstone = isTombstone;
@@ -59,29 +55,22 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="endpoint">TBD</param>
             /// <param name="uid">TBD</param>
-            /// <param name="refuseUid">TBD</param>
-            public Pass(IActorRef endpoint, int? uid, int? refuseUid)
+            public Pass(IActorRef endpoint, int? uid)
                 : base(false)
             {
                 Uid = uid;
                 Endpoint = endpoint;
-                RefuseUid = refuseUid;
             }
 
             /// <summary>
-            /// TBD
+            /// The actor who owns the current endpoint
             /// </summary>
             public IActorRef Endpoint { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// The endpoint UID, if it's currently known
             /// </summary>
             public int? Uid { get; private set; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int? RefuseUid { get; private set; }
         }
 
         /// <summary>
@@ -95,42 +84,16 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="deadline">TBD</param>
             /// <param name="refuseUid">TBD</param>
-            public Gated(Deadline deadline, int? refuseUid)
+            public Gated(Deadline deadline)
                 : base(true)
             {
                 TimeOfRelease = deadline;
-                RefuseUid = refuseUid;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
             public Deadline TimeOfRelease { get; private set; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int? RefuseUid { get; private set; }
-        }
-
-        /// <summary>
-        /// Used to indicated that a node was <see cref="Gated"/> previously.
-        /// </summary>
-        public sealed class WasGated : EndpointPolicy
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="refuseUid">TBD</param>
-            public WasGated(int? refuseUid) : base(false)
-            {
-                RefuseUid = refuseUid;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int? RefuseUid { get; private set; }
         }
 
         /// <summary>
@@ -829,7 +792,12 @@ namespace Akka.Remote
                 else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
                 else { } // nothing to stop
 
-                bool MatchesQuarantine(AkkaProtocolHandle handle) => handle.RemoteAddress.Equals(quarantine.RemoteAddress) && quarantine.Uid == handle.HandshakeInfo.Uid;
+                bool MatchesQuarantine(AkkaProtocolHandle handle)
+                {
+
+                    return handle.RemoteAddress.Equals(quarantine.RemoteAddress) &&
+                           quarantine.Uid == handle.HandshakeInfo.Uid;
+                }
 
                 // Stop all matching pending read handoffs
                 _pendingReadHandoffs = _pendingReadHandoffs.Where(x =>

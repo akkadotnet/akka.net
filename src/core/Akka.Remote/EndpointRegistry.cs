@@ -18,6 +18,7 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
+        private readonly Dictionary<Address, Tuple<int, Deadline>> _addressToRefuseUid = new Dictionary<Address, Tuple<int, Deadline>>();
         private readonly Dictionary<Address, Tuple<IActorRef, int>> _addressToReadonly = new Dictionary<Address, Tuple<IActorRef, int>>();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
@@ -27,75 +28,67 @@ namespace Akka.Remote
         private readonly Dictionary<IActorRef, Address> _writableToAddress = new Dictionary<IActorRef, Address>();
 
         /// <summary>
-        /// TBD
+        /// Registers a new writable endpoint with the system.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="endpoint">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <param name="refuseUid">TBD</param>
+        /// <param name="address">The remote address.</param>>
+        /// <param name="endpoint">The local endpoint actor who owns this connection.</param>
+        /// <param name="uid">The UID of the remote actor system. Can be <c>null</c>.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="address"/> does not have
         /// an <see cref="EndpointManager.EndpointPolicy"/> of <see cref="EndpointManager.Pass"/>
         /// in the registry.
         /// </exception>
-        /// <returns>TBD</returns>
-        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid, int? refuseUid)
+        /// <returns>The <see cref="endpoint"/> actor reference.</returns>
+        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid)
         {
-            _addressToWritable.TryGetValue(address, out var existing);
-
-            var pass = existing as EndpointManager.Pass;
-            if (pass != null) // if we already have a writable endpoint....
+            if (_addressToWritable.TryGetValue(address, out var existing))
             {
-                throw new ArgumentException($"Attempting to overwrite existing endpoint {pass.Endpoint} with {endpoint}");
+                if (existing is EndpointManager.Pass pass) // if we already have a writable endpoint....
+                {
+                    throw new ArgumentException($"Attempting to overwrite existing endpoint {pass.Endpoint} with {endpoint}");
+                }
             }
 
-            _addressToWritable[address] = new EndpointManager.Pass(endpoint, uid, refuseUid);
+            // note that this overwrites Quarantine marker,
+            // but that is ok since we keep the quarantined uid in addressToRefuseUid
+            _addressToWritable[address] = new EndpointManager.Pass(endpoint, uid);
             _writableToAddress[endpoint] = address;
             return endpoint;
         }
 
         /// <summary>
-        /// TBD
+        /// Sets the UID for an existing <see cref="EndpointManager.Pass"/> policy.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="uid">TBD</param>
+        /// <param name="remoteAddress">The address of the remote system.</param>
+        /// <param name="uid">The UID of the remote system.</param>
         public void RegisterWritableEndpointUid(Address remoteAddress, int uid)
         {
             if (_addressToWritable.TryGetValue(remoteAddress, out var existing))
             {
-                var pass = existing as EndpointManager.Pass;
-                if (pass != null)
-                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, uid, pass.RefuseUid);
+                if (existing is EndpointManager.Pass pass)
+                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, uid);
                 // if the policy is not Pass, then the GotUid might have lost the race with some failure
             }
         }
 
         /// <summary>
-        /// TBD
+        /// Record a "refused" UID for a remote system that has been quarantined.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid)
+        /// <param name="remoteAddress">The remote address of the quarantined system.</param>
+        /// <param name="refuseUid">The refused UID of the remote system.</param>
+        /// <param name="timeOfRelease">The timeframe for releasing quarantine.</param>
+        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid, Deadline timeOfRelease)
         {
-            if (_addressToWritable.TryGetValue(remoteAddress, out var existing))
-            {
-                var pass = existing as EndpointManager.Pass;
-                if (pass != null)
-                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, pass.Uid, refuseUid);
-                else if (existing is EndpointManager.Gated)
-                    _addressToWritable[remoteAddress] = new EndpointManager.Gated(((EndpointManager.Gated)existing).TimeOfRelease, refuseUid);
-                else if (existing is EndpointManager.WasGated)
-                    _addressToWritable[remoteAddress] = new EndpointManager.WasGated(refuseUid);
-            }
+            _addressToRefuseUid[remoteAddress] = Tuple.Create(refuseUid, timeOfRelease);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a read-only endpoint.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="endpoint">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The remote address.</param>>
+        /// <param name="endpoint">The local endpoint actor who owns this connection.</param>
+        /// <param name="uid">The UID of the remote actor system. Can be <c>null</c>.</param>
+        /// <returns>The <see cref="endpoint"/> actor reference.</returns>
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
             _addressToReadonly[address] = Tuple.Create(endpoint, uid);
@@ -104,9 +97,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Unregisters an endpoint from the registry.
         /// </summary>
-        /// <param name="endpoint">TBD</param>
+        /// <param name="endpoint">The actor who owns the endpoint.</param>
         public void UnregisterEndpoint(IActorRef endpoint)
         {
             if (IsWritable(endpoint))
@@ -120,6 +113,7 @@ namespace Akka.Remote
                 else
                     _addressToWritable.Remove(address);
                 _writableToAddress.Remove(endpoint);
+                // leave the refuseUid
             }
             else if (IsReadOnly(endpoint))
             {
@@ -129,10 +123,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Get the endpoint address for the selected endpoint writer actor.
         /// </summary>
-        /// <param name="writer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="writer">The endpoint writer actor reference.</param>
+        /// <returns>The remote system address owned by <see cref="writer"/>.</returns>
         public Address AddressForWriter(IActorRef writer)
         {
             // Needs to return null if the key is not in the dictionary, instead of throwing.
@@ -141,10 +135,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a read-only endpoint for the given address, if it exists.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The remote address to check.</param>
+        /// <returns>A tuple containing the actor reference and the remote system UID, if they exist. Otherwise <c>null</c>.</returns>
         public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
         {
             _addressToReadonly.TryGetValue(address, out var tmp);
