@@ -641,8 +641,7 @@ namespace Akka.Remote
                                          if (x.transports.Count > 1)
                                          {
                                              throw new RemoteTransportException(
-                                                 string.Format("There are more than one transports listening on local address {0}",
-                                                     x.address));
+                                                 $"There are more than one transports listening on local address {x.address}");
                                          }
                                          return new KeyValuePair<Address, AkkaProtocolTransport>(x.address,
                                              x.transports.Head().Item1.ProtocolTransport);
@@ -719,20 +718,15 @@ namespace Akka.Remote
                         Context.Stop(p.Endpoint);
                     }
                     // or it does not match with the UID to be quarantined
-                    else if (!uidOption.HasValue && p.RefuseUid != quarantineUid)
+                    else if (!uidOption.HasValue && _endpoints.RefuseUid(quarantine.RemoteAddress) != quarantineUid)
                     {
                         // the quarantine uid may be got fresh by cluster gossip, so update refuseUid for late handle when the writer got uid
-                        _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, quarantineUid.Value);
+                        _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, quarantineUid.Value, Deadline.Now + _settings.QuarantineDuration);
                     }
                     else
                     {
                         //the quarantine uid has lost the race with some failure, do nothing
                     }
-                }
-                else if (policy.Item1 is WasGated wg && policy.Item2 != null)
-                {
-                    if (wg.RefuseUid == policy.Item2)
-                        _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, policy.Item2.Value);
                 }
                 else if (policy.Item1 is Quarantined && policy.Item2 != null && policy.Item1.AsInstanceOf<Quarantined>().Uid == policy.Item2.Value)
                 {
@@ -795,31 +789,29 @@ namespace Akka.Remote
             Receive<Send>(send =>
             {
                 var recipientAddress = send.Recipient.Path.Address;
-                IActorRef CreateAndRegisterWritingEndpoint(int? refuseUid) => _endpoints.RegisterWritableEndpoint(recipientAddress, CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], _settings, writing: true, handleOption: null, refuseUid: refuseUid), uid: null, refuseUid: refuseUid);
+                IActorRef CreateAndRegisterWritingEndpoint() => _endpoints.RegisterWritableEndpoint(recipientAddress, 
+                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], 
+                        _settings, writing: true, handleOption: null), uid: null);
 
                 // pattern match won't throw a NullReferenceException if one is returned by WritableEndpointWithPolicyFor
-                _endpoints.WritableEndpointWithPolicyFor(recipientAddress).Match()
-                    .With<Pass>(
-                        pass =>
-                        {
-                            pass.Endpoint.Tell(send);
-                        })
-                    .With<Gated>(gated =>
-                    {
-                        if (gated.TimeOfRelease.IsOverdue) CreateAndRegisterWritingEndpoint(gated.RefuseUid).Tell(send);
+                switch (_endpoints.WritableEndpointWithPolicyFor(recipientAddress))
+                {
+                    case Pass pass:
+                        pass.Endpoint.Tell(send);
+                        break;
+                    case Gated gated:
+                        if (gated.TimeOfRelease.IsOverdue) CreateAndRegisterWritingEndpoint().Tell(send);
                         else Context.System.DeadLetters.Tell(send);
-                    })
-                    .With<WasGated>(wasGated =>
-                    {
-                        CreateAndRegisterWritingEndpoint(wasGated.RefuseUid).Tell(send);
-                    })
-                    .With<Quarantined>(quarantined =>
-                    {
+                        break;
+                    case Quarantined quarantined:
                         // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
                         // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
-                        CreateAndRegisterWritingEndpoint(quarantined.Uid).Tell(send);
-                    })
-                    .Default(msg => CreateAndRegisterWritingEndpoint(null).Tell(send));
+                        CreateAndRegisterWritingEndpoint().Tell(send);
+                        break;
+                    default:
+                        CreateAndRegisterWritingEndpoint().Tell(send);
+                        break;
+                }
             });
             Receive<InboundAssociation>(ia => HandleInboundAssociation(ia, false));
             Receive<EndpointWriter.StoppedReading>(endpoint => AcceptPendingReader(endpoint.Writer));
@@ -832,44 +824,28 @@ namespace Akka.Remote
             Receive<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle));
             Receive<ReliableDeliverySupervisor.GotUid>(gotuid =>
             {
-
+                var refuseUidOption = _endpoints.RefuseUid(gotuid.RemoteAddress);
                 var policy = _endpoints.WritableEndpointWithPolicyFor(gotuid.RemoteAddress);
-                var pass = policy as Pass;
-                if (pass != null)
+                switch (policy)
                 {
-                    if (pass.RefuseUid == gotuid.Uid)
-                    {
-                        _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
-                            Deadline.Now + _settings.QuarantineDuration);
-                        _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
-                        Context.Stop(pass.Endpoint);
-                    }
-                    else
-                    {
-                        _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
-                    }
-                    HandleStashedInbound(Sender, writerIsIdle: false);
+                    case Pass pass:
+                        if (refuseUidOption == gotuid.Uid)
+                        {
+                            _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
+                                Deadline.Now + _settings.QuarantineDuration);
+                            _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
+                            Context.Stop(pass.Endpoint);
+                        }
+                        else
+                        {
+                            _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
+                        }
+                        HandleStashedInbound(Sender, writerIsIdle: false);
+                        break;
+                    default:
+                        // the GotUid might have lost the race with some failure
+                        break;
                 }
-                else if (policy is WasGated)
-                {
-                    var wg = (WasGated) policy;
-                    if (wg.RefuseUid == gotuid.Uid)
-                    {
-                        _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
-                            Deadline.Now + _settings.QuarantineDuration);
-                        _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
-                    }
-                    else
-                    {
-                        _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
-                    }
-                    HandleStashedInbound(Sender, writerIsIdle: false);
-                }
-                else
-                {
-                    // the GotUid might have lost the race with some failure
-                }
-
             });
             Receive<ReliableDeliverySupervisor.Idle>(idle =>
             {

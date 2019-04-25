@@ -312,21 +312,6 @@ namespace Akka.Remote
             _addressToRefuseUid = _addressToRefuseUid.Where(x => x.Value.Item2.HasTimeLeft)
                 .ToDictionary(x => x.Key, x => x.Value);
         }
-
-        /// <summary>
-        /// Internal function used for filtering endpoints that need to be pruned due to non-recovery past their deadlines
-        /// </summary>
-        private static bool PruneFilterFunction(EndpointManager.EndpointPolicy policy)
-        {
-            var rValue = true;
-
-            policy.Match()
-                .With<EndpointManager.Gated>(g => rValue = g.TimeOfRelease.HasTimeLeft)
-                .With<EndpointManager.Quarantined>(q => rValue = q.Deadline.HasTimeLeft)
-                .Default(msg => rValue = true);
-
-            return rValue;
-        }
     }
 }
 
