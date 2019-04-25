@@ -403,42 +403,38 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// The current handshake information.
         /// </summary>
         public readonly HandshakeInfo HandshakeInfo;
 
         /// <summary>
-        /// TBD
+        /// The <see cref="ProtocolStateActor"/> responsible for this association.
         /// </summary>
         public readonly IActorRef StateActor;
 
         /// <summary>
-        /// TBD
+        /// The codec instance used for managing transport-specific commands.
         /// </summary>
         public readonly AkkaPduCodec Codec;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="AssociationHandle"/>
         public override bool Write(ByteString payload)
         {
             return WrappedHandle.Write(Codec.ConstructPayload(payload));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+#pragma warning disable CS0672 // Member overrides obsolete member
+                              /// <inheritdoc cref="AssociationHandle"/>
         public override void Disassociate()
+#pragma warning restore CS0672 // Member overrides obsolete member
         {
             Disassociate(DisassociateInfo.Unknown);
         }
 
         /// <summary>
-        /// TBD
+        /// Forces a disassociation of the current transport.
         /// </summary>
-        /// <param name="info">TBD</param>
+        /// <param name="info">The reason for disassociating.</param>
         public void Disassociate(DisassociateInfo info)
         {
             StateActor.Tell(new DisassociateUnderlying(info));

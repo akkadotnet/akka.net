@@ -1103,7 +1103,8 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                AssociateAsync().PipeTo(Self);
+                var self = Self;
+                AssociateAsync().PipeTo(self);
             }
             else
             {
