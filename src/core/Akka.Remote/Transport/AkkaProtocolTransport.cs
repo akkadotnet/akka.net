@@ -177,14 +177,14 @@ namespace Akka.Remote.Transport
             return (AkkaProtocolHandle)await statusPromise.Task.ConfigureAwait(false);
         }
 
-#region Static properties
+        #region Static properties
 
         /// <summary>
         /// TBD
         /// </summary>
         public static AtomicCounter UniqueId = new AtomicCounter(0);
 
-#endregion
+        #endregion
     }
 
     /// <summary>
@@ -221,7 +221,7 @@ namespace Akka.Remote.Transport
             return _supervisor;
         }
 
-#region ActorBase / ActorTransportAdapterManager overrides
+        #region ActorBase / ActorTransportAdapterManager overrides
 
         /// <summary>
         /// TBD
@@ -257,9 +257,9 @@ namespace Akka.Remote.Transport
             }
         }
 
-#endregion
+        #endregion
 
-#region Actor creation methods
+        #region Actor creation methods
 
         private string ActorNameFor(Address remoteAddress)
         {
@@ -290,7 +290,7 @@ namespace Akka.Remote.Transport
                 _settings.TransportFailureDetectorConfig);
         }
 
-#endregion
+        #endregion
     }
 
     /// <summary>
@@ -424,7 +424,7 @@ namespace Akka.Remote.Transport
         }
 
 #pragma warning disable CS0672 // Member overrides obsolete member
-                              /// <inheritdoc cref="AssociationHandle"/>
+        /// <inheritdoc cref="AssociationHandle"/>
         public override void Disassociate()
 #pragma warning restore CS0672 // Member overrides obsolete member
         {
@@ -491,6 +491,8 @@ namespace Akka.Remote.Transport
     /// TBD
     /// </summary>
     internal class HeartbeatTimer : INoSerializationVerificationNeeded { }
+
+    internal class HandshakeTimer : INoSerializationVerificationNeeded { }
 
     /// <summary>
     /// TBD
@@ -727,13 +729,15 @@ namespace Akka.Remote.Transport
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private InitialProtocolStateData _initialData;
-        private HandshakeInfo _localHandshakeInfo;
+        public InitialProtocolStateData _initialData;
+        private readonly HandshakeInfo _localHandshakeInfo;
         private int? _refuseUid;
         private AkkaProtocolSettings _settings;
         private Address _localAddress;
         private AkkaPduCodec _codec;
         private FailureDetector _failureDetector;
+
+        private const string handshakeTimerKey = "handshake-timer";
 
         /// <summary>
         /// Constructor for outbound ProtocolStateActors
@@ -825,12 +829,62 @@ namespace Akka.Remote.Transport
             InitializeFSM();
         }
 
-#region FSM bindings
+        #region FSM bindings
 
         private void InitializeFSM()
         {
             When(AssociationState.Closed, fsmEvent =>
             {
+                switch (fsmEvent.FsmEvent)
+                {
+                    case Status.Failure f:
+                        switch (fsmEvent.StateData)
+                        {
+                            case OutboundUnassociated ou:
+                                ou.StatusCompletionSource.SetException(f.Cause);
+                                return Stop();
+                        }
+
+                        break;
+                    case HandleMsg h:
+                        switch (fsmEvent.StateData)
+                        {
+                            case OutboundUnassociated ou:
+                                /*
+                                 * Association has been established, but handshake is not yet complete.
+                                 * This actor, the outbound ProtocolStateActor, can now set itself as
+                                 * the read handler for the remainder of the handshake process.
+                                 */
+                                var wrappedHandle = h.Handle;
+                                var statusPromise = ou.StatusCompletionSource;
+                                wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
+                                if (SendAssociate(wrappedHandle, _localHandshakeInfo))
+                                {
+                                    _failureDetector.HeartBeat();
+                                    InitHeartbeatTimer();
+                                    // wait for reply from the inbound side of the connection (WaitHandshake)
+                                    return
+                                        GoTo(AssociationState.WaitHandshake)
+                                            .Using(new OutboundUnderlyingAssociated(statusPromise, wrappedHandle));
+                                }
+                                else
+                                {
+                                    //Otherwise, retry
+                                    SetTimer("associate-retry", new HandleMsg(wrappedHandle),
+                                        RARP.For(Context.System).Provider
+                                            .RemoteSettings.BackoffPeriod, repeat: false);
+                                    return Stay();
+                                }
+                        }
+
+                        break;
+
+                    case DisassociateUnderlying du:
+                        return Stop();
+
+                    
+                }
+
                 State<AssociationState, ProtocolStateData> nextState = null;
                 //Transport layer events for outbound associations
                 fsmEvent.FsmEvent.Match()
@@ -854,7 +908,7 @@ namespace Akka.Remote.Transport
                             if (SendAssociate(wrappedHandle, _localHandshakeInfo))
                             {
                                 _failureDetector.HeartBeat();
-                                InitTimers();
+                                InitHeartbeatTimer();
                                 // wait for reply from the inbound side of the connection (WaitHandshake)
                                 nextState =
                                     GoTo(AssociationState.WaitHandshake)
@@ -958,7 +1012,7 @@ namespace Akka.Remote.Transport
                                     {
                                         SendAssociate(wrappedHandle, _localHandshakeInfo);
                                         _failureDetector.HeartBeat();
-                                        InitTimers();
+                                        InitHeartbeatTimer();
                                         nextState =
                                             GoTo(AssociationState.Open)
                                                 .Using(
@@ -1163,9 +1217,9 @@ namespace Akka.Remote.Transport
                 base.LogTermination(reason);
         }
 
-#endregion
+        #endregion
 
-#region Actor methods
+        #region Actor methods
 
         /// <summary>
         /// TBD
@@ -1176,9 +1230,9 @@ namespace Akka.Remote.Transport
             base.PostStop(); //pass to OnTermination
         }
 
-#endregion
+        #endregion
 
-#region Internal protocol messaging methods
+        #region Internal protocol messaging methods
 
         private Exception DisassociateException(DisassociateInfo info)
         {
@@ -1250,10 +1304,15 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private void InitTimers()
+        private void InitHeartbeatTimer()
         {
             SetTimer("heartbeat-timer", new HeartbeatTimer(), _settings.TransportHeartBeatInterval, true);
         }
+
+        //private void InitHandshakeTimer()
+        //{
+        //    SetTimer(handshakeTimerKey, new HandshakeTimer(), _settings.);
+        //}
 
         private bool SendAssociate(AssociationHandle wrappedHandle, HandshakeInfo info)
         {
@@ -1299,9 +1358,9 @@ namespace Akka.Remote.Transport
             _log.Error(transportError.Cause, transportError.Message);
         }
 
-#endregion
+        #endregion
 
-#region Static methods
+        #region Static methods
 
 
 
@@ -1343,7 +1402,7 @@ namespace Akka.Remote.Transport
             return Props.Create(() => new ProtocolStateActor(handshakeInfo, wrappedHandle, associationEventListener, settings, codec, failureDetector));
         }
 
-#endregion
+        #endregion
     }
 }
 
