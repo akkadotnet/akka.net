@@ -1182,7 +1182,7 @@ namespace Akka.Remote.Transport
                 case Failure f:
                     return $"the ProtocolStateActor failed: {f.Cause}";
                 default:
-                    throw new AkkaProtocolException($"Unrecogized shutdown reason: {reason}");
+                    throw new AkkaProtocolException($"Unrecognized shutdown reason: {reason}");
             }
         }
 
