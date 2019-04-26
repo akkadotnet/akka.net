@@ -16,6 +16,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using Xunit;
+using Xunit.Abstractions;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Tests.Transport
@@ -45,8 +46,8 @@ namespace Akka.Remote.Tests.Transport
         private IHandleEvent testAssociate(int uid) { return new InboundPayload(codec.ConstructAssociate(new HandshakeInfo(remoteAkkaAddress, uid))); }
         private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
 
-        public AkkaProtocolSpec()
-            : base(@"akka.test.default-timeout = 1.5 s")
+        public AkkaProtocolSpec(ITestOutputHelper helper)
+            : base(@"akka.test.default-timeout = 1.5 s", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(localAkkaAddress, TestActor, testMsg);
@@ -105,7 +106,11 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private Config config = ConfigurationFactory.ParseString(
-        @"akka.remote {
+        @"akka{
+            loglevel = DEBUG
+            actor.debug.unhandled = on
+            actor.debug.fsm = on
+            remote {
 
             transport-failure-detector {
               implementation-class = ""Akka.Remote.PhiAccrualFailureDetector, Akka.Remote""
@@ -127,7 +132,7 @@ namespace Akka.Remote.Tests.Transport
             startup-timeout = 5 s
 
             use-passive-connections = on
-        }");
+        }}");
 
         #endregion
 

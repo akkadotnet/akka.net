@@ -38,6 +38,7 @@ namespace Akka.Remote.Tests
             var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             _remoteSystem = ActorSystem.Create("remote-sys", conf);
+            InitializeLogger(_remoteSystem);
             Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
             Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
 
@@ -56,7 +57,14 @@ namespace Akka.Remote.Tests
             }
 
             akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+              actor.provider = remote
+              loglevel = DEBUG
+                
+              debug{
+                unhandled = on
+                fsm = on
+                receive = on
+              }
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
@@ -102,8 +110,13 @@ namespace Akka.Remote.Tests
             }
 
             akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-
+              actor.provider = remote
+              loglevel = DEBUG
+              debug{
+                unhandled = on
+                fsm = on
+                receive = on
+              }
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
 

@@ -52,7 +52,7 @@ namespace Akka.Remote
             else if (enabledTransports.Contains("akka.remote.dot-netty.ssl"))
                 HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout");
             else
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", allowInfinite:false);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
         }
     }
 }
