@@ -980,6 +980,9 @@ namespace Akka.Remote.Transport
                         SendDisassociate(oua.WrappedHandle, DisassociateInfo.Unknown);
                         return Stop(new Failure(new TimeoutReason(
                             $"No response from remote for outbound association. Handshake timed out after [{_settings.HandshakeTimeout.TotalMilliseconds}] ms")));
+                    case UnderlyingTransportError ue:
+                        PublishError(ue);
+                        return Stay();
                     default:
                         return null;
                 }
@@ -987,6 +990,40 @@ namespace Akka.Remote.Transport
 
             When(AssociationState.Open, @event =>
             {
+            switch (@event.FsmEvent)
+            {
+                case Disassociated d:
+                    return Stop(new Failure(d.Info));
+                case InboundPayload ip:
+                    {
+                        var pdu = DecodePdu(ip.Payload);
+                        switch (pdu)
+                        {
+                            case Disassociate d:
+                                return Stop(new Failure(d.Reason));
+                            case Heartbeat h:
+                                _failureDetector.HeartBeat();
+                                return Stay();
+                            case Payload p:
+                                _failureDetector.HeartBeat();
+                                switch (@event.StateData)
+                                {
+                                    case AssociatedWaitHandler awh:
+                                        var nQueue = new Queue<ByteString>(awh.Queue);
+                                        nQueue.Enqueue(p.Bytes);
+                                        return
+                                            Stay()
+                                                .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
+                                                    nQueue));
+                                    case ListenerReady lr:
+                                        lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                        return Stay();
+                                    default:
+                                        throw new AkkaProtocolException("Unhandled message in state")
+                                }
+                        }
+                    }
+                }
                 State<AssociationState, ProtocolStateData> nextState = null;
                 @event.FsmEvent.Match()
                     .With<UnderlyingTransportError>(e =>
