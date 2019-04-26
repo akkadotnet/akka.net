@@ -392,7 +392,7 @@ namespace Akka.Remote.Transport
         /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not
         /// guaranteed.
         /// 
-        /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
+        /// The transport that provides the handle MUST guarantee that <see cref="Disassociate()"/> could be called arbitrarily many times.
         /// </summary>
         public void Disassociate(string reason, ILoggingAdapter log)
         {

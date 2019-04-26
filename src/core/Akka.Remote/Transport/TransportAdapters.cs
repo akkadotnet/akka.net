@@ -161,6 +161,9 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public Address AugmentScheme(Address address)
         {
+            // HACK to resolve https://github.com/akkadotnet/akka.net/pull/3764
+            if (address.Protocol.StartsWith(AddedSchemeIdentifier))
+                return address;
             var protocol = AugmentScheme(address.Protocol);
             return address.WithProtocol(protocol);
         }

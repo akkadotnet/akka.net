@@ -517,7 +517,7 @@ namespace Akka.Remote.Tests
                 var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
                 dummySelection.Tell("ping", Sys.DeadLetters);
 
-                var remoteHandle = remoteTransportProbe.ExpectMsg<InboundAssociation>();
+                var remoteHandle = remoteTransportProbe.ExpectMsg<InboundAssociation>(TimeSpan.FromMinutes(4));
                 remoteHandle.Association.ReadHandlerSource.TrySetResult((IHandleEventListener)(new ActionHandleEventListener(ev => { })));
 
                 // Now we initiate an emulated inbound connection to the real system
@@ -549,7 +549,7 @@ namespace Akka.Remote.Tests
                 // Finish the handshake for the outbound connection - this will unstash the inbound pending connection.
                 remoteHandle.Association.Write(handshakePacket);
 
-                inboundHandleProbe.ExpectMsg<Disassociated>();
+                inboundHandleProbe.ExpectMsg<Disassociated>(TimeSpan.FromMinutes(5));
             }
             finally
             {
