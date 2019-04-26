@@ -835,6 +835,7 @@ namespace Akka.Remote.Transport
         {
             When(AssociationState.Closed, fsmEvent =>
             {
+                _log.Info("{0} - {1}: {2}", StateName, StateData, @fsmEvent.FsmEvent);
                 switch (fsmEvent.FsmEvent)
                 {
                     case Status.Failure f:
@@ -845,7 +846,7 @@ namespace Akka.Remote.Transport
                                 return Stop();
                         }
 
-                        return Stay();
+                        return null;
                     case HandleMsg h:
                         switch (fsmEvent.StateData)
                         {
@@ -869,7 +870,7 @@ namespace Akka.Remote.Transport
                                 }
                                 else
                                 {
-                                    //Otherwise, retry
+                                    // Underlying transport was busy -- Associate could not be sent
                                     SetTimer("associate-retry", new HandleMsg(wrappedHandle),
                                         RARP.For(Context.System).Provider
                                             .RemoteSettings.BackoffPeriod, repeat: false);
@@ -883,6 +884,7 @@ namespace Akka.Remote.Transport
                     case HandshakeTimer t when fsmEvent.StateData is OutboundUnassociated ou:
                         var errMsg = $"No response from remote for outbound association. Associate timed out after " +
                                      $"[{_settings.HandshakeTimeout.TotalMilliseconds} ms].";
+                        ou.StatusCompletionSource.SetException(new TimeoutException(errMsg));
                         return Stop(new Failure(new TimeoutReason(errMsg)));
                     default:
                         return Stay();
@@ -892,6 +894,7 @@ namespace Akka.Remote.Transport
             //Transport layer events for outbound associations
             When(AssociationState.WaitHandshake, @event =>
             {
+                _log.Info("{0} - {1}: {2}", StateName, StateData, @event.FsmEvent);
                 switch (@event.FsmEvent)
                 {
                     case Disassociated d:
@@ -944,34 +947,34 @@ namespace Akka.Remote.Transport
 
                     // Events for inbound associations
                     case InboundPayload p when @event.StateData is InboundUnassociated iu:
+                    {
+                        var pdu = DecodePdu(p.Payload);
+                        /*
+                         * This state is used by inbound protocol state actors
+                         * when they receive an association attempt from the
+                         * outbound side of the association.
+                         */
+                        var associationHandler = iu.AssociationEventListener;
+                        var wrappedHandle = iu.WrappedHandle;
+                        switch (pdu)
                         {
-                            var pdu = DecodePdu(p.Payload);
-                            /*
-                             * This state is used by inbound protocol state actors
-                             * when they receive an association attempt from the
-                             * outbound side of the association.
-                             */
-                            var associationHandler = iu.AssociationEventListener;
-                            var wrappedHandle = iu.WrappedHandle;
-                            switch (pdu)
-                            {
-                                case Associate a:
-                                    SendAssociate(wrappedHandle, _localHandshakeInfo);
-                                    _failureDetector.HeartBeat();
-                                    CancelTimer(HandshakeTimerKey);
-                                    return GoTo(AssociationState.Open).Using(
-                                        new AssociatedWaitHandler(
-                                            NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                            wrappedHandle, new Queue<ByteString>()));
+                            case Associate a:
+                                SendAssociate(wrappedHandle, _localHandshakeInfo);
+                                _failureDetector.HeartBeat();
+                                CancelTimer(HandshakeTimerKey);
+                                return GoTo(AssociationState.Open).Using(
+                                    new AssociatedWaitHandler(
+                                        NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
+                                        wrappedHandle, new Queue<ByteString>()));
 
-                                // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
-                                default:
-                                    if (_log.IsDebugEnabled)
-                                        _log.Debug("Sending disassociate to [{0}] because unexpected message of type [{1}] was received unassociated.", wrappedHandle, @event.FsmEvent.GetType());
-                                    SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
-                                    return Stop();
-                            }
+                            // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
+                            default:
+                                if (_log.IsDebugEnabled)
+                                    _log.Debug("Sending disassociate to [{0}] because unexpected message of type [{1}] was received unassociated.", wrappedHandle, @event.FsmEvent.GetType());
+                                SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
+                                return Stop();
                         }
+                    }
 
                     case HandshakeTimer t when @event.StateData is OutboundUnderlyingAssociated oua:
                         if (_log.IsDebugEnabled)
@@ -979,6 +982,12 @@ namespace Akka.Remote.Transport
                         SendDisassociate(oua.WrappedHandle, DisassociateInfo.Unknown);
                         return Stop(new Failure(new TimeoutReason(
                             $"No response from remote for outbound association. Handshake timed out after [{_settings.HandshakeTimeout.TotalMilliseconds}] ms")));
+                    case HandshakeTimer t when @event.StateData is InboundUnassociated iu:
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("Sending disassociate to [{0}] because handshake timed out for inbound association after [{1}] ms.", iu.WrappedHandle, _settings.HandshakeTimeout.TotalMilliseconds);
+                        SendDisassociate(iu.WrappedHandle, DisassociateInfo.Unknown);
+                        return Stop(new Failure(new TimeoutReason(
+                            $"No response from remote for inbound association. Handshake timed out after [{_settings.HandshakeTimeout.TotalMilliseconds}] ms")));
                     case UnderlyingTransportError ue:
                         PublishError(ue);
                         return Stay();
@@ -989,6 +998,7 @@ namespace Akka.Remote.Transport
 
             When(AssociationState.Open, @event =>
             {
+                _log.Info("{0} - {1}: {2}", StateName, StateData, @event.FsmEvent);
                 switch (@event.FsmEvent)
                 {
                     case Disassociated d:
@@ -1004,6 +1014,7 @@ namespace Akka.Remote.Transport
                                     _failureDetector.HeartBeat();
                                     return Stay();
                                 case Payload p:
+                                    // use incoming ordinary message as alive sign
                                     _failureDetector.HeartBeat();
                                     switch (@event.StateData)
                                     {
@@ -1019,7 +1030,7 @@ namespace Akka.Remote.Transport
                                             return Stay();
                                         default:
                                             throw new AkkaProtocolException(
-                                                $"Unhandled message in state Open(InboundPayload) with type [{@event.FsmEvent.GetType()}]");
+                                                $"Unhandled message in state Open(InboundPayload) with type [{@event.FsmEvent?.GetType()}]");
                                     }
                                 default:
                                     return Stay();

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -107,9 +108,6 @@ namespace Akka.Remote.Tests.Transport
 
         private Config config = ConfigurationFactory.ParseString(
         @"akka{
-            loglevel = DEBUG
-            actor.debug.unhandled = on
-            actor.debug.fsm = on
             remote {
 
             transport-failure-detector {

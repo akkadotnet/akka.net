@@ -60,7 +60,7 @@ namespace Akka.Remote.Tests
               actor.provider = remote
               loglevel = DEBUG
                 
-              debug{
+              actor.debug{
                 unhandled = on
                 fsm = on
                 receive = on
@@ -112,7 +112,7 @@ namespace Akka.Remote.Tests
             akka {
               actor.provider = remote
               loglevel = DEBUG
-              debug{
+              actor.debug{
                 unhandled = on
                 fsm = on
                 receive = on
