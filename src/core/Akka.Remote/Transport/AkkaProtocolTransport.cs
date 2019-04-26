@@ -947,34 +947,39 @@ namespace Akka.Remote.Transport
 
                     // Events for inbound associations
                     case InboundPayload p when @event.StateData is InboundUnassociated iu:
-                    {
-                        var pdu = DecodePdu(p.Payload);
-                        /*
-                         * This state is used by inbound protocol state actors
-                         * when they receive an association attempt from the
-                         * outbound side of the association.
-                         */
-                        var associationHandler = iu.AssociationEventListener;
-                        var wrappedHandle = iu.WrappedHandle;
-                        switch (pdu)
                         {
-                            case Associate a:
-                                SendAssociate(wrappedHandle, _localHandshakeInfo);
-                                _failureDetector.HeartBeat();
-                                CancelTimer(HandshakeTimerKey);
-                                return GoTo(AssociationState.Open).Using(
-                                    new AssociatedWaitHandler(
-                                        NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                        wrappedHandle, new Queue<ByteString>()));
+                            var pdu = DecodePdu(p.Payload);
+                            /*
+                             * This state is used by inbound protocol state actors
+                             * when they receive an association attempt from the
+                             * outbound side of the association.
+                             */
+                            var associationHandler = iu.AssociationEventListener;
+                            var wrappedHandle = iu.WrappedHandle;
+                            switch (pdu)
+                            {
+                                case Disassociate d:
+                                    // After receiving Disassociate we MUST NOT send back a Disassociate (loop)
+                                    return Stop(new Failure(d.Reason));
+                                case Associate a:
+                                    // Incoming association -- implicitly ACK by a heartbeat
+                                    SendAssociate(wrappedHandle, _localHandshakeInfo);
+                                    _failureDetector.HeartBeat();
+                                    InitHeartbeatTimer();
+                                    CancelTimer(HandshakeTimerKey);
+                                    return GoTo(AssociationState.Open).Using(
+                                        new AssociatedWaitHandler(
+                                            NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
+                                            wrappedHandle, new Queue<ByteString>()));
 
-                            // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
-                            default:
-                                if (_log.IsDebugEnabled)
-                                    _log.Debug("Sending disassociate to [{0}] because unexpected message of type [{1}] was received unassociated.", wrappedHandle, @event.FsmEvent.GetType());
-                                SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
-                                return Stop();
+                                // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
+                                default:
+                                    if (_log.IsDebugEnabled)
+                                        _log.Debug("Sending disassociate to [{0}] because unexpected message of type [{1}] was received unassociated.", wrappedHandle, @event.FsmEvent.GetType());
+                                    SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
+                                    return Stop();
+                            }
                         }
-                    }
 
                     case HandshakeTimer t when @event.StateData is OutboundUnderlyingAssociated oua:
                         if (_log.IsDebugEnabled)
@@ -1104,10 +1109,12 @@ namespace Akka.Remote.Transport
                                             "Transport disassociated before handshake finished"));
 
                     oua.StatusCompletionSource.TrySetException(associationFailure);
-                    oua.WrappedHandle.Disassociate();
+                    oua.WrappedHandle.Disassociate(DisassociationReason(@event.Reason), _log);
                 })
                 .With<AssociatedWaitHandler>(awh =>
                 {
+                    // Invalidate exposed but still unfinished promise. The underlying association disappeared, so after
+                    // registration immediately signal a disassociate
                     Disassociated disassociateNotification = null;
                     if (@event.Reason is Failure && @event.Reason.AsInstanceOf<Failure>().Cause is DisassociateInfo)
                     {
@@ -1120,24 +1127,25 @@ namespace Akka.Remote.Transport
                     }
                     awh.HandlerListener.ContinueWith(result => result.Result.Notify(disassociateNotification),
                         TaskContinuationOptions.ExecuteSynchronously);
+                    awh.WrappedHandle.Disassociate(DisassociationReason(@event.Reason), _log);
                 })
                 .With<ListenerReady>(lr =>
                 {
                     Disassociated disassociateNotification = null;
-                    if (@event.Reason is Failure && ((Failure)@event.Reason).Cause is DisassociateInfo)
+                    if (@event.Reason is Failure failure && failure.Cause is DisassociateInfo)
                     {
                         disassociateNotification =
-                            new Disassociated(((Failure)@event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
+                            new Disassociated(failure.Cause.AsInstanceOf<DisassociateInfo>());
                     }
                     else
                     {
                         disassociateNotification = new Disassociated(DisassociateInfo.Unknown);
                     }
                     lr.Listener.Notify(disassociateNotification);
-                    lr.WrappedHandle.Disassociate();
+                    lr.WrappedHandle.Disassociate(DisassociationReason(@event.Reason), _log);
                 })
                 .With<InboundUnassociated>(iu =>
-                    iu.WrappedHandle.Disassociate()));
+                    iu.WrappedHandle.Disassociate(DisassociationReason(@event.Reason), _log)));
 
             /*
              * Set the initial ProtocolStateActor state to CLOSED if OUTBOUND
@@ -1161,6 +1169,21 @@ namespace Akka.Remote.Transport
                     StartWith(AssociationState.WaitHandshake, d);
                 });
             InitHandshakeTimer();
+        }
+
+        private static string DisassociationReason(Reason reason)
+        {
+            switch (reason)
+            {
+                case Normal n:
+                    return "the ProtocolStateActor was stopped normally";
+                case Shutdown s:
+                    return "the ProtocolStateActor was shutdown";
+                case Failure f:
+                    return $"the ProtocolStateActor failed: {f.Cause}";
+                default:
+                    throw new AkkaProtocolException($"Unrecogized shutdown reason: {reason}");
+            }
         }
 
         /// <summary>

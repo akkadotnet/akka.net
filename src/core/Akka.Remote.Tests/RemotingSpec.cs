@@ -751,7 +751,8 @@ namespace Akka.Remote.Tests
         {
             MuteSystem(Sys);
             _remoteSystem.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
-            _remoteSystem.EventStream.Publish(EventFilter.Exception<EndpointException>().Mute());
+            // OversizedPayloadException inherits from EndpointException, so have to mute it for now
+            //_remoteSystem.EventStream.Publish(EventFilter.Exception<EndpointException>().Mute());
         }
 
         private void MuteSystem(ActorSystem system)
