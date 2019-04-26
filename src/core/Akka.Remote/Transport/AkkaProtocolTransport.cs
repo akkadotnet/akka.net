@@ -845,7 +845,7 @@ namespace Akka.Remote.Transport
                                 return Stop();
                         }
 
-                        break;
+                        return Stay();
                     case HandleMsg h:
                         switch (fsmEvent.StateData)
                         {
@@ -877,161 +877,112 @@ namespace Akka.Remote.Transport
                                 }
                         }
 
-                        break;
-
+                        return Stay();
                     case DisassociateUnderlying du:
                         return Stop();
-
-                    
+                    case HandshakeTimer t when fsmEvent.StateData is OutboundUnassociated ou:
+                        var errMsg = $"No response from remote for outbound association. Associate timed out after " +
+                                     $"[{_settings.HandshakeTimeout.TotalMilliseconds} ms].";
+                        return Stop(new Failure(new TimeoutReason(errMsg)));
+                    default:
+                        return Stay();
                 }
-
-                State<AssociationState, ProtocolStateData> nextState = null;
-                //Transport layer events for outbound associations
-                fsmEvent.FsmEvent.Match()
-                    .With<Status.Failure>(f => fsmEvent.StateData.Match()
-                        .With<OutboundUnassociated>(ou =>
-                        {
-                            ou.StatusCompletionSource.SetException(f.Cause);
-                            nextState = Stop();
-                        }))
-                    .With<HandleMsg>(h => fsmEvent.StateData.Match()
-                        .With<OutboundUnassociated>(ou =>
-                        {
-                            /*
-                             * Association has been established, but handshake is not yet complete.
-                             * This actor, the outbound ProtocolStateActor, can now set itself as
-                             * the read handler for the remainder of the handshake process.
-                             */
-                            AssociationHandle wrappedHandle = h.Handle;
-                            var statusPromise = ou.StatusCompletionSource;
-                            wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
-                            if (SendAssociate(wrappedHandle, _localHandshakeInfo))
-                            {
-                                _failureDetector.HeartBeat();
-                                InitHeartbeatTimer();
-                                // wait for reply from the inbound side of the connection (WaitHandshake)
-                                nextState =
-                                    GoTo(AssociationState.WaitHandshake)
-                                        .Using(new OutboundUnderlyingAssociated(statusPromise, wrappedHandle));
-                            }
-                            else
-                            {
-                                //Otherwise, retry
-                                SetTimer("associate-retry", new HandleMsg(wrappedHandle),
-                                    RARP.For(Context.System).Provider
-                                        .RemoteSettings.BackoffPeriod, repeat: false);
-                                nextState = Stay();
-                            }
-                        }))
-                    .With<DisassociateUnderlying>(d =>
-                    {
-                        nextState = Stop();
-                    })
-                    .Default(m => { nextState = Stay(); });
-
-                return nextState;
             });
 
             //Transport layer events for outbound associations
             When(AssociationState.WaitHandshake, @event =>
             {
-                State<AssociationState, ProtocolStateData> nextState = null;
-
-                @event.FsmEvent.Match()
-                    .With<UnderlyingTransportError>(e =>
-                    {
-                        PublishError(e);
-                        nextState = Stay();
-                    })
-                    .With<Disassociated>(d =>
-                    {
-                        nextState = Stop(new Failure(d.Info));
-                    })
-                    .With<InboundPayload>(m =>
-                    {
-                        var pdu = DecodePdu(m.Payload);
-                        @event.StateData.Match()
-                            .With<OutboundUnderlyingAssociated>(ola =>
+                switch (@event.FsmEvent)
+                {
+                    case Disassociated d:
+                        return Stop(new Failure(d.Info));
+                    case InboundPayload p when @event.StateData is OutboundUnderlyingAssociated ola:
+                        {
+                            var pdu = DecodePdu(p.Payload);
+                            /*
+                             * This state is used for OutboundProtocolState actors when they receive
+                             * a reply back from the inbound end of the association.
+                             */
+                            var wrappedHandle = ola.WrappedHandle;
+                            var statusCompletionSource = ola.StatusCompletionSource;
+                            switch (pdu)
                             {
-                                /*
-                                 * This state is used for OutboundProtocolState actors when they receive
-                                 * a reply back from the inbound end of the association.
-                                 */
-                                var wrappedHandle = ola.WrappedHandle;
-                                var statusCompletionSource = ola.StatusCompletionSource;
-                                pdu.Match()
-                                    .With<Associate>(a =>
+                                case Associate a:
+                                    var handshakeInfo = a.Info;
+                                    if (_refuseUid.HasValue && _refuseUid == handshakeInfo.Uid) //refused UID
                                     {
-
-                                        var handshakeInfo = a.Info;
-                                        if (_refuseUid.HasValue && _refuseUid == handshakeInfo.Uid) //refused UID
-                                        {
-                                            SendDisassociate(wrappedHandle, DisassociateInfo.Quarantined);
-                                            nextState = Stop(new Failure(new ForbiddenUidReason()));
-                                        }
-                                        else //accepted UID
-                                        {
-                                            _failureDetector.HeartBeat();
-                                            nextState =
-                                                GoTo(AssociationState.Open)
-                                                    .Using(
-                                                        new AssociatedWaitHandler(
-                                                            NotifyOutboundHandler(wrappedHandle, handshakeInfo,
-                                                                statusCompletionSource), wrappedHandle,
-                                                            new Queue<ByteString>()));
-                                        }
-                                    })
-                                    .With<Disassociate>(d =>
+                                        SendDisassociate(wrappedHandle, DisassociateInfo.Quarantined);
+                                        return Stop(new Failure(new ForbiddenUidReason()));
+                                    }
+                                    else //accepted UID
                                     {
-                                        //After receiving Disassociate we MUST NOT send back a Disassociate (loop)
-                                        nextState = Stop(new Failure(d.Reason));
-                                    })
-                                    .Default(d =>
-                                    {
-                                        _log.Debug("Expected message of type Associate; instead received {0}", d);
-                                        //Expect handshake to be finished, dropping connection
-                                        SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
-                                        nextState = Stop();
-                                    });
-                            })
-                            .With<InboundUnassociated>(iu =>
-                            {
-                                /*
-                                 * This state is used by inbound protocol state actors
-                                 * when they receive an association attempt from the
-                                 * outbound side of the association.
-                                 */
-                                var associationHandler = iu.AssociationEventListener;
-                                var wrappedHandle = iu.WrappedHandle;
-                                pdu.Match()
-                                    .With<Disassociate>(d =>
-                                    {
-                                        nextState = Stop(new Failure(d.Reason));
-                                    })
-                                    .With<Associate>(a =>
-                                    {
-                                        SendAssociate(wrappedHandle, _localHandshakeInfo);
                                         _failureDetector.HeartBeat();
-                                        InitHeartbeatTimer();
-                                        nextState =
+                                        CancelTimer(handshakeTimerKey);
+                                        return
                                             GoTo(AssociationState.Open)
                                                 .Using(
                                                     new AssociatedWaitHandler(
-                                                        NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                                        wrappedHandle, new Queue<ByteString>()));
-                                    })
-                                    .Default(d =>
-                                    {
-                                        SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
-                                        nextState = Stop();
-                                    });
-                            });
+                                                        NotifyOutboundHandler(wrappedHandle, handshakeInfo,
+                                                            statusCompletionSource), wrappedHandle,
+                                                        new Queue<ByteString>()));
+                                    }
+                                case Disassociate d:
+                                    //After receiving Disassociate we MUST NOT send back a Disassociate (loop)
+                                    return Stop(new Failure(d.Reason));
+                                default:
+                                    _log.Debug("Expected message of type Associate; instead received {0}", @event.FsmEvent);
+                                    //Expect handshake to be finished, dropping connection
+                                    SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
+                                    return Stop();
+                            }
+                        }
 
-                    })
-                    .With<HeartbeatTimer>(h => @event.StateData.Match()
-                        .With<OutboundUnderlyingAssociated>(ou => nextState = HandleTimers(ou.WrappedHandle)));
+                    case HeartbeatTimer t when @event.FsmEvent is OutboundUnderlyingAssociated oua:
+                        return HandleTimers(oua.WrappedHandle);
 
-                return nextState;
+                    // Events for inbound associations
+                    case InboundPayload p when @event.StateData is InboundUnassociated iu:
+                        {
+                            var pdu = DecodePdu(p.Payload);
+                            /*
+                             * This state is used by inbound protocol state actors
+                             * when they receive an association attempt from the
+                             * outbound side of the association.
+                             */
+                            var associationHandler = iu.AssociationEventListener;
+                            var wrappedHandle = iu.WrappedHandle;
+                            switch (pdu)
+                            {
+                                case Associate a when _refuseUid.HasValue && _refuseUid == a.Info.Uid:
+                                    SendDisassociate(wrappedHandle, DisassociateInfo.Quarantined);
+                                    return Stop(new Failure(new ForbiddenUidReason()));
+                                case Associate a:
+                                    _failureDetector.HeartBeat();
+                                    CancelTimer(handshakeTimerKey);
+                                    return GoTo(AssociationState.Open).Using(
+                                        new AssociatedWaitHandler(
+                                            NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
+                                            wrappedHandle, new Queue<ByteString>()));
+                                case Disassociate d:
+                                    // After receiving Disassociate we MUST NOT send back a Disassociate (loop)
+                                    return Stop(new Failure(d.Reason));
+                                default:
+                                    if (_log.IsDebugEnabled)
+                                        _log.Debug("Sending disassociate to [{0}] because unexpected message of type [{1}] was received during handshake.", wrappedHandle, @event.FsmEvent.GetType());
+                                    SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
+                                    return Stop();
+                            }
+                        }
+
+                    case HandshakeTimer t when @event.StateData is OutboundUnderlyingAssociated oua:
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("Sending disassociate to [{0}] because handshake timed out for outbound association after [{1}] ms.", oua.WrappedHandle, _settings.HandshakeTimeout.TotalMilliseconds);
+                        SendDisassociate(oua.WrappedHandle, DisassociateInfo.Unknown);
+                        return Stop(new Failure(new TimeoutReason(
+                            $"No response from remote for outbound association. Handshake timed out after [{_settings.HandshakeTimeout.TotalMilliseconds}] ms")));
+                    default:
+                        return null;
+                }
             });
 
             When(AssociationState.Open, @event =>
@@ -1194,6 +1145,7 @@ namespace Akka.Remote.Transport
                     // therefore we just have to set ourselves as listener and wait for
                     // incoming handshake attempts from the client.
                     d.WrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+                    InitHandshakeTimer();
                     StartWith(AssociationState.WaitHandshake, d);
                 });
 
@@ -1219,18 +1171,12 @@ namespace Akka.Remote.Transport
 
         #endregion
 
-        #region Actor methods
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PostStop()
         {
             CancelTimer("heartbeat-timer");
             base.PostStop(); //pass to OnTermination
         }
 
-        #endregion
 
         #region Internal protocol messaging methods
 
@@ -1309,10 +1255,10 @@ namespace Akka.Remote.Transport
             SetTimer("heartbeat-timer", new HeartbeatTimer(), _settings.TransportHeartBeatInterval, true);
         }
 
-        //private void InitHandshakeTimer()
-        //{
-        //    SetTimer(handshakeTimerKey, new HandshakeTimer(), _settings.);
-        //}
+        private void InitHandshakeTimer()
+        {
+            SetTimer(handshakeTimerKey, new HandshakeTimer(), _settings.HandshakeTimeout, true);
+        }
 
         private bool SendAssociate(AssociationHandle wrappedHandle, HandshakeInfo info)
         {

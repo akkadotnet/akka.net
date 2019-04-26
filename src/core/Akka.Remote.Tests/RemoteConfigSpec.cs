@@ -8,9 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.Actor;
-using Akka.Actor.Internal;
-using Akka.Remote;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.Util.Internal;
