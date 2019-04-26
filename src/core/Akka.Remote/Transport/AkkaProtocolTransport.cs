@@ -990,117 +990,82 @@ namespace Akka.Remote.Transport
 
             When(AssociationState.Open, @event =>
             {
-            switch (@event.FsmEvent)
-            {
-                case Disassociated d:
-                    return Stop(new Failure(d.Info));
-                case InboundPayload ip:
-                    {
-                        var pdu = DecodePdu(ip.Payload);
-                        switch (pdu)
+                switch (@event.FsmEvent)
+                {
+                    case Disassociated d:
+                        return Stop(new Failure(d.Info));
+                    case InboundPayload ip:
                         {
-                            case Disassociate d:
-                                return Stop(new Failure(d.Reason));
-                            case Heartbeat h:
-                                _failureDetector.HeartBeat();
-                                return Stay();
-                            case Payload p:
-                                _failureDetector.HeartBeat();
-                                switch (@event.StateData)
-                                {
-                                    case AssociatedWaitHandler awh:
-                                        var nQueue = new Queue<ByteString>(awh.Queue);
-                                        nQueue.Enqueue(p.Bytes);
-                                        return
-                                            Stay()
-                                                .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
-                                                    nQueue));
-                                    case ListenerReady lr:
-                                        lr.Listener.Notify(new InboundPayload(p.Bytes));
-                                        return Stay();
-                                    default:
-                                        throw new AkkaProtocolException("Unhandled message in state")
-                                }
+                            var pdu = DecodePdu(ip.Payload);
+                            switch (pdu)
+                            {
+                                case Disassociate d:
+                                    return Stop(new Failure(d.Reason));
+                                case Heartbeat h:
+                                    _failureDetector.HeartBeat();
+                                    return Stay();
+                                case Payload p:
+                                    _failureDetector.HeartBeat();
+                                    switch (@event.StateData)
+                                    {
+                                        case AssociatedWaitHandler awh:
+                                            var nQueue = new Queue<ByteString>(awh.Queue);
+                                            nQueue.Enqueue(p.Bytes);
+                                            return
+                                                Stay()
+                                                    .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
+                                                        nQueue));
+                                        case ListenerReady lr:
+                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                            return Stay();
+                                        default:
+                                            throw new AkkaProtocolException(
+                                                $"Unhandled message in state Open(InboundPayload) with type [{@event.FsmEvent.GetType()}]");
+                                    }
+                                default:
+                                    return Stay();
+                            }
                         }
-                    }
-                }
-                State<AssociationState, ProtocolStateData> nextState = null;
-                @event.FsmEvent.Match()
-                    .With<UnderlyingTransportError>(e =>
+                    case HeartbeatTimer ht when @event.StateData is AssociatedWaitHandler awh:
+                        return HandleTimers(awh.WrappedHandle);
+                    case HeartbeatTimer ht when @event.StateData is ListenerReady lr:
+                        return HandleTimers(lr.WrappedHandle);
+                    case DisassociateUnderlying dl:
                     {
-                        PublishError(e);
-                        nextState = Stay();
-                    })
-                    .With<Disassociated>(d =>
-                    {
-                        nextState = Stop(new Failure(d.Info));
-                    })
-                    .With<InboundPayload>(ip =>
-                    {
-                        var pdu = DecodePdu(ip.Payload);
-                        pdu.Match()
-                            .With<Disassociate>(d =>
-                            {
-                                nextState = Stop(new Failure(d.Reason));
-                            })
-                            .With<Heartbeat>(h =>
-                            {
-                                _failureDetector.HeartBeat();
-                                nextState = Stay();
-                            })
-                            .With<Payload>(p =>
-                            {
-                                _failureDetector.HeartBeat();
-                                @event.StateData.Match()
-                                    .With<AssociatedWaitHandler>(awh =>
-                                    {
-                                        var nQueue = new Queue<ByteString>(awh.Queue);
-                                        nQueue.Enqueue(p.Bytes);
-                                        nextState =
-                                            Stay()
-                                                .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
-                                                    nQueue));
-                                    })
-                                    .With<ListenerReady>(lr =>
-                                    {
-                                        lr.Listener.Notify(new InboundPayload(p.Bytes));
-                                        nextState = Stay();
-                                    })
-                                    .Default(msg =>
-                                    {
-                                        throw new AkkaProtocolException($"Unhandled message in state Open(InboundPayload) with type {msg.GetType()}");
-                                    });
-                            })
-                            .Default(d =>
-                            {
-                                nextState = Stay();
-                            });
-                    })
-                    .With<HeartbeatTimer>(hrt => @event.StateData.Match()
-                        .With<AssociatedWaitHandler>(awh => nextState = HandleTimers(awh.WrappedHandle))
-                        .With<ListenerReady>(lr => nextState = HandleTimers(lr.WrappedHandle)))
-                    .With<DisassociateUnderlying>(du =>
-                    {
-                        AssociationHandle handle = null;
-                        @event.StateData.Match()
-                            .With<ListenerReady>(lr => handle = lr.WrappedHandle)
-                            .With<AssociatedWaitHandler>(awh => handle = awh.WrappedHandle)
-                            .Default(msg =>
-                            {
-                                throw new AkkaProtocolException($"unhandled message in state Open(DisassociateUnderlying) with type {msg.GetType()}");
-                            });
-                        SendDisassociate(handle, du.Info);
-                        nextState = Stop();
-                    })
-                    .With<HandleListenerRegistered>(hlr => @event.StateData.Match()
-                        .With<AssociatedWaitHandler>(awh =>
+                        AssociationHandle GetHandle(ProtocolStateData data)
                         {
-                            foreach (var msg in awh.Queue)
-                                hlr.Listener.Notify(new InboundPayload(msg));
-                            nextState = Stay().Using(new ListenerReady(hlr.Listener, awh.WrappedHandle));
-                        }));
+                            switch (data)
+                            {
+                                case ListenerReady lr:
+                                    return lr.WrappedHandle;
+                                case AssociatedWaitHandler awh:
+                                    return awh.WrappedHandle;
+                                default:
+                                    throw new AkkaProtocolException(
+                                        $"Unhandled message in state Open(DisassociateUnderlying) with type [{@event.FsmEvent.GetType()}]");
+                            }
+                        }
 
-                return nextState;
+                        var handle = GetHandle(@event.StateData);
+
+                        // No debug logging here as sending DisassociateUnderlying(Unknown) should have been logged from where
+                        // it was sent
+                        SendDisassociate(handle, dl.Info);
+                        return Stop();
+                    }
+                    case HandleListenerRegistered hlr when @event.StateData is AssociatedWaitHandler awh:
+                        foreach (var p in awh.Queue)
+                        {
+                            hlr.Listener.Notify(new InboundPayload(p));
+                        }
+
+                        return Stay().Using(new ListenerReady(hlr.Listener, awh.WrappedHandle));
+                    case UnderlyingTransportError e:
+                        PublishError(e);
+                        return Stay();
+                    default:
+                        return null;
+                }
             });
 
             OnTermination(@event => @event.StateData.Match()
