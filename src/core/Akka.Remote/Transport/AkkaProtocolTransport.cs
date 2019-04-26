@@ -835,7 +835,6 @@ namespace Akka.Remote.Transport
         {
             When(AssociationState.Closed, fsmEvent =>
             {
-                _log.Info("{0} - {1}: {2}", StateName, StateData, @fsmEvent.FsmEvent);
                 switch (fsmEvent.FsmEvent)
                 {
                     case Status.Failure f:
@@ -894,7 +893,6 @@ namespace Akka.Remote.Transport
             //Transport layer events for outbound associations
             When(AssociationState.WaitHandshake, @event =>
             {
-                _log.Info("{0} - {1}: {2}", StateName, StateData, @event.FsmEvent);
                 switch (@event.FsmEvent)
                 {
                     case Disassociated d:
@@ -1003,7 +1001,6 @@ namespace Akka.Remote.Transport
 
             When(AssociationState.Open, @event =>
             {
-                _log.Info("{0} - {1}: {2}", StateName, StateData, @event.FsmEvent);
                 switch (@event.FsmEvent)
                 {
                     case Disassociated d:
