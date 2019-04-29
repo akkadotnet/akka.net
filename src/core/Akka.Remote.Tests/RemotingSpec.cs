@@ -58,13 +58,6 @@ namespace Akka.Remote.Tests
 
             akka {
               actor.provider = remote
-              loglevel = DEBUG
-                
-              actor.debug{
-                unhandled = on
-                fsm = on
-                receive = on
-              }
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
@@ -111,12 +104,7 @@ namespace Akka.Remote.Tests
 
             akka {
               actor.provider = remote
-              loglevel = DEBUG
-              actor.debug{
-                unhandled = on
-                fsm = on
-                receive = on
-              }
+
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
 
@@ -534,7 +522,7 @@ namespace Akka.Remote.Tests
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
 
-                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(remoteAddress, 0));
+                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(rawRemoteAddress, 0));
                 var brokenPacket = pduCodec.ConstructPayload(ByteString.CopyFrom(0, 1, 2, 3, 4, 5, 6));
 
                 // Finish the inbound handshake so now it is handed up to Remoting
@@ -616,7 +604,7 @@ namespace Akka.Remote.Tests
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
 
-                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(remoteAddress, remoteUID));
+                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(rawRemoteAddress, remoteUID));
 
                 // Finish the inbound handshake so now it is handed up to Remoting
                 inboundHandle.Write(handshakePacket);
