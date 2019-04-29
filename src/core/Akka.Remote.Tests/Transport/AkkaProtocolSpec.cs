@@ -434,6 +434,25 @@ namespace Akka.Remote.Tests.Transport
             ExpectTerminated(stateActor);
         }
 
+        [Fact]
+        public void ProtocolStateActor_must_give_up_inbound_after_connection_timeout()
+        {
+            var collaborators = GetCollaborators();
+            collaborators.Handle.Writeable = false;
+            collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
+
+            var conf2 = ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.connection-timeout = 500 ms")
+                .WithFallback(config);
+
+            var reader =
+                Sys.ActorOf(ProtocolStateActor.InboundProps(new HandshakeInfo(_localAddress, 42), collaborators.Handle,
+                    new ActorAssociationEventListener(TestActor), new AkkaProtocolSettings(conf2), codec,
+                    collaborators.FailureDetector));
+
+            Watch(reader);
+            ExpectTerminated(reader);
+        }
+
         #endregion
 
         #region Internal helper methods
