@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 
 namespace Akka.Util
@@ -17,47 +18,55 @@ namespace Akka.Util
     /// See http://visualstudiomagazine.com/articles/2012/11/01/priority-queues-with-c.aspx for original implementation
     /// This specific version is adapted for Envelopes only and calculates a priority of envelope.Message
     /// </summary>
-    public sealed class ListPriorityQueue
+    public sealed class StableListPriorityQueue
     {
-        private readonly List<Envelope> _data;
+        private struct WrappedEnvelope
+        {
+            public WrappedEnvelope(Envelope envelope, int sequenceNumber)
+            {
+                Envelope = envelope;
+                SequenceNumber = sequenceNumber;
+            }
+
+            public Envelope Envelope { get; }
+            public int SequenceNumber { get; }
+        }
+
+        private class WrappedEnvelopeComparator
+        {
+            private readonly Func<object, int> priorityCalculator;
+
+            public WrappedEnvelopeComparator(Func<object, int> priorityCalculator)
+            {
+                this.priorityCalculator = priorityCalculator;
+            }
+
+            public int Compare(WrappedEnvelope x, WrappedEnvelope y)
+            {
+                var baseCompare = priorityCalculator(x.Envelope.Message).CompareTo(priorityCalculator(y.Envelope.Message));
+                if (baseCompare != 0) return baseCompare;
+                return x.SequenceNumber.CompareTo(y.SequenceNumber);
+            }
+        }
+
+        private readonly List<WrappedEnvelope> _data;
+        private readonly WrappedEnvelopeComparator comparator;
+
         /// <summary>
         /// The default priority generator.
         /// </summary>
         internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
-        private Func<object, int> _priorityCalculator;
-
-        /// <summary>
-        /// DEPRECATED. Should always specify priority calculator instead.
-        /// </summary>
-        /// <param name="initialCapacity">The current capacity of the priority queue.</param>
-        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead [1.1.3]")]
-        public ListPriorityQueue(int initialCapacity) : this (initialCapacity, DefaultPriorityCalculator)
-        {
-            
-        }
+        private int sequenceNumber;
 
         /// <summary>
         /// Creates a new priority queue.
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the queue.</param>
         /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
-        public ListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
+        public StableListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
         {
-            _data = new List<Envelope>(initialCapacity);
-            _priorityCalculator = priorityCalculator;
-        }
-
-        /// <summary>
-        /// DEPRECATED. Sets a new priority calculator.
-        /// </summary>
-        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
-        /// <remarks>
-        /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
-        /// </remarks>
-        [Obsolete("Use the constructor to set the priority calculator instead. [1.1.3]")]
-        public void SetPriorityCalculator(Func<object, int> priorityCalculator)
-        {
-            _priorityCalculator = priorityCalculator;
+            _data = new List<WrappedEnvelope>(initialCapacity);
+            comparator = new WrappedEnvelopeComparator(priorityCalculator);
         }
 
         /// <summary>
@@ -66,13 +75,15 @@ namespace Akka.Util
         /// <param name="item">The item to enqueue.</param>
         public void Enqueue(Envelope item)
         {
+            int seq = Interlocked.Increment(ref sequenceNumber);
+            var wrappedItem = new WrappedEnvelope(item, seq);
 
-            _data.Add(item);
+            _data.Add(wrappedItem);
             var ci = _data.Count - 1; // child index; start at end
             while (ci > 0)
             {
                 var pi = (ci - 1) / 2; // parent index
-                if (_priorityCalculator(_data[ci].Message).CompareTo(_priorityCalculator(_data[pi].Message)) >= 0) break; // child item is larger than (or equal) parent so we're done
+                if (comparator.Compare(_data[ci], _data[pi]) >= 0) break; // child item is larger than (or equal) parent so we're done
                 var tmp = _data[ci]; _data[ci] = _data[pi]; _data[pi] = tmp;
                 ci = pi;
             }
@@ -97,13 +108,13 @@ namespace Akka.Util
                 var ci = pi * 2 + 1; // left child index of parent
                 if (ci > li) break;  // no children so done
                 var rc = ci + 1;     // right child
-                if (rc <= li && _priorityCalculator(_data[rc].Message).CompareTo(_priorityCalculator(_data[ci].Message)) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
+                if (rc <= li && comparator.Compare(_data[rc], _data[ci]) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
                     ci = rc;
-                if (_priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[ci].Message)) <= 0) break; // parent is smaller than (or equal to) smallest child so done
+                if (comparator.Compare(_data[pi], _data[ci]) <= 0) break; // parent is smaller than (or equal to) smallest child so done
                 var tmp = _data[pi]; _data[pi] = _data[ci]; _data[ci] = tmp; // swap parent and child
                 pi = ci;
             }
-            return frontItem;
+            return frontItem.Envelope;
         }
 
         /// <summary>
@@ -112,8 +123,7 @@ namespace Akka.Util
         /// <returns>The highest priority message <see cref="Envelope"/>.</returns>
         public Envelope Peek()
         {
-            var frontItem = _data[0];
-            return frontItem;
+            return _data[0].Envelope;
         }
 
         /// <summary>
@@ -139,9 +149,12 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Checks the integrity of the StableListPriorityQueue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the list is consistent, false otherwise.</returns>
+        /// <remarks>
+        /// WARNING: high performance impact. Call during testing only.
+        /// </remarks>
         public bool IsConsistent()
         {
             // is the heap property true for all data?
@@ -152,10 +165,10 @@ namespace Akka.Util
                 var lci = 2 * pi + 1; // left child index
                 var rci = 2 * pi + 2; // right child index
 
-                if (lci <= li && _priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[lci].Message)) > 0) return false; // if lc exists and it's greater than parent then bad.
-                if (rci <= li && _priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[rci].Message)) > 0) return false; // check the right child too.
+                if (lci <= li && comparator.Compare(_data[pi], _data[lci]) > 0) return false; // if lc exists and it's greater than parent then bad.
+                if (rci <= li && comparator.Compare(_data[pi], _data[rci]) > 0) return false; // check the right child too.
             }
             return true; // passed all checks
-        } // IsConsistent
-    } // ListPriorityQueue
+        }
+    }
 }

@@ -494,7 +494,7 @@ namespace Akka.Streams.Dsl
                         Fail(Out, ex);
                     else
                     {
-                        Log.Error(ex, "Restarting graph due to failure");
+                        Log.Warning($"Restarting graph due to failure. Stacktrace: {ex.StackTrace}");
                         ScheduleRestartTimer();
                     }
                 }));

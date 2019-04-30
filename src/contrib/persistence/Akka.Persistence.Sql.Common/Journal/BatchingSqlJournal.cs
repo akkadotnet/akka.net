@@ -351,6 +351,18 @@ namespace Akka.Persistence.Sql.Common.Journal
         where TCommand : DbCommand
     {
         #region internal classes
+        
+        private sealed class ChunkExecutionFailure : IDeadLetterSuppression
+        {
+            public Exception Cause { get; }
+            public IJournalRequest[] Requests { get; }
+
+            public ChunkExecutionFailure(Exception cause, IJournalRequest[] requests)
+            {
+                Cause = cause;
+                Requests = requests;
+            }
+        }
 
         private sealed class BatchComplete
         {
@@ -658,8 +670,34 @@ namespace Akka.Persistence.Sql.Common.Journal
             else if (message is Terminated) RemoveSubscriber(((Terminated)message).ActorRef);
             else if (message is GetCurrentPersistenceIds) InitializePersistenceIds();
             else if (message is CurrentPersistenceIds) SendCurrentPersistenceIds((CurrentPersistenceIds)message);
+            else if (message is ChunkExecutionFailure) FailChunkExecution((ChunkExecutionFailure)message);
             else return false;
             return true;
+        }
+
+        private void FailChunkExecution(ChunkExecutionFailure message)
+        {
+            var cause = message.Cause;
+            Log.Error(cause, "Failed to execute chunk for {0} requests", message.Requests.Length);
+
+            foreach (var req in message.Requests)
+            {
+                switch (req)
+                {
+                    case WriteMessages write:
+                        write.PersistentActor.Tell(new WriteMessagesFailed(cause));
+                        break;
+                    case ReplayMessages replay:
+                        replay.PersistentActor.Tell(new ReplayMessagesFailure(cause));
+                        break;
+                    case DeleteMessagesTo delete:
+                        delete.PersistentActor.Tell(new DeleteMessagesFailure(cause, delete.ToSequenceNr));
+                        break;
+                    case ReplayTaggedMessages replayTagged:
+                        replayTagged.ReplyTo.Tell(new ReplayMessagesFailure(cause));
+                        break;
+                }
+            }
         }
 
         private void SendCurrentPersistenceIds(CurrentPersistenceIds message)
@@ -837,7 +875,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 var chunk = DequeueChunk(_remainingOperations);
                 var context = Context;
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context)).PipeTo(Self);
+                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context))
+                    .PipeTo(Self, failure: ex => new ChunkExecutionFailure(ex, chunk.Requests));
             }
         }
 
