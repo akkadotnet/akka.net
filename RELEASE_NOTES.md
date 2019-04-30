@@ -1,3 +1,6 @@
+#### 1.4.0 May 01 2019 ####
+**Placeholder for nightlies**
+
 #### 1.3.13 April 30 2019 ####
 **Maintenance Release for Akka.NET 1.3**
 Well, we thought 1.3.12 would be the final release for Akka.NET v1.3.* - but then we found some nasty bugs prior to merging any of the v1.4 features into our development branch. But finally, for real this time - this is really the last v1.3.13 release.
