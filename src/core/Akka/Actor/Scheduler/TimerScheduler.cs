@@ -85,7 +85,7 @@ namespace Akka.Actor.Scheduler
         /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
         /// a fixed <paramref name="interval"/>.
         ///
-        ///Each timer has a key and if a new timer with same key is started
+        /// Each timer has a key and if a new timer with same key is started
         /// the previous is cancelled and it's guaranteed that a message from the
         /// previous timer is not received, even though it might already be enqueued
         /// in the mailbox when the new timer is started.
@@ -95,7 +95,25 @@ namespace Akka.Actor.Scheduler
         /// <param name="interval">Interval</param>
         public void StartPeriodicTimer(string key, object msg, TimeSpan interval)
         {
-            StartTimer(key, msg, interval, repeat: true);
+            StartTimer(key, msg, interval, interval, true);
+        }
+
+        /// <summary>
+        /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
+        /// a fixed <paramref name="interval"/>.
+        ///
+        /// Each timer has a key and if a new timer with same key is started
+        /// the previous is cancelled and it's guaranteed that a message from the
+        /// previous timer is not received, even though it might already be enqueued
+        /// in the mailbox when the new timer is started.
+        /// </summary>
+        /// <param name="key">Name of timer</param>
+        /// <param name="msg">Message to schedule</param>
+        /// <param name="initialDelay">Initial delay</param>
+        /// <param name="interval">Interval</param>
+        public void StartPeriodicTimer(string key, object msg, TimeSpan initialDelay, TimeSpan interval)
+        {
+            StartTimer(key, msg, interval, initialDelay, true);
         }
 
         /// <summary>
@@ -112,7 +130,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="timeout">Interval</param>
         public void StartSingleTimer(string key, object msg, TimeSpan timeout)
         {
-            StartTimer(key, msg, timeout, repeat: false);
+            StartTimer(key, msg, timeout, TimeSpan.Zero, false);
         }
 
         /// <summary>
@@ -160,7 +178,7 @@ namespace Akka.Actor.Scheduler
         }
 
 
-        private void StartTimer(string key, object msg, TimeSpan timeout, bool repeat)
+        private void StartTimer(string key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat)
         {
             if (timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);
@@ -175,7 +193,7 @@ namespace Akka.Actor.Scheduler
 
             ICancelable task;
             if (repeat)
-                task = ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, ctx.Self, timerMsg, ActorRefs.NoSender);// (ctx.dispatcher)
+                task = ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, ctx.Self, timerMsg, ActorRefs.NoSender);// (ctx.dispatcher)
             else
                 task = ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, ctx.Self, timerMsg, ActorRefs.NoSender);// (ctx.dispatcher)
 

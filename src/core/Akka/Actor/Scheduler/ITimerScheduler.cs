@@ -32,6 +32,21 @@ namespace Akka.Actor.Scheduler
         void StartPeriodicTimer(string key, object msg, TimeSpan interval);
 
         /// <summary>
+        /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
+        /// a fixed <paramref name="interval"/>.
+        ///
+        /// Each timer has a key and if a new timer with same key is started
+        /// the previous is cancelled and it's guaranteed that a message from the
+        /// previous timer is not received, even though it might already be enqueued
+        /// in the mailbox when the new timer is started.
+        /// </summary>
+        /// <param name="key">Name of timer</param>
+        /// <param name="msg">Message to schedule</param>
+        /// <param name="initialDelay">Initial delay</param>
+        /// <param name="interval">Interval</param>
+        void StartPeriodicTimer(string key, object msg, TimeSpan initialDelay, TimeSpan interval);
+
+        /// <summary>
         /// Start a timer that will send <paramref name="msg"/> once to the "Self" actor after
         /// the given <paramref name="timeout"/>.
         ///

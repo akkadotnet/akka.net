@@ -1985,6 +1985,7 @@ namespace Akka.Actor.Scheduler
         void CancelAll();
         bool IsTimerActive(string key);
         void StartPeriodicTimer(string key, object msg, System.TimeSpan interval);
+        void StartPeriodicTimer(string key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval);
         void StartSingleTimer(string key, object msg, System.TimeSpan timeout);
     }
 }
