@@ -18,6 +18,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         public virtual void AroundPreRestart(Exception cause, object message)
         {
+            timers?.CancelAll();
             PreRestart(cause, message);
         }
 
@@ -84,6 +85,7 @@ namespace Akka.Actor
         /// </summary>
         public virtual void AroundPostStop()
         {
+            timers?.CancelAll();
             PostStop();
         }
 

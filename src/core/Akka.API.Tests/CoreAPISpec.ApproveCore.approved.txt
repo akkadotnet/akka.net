@@ -30,6 +30,7 @@ namespace Akka.Actor
         protected static Akka.Actor.Receive EmptyReceive { get; }
         protected Akka.Actor.IActorRef Self { get; }
         protected Akka.Actor.IActorRef Sender { get; }
+        public Akka.Actor.Scheduler.ITimerScheduler Timers { get; }
         public virtual void AroundPostRestart(System.Exception cause, object message) { }
         public virtual void AroundPostStop() { }
         public virtual void AroundPreRestart(System.Exception cause, object message) { }
@@ -78,7 +79,7 @@ namespace Akka.Actor
         protected void AddWatcher(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
         protected void AddressTerminated(Akka.Actor.Address address) { }
         public virtual Akka.Actor.IActorRef AttachChild(Akka.Actor.Props props, bool isSystemService, string name = null) { }
-        protected virtual void AutoReceiveMessage(Akka.Actor.Envelope envelope) { }
+        protected internal void AutoReceiveMessage(Akka.Actor.Envelope envelope) { }
         public void Become(Akka.Actor.Receive receive) { }
         public void BecomeStacked(Akka.Actor.Receive receive) { }
         public void CheckReceiveTimeout(bool reschedule = True) { }
@@ -1974,6 +1975,17 @@ namespace Akka.Actor.Internal
     public class UnboundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
         public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
+    }
+}
+namespace Akka.Actor.Scheduler
+{
+    public interface ITimerScheduler
+    {
+        void Cancel(string key);
+        void CancelAll();
+        bool IsTimerActive(string key);
+        void StartPeriodicTimer(string key, object msg, System.TimeSpan interval);
+        void StartSingleTimer(string key, object msg, System.TimeSpan timeout);
     }
 }
 namespace Akka.Annotations
