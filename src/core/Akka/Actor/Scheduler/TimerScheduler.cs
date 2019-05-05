@@ -193,9 +193,9 @@ namespace Akka.Actor.Scheduler
 
             ICancelable task;
             if (repeat)
-                task = ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, ctx.Self, timerMsg, ActorRefs.NoSender);// (ctx.dispatcher)
+                task = ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, ctx.Self, timerMsg, ActorRefs.NoSender);
             else
-                task = ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, ctx.Self, timerMsg, ActorRefs.NoSender);// (ctx.dispatcher)
+                task = ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, ctx.Self, timerMsg, ActorRefs.NoSender);
 
             var nextTimer = new Timer(key, msg, repeat, nextGen, task);
             ctx.System.Log.Debug("Start timer [{0}] with generation [{1}]", key, timerGen);
