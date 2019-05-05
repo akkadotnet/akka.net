@@ -190,11 +190,11 @@ namespace Akka.Tests.Actor
 
         #region Actors
 
-        public interface ICommand
+        internal interface ICommand
         {
         }
 
-        public class Tick : ICommand
+        internal class Tick : ICommand
         {
             public int N { get; }
 
@@ -204,7 +204,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class Bump : ICommand
+        internal class Bump : ICommand
         {
             public static readonly Bump Instance = new Bump();
 
@@ -213,7 +213,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class SlowThenBump : ICommand, INoSerializationVerificationNeeded
+        internal class SlowThenBump : ICommand, INoSerializationVerificationNeeded
         {
             public TestLatch Latch { get; }
 
@@ -223,7 +223,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class End : ICommand
+        internal class End : ICommand
         {
             public static readonly End Instance = new End();
 
@@ -232,7 +232,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class Throw : ICommand
+        internal class Throw : ICommand
         {
             public Exception E { get; }
 
@@ -242,7 +242,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class Cancel : ICommand
+        internal class Cancel : ICommand
         {
             public static readonly Cancel Instance = new Cancel();
 
@@ -251,7 +251,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class SlowThenThrow : ICommand, INoSerializationVerificationNeeded
+        internal class SlowThenThrow : ICommand, INoSerializationVerificationNeeded
         {
             public TestLatch Latch { get; }
             public Exception E { get; }
@@ -263,7 +263,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class AutoReceive : ICommand
+        internal class AutoReceive : ICommand
         {
             public static readonly AutoReceive Instance = new AutoReceive();
 
@@ -272,11 +272,11 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public interface IEvent
+        internal interface IEvent
         {
         }
 
-        public class Tock : IEvent
+        internal class Tock : IEvent
         {
             public int N { get; }
 
@@ -285,7 +285,7 @@ namespace Akka.Tests.Actor
                 N = n;
             }
         }
-        public class GotPostStop : IEvent
+        internal class GotPostStop : IEvent
         {
             public bool TimerActive { get; }
 
@@ -295,7 +295,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class GotPreRestart : IEvent
+        internal class GotPreRestart : IEvent
         {
             public bool TimerActive { get; }
 
@@ -305,7 +305,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class Exc : Exception
+        internal class Exc : Exception
         {
             public Exc()
                 : base("simulated exc")
@@ -313,7 +313,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class Target : ActorBase
+        internal class Target : ActorBase
         {
             private IActorRef monitor;
             private TimeSpan interval;
@@ -393,7 +393,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class TheState
+        internal class TheState
         {
             public static readonly TheState Instance = new TheState();
 
@@ -402,7 +402,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class FsmTarget : FSM<TheState, int>
+        internal class FsmTarget : FSM<TheState, int>
         {
             private readonly IActorRef monitor;
             private readonly TimeSpan interval;
@@ -506,7 +506,7 @@ namespace Akka.Tests.Actor
 
         #region actors
 
-        public class StopStashing
+        internal class StopStashing
         {
             public static readonly StopStashing Instance = new StopStashing();
 
@@ -515,7 +515,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        public class ActorWithTimerAndStash : ActorBase, IWithUnboundedStash
+        internal class ActorWithTimerAndStash : ActorBase, IWithUnboundedStash
         {
             private IActorRef probe;
 
