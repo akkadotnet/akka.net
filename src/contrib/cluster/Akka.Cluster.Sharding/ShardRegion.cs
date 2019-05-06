@@ -691,22 +691,27 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
+                    SendGracefulShutdownToCoordinator();
+
                     if (ShardBuffers.Count != 0) _retryCount++;
 
                     if (_coordinator == null) Register();
                     else
                     {
-                        SendGracefulShutdownToCoordinator();
                         RequestShardBufferHomes();
-                        TryCompleteGracefulShutdown();
                     }
+
+                    TryCompleteGracefulShutdown();
+
                     break;
+
                 case GracefulShutdown _:
                     Log.Debug("Starting graceful shutdown of region and all its shards");
                     GracefulShutdownInProgress = true;
                     SendGracefulShutdownToCoordinator();
                     TryCompleteGracefulShutdown();
                     break;
+
                 default:
                     Unhandled(command);
                     break;
