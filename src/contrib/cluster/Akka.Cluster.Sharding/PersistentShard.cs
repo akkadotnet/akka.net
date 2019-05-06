@@ -90,20 +90,7 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("PersistentShard snapshot saved successfully");
-                    /*
-                    * delete old events but keep the latest around because
-                    *
-                    * it's not safe to delete all events immediately because snapshots are typically stored with a weaker consistency
-                    * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
-                    * i.e. it will use an older snapshot and then not replay the full sequence of events
-                    *
-                    * for debugging if something goes wrong in production it's very useful to be able to inspect the events
-                    */
-                    var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
-                    if (deleteToSequenceNr > 0)
-                    {
-                        DeleteMessages(deleteToSequenceNr);
-                    }
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
                     break;
                 case SaveSnapshotFailure m:
                     Log.Warning("PersistentShard snapshot failure: [{0}]", m.Cause.Message);
