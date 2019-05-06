@@ -1981,12 +1981,12 @@ namespace Akka.Actor.Scheduler
 {
     public interface ITimerScheduler
     {
-        void Cancel(string key);
+        void Cancel(object key);
         void CancelAll();
-        bool IsTimerActive(string key);
-        void StartPeriodicTimer(string key, object msg, System.TimeSpan interval);
-        void StartPeriodicTimer(string key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval);
-        void StartSingleTimer(string key, object msg, System.TimeSpan timeout);
+        bool IsTimerActive(object key);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval);
+        void StartSingleTimer(object key, object msg, System.TimeSpan timeout);
     }
 }
 namespace Akka.Annotations
