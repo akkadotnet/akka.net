@@ -570,8 +570,11 @@ namespace Akka.Cluster.Sharding
 
                 if (shard.State.Entries.Count != 0)
                 {
+                    var entityHandOffTimeout = (shard.Settings.TunningParameters.HandOffTimeout - TimeSpan.FromSeconds(5));
+                    if (entityHandOffTimeout < TimeSpan.FromSeconds(1))
+                        entityHandOffTimeout = TimeSpan.FromSeconds(1);
                     shard.HandOffStopper = shard.Context.Watch(shard.Context.ActorOf(
-                        ShardRegion.HandOffStopper.Props(shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage)));
+                        ShardRegion.HandOffStopper.Props(shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage, entityHandOffTimeout)));
 
                     //During hand off we only care about watching for termination of the hand off stopper
                     shard.Context.Become(message =>
