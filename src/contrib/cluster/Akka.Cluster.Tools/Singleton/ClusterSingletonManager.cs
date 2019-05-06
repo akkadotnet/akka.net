@@ -598,7 +598,7 @@ namespace Akka.Cluster.Tools.Singleton
         protected override void PreStart()
         {
             // subscribe to cluster changes, re-subscribe when restart
-            _cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.MemberRemoved));
+            _cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.MemberRemoved), typeof(ClusterEvent.MemberDowned));
 
             SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
@@ -743,6 +743,11 @@ namespace Akka.Cluster.Tools.Singleton
                         return Stay().Using(new YoungerData(oldestChanged.Oldest));
                     }
                 }
+                else if (e.FsmEvent is MemberDowned memberDowned && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                {
+                    Log.Info("Self downed, stopping ClusterSingletonManager");
+                    return Stop();
+                }
                 else if (e.FsmEvent is MemberRemoved memberRemoved)
                 {
                     if (memberRemoved.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
@@ -800,6 +805,11 @@ namespace Akka.Cluster.Tools.Singleton
                             Sender.Path.Address, b.PreviousOldest.Address);
                         return Stay();
                     }
+                }
+                else if (e.FsmEvent is MemberDowned memberDowned && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                {
+                    Log.Info("Self downed, stopping ClusterSingletonManager");
+                    return Stop();
                 }
                 else if (e.FsmEvent is MemberRemoved memberRemoved)
                 {
@@ -937,6 +947,19 @@ namespace Akka.Cluster.Tools.Singleton
                     Sender.Tell(Done.Instance); // reply to ask
                     return Stay();
                 }
+                else if (e.FsmEvent is MemberDowned memberDowned && e.StateData is OldestData od && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                {
+                    if (od.SingletonTerminated)
+                    {
+                        Log.Info("Self downed, stopping ClusterSingletonManager");
+                        return Stop();
+                    }
+                    else
+                    {
+                        Log.Info("Self downed, stopping");
+                        return GoToStopping(od.Singleton);
+                    }
+                }
 
                 return null;
             });
@@ -1001,6 +1024,19 @@ namespace Akka.Cluster.Tools.Singleton
                     // complete _memberExitingProgress when HandOverDone
                     Sender.Tell(Done.Instance); // reply to ask
                     return Stay();
+                }
+                else if (e.FsmEvent is MemberDowned memberDowned && e.StateData is WasOldestData od && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                {
+                    if (od.SingletonTerminated)
+                    {
+                        Log.Info("Self downed, stopping ClusterSingletonManager");
+                        return Stop();
+                    }
+                    else
+                    {
+                        Log.Info("Self downed, stopping");
+                        return GoToStopping(od.Singleton);
+                    }
                 }
 
                 return null;
@@ -1105,6 +1141,12 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is Cleanup)
                 {
                     CleanupOverdueNotMemberAnyMore();
+                    return Stay();
+                }
+                if (e.FsmEvent is MemberDowned memberDowned)
+                {
+                    if (memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                        Log.Info("Self downed, waiting for removal");
                     return Stay();
                 }
 

@@ -980,6 +980,7 @@ namespace Akka.Cluster
         protected readonly UniqueAddress SelfUniqueAddress;
         private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 5;
         private const int MaxGossipsBeforeShuttingDownMyself = 5;
+        private const int MaxTicksBeforeShuttingDownMyself = 4;
 
         private readonly VectorClock.Node _vclockNode;
 
@@ -1000,6 +1001,7 @@ namespace Akka.Cluster
 
         readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
+        private int _selfDownCounter = 0;
 
         private bool _exitingTasksInProgress = false;
         private readonly TaskCompletionSource<Done> _selfExiting = new TaskCompletionSource<Done>();
@@ -2163,7 +2165,7 @@ namespace Akka.Cluster
                 var unreachable = _latestGossip.Overview.Reachability.AllUnreachableOrTerminated;
                 var downed = _latestGossip.Members.Where(m => m.Status == MemberStatus.Down)
                     .Select(m => m.UniqueAddress).ToList();
-                if (downed.All(node => unreachable.Contains(node) || _latestGossip.SeenByNode(node)))
+                if (_selfDownCounter >= MaxTicksBeforeShuttingDownMyself || downed.All(node => unreachable.Contains(node) || _latestGossip.SeenByNode(node)))
                 {
                     // the reason for not shutting down immediately is to give the gossip a chance to spread
                     // the downing information to other downed nodes, so that they can shutdown themselves
@@ -2172,6 +2174,10 @@ namespace Akka.Cluster
                     // if other downed know that this node has seen the version
                     SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
                     Shutdown();
+                }
+                else
+                {
+                    _selfDownCounter++;
                 }
             }
         }

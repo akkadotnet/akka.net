@@ -440,7 +440,7 @@ namespace Akka.Cluster.Sharding
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
             if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero)
             {
-                Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]"); 
+                Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
             }
         }
 
@@ -983,6 +983,14 @@ namespace Akka.Cluster.Sharding
                         else if (MatchingRole(m))
                             ChangeMembers(MembersByAge.Remove(m));
                     }
+                    break;
+
+                case ClusterEvent.MemberDowned md:
+                    if (md.Member.UniqueAddress == Cluster.SelfUniqueAddress)
+                    {
+                        Context.Stop(Self);
+                    }
+                        Log.Info("Self downed, stopping ShardRegion [{0}]", Self.Path);
                     break;
                 case ClusterEvent.IMemberEvent _:
                     // these are expected, no need to warn about them
