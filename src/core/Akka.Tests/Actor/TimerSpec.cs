@@ -46,77 +46,77 @@ namespace Akka.Tests.Actor
         public void Must_schedule_non_repeated_ticks()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, TimeSpan.FromMilliseconds(10), false));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, TimeSpan.FromMilliseconds(10), false));
 
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new Tock(1));
             probe.ExpectNoMsg(100);
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_schedule_repeated_ticks()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
             probe.Within(TimeSpan.FromSeconds(interval * 4) - TimeSpan.FromMilliseconds(100), () =>
             {
-                probe.ExpectMsg<Tock>(m => m.N == 1);
-                probe.ExpectMsg<Tock>(m => m.N == 1);
-                probe.ExpectMsg<Tock>(m => m.N == 1);
+                probe.ExpectMsg(new Tock(1));
+                probe.ExpectMsg(new Tock(1));
+                probe.ExpectMsg(new Tock(1));
             });
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_replace_timer()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new Tock(1));
 
             var latch = this.CreateTestLatch(1);
             // next Tock(1) enqueued in mailboxed, but should be discarded because of new timer
-            _ref.Tell(new SlowThenBump(latch));
+            actor.Tell(new SlowThenBump(latch));
             probe.ExpectNoMsg(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
             latch.CountDown();
-            probe.ExpectMsg<Tock>(m => m.N == 2);
+            probe.ExpectMsg(new Tock(2));
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_cancel_timer()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new Tock(1));
 
-            _ref.Tell(Cancel.Instance);
+            actor.Tell(Cancel.Instance);
             probe.ExpectNoMsg(dilatedInterval + TimeSpan.FromMilliseconds(100));
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_cancel_timers_when_restarted()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            _ref.Tell(new Throw(new Exc()));
-            probe.ExpectMsg<GotPreRestart>(m => m.TimerActive == false);
+            actor.Tell(new Throw(new Exc()));
+            probe.ExpectMsg(new GotPreRestart(false));
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
@@ -124,67 +124,67 @@ namespace Akka.Tests.Actor
         {
             var probe = CreateTestProbe();
             var startCounter = new AtomicCounter(0);
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true, () => startCounter.IncrementAndGet()));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true, () => startCounter.IncrementAndGet()));
 
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new Tock(1));
 
             var latch = this.CreateTestLatch(1);
             // next Tock(1) is enqueued in mailbox, but should be discarded by new incarnation
-            _ref.Tell(new SlowThenThrow(latch, new Exc()));
+            actor.Tell(new SlowThenThrow(latch, new Exc()));
             probe.ExpectNoMsg(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
             latch.CountDown();
-            probe.ExpectMsg<GotPreRestart>(m => m.TimerActive == false);
+            probe.ExpectMsg(new GotPreRestart(false));
             probe.ExpectNoMsg(TimeSpan.FromSeconds(interval / 2));
-            probe.ExpectMsg<Tock>(m => m.N == 2); // this is from the startCounter increment
+            probe.ExpectMsg(new Tock(2)); // this is from the startCounter increment
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_discard_timers_from_old_incarnation_after_restart_alt_2()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new Tock(1));
             // change state so that we see that the restart starts over again
-            _ref.Tell(Bump.Instance);
+            actor.Tell(Bump.Instance);
 
-            probe.ExpectMsg<Tock>(m => m.N == 2);
+            probe.ExpectMsg(new Tock(2));
 
             var latch = this.CreateTestLatch(1);
             // next Tock(2) is enqueued in mailbox, but should be discarded by new incarnation
-            _ref.Tell(new SlowThenThrow(latch, new Exc()));
+            actor.Tell(new SlowThenThrow(latch, new Exc()));
             probe.ExpectNoMsg(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
             latch.CountDown();
-            probe.ExpectMsg<GotPreRestart>(m => m.TimerActive == false);
-            probe.ExpectMsg<Tock>(m => m.N == 1);
+            probe.ExpectMsg(new GotPreRestart(false));
+            probe.ExpectMsg(new Tock(1));
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_cancel_timers_when_stopped()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            _ref.Tell(End.Instance);
-            probe.ExpectMsg<GotPostStop>(m => m.TimerActive == false);
+            actor.Tell(End.Instance);
+            probe.ExpectMsg(new GotPostStop(false));
         }
 
         [Fact]
         public void Must_handle_AutoReceivedMessages_automatically()
         {
             var probe = CreateTestProbe();
-            var _ref = this.Sys.ActorOf(TargetProps(probe.Ref, TimeSpan.FromMilliseconds(10), false));
+            var actor = this.Sys.ActorOf(TargetProps(probe.Ref, TimeSpan.FromMilliseconds(10), false));
 
-            this.Watch(_ref);
-            _ref.Tell(AutoReceive.Instance);
+            this.Watch(actor);
+            actor.Tell(AutoReceive.Instance);
 
-            ExpectTerminated(_ref);
+            ExpectTerminated(actor);
         }
 
 
@@ -284,7 +284,22 @@ namespace Akka.Tests.Actor
             {
                 N = n;
             }
+
+            public override int GetHashCode()
+            {
+                return N.GetHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is Tock other)
+                {
+                    return N.Equals(other.N);
+                }
+                return false;
+            }
         }
+
         internal class GotPostStop : IEvent
         {
             public bool TimerActive { get; }
@@ -292,6 +307,20 @@ namespace Akka.Tests.Actor
             public GotPostStop(bool timerActive)
             {
                 TimerActive = timerActive;
+            }
+
+            public override int GetHashCode()
+            {
+                return TimerActive.GetHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is GotPostStop other)
+                {
+                    return TimerActive.Equals(other.TimerActive);
+                }
+                return false;
             }
         }
 
@@ -302,6 +331,20 @@ namespace Akka.Tests.Actor
             public GotPreRestart(bool timerActive)
             {
                 TimerActive = timerActive;
+            }
+
+            public override int GetHashCode()
+            {
+                return TimerActive.GetHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is GotPreRestart other)
+                {
+                    return TimerActive.Equals(other.TimerActive);
+                }
+                return false;
             }
         }
 
@@ -499,9 +542,9 @@ namespace Akka.Tests.Actor
 
             var probe = CreateTestProbe();
             var actor = this.Sys.ActorOf(Props.Create(() => new ActorWithTimerAndStash(probe.Ref)));
-            probe.ExpectMsg<string>(m => m == "saw-scheduled");
+            probe.ExpectMsg("saw-scheduled");
             actor.Tell(StopStashing.Instance);
-            probe.ExpectMsg<string>(m => m == "scheduled");
+            probe.ExpectMsg("scheduled");
         }
 
         #region actors

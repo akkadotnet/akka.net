@@ -21,13 +21,13 @@ namespace Akka.Actor.Scheduler
     {
         private class Timer
         {
-            public string Key { get; }
+            public object Key { get; }
             public object Msg { get; }
             public bool Repeat { get; }
             public int Generation { get; }
             public ICancelable Task { get; }
 
-            public Timer(string key, object msg, bool repeat, int generation, ICancelable task)
+            public Timer(object key, object msg, bool repeat, int generation, ICancelable task)
             {
                 this.Key = key;
                 this.Msg = msg;
@@ -39,18 +39,18 @@ namespace Akka.Actor.Scheduler
 
         public interface ITimerMsg
         {
-            string Key { get; }
+            object Key { get; }
             int Generation { get; }
             TimerScheduler Owner { get; }
         }
 
         private class TimerMsg : ITimerMsg, INoSerializationVerificationNeeded
         {
-            public string Key { get; }
+            public object Key { get; }
             public int Generation { get; }
             public TimerScheduler Owner { get; }
 
-            public TimerMsg(string key, int generation, TimerScheduler owner)
+            public TimerMsg(object key, int generation, TimerScheduler owner)
             {
                 this.Key = key;
                 this.Generation = generation;
@@ -65,14 +65,14 @@ namespace Akka.Actor.Scheduler
 
         private class TimerMsgNotInfluenceReceiveTimeout : TimerMsg, INotInfluenceReceiveTimeout
         {
-            public TimerMsgNotInfluenceReceiveTimeout(string key, int generation, TimerScheduler owner)
+            public TimerMsgNotInfluenceReceiveTimeout(object key, int generation, TimerScheduler owner)
                 : base(key, generation, owner)
             {
             }
         }
 
         private readonly IActorContext ctx;
-        private readonly Dictionary<string, Timer> timers = new Dictionary<string, Timer>();
+        private readonly Dictionary<object, Timer> timers = new Dictionary<object, Timer>();
         private AtomicCounter timerGen = new AtomicCounter(0);
 
 
@@ -93,7 +93,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="key">Name of timer</param>
         /// <param name="msg">Message to schedule</param>
         /// <param name="interval">Interval</param>
-        public void StartPeriodicTimer(string key, object msg, TimeSpan interval)
+        public void StartPeriodicTimer(object key, object msg, TimeSpan interval)
         {
             StartTimer(key, msg, interval, interval, true);
         }
@@ -111,7 +111,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="msg">Message to schedule</param>
         /// <param name="initialDelay">Initial delay</param>
         /// <param name="interval">Interval</param>
-        public void StartPeriodicTimer(string key, object msg, TimeSpan initialDelay, TimeSpan interval)
+        public void StartPeriodicTimer(object key, object msg, TimeSpan initialDelay, TimeSpan interval)
         {
             StartTimer(key, msg, interval, initialDelay, true);
         }
@@ -128,7 +128,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="key">Name of timer</param>
         /// <param name="msg">Message to schedule</param>
         /// <param name="timeout">Interval</param>
-        public void StartSingleTimer(string key, object msg, TimeSpan timeout)
+        public void StartSingleTimer(object key, object msg, TimeSpan timeout)
         {
             StartTimer(key, msg, timeout, TimeSpan.Zero, false);
         }
@@ -138,7 +138,7 @@ namespace Akka.Actor.Scheduler
         /// </summary>
         /// <param name="key"></param>
         /// <returns>Name of timer</returns>
-        public bool IsTimerActive(string key)
+        public bool IsTimerActive(object key)
         {
             return timers.ContainsKey(key);
         }
@@ -153,7 +153,7 @@ namespace Akka.Actor.Scheduler
         /// be enqueued in the mailbox when cancel is called.
         /// </summary>
         /// <param name="key">Name of timer</param>
-        public void Cancel(string key)
+        public void Cancel(object key)
         {
             if (timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);
@@ -178,7 +178,7 @@ namespace Akka.Actor.Scheduler
         }
 
 
-        private void StartTimer(string key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat)
+        private void StartTimer(object key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat)
         {
             if (timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);

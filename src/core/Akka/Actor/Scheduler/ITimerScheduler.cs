@@ -29,7 +29,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="key">Name of timer</param>
         /// <param name="msg">Message to schedule</param>
         /// <param name="interval">Interval</param>
-        void StartPeriodicTimer(string key, object msg, TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, TimeSpan interval);
 
         /// <summary>
         /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
@@ -44,7 +44,7 @@ namespace Akka.Actor.Scheduler
         /// <param name="msg">Message to schedule</param>
         /// <param name="initialDelay">Initial delay</param>
         /// <param name="interval">Interval</param>
-        void StartPeriodicTimer(string key, object msg, TimeSpan initialDelay, TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, TimeSpan initialDelay, TimeSpan interval);
 
         /// <summary>
         /// Start a timer that will send <paramref name="msg"/> once to the "Self" actor after
@@ -58,14 +58,14 @@ namespace Akka.Actor.Scheduler
         /// <param name="key">Name of timer</param>
         /// <param name="msg">Message to schedule</param>
         /// <param name="timeout">Interval</param>
-        void StartSingleTimer(string key, object msg, TimeSpan timeout);
+        void StartSingleTimer(object key, object msg, TimeSpan timeout);
 
         /// <summary>
         /// Check if a timer with a given <paramref name="key"/> is active.
         /// </summary>
         /// <param name="key"></param>
         /// <returns>Name of timer</returns>
-        bool IsTimerActive(string key);
+        bool IsTimerActive(object key);
 
         /// <summary>
         /// Cancel a timer with a given <paramref name="key"/>.
@@ -77,7 +77,7 @@ namespace Akka.Actor.Scheduler
         /// be enqueued in the mailbox when cancel is called.
         /// </summary>
         /// <param name="key">Name of timer</param>
-        void Cancel(string key);
+        void Cancel(object key);
 
         /// <summary>
         /// Cancel all timers.

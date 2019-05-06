@@ -148,15 +148,7 @@ namespace Akka.Actor
         }
 
         private Scheduler.TimerScheduler timers;
-        public Scheduler.ITimerScheduler Timers
-        {
-            get
-            {
-                if (timers == null)
-                    timers = new Scheduler.TimerScheduler(Context);
-                return timers;
-            }
-        }
+        public Scheduler.ITimerScheduler Timers => timers ?? (timers = new Scheduler.TimerScheduler(Context));
 
         /// <summary>
         /// TBD
