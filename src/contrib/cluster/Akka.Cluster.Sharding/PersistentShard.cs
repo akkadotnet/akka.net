@@ -215,7 +215,7 @@ namespace Akka.Cluster.Sharding
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
-                    this.GetEntity(id).Tell(payload, sender);
+                    this.GetOrCreateEntity(id).Tell(payload, sender);
                 }
                 else
                 {
