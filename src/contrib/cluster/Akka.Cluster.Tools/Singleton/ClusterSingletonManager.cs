@@ -1090,7 +1090,7 @@ namespace Akka.Cluster.Tools.Singleton
                     Log.Info("Self removed, stopping ClusterSingletonManager");
                     return Stop();
                 }
-                if (e.FsmEvent is OldestChangedBuffer.OldestChanged)
+                if (e.FsmEvent is OldestChangedBuffer.OldestChanged || e.FsmEvent is HandOverToMe)
                 {
                     // not interested anymore - waiting for removal
                     return Stay();
