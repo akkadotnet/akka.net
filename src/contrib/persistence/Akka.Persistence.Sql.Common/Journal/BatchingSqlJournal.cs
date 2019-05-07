@@ -112,7 +112,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Maximum number of failures that can happen before the circuit opens.
         /// </summary>
         public int MaxFailures { get; }
-        
+
         /// <summary>
         /// Maximum time available for operation to execute before 
         /// <see cref="CircuitBreaker"/> considers it a failure.
@@ -229,7 +229,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public string DefaultSerializer { get; }
 
-    /// <summary>
+        /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
@@ -346,12 +346,12 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     /// <typeparam name="TConnection">A concrete implementation of <see cref="DbConnection"/> for targeted database provider.</typeparam>
     /// <typeparam name="TCommand">A concrete implementation of <see cref="DbCommand"/> for targeted database provider.</typeparam>
-    public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase 
+    public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase
         where TConnection : DbConnection
         where TCommand : DbCommand
     {
         #region internal classes
-        
+
         private sealed class ChunkExecutionFailure : IDeadLetterSuppression
         {
             public Exception Cause { get; }
@@ -458,7 +458,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// SQL statement executed as result of <see cref="WriteMessages"/> request to journal.
         /// </summary>
         protected virtual string InsertEventSql { get; }
-        
+
         /// <summary>
         /// SQL query executed as result of <see cref="GetCurrentPersistenceIds"/> request to journal.
         /// It's a part of persistence query protocol.
@@ -509,7 +509,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <see cref="PersistenceIdAdded"/> messages.
         /// </summary>
         protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
-        
+
         /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
         /// Useful mostly for tests.
@@ -862,7 +862,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             else if (request is ReplayTaggedMessages)
             {
-                var r = (ReplayTaggedMessages) request;
+                var r = (ReplayTaggedMessages)request;
                 r.ReplyTo.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
             }
         }
@@ -887,11 +887,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateConnection(Setup.ConnectionString))
             {
                 await connection.OpenAsync();
-                
+
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
-                    command.CommandTimeout = (int) Setup.ConnectionTimeout.TotalMilliseconds;
+                    command.CommandTimeout = (int)Setup.ConnectionTimeout.TotalMilliseconds;
                     command.Transaction = tx;
                     try
                     {
@@ -1034,10 +1034,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             var replaySettings = Setup.ReplayFilterSettings;
             var replyTo = replaySettings.IsEnabled
                 ? context.ActorOf(ReplayFilter.Props(
-                    persistentActor: req.PersistentActor, 
-                    mode: replaySettings.Mode, 
+                    persistentActor: req.PersistentActor,
+                    mode: replaySettings.Mode,
                     windowSize: replaySettings.WindowSize,
-                    maxOldWriters: replaySettings.MaxOldWriters, 
+                    maxOldWriters: replaySettings.MaxOldWriters,
                     debugEnabled: replaySettings.IsDebug))
                 : req.PersistentActor;
             var persistenceId = req.PersistenceId;
@@ -1086,7 +1086,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private async Task HandleWriteMessages(WriteMessages req, TCommand command)
         {
             IJournalResponse summary = null;
-            var responses = new List<IJournalResponse>();
+            var responses = new List<Tuple<IJournalResponse, IActorRef>>();
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
             var actorInstanceId = req.ActorInstanceId;
@@ -1094,7 +1094,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             try
             {
                 command.CommandText = InsertEventSql;
-                
+
                 var tagBuilder = new StringBuilder(16); // magic number
 
                 foreach (var envelope in req.Messages)
@@ -1113,7 +1113,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 var persistent = AdaptToJournal(unadapted);
                                 if (persistent.Payload is Tagged)
                                 {
-                                    var tagged = (Tagged) persistent.Payload;
+                                    var tagged = (Tagged)persistent.Payload;
                                     if (tagged.Tags.Count != 0)
                                     {
                                         tagBuilder.Append(';');
@@ -1130,7 +1130,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                                 await command.ExecuteNonQueryAsync();
 
-                                var response = new WriteMessageSuccess(unadapted, actorInstanceId);
+                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                                 persistenceIds.Add(persistent.PersistenceId);
 
@@ -1140,7 +1140,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                             {
                                 // database-related exceptions should result in failure
                                 summary = new WriteMessagesFailed(cause);
-                                var response = new WriteMessageFailure(unadapted, cause, actorInstanceId);
+                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
                             catch (Exception cause)
@@ -1148,7 +1148,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = new WriteMessageRejected(unadapted, cause, actorInstanceId);
+                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageRejected(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
                         }
@@ -1156,7 +1156,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     else
                     {
                         //TODO: other cases?
-                        var response = new LoopMessageSuccess(envelope.Payload, actorInstanceId);
+                        var response = Tuple.Create<IJournalResponse, IActorRef>(new LoopMessageSuccess(envelope.Payload, actorInstanceId), envelope.Sender);
                         responses.Add(response);
                     }
                 }
@@ -1187,12 +1187,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             var aref = req.PersistentActor;
 
             aref.Tell(summary);
-            foreach (var response in responses)
+            foreach (var r in responses)
             {
-                aref.Tell(response);
+                aref.Tell(r.Item1, r.Item2);
             }
         }
-        
+
         /// <summary>
         /// Perform write of persistent event with specified <paramref name="tags"/> 
         /// into database using given <paramref name="command"/>.
