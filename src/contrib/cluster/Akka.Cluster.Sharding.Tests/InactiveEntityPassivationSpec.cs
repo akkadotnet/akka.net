@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class InactiveEntityPassivationSpec : AkkaSpec
+    public abstract class AbstractInactiveEntityPassivationSpec : AkkaSpec
     {
         #region Protocol
 
@@ -74,15 +74,19 @@ namespace Akka.Cluster.Sharding.Tests
 
         #endregion
 
+        private ClusterShardingSettings settings;
+        private TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
+
         private readonly ExtractEntityId _extractEntityId = message =>
             message is int msg ? Tuple.Create(msg.ToString(), message) : null;
 
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
 
-        public InactiveEntityPassivationSpec()
-            : base(GetConfig())
-        { }
+        public AbstractInactiveEntityPassivationSpec(Config config)
+            : base(config.WithFallback(GetConfig()))
+        {
+        }
 
         public static Config GetConfig()
         {
@@ -90,36 +94,37 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.loglevel = INFO
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
+                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
         }
 
-        [Fact]
-        public void Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
+        protected IActorRef Start(TestProbe probe, bool rememberEntities)
         {
-            // Single node cluster
+            settings = ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities);
+            // single node cluster
             Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
 
-            var probe = new TestProbe(Sys, new XunitAssertions());
-            var settings = ClusterShardingSettings.Create(Sys);
-            var region = ClusterSharding.Get(Sys).Start(
+            return ClusterSharding.Get(Sys).Start(
                 "myType",
                 Entity.Props(probe.Ref),
                 settings,
                 _extractEntityId,
                 _extractShard,
-                new LeastShardAllocationStrategy(10, 3),
+                ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
                 Passivate.Instance);
-            
+        }
+
+        protected TimeSpan TimeUntilPassivate(IActorRef region, TestProbe probe)
+        {
             region.Tell(1);
             region.Tell(2);
-
             var responses = new[]
             {
-                probe.ExpectMsg<Entity.GotIt>(),
-                probe.ExpectMsg<Entity.GotIt>()
-            };
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
             responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
             var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
 
@@ -130,21 +135,54 @@ namespace Akka.Cluster.Sharding.Tests
             region.Tell(2);
             probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
 
-            // Make sure "1" hasn't seen a message in 3 seconds and passivates
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(3) - TimeSpan.FromTicks(timeSinceOneSawAMessage));
+            return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+        }
+    }
+
+    public class InactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+    {
+        public InactiveEntityPassivationSpec()
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"))
+        {
+        }
+
+        [Fact]
+        public void Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
+        {
+            var probe = CreateTestProbe();
+            var region = Start(probe, false);
+
+            // make sure "1" hasn't seen a message in 3 seconds and passivates
+            probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
+
             probe.ExpectMsg("1 passivating");
 
-            // But it can be re-activated just fine
+            // but it can be re activated
             region.Tell(1);
             region.Tell(2);
-
-            responses = new[]
+            var responses = new[]
             {
-                probe.ExpectMsg<Entity.GotIt>(),
-                probe.ExpectMsg<Entity.GotIt>()
-            };
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
             responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+        }
+    }
+
+    public class DisabledInactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+    {
+        public DisabledInactiveEntityPassivationSpec()
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"))
+        {
+        }
+
+        [Fact]
+        public void Passivation_of_inactive_entities_must_not_passivate_when_passivation_is_disabled()
+        {
+            var probe = CreateTestProbe();
+            var region = Start(probe, false);
+            probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
         }
     }
 }
