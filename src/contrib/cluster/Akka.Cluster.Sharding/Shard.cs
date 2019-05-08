@@ -512,17 +512,22 @@ namespace Akka.Cluster.Sharding
         {
             var requester = shard.Sender;
             shard.Log.Debug("Got a request from [{0}] to start entity [{1}] in shard [{2}]", requester, start.EntityId, shard.ShardId);
-            if (shard.PassivateIdleTask != null)
+            shard.TouchLastMessageTimestamp(start.EntityId);
+
+            if (shard.State.Entries.Contains(start.EntityId))
             {
-                shard.LastMessageTimestamp = shard.LastMessageTimestamp.SetItem(start.EntityId, DateTime.Now.Ticks);
+                shard.GetOrCreateEntity(start.EntityId);
+                requester.Tell(new ShardRegion.StartEntityAck(start.EntityId, shard.ShardId));
             }
-            shard.GetOrCreateEntity(start.EntityId, _ =>
+            else
             {
                 shard.ProcessChange(new Shard.EntityStarted(start.EntityId), e =>
                 {
+                    shard.GetOrCreateEntity(start.EntityId);
+                    shard.SendMessageBuffer(e);
                     requester.Tell(new ShardRegion.StartEntityAck(start.EntityId, shard.ShardId));
                 });
-            });
+            };
         }
 
         private static void HandleStartEntityAck<TShard>(this TShard shard, ShardRegion.StartEntityAck ack) where TShard : IShard
@@ -633,6 +638,14 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        public static void TouchLastMessageTimestamp<TShard>(this TShard shard, EntityId id) where TShard : IShard
+        {
+            if (shard.PassivateIdleTask != null)
+            {
+                shard.LastMessageTimestamp = shard.LastMessageTimestamp.SetItem(id, DateTime.Now.Ticks);
+            }
+        }
+
         private static void PassivateIdleEntities<TShard>(this TShard shard) where TShard : IShard
         {
             var idleEntitiesCount = 0;
@@ -739,10 +752,7 @@ namespace Akka.Cluster.Sharding
 
         internal static void BaseDeliverTo<TShard>(this TShard shard, string id, object message, object payload, IActorRef sender) where TShard : IShard
         {
-            if (shard.PassivateIdleTask != null)
-            {
-                shard.LastMessageTimestamp = shard.LastMessageTimestamp.SetItem(id, DateTime.Now.Ticks);
-            }
+            shard.TouchLastMessageTimestamp(id);
             shard.GetOrCreateEntity(id).Tell(payload, sender);
         }
 
@@ -756,10 +766,7 @@ namespace Akka.Cluster.Sharding
                 var a = shard.Context.Watch(shard.Context.ActorOf(shard.EntityProps(id), name));
                 shard.IdByRef = shard.IdByRef.SetItem(a, id);
                 shard.RefById = shard.RefById.SetItem(id, a);
-                if (shard.PassivateIdleTask != null)
-                {
-                    shard.LastMessageTimestamp = shard.LastMessageTimestamp.SetItem(id, DateTime.Now.Ticks);
-                }
+                shard.TouchLastMessageTimestamp(id);
                 shard.State = new Shard.ShardState(shard.State.Entries.Add(id));
                 onCreate?.Invoke(a);
                 return a;

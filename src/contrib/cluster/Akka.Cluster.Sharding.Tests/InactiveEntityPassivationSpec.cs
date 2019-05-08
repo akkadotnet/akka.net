@@ -69,13 +69,25 @@ namespace Akka.Cluster.Sharding.Tests
                     Msg = msg;
                     When = when;
                 }
+
+                public override int GetHashCode()
+                {
+                    return Id.GetHashCode();
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (obj is GotIt other)
+                        return Id == other.Id;
+                    return false;
+                }
             }
         }
 
         #endregion
 
-        private ClusterShardingSettings settings;
-        private TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
+        protected ClusterShardingSettings settings;
+        protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
 
         private readonly ExtractEntityId _extractEntityId = message =>
             message is int msg ? Tuple.Create(msg.ToString(), message) : null;
@@ -154,14 +166,89 @@ namespace Akka.Cluster.Sharding.Tests
             var region = Start(probe, false);
 
             // make sure "1" hasn't seen a message in 3 seconds and passivates
-            probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
+            //probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
+
+            region.Tell(1);
+            region.Tell(2);
+            var responses = new[]
+            {
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
+            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+            var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
+
+            Thread.Sleep(1000);
+            region.Tell(2);
+            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
+            Thread.Sleep(1000);
+            region.Tell(2);
+            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
+
+            var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
+            probe.ExpectNoMsg(settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) - smallTolerance);
 
             probe.ExpectMsg("1 passivating");
 
             // but it can be re activated
             region.Tell(1);
             region.Tell(2);
+            responses = new[]
+            {
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
+            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+        }
+    }
+
+    public class InactivePersistentEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+    {
+        public InactivePersistentEntityPassivationSpec()
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"))
+        {
+        }
+
+        [Fact]
+        public void Passivation_of_inactive_persistent_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
+        {
+            var probe = CreateTestProbe();
+            var region = Start(probe, true);
+
+            region.Tell(1);
+            region.Tell(2);
             var responses = new[]
+            {
+                probe.ExpectMsg<Entity.GotIt>(),
+                probe.ExpectMsg<Entity.GotIt>()
+            };
+            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+
+            Thread.Sleep(1500);
+
+            region.Tell(1);
+            probe.ExpectMsg<Entity.GotIt>(m => m.Id == "1");
+
+            Thread.Sleep(1500);
+
+            region.Tell(1);
+
+            probe.ExpectMsgAllOf<object>(
+                new Entity.GotIt("1", null, 0),
+                "2 passivating"
+                );
+
+            Thread.Sleep(1300);
+
+            region.Tell(1);
+            probe.ExpectMsg<Entity.GotIt>(m => m.Id == "1");
+
+            probe.ExpectMsg("1 passivating", TimeSpan.FromSeconds(5));
+
+            // but it can be re activated
+            region.Tell(1);
+            region.Tell(2);
+            responses = new[]
             {
                     probe.ExpectMsg<Entity.GotIt>(),
                     probe.ExpectMsg<Entity.GotIt>()

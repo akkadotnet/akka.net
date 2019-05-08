@@ -212,7 +212,10 @@ namespace Akka.Cluster.Sharding
                 }
             }
             else
+            {
+                this.TouchLastMessageTimestamp(id);
                 child.Tell(payload, sender);
+            }
         }
     }
 }
