@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Event;
 
@@ -91,6 +92,7 @@ namespace Akka.Actor
     public abstract partial class ActorBase : IInternalActor
     {
         private IActorRef _clearedSelf;
+        private Scheduler.TimerScheduler timers;
         private bool HasBeenCleared => _clearedSelf != null;
 
         /// <summary>
@@ -147,8 +149,7 @@ namespace Akka.Actor
             }
         }
 
-        private Scheduler.TimerScheduler timers;
-        public Scheduler.ITimerScheduler Timers => timers ?? (timers = new Scheduler.TimerScheduler(Context));
+        protected Scheduler.ITimerScheduler Timers => timers ?? Interlocked.CompareExchange(ref timers, new Scheduler.TimerScheduler(Context), null) ?? timers;
 
         /// <summary>
         /// TBD
@@ -177,7 +178,6 @@ namespace Akka.Actor
                             // this is important for stash interaction, as stash will look directly at currentMessage #24557
                             actorCell.CurrentMessage = m;
                         }
-                        //return AroundReceive(receive, m);
                         message = m;
                         break;
                 }

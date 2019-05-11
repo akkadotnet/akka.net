@@ -30,7 +30,7 @@ namespace Akka.Actor
         protected static Akka.Actor.Receive EmptyReceive { get; }
         protected Akka.Actor.IActorRef Self { get; }
         protected Akka.Actor.IActorRef Sender { get; }
-        public Akka.Actor.Scheduler.ITimerScheduler Timers { get; }
+        protected Akka.Actor.Scheduler.ITimerScheduler Timers { get; }
         public virtual void AroundPostRestart(System.Exception cause, object message) { }
         public virtual void AroundPostStop() { }
         public virtual void AroundPreRestart(System.Exception cause, object message) { }
