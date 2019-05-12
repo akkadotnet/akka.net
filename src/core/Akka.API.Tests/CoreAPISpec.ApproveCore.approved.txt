@@ -47,6 +47,7 @@ namespace Akka.Actor
         protected virtual Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
         protected void UnbecomeStacked() { }
         protected virtual void Unhandled(object message) { }
+        protected void WithTimers() { }
     }
     [System.Diagnostics.DebuggerDisplayAttribute("{Self,nq}")]
     public class ActorCell : Akka.Actor.IActorContext, Akka.Actor.IActorRefFactory, Akka.Actor.ICanWatch, Akka.Actor.ICell, Akka.Actor.IUntypedActorContext
