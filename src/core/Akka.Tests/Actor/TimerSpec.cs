@@ -364,6 +364,7 @@ namespace Akka.Tests.Actor
 
             public Target(IActorRef monitor, TimeSpan interval, bool repeat, Func<int> initial)
             {
+                WithTimers();
                 this.monitor = monitor;
                 this.interval = interval;
                 bumpCount = initial();
@@ -566,6 +567,7 @@ namespace Akka.Tests.Actor
 
             public ActorWithTimerAndStash(IActorRef probe)
             {
+                WithTimers();
                 this.probe = probe;
 
                 Timers.StartSingleTimer("key", "scheduled", TimeSpan.FromMilliseconds(50));

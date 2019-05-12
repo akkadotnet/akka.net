@@ -149,7 +149,20 @@ namespace Akka.Actor
             }
         }
 
-        protected Scheduler.ITimerScheduler Timers => timers ?? Interlocked.CompareExchange(ref timers, new Scheduler.TimerScheduler(Context), null) ?? timers;
+        protected Scheduler.ITimerScheduler Timers
+        {
+            get
+            {
+                if (timers == null)
+                    throw new NotSupportedException("To use Timers, you have to enable them via WithTimers() in actor constructor");
+                return timers;
+            }
+        }
+
+        protected void WithTimers()
+        {
+            Interlocked.CompareExchange(ref timers, new Scheduler.TimerScheduler(Context), null);
+        }
 
         /// <summary>
         /// TBD

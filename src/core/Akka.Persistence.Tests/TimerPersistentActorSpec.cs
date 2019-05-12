@@ -82,6 +82,7 @@ namespace Akka.Persistence.Tests
 
             public TestPersistentActor(string name)
             {
+                WithTimers();
                 this.name = name;
             }
 
