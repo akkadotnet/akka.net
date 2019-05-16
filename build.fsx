@@ -97,6 +97,7 @@ let getAffectedProjects =
 
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
+        log (sprintf "(Debug) .NET Core Root found at %s" (Environment.GetEnvironmentVariable "DOTNET_ROOT"))
         let targetBranch = match getBuildParam "targetBranch" with
                             | "" -> "dev"
                             | null -> "dev"
