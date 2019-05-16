@@ -4,6 +4,7 @@
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+#if FSCHECK
 
 using System.Net;
 using System.Net.Sockets;
@@ -101,3 +102,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+#endif
