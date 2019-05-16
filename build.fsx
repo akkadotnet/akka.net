@@ -25,8 +25,8 @@ let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
-let outputBinariesNet45 = outputBinaries @@ "net45"
-let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
+let outputBinariesNet45 = outputBinaries @@ "net452"
+let outputBinariesNetStandard = outputBinaries @@ "netstandard2.0"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
@@ -313,7 +313,7 @@ open Fake.TemplateHelper
 Target "PublishMntr" (fun _ ->
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
 
-    // Windows .NET 4.5.2
+    // Restore
     executableProjects |> Seq.iter (fun project ->
         DotNetCli.Restore
             (fun p -> 
@@ -322,7 +322,7 @@ Target "PublishMntr" (fun _ ->
                     AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
     )
 
-    // Windows .NET 4.5.2
+    // Windows .NET 4.6.1
     executableProjects |> Seq.iter (fun project ->  
         DotNetCli.Publish
             (fun p ->
