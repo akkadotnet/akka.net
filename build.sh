@@ -15,6 +15,7 @@ DOTNET_VERSION=2.1.500
 DOTNET_INSTALLER_URL=https://raw.githubusercontent.com/dotnet/cli/v$DOTNET_VERSION/scripts/obtain/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
+INCREMENTALIST_VERSION=0.1.3
 
 # Define default arguments.
 TARGET="Default"
@@ -109,6 +110,16 @@ if [ ! -f "$PROTOC_EXE" ]; then
     if [ $? -ne 0 ]; then
         echo "An error occured while making protoc executable"
         exit 1
+    fi
+fi
+
+###########################################################################
+# INSTALL Incrementalist
+###########################################################################
+if [ ! -f "$INCREMENTALIST_EXE" ]; then
+    "$SCRIPT_DIR/.dotnet/dotnet" tool install Incrementalist.Cmd --version $INCREMENTALIST_VERSION --tool-path "$INCREMENTALIST_DIR"
+    if [ $? -ne 0 ]; then
+        echo "Incrementalist already installed."
     fi
 fi
 
