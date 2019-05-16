@@ -13,7 +13,7 @@ open Fake.NuGet.Install
 
 // Variables
 let configuration = "Release"
-let solution = "./src/Akka.sln"
+let solution = System.IO.Path.GetFullPath(string "./src/Akka.sln")
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
