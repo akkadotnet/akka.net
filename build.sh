@@ -6,6 +6,8 @@
 # Define directories.
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TOOLS_DIR=$SCRIPT_DIR/tools
+INCREMENTALIST_DIR=$TOOLS_DIR/incrementalist
+INCREMENTALIST_EXE=$INCREMENTALIST_DIR/Incrementalist.Cmd.exe
 NUGET_EXE=$TOOLS_DIR/nuget.exe
 NUGET_URL=https://dist.nuget.org/win-x86-commandline/v4.3.0/nuget.exe
 FAKE_VERSION=4.63.0
