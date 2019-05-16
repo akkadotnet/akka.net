@@ -191,7 +191,6 @@ namespace Akka.Remote
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public EndpointException(string message, Exception cause = null) : base(message, cause) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
@@ -201,7 +200,6 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>

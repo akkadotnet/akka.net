@@ -9,9 +9,6 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
-#if CORECLR
-using Akka.MultiNodeTestRunner.Shared.Extensions;
-#endif
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
