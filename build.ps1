@@ -91,6 +91,7 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
     $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
     $env:DOTNET_ROOT="$InstallPath\dotnet.exe" #workaround for https://github.com/dotnet/cli/issues/9114
+    Write-Host "$env:DOTNET_ROOT"
 }
 
 ###########################################################################
