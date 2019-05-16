@@ -23,6 +23,7 @@ module IncrementalTests =
     let SkippedTest name runtime =
         match (name, runtime) with
             | (EndsWith "Sqlite.Tests.csproj", NetCore) -> false
+            | (EndsWith "API.Tests.csproj", NetCore) -> false
             | _ -> true
 
 
@@ -124,7 +125,7 @@ module IncrementalTests =
 
     let getAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll")
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net461" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->
@@ -133,7 +134,7 @@ module IncrementalTests =
     
     let getNetCoreAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp2.1" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->

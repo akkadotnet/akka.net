@@ -99,7 +99,9 @@ namespace Akka.Cluster.Sharding.Tests
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString("akka.actor.provider = cluster \r\n akka.loglevel = INFO")
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.loglevel = INFO
+                                                      akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig());
         }
 
