@@ -403,13 +403,7 @@ namespace Akka.Remote.TestKit
             _roles = roles;
             _deployments = deployments;
 
-#if CORECLR
-            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
-            dnsTask.Wait();
-            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
-#else
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
-#endif
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));

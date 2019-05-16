@@ -23,10 +23,7 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated
-#if CLONEABLE
-        , ICloneable
-#endif
+    public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated, ICloneable
     {
         #region comparer
 

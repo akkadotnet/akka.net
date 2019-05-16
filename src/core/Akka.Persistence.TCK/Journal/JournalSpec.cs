@@ -262,7 +262,6 @@ namespace Akka.Persistence.TCK.Journal
             _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
-#if !CORECLR
         /// <summary>
         /// JSON serializer should fail on this
         /// </summary>
@@ -309,6 +308,5 @@ namespace Akka.Persistence.TCK.Journal
                                                       m.Persistent.WriterGuid.Equals(writerGuid) &&
                                                       m.Persistent.Payload.Equals("b-8"));
         }
-#endif
     }
 }

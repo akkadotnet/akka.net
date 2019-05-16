@@ -32,7 +32,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamTcpException"/> class.
         /// </summary>
@@ -41,7 +40,6 @@ namespace Akka.Streams
         protected StreamTcpException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -58,7 +56,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="BindFailedException"/> class.
         /// </summary>
@@ -67,7 +64,6 @@ namespace Akka.Streams
         protected BindFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -92,7 +88,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionException"/> class.
         /// </summary>
@@ -101,6 +96,5 @@ namespace Akka.Streams
         protected ConnectionException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 }

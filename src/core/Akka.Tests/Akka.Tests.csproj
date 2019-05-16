@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING</DefineConstants>
+    <DefineConstants>$(DefineConstants);CONFIGURATION;UNSAFE_THREADING</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">

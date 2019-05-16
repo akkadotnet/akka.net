@@ -13,9 +13,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-#if CORECLR
-using Akka.MultiNodeTestRunner.Shared.Extensions;
-#endif
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using JetBrains.TeamCity.ServiceMessages;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;

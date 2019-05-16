@@ -91,11 +91,9 @@ namespace Akka.DistributedData.Durable
         {
         }
 
-#if SERIALIZATION
         public LoadFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>

@@ -194,12 +194,8 @@ namespace Akka.Remote.Tests.Transport
             }
             finally
             {
-#if NET452 //netstandard 1.6 doesn't have close on store
                 store.Close();
-#else
-#endif
             }
-
         }
 
 
@@ -220,10 +216,7 @@ namespace Akka.Remote.Tests.Transport
             }
             finally
             {
-#if NET452 //NetStandard1.6 doesn't have close on store.
                 store.Close();
-#else
-#endif
             }
         }
         public class Echo : ReceiveActor

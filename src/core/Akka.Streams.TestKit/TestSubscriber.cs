@@ -34,7 +34,7 @@ namespace Akka.Streams.TestKit
             public override string ToString() => $"TestSubscriber.OnSubscribe({Subscription})";
         }
 
-        public struct OnNext<T> : ISubscriberEvent
+        public struct OnNext<T> : ISubscriberEvent, IEquatable<OnNext<T>>
         {
             public readonly T Element;
 
@@ -44,6 +44,21 @@ namespace Akka.Streams.TestKit
             }
 
             public override string ToString() => $"TestSubscriber.OnNext({Element})";
+
+            public bool Equals(OnNext<T> other)
+            {
+                return EqualityComparer<T>.Default.Equals(Element, other.Element);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is OnNext<T> other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return EqualityComparer<T>.Default.GetHashCode(Element);
+            }
         }
 
         public sealed class OnComplete: ISubscriberEvent

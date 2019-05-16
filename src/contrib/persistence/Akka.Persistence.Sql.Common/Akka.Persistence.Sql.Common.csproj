@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION</DefineConstants>
+    <DefineConstants>$(DefineConstants);CONFIGURATION</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">

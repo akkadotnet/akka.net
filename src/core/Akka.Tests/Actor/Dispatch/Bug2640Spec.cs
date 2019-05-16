@@ -46,6 +46,12 @@ namespace Akka.Tests.Actor.Dispatch
         {
             public ThreadReporterActor()
             {
+                // Improve reliability of ForkJoinExecutorShouldShutdownUponAllActorsTerminating
+                // test which intermittently can fail because all messages are actually serviced 
+                // by a single thread from the pool. Happens under load, presumably when the processor
+                // finds it more efficient to keep thread locality of the execution.
+                Thread.Sleep(1);
+
                 Receive<GetThread>(_ => Sender.Tell(Thread.CurrentThread));
             }
         }
@@ -76,6 +82,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
+            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
 
             await Sys.Terminate();
             AwaitAssert(() =>
@@ -90,12 +97,12 @@ namespace Akka.Tests.Actor.Dispatch
 
             Dictionary<int, Thread> threads = null;
             Watch(actor);
-            var msgCount = 100;
-            for (var i = 0; i < msgCount; i++)
+            for (var i = 0; i < 100; i++)
                 actor.Tell(GetThread.Instance);
 
-            threads = ReceiveN(msgCount).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+            threads = ReceiveN(100).Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
+            threads.Count.Should().Be(4, "Expected 4 distinct threads in this example");
 
             Sys.Stop(actor);
             ExpectTerminated(actor);

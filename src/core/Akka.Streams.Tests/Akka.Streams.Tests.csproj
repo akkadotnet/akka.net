@@ -37,8 +37,8 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <!--<DefineConstants>TRACE;DEBUG;SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;NET452;NET452</DefineConstants>-->
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;AKKAIO</DefineConstants>
+    <!--<DefineConstants>TRACE;DEBUG;CONFIGURATION;UNSAFE_THREADING;NET452;NET452</DefineConstants>-->
+    <DefineConstants>$(DefineConstants);CONFIGURATION;UNSAFE_THREADING;AKKAIO</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">

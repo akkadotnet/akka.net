@@ -362,13 +362,8 @@ namespace Akka.Remote.Transport.DotNetty
             }
             finally
             {
-#if  NET45 //netstandard1.6 doesn't have close on store.
                 store.Close();
-#else
-#endif
-
             }
-
         }
             
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)

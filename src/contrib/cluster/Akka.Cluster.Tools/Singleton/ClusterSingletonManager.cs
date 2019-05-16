@@ -423,7 +423,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="message">The message that describes the error.</param>
         public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
         /// </summary>
@@ -432,7 +431,6 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>

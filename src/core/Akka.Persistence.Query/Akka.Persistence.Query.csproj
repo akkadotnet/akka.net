@@ -15,14 +15,6 @@
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
-
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>

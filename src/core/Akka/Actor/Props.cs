@@ -770,13 +770,8 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
         protected override Props Copy()
         {
-            Props initialCopy = base.Copy();
-#if CLONEABLE
+            var initialCopy = base.Copy();
             var invokerCopy = (Func<TActor>)invoker.Clone();
-#else
-            // TODO: CORECLR FIX IT
-            var invokerCopy = (Func<TActor>)invoker;
-#endif
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 

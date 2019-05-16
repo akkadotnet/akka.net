@@ -65,7 +65,7 @@
     <PackageReference Include="Reactive.Streams" Version="1.0.2" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>
+    <DefineConstants>$(DefineConstants);AKKAIO</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>

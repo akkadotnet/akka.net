@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;AKKAIO</DefineConstants>
+    <DefineConstants>$(DefineConstants);AKKAIO</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
