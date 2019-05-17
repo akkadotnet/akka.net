@@ -43,7 +43,7 @@ jobs:
       - task: CopyFiles@2
         displayName: 'Copy TestResults'
         inputs:
-          sourceFolder: ${{ outputDirectory }}
+          sourceFolder: ${{ parameters.outputDirectory }}
           contents: '*'
           targetFolder: $(Build.ArtifactStagingDirectory)
       - task: PublishBuildArtifacts@1
