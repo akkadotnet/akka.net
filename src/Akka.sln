@@ -62,7 +62,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
 	ProjectSection(SolutionItems) = preProject
 		..\build.fsx = ..\build.fsx
-		..\buildIncremental.fsx = ..\buildIncremental.fsx
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contrib", "Contrib", "{588C1513-FAB6-42C3-B6FC-3485F13620CF}"
@@ -186,11 +185,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Cluster.Simple", "e
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Cluster.Transformation", "examples\Cluster\Roles\Samples.Cluster.Transformation\Samples.Cluster.Transformation.csproj", "{01B074DB-67C8-4600-8CE2-DAAAFC052261}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp", "core/Akka.FSharp/Akka.FSharp.fsproj", "{483B4579-2665-49FC-A7E4-42C67FEC7531}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp", "core\Akka.FSharp\Akka.FSharp.fsproj", "{483B4579-2665-49FC-A7E4-42C67FEC7531}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp.Tests", "core/Akka.FSharp.Tests/Akka.FSharp.Tests.fsproj", "{FA2E30CC-9F2D-4BFC-9899-347B32DF7181}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Akka.FSharp.Tests", "core\Akka.FSharp.Tests\Akka.FSharp.Tests.fsproj", "{FA2E30CC-9F2D-4BFC-9899-347B32DF7181}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Benchmarks", "benchmark\Akka.Benchmarks\Akka.Benchmarks.csproj", "{A1D57384-A933-480A-9DF4-FA5E60AB1A67}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Benchmarks", "benchmark\Akka.Benchmarks\Akka.Benchmarks.csproj", "{A1D57384-A933-480A-9DF4-FA5E60AB1A67}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{9BEAF609-B406-4CCB-9708-6E8DFF764232}"
 EndProject
