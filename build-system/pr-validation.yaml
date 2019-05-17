@@ -34,31 +34,32 @@ jobs:
       - task: PublishPipelineArtifact@0
         inputs:
           artifactName: 'akkaBuild'
+          targetPath:
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
         condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
 
-    - template: azure-pipeline.template.yaml
-      parameters:
-        name: '.NET Framework Unit Tests (Windows)'
-        vmImage: 'vs2017-win2016'
-        scriptFileName: build.cmd
-        scriptArgs: runTests incremental
-        outputDirectory: 'TestResults'
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: '.NET Framework Unit Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: runTests incremental
+      outputDirectory: 'TestResults'
 
-    - template: azure-pipeline.template.yaml
-      parameters:
-        name: '.NET Core Unit Tests (Windows)'
-        vmImage: 'vs2017-win2016'
-        scriptFileName: build.cmd
-        scriptArgs: runTestsNetCore incremental
-        outputDirectory: 'TestResults'
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: '.NET Core Unit Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: runTestsNetCore incremental
+      outputDirectory: 'TestResults'
 
-    - template: azure-pipeline.template.yaml
-      parameters:
-        name: '.NET Core Unit Tests (Linux)'
-        vmImage: 'ubuntu-16.04'
-        scriptFileName: './build.sh'
-        scriptArgs: runTestsNetCore incremental
-        outputDirectory: 'TestResults'
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: '.NET Core Unit Tests (Linux)'
+      vmImage: 'ubuntu-16.04'
+      scriptFileName: './build.sh'
+      scriptArgs: runTestsNetCore incremental
+      outputDirectory: 'TestResults'
