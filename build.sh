@@ -6,6 +6,8 @@
 # Define directories.
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TOOLS_DIR=$SCRIPT_DIR/tools
+INCREMENTALIST_DIR=$TOOLS_DIR/incrementalist
+INCREMENTALIST_EXE=$INCREMENTALIST_DIR/Incrementalist.Cmd.exe
 NUGET_EXE=$TOOLS_DIR/nuget.exe
 NUGET_URL=https://dist.nuget.org/win-x86-commandline/v4.3.0/nuget.exe
 FAKE_VERSION=4.63.0
@@ -15,6 +17,7 @@ DOTNET_VERSION=2.1.500
 DOTNET_INSTALLER_URL=https://raw.githubusercontent.com/dotnet/cli/v$DOTNET_VERSION/scripts/obtain/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
+INCREMENTALIST_VERSION=0.1.3
 
 # Define default arguments.
 TARGET="Default"
@@ -54,6 +57,7 @@ bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version $DOTNET_VERSION --channel
 export PATH="$SCRIPT_DIR/.dotnet":$PATH
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_ROOT="$SCRIPT_DIR/.dotnet"
 chmod -R 0755 ".dotnet"
 "$SCRIPT_DIR/.dotnet/dotnet" --info
 
@@ -109,6 +113,16 @@ if [ ! -f "$PROTOC_EXE" ]; then
     if [ $? -ne 0 ]; then
         echo "An error occured while making protoc executable"
         exit 1
+    fi
+fi
+
+###########################################################################
+# INSTALL Incrementalist
+###########################################################################
+if [ ! -f "$INCREMENTALIST_EXE" ]; then
+    "$SCRIPT_DIR/.dotnet/dotnet" tool install Incrementalist.Cmd --version $INCREMENTALIST_VERSION --tool-path "$INCREMENTALIST_DIR"
+    if [ $? -ne 0 ]; then
+        echo "Incrementalist already installed."
     fi
 fi
 

@@ -39,6 +39,8 @@ $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe
 $ProtobufVersion = "3.4.0"
 $DocfxVersion = "2.40.5"
 
+$IncrementalistVersion = "0.1.3";
+
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
 $ToolPath = Join-Path $PSScriptRoot "tools"
@@ -88,6 +90,8 @@ if($FoundDotNetCliVersion -ne $DotNetVersion) {
     $env:PATH = "$InstallPath;$env:PATH"
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
     $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
+    $env:DOTNET_ROOT="$InstallPath" #workaround for https://github.com/dotnet/cli/issues/9114
+    Write-Host "$env:DOTNET_ROOT"
 }
 
 ###########################################################################
@@ -155,6 +159,20 @@ if (!(Test-Path $DocfxExePath)) {
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring docfx.console from NuGet."
     }
+}
+
+###########################################################################
+# Incrementalist
+###########################################################################
+
+# Make sure the Incrementalist has been installed
+if (Get-Command incrementalist -ErrorAction SilentlyContinue) {
+    Write-Host "Found Incrementalist. Skipping install."
+}
+else{
+    $IncrementalistFolder = Join-Path $ToolPath "incrementalist"
+    Write-Host "Incrementalist not found. Installing to ... $IncrementalistFolder"
+    dotnet tool install Incrementalist.Cmd --version $IncrementalistVersion --tool-path "$IncrementalistFolder"
 }
 
 ###########################################################################
