@@ -43,8 +43,8 @@ let runIncrementally = hasBuildParam "incremental"
 let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
-let testNetFrameworkVersion = "net452"
-let testNetCoreVersion = "netcoreapp1.1"
+let testNetFrameworkVersion = "net461"
+let testNetCoreVersion = "netcoreapp2.1"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -93,6 +93,7 @@ let getAffectedProjects =
 
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
+        log (sprintf "(Debug) .NET Core Root found at %s" (Environment.GetEnvironmentVariable "DOTNET_ROOT"))
         let targetBranch = match getBuildParam "targetBranch" with
                             | "" -> "dev"
                             | null -> "dev"
@@ -424,7 +425,7 @@ Target "CreateNuget" (fun _ ->
 
         projects |> Seq.iter (runSingleProject)
 )
-
+open Fake.TemplateHelper
 Target "PublishMntr" (fun _ ->
     if not skipBuild.Value then
         let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
