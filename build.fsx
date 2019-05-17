@@ -63,21 +63,6 @@ Target "Clean" (fun _ ->
     CleanDirs !! "./**/obj"
 )
 
-Target "AssemblyInfo" (fun _ ->
-    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
-    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
-)
-
-Target "Build" (fun _ ->   
-    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
-
-    DotNetCli.Build
-        (fun p -> 
-            { p with
-                Project = solution
-                Configuration = configuration
-                AdditionalArgs = additionalArgs })
-)
 
 //--------------------------------------------------------------------------------
 // Incrementalist targets 
@@ -151,6 +136,33 @@ let filterProjects selectedProject =
         Some selectedProject
 
 //--------------------------------------------------------------------------------
+// Build targets 
+//--------------------------------------------------------------------------------
+let skipBuild = 
+    lazy(
+        match getAffectedProjects.Value with
+        | None when runIncrementally -> true
+        | _ -> false
+    )
+
+Target "AssemblyInfo" (fun _ ->
+    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
+    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
+)
+
+Target "Build" (fun _ ->   
+    if not skipBuild.Value then
+        let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+
+        DotNetCli.Build
+            (fun p -> 
+                { p with
+                    Project = solution
+                    Configuration = configuration
+                    AdditionalArgs = additionalArgs })
+)
+
+//--------------------------------------------------------------------------------
 // Tests targets 
 //--------------------------------------------------------------------------------
 type Runtime =
@@ -210,152 +222,156 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
-    let projects = 
-        let rawProjects = match (isWindows) with 
-                            | true -> !! "./src/**/*.Tests.csproj"
-                            | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-        rawProjects |> Seq.choose filterProjects
+    if not skipBuild.Value then
+        let projects = 
+            let rawProjects = match (isWindows) with 
+                                | true -> !! "./src/**/*.Tests.csproj"
+                                | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
      
-    let runSingleProject project =
-        let arguments =
-            match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetCoreVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetCoreVersion outputTests)
+        let runSingleProject project =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetCoreVersion outputTests)
 
-        let result = ExecProcess(fun info ->
-            info.FileName <- "dotnet"
-            info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
-    CreateDir outputTests
-    projects |> Seq.iter (runSingleProject)
+        CreateDir outputTests
+        projects |> Seq.iter (runSingleProject)
 )
 
 Target "MultiNodeTests" (fun _ ->
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetFrameworkVersion)
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetFrameworkVersion)
 
-    let projects = 
-        let rawProjects = match (isWindows) with 
-                            | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                            | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-        rawProjects |> Seq.choose filterProjects
+        let projects = 
+            let rawProjects = match (isWindows) with 
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
 
-    let multiNodeTestAssemblies = 
-        projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
+        let multiNodeTestAssemblies = 
+            projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
 
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-    let runMultiNodeSpec assembly =
-        let spec = getBuildParam "spec"
-
-        let args = StringBuilder()
-                |> append assembly
-                |> append "-Dmultinode.teamcity=true"
-                |> append "-Dmultinode.enable-filesink=on"
-                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                |> toText
-
-        let result = ExecProcess(fun info -> 
-            info.FileName <- multiNodeTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
-)
-
-Target "MultiNodeTestsNetCore" (fun _ ->
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win7-x64" @@ "publish")
-
-    let projects = 
-        let rawProjects = match (isWindows) with 
-                            | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                            | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-        rawProjects |> Seq.choose filterProjects
-
-    let multiNodeTestAssemblies = 
-        projects |> Seq.choose (getTestAssembly Runtime.NetCore)
-
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
-
-    let runMultiNodeSpec assembly =
-        match assembly with
-        | null -> ()
-        | _ ->
+        let runMultiNodeSpec assembly =
             let spec = getBuildParam "spec"
 
             let args = StringBuilder()
-                    |> append multiNodeTestPath
                     |> append assembly
                     |> append "-Dmultinode.teamcity=true"
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                    |> append "-Dmultinode.platform=netcore"
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                     |> toText
 
             let result = ExecProcess(fun info -> 
-                info.FileName <- "dotnet"
+                info.FileName <- multiNodeTestPath
                 info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
                 info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
             if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
     
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+)
+
+Target "MultiNodeTestsNetCore" (fun _ ->
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win7-x64" @@ "publish")
+
+        let projects = 
+            let rawProjects = match (isWindows) with 
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
+
+        let multiNodeTestAssemblies = 
+            projects |> Seq.choose (getTestAssembly Runtime.NetCore)
+
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+
+        let runMultiNodeSpec assembly =
+            match assembly with
+            | null -> ()
+            | _ ->
+                let spec = getBuildParam "spec"
+
+                let args = StringBuilder()
+                        |> append multiNodeTestPath
+                        |> append assembly
+                        |> append "-Dmultinode.teamcity=true"
+                        |> append "-Dmultinode.enable-filesink=on"
+                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append "-Dmultinode.platform=netcore"
+                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
+                        |> toText
+
+                let result = ExecProcess(fun info -> 
+                    info.FileName <- "dotnet"
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+    
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 
 Target "NBench" <| fun _ ->
-    CleanDir outputPerfTests
+    if not skipBuild.Value then
+        CleanDir outputPerfTests
 
-    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-    printfn "Using NBench.Runner: %s" nbenchTestPath
+        let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
+        printfn "Using NBench.Runner: %s" nbenchTestPath
 
-    let projects = 
-        let rawProjects = match (isWindows) with 
-                            | true -> !! "./src/**/*.Tests.Peformance.csproj"
-                            | _ -> !! "./src/**/*.Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-        rawProjects |> Seq.choose filterProjects
+        let projects = 
+            let rawProjects = match (isWindows) with 
+                                | true -> !! "./src/**/*.Tests.Peformance.csproj"
+                                | _ -> !! "./src/**/*.Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
 
-    let nbenchTestAssemblies = 
-        projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
+        let nbenchTestAssemblies = 
+            projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
 
-    let runNBench assembly =
-        let includes = getBuildParam "include"
-        let excludes = getBuildParam "exclude"
-        let teamcityStr = (getBuildParam "teamcity")
-        let enableTeamCity = 
-            match teamcityStr with
-            | null -> false
-            | "" -> false
-            | _ -> bool.Parse teamcityStr
+        let runNBench assembly =
+            let includes = getBuildParam "include"
+            let excludes = getBuildParam "exclude"
+            let teamcityStr = (getBuildParam "teamcity")
+            let enableTeamCity = 
+                match teamcityStr with
+                | null -> false
+                | "" -> false
+                | _ -> bool.Parse teamcityStr
 
-        let args = StringBuilder()
-                |> append assembly
-                |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
-                |> append (sprintf "concurrent=\"%b\"" true)
-                |> append (sprintf "trace=\"%b\"" true)
-                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
-                |> appendIfNotNullOrEmpty includes "include="
-                |> appendIfNotNullOrEmpty excludes "include="
-                |> toText
+            let args = StringBuilder()
+                    |> append assembly
+                    |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
+                    |> append (sprintf "concurrent=\"%b\"" true)
+                    |> append (sprintf "trace=\"%b\"" true)
+                    |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+                    |> appendIfNotNullOrEmpty includes "include="
+                    |> appendIfNotNullOrEmpty excludes "include="
+                    |> toText
 
-        let result = ExecProcess(fun info -> 
-            info.FileName <- nbenchTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-        if result <> 0 then failwithf "%s %s \nexited with code %i" nbenchTestPath args result
+            let result = ExecProcess(fun info -> 
+                info.FileName <- nbenchTestPath
+                info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
+                info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+            if result <> 0 then failwithf "%s %s \nexited with code %i" nbenchTestPath args result
         
-    let failedRuns =
-        nbenchTestAssemblies
-        |> Seq.map (fun asm -> try runNBench asm; None with e -> Some(e.ToString()))
-        |> Seq.filter Option.isSome
-        |> Seq.map Option.get
-        |> Seq.mapi (fun i s -> sprintf "%i: \"%s\"" (i + 1) s)
-        |> Seq.toArray
-    if failedRuns.Length > 0 then
-        failwithf "NBench.Runner failed for %i run(s):\n%s\n\n" failedRuns.Length (String.concat "\n\n" failedRuns)
+        let failedRuns =
+            nbenchTestAssemblies
+            |> Seq.map (fun asm -> try runNBench asm; None with e -> Some(e.ToString()))
+            |> Seq.filter Option.isSome
+            |> Seq.map Option.get
+            |> Seq.mapi (fun i s -> sprintf "%i: \"%s\"" (i + 1) s)
+            |> Seq.toArray
+        if failedRuns.Length > 0 then
+            failwithf "NBench.Runner failed for %i run(s):\n%s\n\n" failedRuns.Length (String.concat "\n\n" failedRuns)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
