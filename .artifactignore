@@ -1,0 +1,5 @@
+**/*
+!build.*
+!**/bin/Release/**
+!TestResults/*
+!src/**/*.csproj
