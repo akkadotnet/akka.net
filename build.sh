@@ -17,7 +17,7 @@ DOTNET_VERSION=2.1.500
 DOTNET_INSTALLER_URL=https://raw.githubusercontent.com/dotnet/cli/v$DOTNET_VERSION/scripts/obtain/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
-INCREMENTALIST_VERSION=0.1.3
+INCREMENTALIST_VERSION=0.1.4
 
 # Define default arguments.
 TARGET="Default"
@@ -57,7 +57,6 @@ bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version $DOTNET_VERSION --channel
 export PATH="$SCRIPT_DIR/.dotnet":$PATH
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
-export DOTNET_ROOT="$SCRIPT_DIR/.dotnet"
 chmod -R 0755 ".dotnet"
 "$SCRIPT_DIR/.dotnet/dotnet" --info
 
