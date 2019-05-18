@@ -21,9 +21,6 @@ namespace Akka.Persistence.Tests
         public static Config Configuration(string test, string serialization = null,
             string extraConfig = null)
         {
-            var c = extraConfig == null
-                ? ConfigurationFactory.Empty
-                : ConfigurationFactory.ParseString(extraConfig);
             var configString = string.Format(@"
                 akka.actor.serialize-creators = {0}
                 akka.actor.serialize-messages = {0}
@@ -31,7 +28,9 @@ namespace Akka.Persistence.Tests
                 akka.persistence.snapshot-store.local.dir = ""target/snapshots-{1}/""
                 akka.test.single-expect-default = 10s", serialization ?? "on", test);
 
-            return c.WithFallback(ConfigurationFactory.ParseString(configString));
+            if(extraConfig == null)
+                return ConfigurationFactory.ParseString(configString);
+            return ConfigurationFactory.ParseString(extraConfig).WithFallback(ConfigurationFactory.ParseString(configString));
         }
 
         internal readonly Cleanup Clean;

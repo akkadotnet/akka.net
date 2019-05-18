@@ -21,6 +21,7 @@ namespace Akka.IO
         private readonly SimpleDnsCache _cache;
         private readonly long _positiveTtl;
         private readonly long _negativeTtl;
+        private readonly bool _useIpv6;
 
         /// <summary>
         /// TBD
@@ -32,6 +33,7 @@ namespace Akka.IO
             _cache = cache;
             _positiveTtl = (long) config.GetTimeSpan("positive-ttl").TotalMilliseconds;
             _negativeTtl = (long) config.GetTimeSpan("negative-ttl").TotalMilliseconds;
+            _useIpv6 = config.GetBoolean( "use-ipv6" );
         }
 
         /// <summary>
@@ -50,8 +52,9 @@ namespace Akka.IO
                     try
                     {
                         //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork 
-                        || x.AddressFamily == AddressFamily.InterNetworkV6));
+                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => 
+                                x.AddressFamily == AddressFamily.InterNetwork 
+                                || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
                         _cache.Put(answer, _positiveTtl);
                     }
                     catch (SocketException ex)

@@ -95,4 +95,3 @@ namespace Akka.Dispatch.MessageQueues
         }
     }
 }
-

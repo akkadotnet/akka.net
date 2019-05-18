@@ -1,6 +1,27 @@
-#### 1.4.0 March 14 2019 ####
+#### 1.4.0 May 01 2019 ####
 **Placeholder for nightlies**
 
+#### 1.3.13 April 30 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+Well, we thought 1.3.12 would be the final release for Akka.NET v1.3.* - but then we found some nasty bugs prior to merging any of the v1.4 features into our development branch. But finally, for real this time - this is really the last v1.3.13 release.
+
+This patch contains some critical bug fixes and improvements to Akka.NET:
+* [Akka.Persistence: OnPersistRejected now logs an error with the complete stacktrace](https://github.com/akkadotnet/akka.net/pull/3763)
+* [Akka.Persistence.Sql: Ensure that BatchingSqlJournal will propagate sql connection opening failure](https://github.com/akkadotnet/akka.net/pull/3754)
+* [Akka: Add UnboundedStablePriorityMailbox](https://github.com/akkadotnet/akka.net/issues/2652)
+* [Akka.Remote and Akka.Cluster: Port exhaustion problem with Akka.Cluster](https://github.com/akkadotnet/akka.net/issues/2575)
+
+To [see the full set of changes for Akka.NET v1.3.13, click here](https://github.com/akkadotnet/akka.net/milestone/31).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 5 | 6 | Ismael Hamed |
+| 2 | 45 | 7 | Shukhrat Nekbaev |
+| 2 | 23 | 30 | Aaron Stannard |
+| 1 | 87 | 7 | Bartosz Sypytkowski |
+| 1 | 492 | 9 | AndreSteenbergen |
+| 1 | 2 | 2 | ThomasWetzel |
+| 1 | 12 | 12 | Sean Gilliam |
 
 #### 1.3.12 March 13 2019 ####
 **Maintenance Release for Akka.NET 1.3**
