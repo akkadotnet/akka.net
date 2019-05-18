@@ -16,7 +16,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -2612,6 +2612,14 @@ namespace Akka.Dispatch
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
     }
+    public abstract class UnboundedStablePriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedStablePriorityMessageQueue>
+    {
+        public const int DefaultCapacity = 11;
+        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public int InitialCapacity { get; }
+        public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
+        protected abstract int PriorityGenerator(object message);
+    }
 }
 namespace Akka.Dispatch.MessageQueues
 {
@@ -2682,6 +2690,14 @@ namespace Akka.Dispatch.MessageQueues
             "lCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
+        protected override int LockedCount { get; }
+        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
+        protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
+    }
+    public class UnboundedStablePriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
+    {
+        public UnboundedStablePriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
@@ -3527,13 +3543,14 @@ namespace Akka.IO
     }
     public class TcpSettings
     {
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries) { }
+        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4) { }
         public int BatchAcceptLimit { get; }
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
         public int FinishConnectRetries { get; }
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
+        public bool OutgoingSocketForceIpv4 { get; }
         public int ReceivedMessageSizeLimit { get; }
         public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
         public bool TraceLogging { get; }
@@ -4772,6 +4789,16 @@ namespace Akka.Util
     {
         public static readonly bool IsMono;
         public static readonly bool IsWindows;
+    }
+    public sealed class StableListPriorityQueue
+    {
+        public StableListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
+        public int Count() { }
+        public Akka.Actor.Envelope Dequeue() { }
+        public void Enqueue(Akka.Actor.Envelope item) { }
+        public bool IsConsistent() { }
+        public Akka.Actor.Envelope Peek() { }
+        public override string ToString() { }
     }
     public class static StandardOutWriter
     {

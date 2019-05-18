@@ -43,7 +43,8 @@
         "resource": [{
             "files": [
                 "images/**",
-                "web.config"
+                "web.config",
+                "xrefmap.yml"
             ],
             "exclude": [
                 "obj/**",

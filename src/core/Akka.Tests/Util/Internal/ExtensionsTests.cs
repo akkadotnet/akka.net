@@ -102,6 +102,7 @@ namespace Akka.Tests.Util.Internal
             actual.ShouldAllBeEquivalentTo(expectation);
         }
 
+#if FSCHECK
         [Property]
         public void SplitDottedPathHonouringQuotesWithTestOracle()
         {
@@ -110,6 +111,7 @@ namespace Akka.Tests.Util.Internal
                     SplitDottedPathHonouringQuotesOracle(s).SequenceEqual(s.SplitDottedPathHonouringQuotes()))
                 .QuickCheckThrowOnFailure();
         }
+#endif
 
         private static IEnumerable<string> SplitDottedPathHonouringQuotesOracle(string path)
         {
