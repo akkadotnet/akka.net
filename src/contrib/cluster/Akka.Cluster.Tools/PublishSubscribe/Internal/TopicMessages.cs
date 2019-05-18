@@ -44,6 +44,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// TBD
     /// </summary>
+    internal sealed class CountSubscribers
+    {
+        public string Topic { get; }
+
+        public CountSubscribers(string topic)
+        {
+            Topic = topic;
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal class Bucket : IEquatable<Bucket>
     {

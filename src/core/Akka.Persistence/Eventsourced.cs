@@ -469,7 +469,7 @@ namespace Akka.Persistence
         {
             if (message != null)
             {
-                Log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
+                Log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]",
                     message.GetType(), LastSequenceNr, PersistenceId);
             }
             else
@@ -499,7 +499,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Called when the journal rejected <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
-        /// The event was not stored. By default this method logs the problem as a warning, and the actor continues.
+        /// The event was not stored. By default this method logs the problem as an error, and the actor continues.
         /// The callback handler that was passed to the <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/>
         /// method will not be invoked.
         /// </summary>
@@ -508,9 +508,8 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
-            if (Log.IsWarningEnabled)
-                Log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
-                    @event.GetType(), sequenceNr, PersistenceId, cause.Message);
+            Log.Error(cause, "Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
+                @event.GetType(), sequenceNr, PersistenceId, cause.Message);
         }
 
         /// <summary>

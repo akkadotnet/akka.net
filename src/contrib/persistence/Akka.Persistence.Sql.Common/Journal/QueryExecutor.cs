@@ -76,7 +76,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
-
+        
         /// <summary>
         /// Asynchronously inserts a collection of events and theirs tags into a journal table.
         /// </summary>
@@ -329,7 +329,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     SELECT m.{Configuration.SequenceNrColumnName} as SeqNr FROM {Configuration.FullMetaTableName} m WHERE m.{Configuration.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
-                DELETE FROM {Configuration.FullJournalTableName} 
+                DELETE FROM {Configuration.FullJournalTableName}
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;
+                DELETE FROM {Configuration.FullMetaTableName}
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;";
 
             UpdateSequenceNrSql = $@"
@@ -343,6 +345,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
                 AND e.{Configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr
                 ORDER BY {Configuration.SequenceNrColumnName} ASC;";
+
+            HighestTagOrderingSql =
+                $@"
+                SELECT MAX(e.{Configuration.OrderingColumnName}) as Ordering
+                FROM {Configuration.FullJournalTableName} e
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering AND e.{Configuration.TagsColumnName} LIKE @Tag";
 
             ByTagSql =
                 $@"
@@ -398,6 +406,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         protected virtual string ByPersistenceIdSql { get; }
+        /// <summary>
+        /// Query to return the highest ordering number for a tag
+        /// </summary>
+        protected virtual string HighestTagOrderingSql { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -526,17 +538,21 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
-                    var maxSequenceNr = 0L;
                     while (await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
-                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
                         callback(new ReplayedTaggedMessage(persistent, tag, ordering));
                     }
-
-                    return maxSequenceNr;
                 }
+            }
+
+            using (var command = GetCommand(connection, HighestTagOrderingSql))
+            {
+                AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
+                return maxOrdering;
             }
         }
 

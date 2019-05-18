@@ -16,7 +16,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -262,6 +262,7 @@ namespace Akka.Actor
     }
     public class static ActorRefExtensions
     {
+        public static Akka.Actor.IActorRef GetOrElse(this Akka.Actor.IActorRef actorRef, System.Func<Akka.Actor.IActorRef> elseValue) { }
         public static bool IsNobody(this Akka.Actor.IActorRef actorRef) { }
     }
     public class static ActorRefFactoryExtensions
@@ -1365,6 +1366,7 @@ namespace Akka.Actor
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
         public class OneForOneStrategySurrogate : Akka.Util.ISurrogate
         {
             public OneForOneStrategySurrogate() { }
@@ -2610,6 +2612,14 @@ namespace Akka.Dispatch
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
     }
+    public abstract class UnboundedStablePriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedStablePriorityMessageQueue>
+    {
+        public const int DefaultCapacity = 11;
+        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public int InitialCapacity { get; }
+        public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
+        protected abstract int PriorityGenerator(object message);
+    }
 }
 namespace Akka.Dispatch.MessageQueues
 {
@@ -2680,6 +2690,14 @@ namespace Akka.Dispatch.MessageQueues
             "lCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
+        protected override int LockedCount { get; }
+        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
+        protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
+    }
+    public class UnboundedStablePriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
+    {
+        public UnboundedStablePriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
@@ -3525,13 +3543,14 @@ namespace Akka.IO
     }
     public class TcpSettings
     {
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries) { }
+        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4) { }
         public int BatchAcceptLimit { get; }
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
         public int FinishConnectRetries { get; }
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
+        public bool OutgoingSocketForceIpv4 { get; }
         public int ReceivedMessageSizeLimit { get; }
         public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
         public bool TraceLogging { get; }
@@ -3753,22 +3772,30 @@ namespace Akka.Pattern
 {
     public class static Backoff
     {
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
     }
     public abstract class BackoffOptions
     {
         protected BackoffOptions() { }
         public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
         public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
+        public abstract Akka.Pattern.BackoffOptions WithFinalStopMessage(System.Func<object, bool> isFinalStopMessage);
         public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
+        public abstract Akka.Pattern.BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
         public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
     }
     public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
-        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped = null, System.Func<object, bool> finalStopMessage = null) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
         public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
         protected override bool Receive(object message) { }
@@ -3810,6 +3837,9 @@ namespace Akka.Pattern
         protected Akka.Actor.IActorRef Child { get; set; }
         protected string ChildName { get; }
         protected Akka.Actor.Props ChildProps { get; }
+        protected System.Func<object, bool> FinalStopMessage { get; }
+        protected bool FinalStopMessageReceived { get; set; }
+        protected object ReplyWhileStopped { get; }
         protected Akka.Pattern.IBackoffReset Reset { get; }
         protected int RestartCountN { get; set; }
         protected bool HandleBackoff(object message) { }
@@ -4758,6 +4788,17 @@ namespace Akka.Util
     public class static RuntimeDetector
     {
         public static readonly bool IsMono;
+        public static readonly bool IsWindows;
+    }
+    public sealed class StableListPriorityQueue
+    {
+        public StableListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
+        public int Count() { }
+        public Akka.Actor.Envelope Dequeue() { }
+        public void Enqueue(Akka.Actor.Envelope item) { }
+        public bool IsConsistent() { }
+        public Akka.Actor.Envelope Peek() { }
+        public override string ToString() { }
     }
     public class static StandardOutWriter
     {
