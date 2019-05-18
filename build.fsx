@@ -93,7 +93,6 @@ let getAffectedProjects =
 
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
-        log (sprintf "(Debug) .NET Core Root found at %s" (Environment.GetEnvironmentVariable "DOTNET_ROOT"))
         let targetBranch = match getBuildParam "targetBranch" with
                             | "" -> "dev"
                             | null -> "dev"
@@ -238,7 +237,7 @@ Target "RunTests" (fun _ ->
             info.WorkingDirectory <- (Directory.GetParent project).FullName
             info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -263,7 +262,7 @@ Target "RunTestsNetCore" (fun _ ->
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputTests
         projects |> Seq.iter (runSingleProject)

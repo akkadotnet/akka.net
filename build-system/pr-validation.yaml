@@ -29,7 +29,7 @@ jobs:
         displayName: Windows Build
         inputs:
           filename: build.cmd
-          arguments: 'buildRelease ' # Run an  build
+          arguments: 'buildRelease incremental' # Run an incremental build
         continueOnError: true
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
       - task: CopyFiles@2
@@ -42,7 +42,7 @@ jobs:
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: istOutput
+          artifactName: incrementalistOutput
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
@@ -54,7 +54,7 @@ jobs:
       displayName: '.NET Framework Unit Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: runTests 
+      scriptArgs: runTests incremental
       outputDirectory: 'TestResults'
 
   - template: azure-pipeline.template.yaml
@@ -63,7 +63,7 @@ jobs:
       displayName: '.NET Core Unit Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: runTestsNetCore 
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
 
   - template: azure-pipeline.template.yaml
@@ -72,7 +72,7 @@ jobs:
       displayName: '.NET Core Unit Tests (Linux)'
       vmImage: 'ubuntu-16.04'
       scriptFileName: './build.sh'
-      scriptArgs: runTestsNetCore 
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
 
   - template: azure-pipeline.template.yaml
@@ -81,7 +81,7 @@ jobs:
       displayName: '.NET Core Multi-Node Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTestsNetCore 
+      scriptArgs: MultiNodeTestsNetCore incremental
       outputDirectory: 'TestResults'
 
   - template: azure-pipeline.template.yaml
@@ -90,7 +90,7 @@ jobs:
       displayName: '.NET Framework Multi-Node Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTests 
+      scriptArgs: MultiNodeTests incremental
       outputDirectory: 'TestResults'
 
   - template: azure-pipeline.template.yaml
@@ -99,5 +99,5 @@ jobs:
       displayName: 'NuGet Pack'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: CreateNuget nugetprerelease=dev 
+      scriptArgs: CreateNuget nugetprerelease=dev incremental
       outputDirectory: 'bin/nuget'
