@@ -211,8 +211,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             return ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.netty.tcp.port = 0
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.pub-sub.routing-logic = {routingLogic}
             ");
