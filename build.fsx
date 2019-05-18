@@ -68,7 +68,7 @@ Target "Clean" (fun _ ->
 // Incrementalist targets 
 //--------------------------------------------------------------------------------
 // Pulls the set of all affected projects detected by Incrementalist from the cached file
-let getAffectedProjects = 
+let getAffectedProjectsTopology = 
     lazy(
         log (sprintf "Checking inside %s for changes" incrementalistReport)
 
@@ -77,12 +77,22 @@ let getAffectedProjects =
         log (sprintf "Found changes via Incrementalist? %b - searched inside %s" incrementalistFoundChanges incrementalistReport)
         if not incrementalistFoundChanges then None
         else
-            Some ((File.ReadAllText incrementalistReport).Split ',')
+            let sortedItems = (File.ReadAllLines incrementalistReport) |> Seq.map (fun x -> (x.Split ','))
+                              |> Seq.map (fun items -> (items.[0], items))
+            let d = dict sortedItems
+            Some(d)
+    )
+
+let getAffectedProjects = 
+    lazy(
+        let finalProjects = getAffectedProjectsTopology.Value
+        match finalProjects with
+        | None -> None
+        | Some p -> Some (p.Values |> Seq.concat)
     )
 
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
-        log (sprintf "(Debug) .NET Core Root found at %s" (Environment.GetEnvironmentVariable "DOTNET_ROOT"))
         let targetBranch = match getBuildParam "targetBranch" with
                             | "" -> "dev"
                             | null -> "dev"
@@ -145,6 +155,14 @@ let skipBuild =
         | _ -> false
     )
 
+let headProjects =
+    lazy(
+        match getAffectedProjectsTopology.Value with
+        | None when runIncrementally -> [||]
+        | None -> [|solution|]
+        | Some p -> p.Keys |> Seq.toArray
+    )
+
 Target "AssemblyInfo" (fun _ ->
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
@@ -153,13 +171,15 @@ Target "AssemblyInfo" (fun _ ->
 Target "Build" (fun _ ->   
     if not skipBuild.Value then
         let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+        let buildProject proj =
+            DotNetCli.Build
+                (fun p -> 
+                    { p with
+                        Project = proj
+                        Configuration = configuration
+                        AdditionalArgs = additionalArgs })
 
-        DotNetCli.Build
-            (fun p -> 
-                { p with
-                    Project = solution
-                    Configuration = configuration
-                    AdditionalArgs = additionalArgs })
+        getAffectedProjects.Value.Value|> Seq.iter buildProject
 )
 
 //--------------------------------------------------------------------------------
@@ -215,7 +235,7 @@ Target "RunTests" (fun _ ->
             info.WorkingDirectory <- (Directory.GetParent project).FullName
             info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -240,7 +260,7 @@ Target "RunTestsNetCore" (fun _ ->
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputTests
         projects |> Seq.iter (runSingleProject)
@@ -378,60 +398,64 @@ Target "NBench" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/*.*sproj"
-                   -- "src/**/*.Tests*.*sproj"
-                   -- "src/benchmark/**/*.*sproj"
-                   -- "src/examples/**/*.*sproj"
-                   -- "src/**/*.MultiNodeTestRunner.csproj"
-                   -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
-                   -- "src/**/*.NodeTestRunner.csproj"
+    if not skipBuild.Value then
+        let projects = 
+            let rawProjects = !! "src/**/*.*sproj"
+                            -- "src/**/*.Tests*.*sproj"
+                            -- "src/benchmark/**/*.*sproj"
+                            -- "src/examples/**/*.*sproj"
+                            -- "src/**/*.MultiNodeTestRunner.csproj"
+                            -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
+                            -- "src/**/*.NodeTestRunner.csproj"
+            rawProjects |> Seq.choose filterProjects
 
-    let runSingleProject project =
-        DotNetCli.Pack
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = versionSuffix
-                    OutputPath = outputNuGet })
+        let runSingleProject project =
+            DotNetCli.Pack
+                (fun p -> 
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        AdditionalArgs = ["--include-symbols --no-build"]
+                        VersionSuffix = versionSuffix
+                        OutputPath = outputNuGet })
 
-    projects |> Seq.iter (runSingleProject)
+        projects |> Seq.iter (runSingleProject)
 )
-open Fake.TemplateHelper
+
 Target "PublishMntr" (fun _ ->
-    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+    if not skipBuild.Value then
+        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
 
-    // Windows .NET 4.5.2
-    executableProjects |> Seq.iter (fun project ->
-        DotNetCli.Restore
-            (fun p -> 
-                { p with
-                    Project = project                  
-                    AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
-    )
+        // Windows .NET 4.5.2
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Restore
+                (fun p -> 
+                    { p with
+                        Project = project                  
+                        AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
+        )
 
-    // Windows .NET 4.5.2
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Publish
-            (fun p ->
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    Runtime = "win7-x64"
-                    Framework = testNetFrameworkVersion
-                    VersionSuffix = versionSuffix }))
+        // Windows .NET 4.5.2
+        executableProjects |> Seq.iter (fun project ->  
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win7-x64"
+                        Framework = testNetFrameworkVersion
+                        VersionSuffix = versionSuffix }))
 
-    // Windows .NET Core
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Publish
-            (fun p ->
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    Runtime = "win7-x64"
-                    Framework = testNetCoreVersion
-                    VersionSuffix = versionSuffix }))
+        // Windows .NET Core
+        executableProjects |> Seq.iter (fun project ->  
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win7-x64"
+                        Framework = testNetCoreVersion
+                        VersionSuffix = versionSuffix }))
 )
 
 Target "CreateMntrNuget" (fun _ -> 
@@ -637,13 +661,16 @@ Target "RunTestsFull" DoNothing
 Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "Build"
+"Build" ==> "PublishMntr" ==> "BuildRelease"
 "ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
-// "RunTests" and "RunTestsNetCore" don't use clean / build so they can be run multiple times, successively, without rebuilding
-"Build" ==> "RunTests" ==> "RunTestsFull"
-"Build" ==> "RunTestsNetCore" ==> "RunTestsNetCoreFull"
+"Build" ==> "RunTests"
+"Build" ==> "RunTestsNetCore"
+
+"BuildRelease" ==> "MultiNodeTestsNetCore"
+"BuildRelease" ==> "MultiNodeTests"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
@@ -656,6 +683,7 @@ Target "RunTestsNetCoreFull" DoNothing
 "RunTests" ==> "All"
 "RunTestsNetCore" ==> "All"
 "MultiNodeTests" ==> "All"
+"MultiNodeTestsNetCore" ==> "All"
 "NBench" ==> "All"
 
 RunTargetOrDefault "Help"
