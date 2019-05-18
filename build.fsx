@@ -398,6 +398,7 @@ Target "NBench" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "CreateNuget" (fun _ ->    
+    CreateDir outputNuGet // need this to stop Azure pipelines copy stage from error-ing out
     if not skipBuild.Value then
         let projects = 
             let rawProjects = !! "src/**/*.*sproj"
@@ -459,26 +460,27 @@ Target "PublishMntr" (fun _ ->
 )
 
 Target "CreateMntrNuget" (fun _ -> 
-    // uses the template file to create a temporary .nuspec file with the correct version
-    CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
-    let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
-    let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
-    TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
+    if not skipBuild.Value then
+        // uses the template file to create a temporary .nuspec file with the correct version
+        CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
+        let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
+        let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
+        TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
 
-    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Pack
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = versionSuffix
-                    OutputPath = outputNuGet } )
-    )
+        executableProjects |> Seq.iter (fun project ->  
+            DotNetCli.Pack
+                (fun p -> 
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        AdditionalArgs = ["--include-symbols"]
+                        VersionSuffix = versionSuffix
+                        OutputPath = outputNuGet } )
+        )
 
-    DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
+        DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
 )
 
 Target "PublishNuget" (fun _ ->
