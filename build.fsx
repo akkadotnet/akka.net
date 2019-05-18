@@ -398,6 +398,7 @@ Target "NBench" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "CreateNuget" (fun _ ->    
+    CreateDir outputNuGet // need this to stop Azure pipelines copy stage from error-ing out
     if not skipBuild.Value then
         let projects = 
             let rawProjects = !! "src/**/*.*sproj"
