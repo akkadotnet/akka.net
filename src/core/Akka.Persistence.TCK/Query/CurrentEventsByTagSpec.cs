@@ -157,5 +157,30 @@ namespace Akka.Persistence.TCK.Query
             probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("a green leaf"));
             probe2.Cancel();
         }
+
+        [Fact]
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_see_all_150_events()
+        {
+            var queries = ReadJournal as ICurrentEventsByTagQuery;
+            var a = Sys.ActorOf(Query.TestActor.Props("a"));
+
+            for (int i = 0; i < 150; ++i) 
+            {
+                a.Tell("a green apple");
+                ExpectMsg("a green apple-done");
+            }
+
+            var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
+            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(150);
+            for (int i = 0; i < 150; ++i)
+            {
+                probe.ExpectNext<EventEnvelope>(p => 
+                    p.PersistenceId == "a" && p.SequenceNr == (i + 1) && p.Event.Equals("a green apple"));
+            }
+
+            probe.ExpectComplete();
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+        }
     }
 }

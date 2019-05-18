@@ -635,9 +635,9 @@ namespace Akka.Actor
             get
             {
                 var current = _parent;
-                while (current is ChildActorPath)
+                while (current is ChildActorPath child)
                 {
-                    current = ((ChildActorPath)current)._parent;
+                    current = child._parent;
                 }
                 return current.Root;
             }
