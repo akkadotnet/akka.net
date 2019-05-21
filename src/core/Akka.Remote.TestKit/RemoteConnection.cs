@@ -111,7 +111,7 @@ namespace Akka.Remote.TestKit
             else //server
             {
                 var connection = new ServerBootstrap()
-                    .Group(GetServerPool(poolSize))
+                    .Group(GetServerPool(poolSize), GetServerWorkerPool(poolSize))
                     .ChannelFactory(() => new TcpServerSocketChannel(socketAddress.AddressFamily))
                     .ChildOption(ChannelOption.TcpNodelay, true)
                     .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
