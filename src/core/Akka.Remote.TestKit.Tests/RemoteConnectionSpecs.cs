@@ -23,7 +23,26 @@ using Xunit.Abstractions;
 
 namespace Akka.Remote.TestKit.Tests
 {
-    public class RemoteConnectionSpecs : AkkaSpec
+    public class RemoteConnectionFixture : IDisposable
+    {
+        private IEventLoopGroup _clientGroup;
+        private IEventLoopGroup _serverGroup;
+
+        public RemoteConnectionFixture()
+        {
+            // allocate connection pools in advance - will be reused on subsequent RemoteConnection.CreateConnection calls
+            _clientGroup = RemoteConnection.GetClientWorkerPool(1);
+            _serverGroup = RemoteConnection.GetServerPool(1);
+        }
+
+        public void Dispose()
+        {
+            // dispose all of the event loop groups created
+            RemoteConnection.ReleaseAll().Wait(TimeSpan.FromSeconds(3));
+        }
+    }
+
+    public class RemoteConnectionSpecs : AkkaSpec, IClassFixture<RemoteConnectionFixture>
     {
         private const string Config = @"
             akka.testconductor.barrier-timeout = 5s
@@ -33,7 +52,7 @@ namespace Akka.Remote.TestKit.Tests
             akka.actor.debug.lifecycle = on
         ";
 
-        public RemoteConnectionSpecs(ITestOutputHelper output) : base(Config, output)
+        public RemoteConnectionSpecs(RemoteConnectionFixture fixture, ITestOutputHelper output) : base(Config, output)
         {
             
         }

@@ -63,7 +63,7 @@ namespace Akka.Remote.TestKit
         #region Static methods
 
         private static IEventLoopGroup _clientPool;
-        private static IEventLoopGroup GetClientWorkerPool(int poolSize)
+        internal static IEventLoopGroup GetClientWorkerPool(int poolSize)
         {
             if (_clientPool == null)
             {
@@ -73,7 +73,7 @@ namespace Akka.Remote.TestKit
         }
 
         private static IEventLoopGroup _serverPool;
-        private static IEventLoopGroup GetServerPool(int poolSize)
+        internal static IEventLoopGroup GetServerPool(int poolSize)
         {
             if (_serverPool == null)
             {
