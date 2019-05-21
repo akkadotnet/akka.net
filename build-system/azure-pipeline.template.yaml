@@ -41,7 +41,7 @@ jobs:
         displayName: 'Copy Build Output'
         inputs:
           sourceFolder: ${{ parameters.outputDirectory }}
-          contents: '*'
+          contents: '**\*'
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
       - task: PublishBuildArtifacts@1
