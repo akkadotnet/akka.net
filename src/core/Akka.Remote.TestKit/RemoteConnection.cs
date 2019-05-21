@@ -98,7 +98,7 @@ namespace Akka.Remote.TestKit
             if (role == Role.Client)
             {
                 var connection = new Bootstrap()
-                    .ChannelFactory(() => new TcpSocketChannel(socketAddress.AddressFamily))
+                    .ChannelFactory(() => new TcpSocketChannel())
                     .Option(ChannelOption.TcpNodelay, true)
                     .Group(GetClientWorkerPool(poolSize))
                     .Handler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
@@ -112,7 +112,7 @@ namespace Akka.Remote.TestKit
             {
                 var connection = new ServerBootstrap()
                     .Group(GetServerPool(poolSize))
-                    .ChannelFactory(() => new TcpServerSocketChannel(socketAddress.AddressFamily))
+                    .ChannelFactory(() => new TcpServerSocketChannel())
                     .ChildOption(ChannelOption.TcpNodelay, true)
                     .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
                     {
