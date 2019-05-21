@@ -53,7 +53,7 @@ namespace Akka.Remote.TestKit.Tests
             try
             {
                 var t1 = RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
-                    new TestConductorHandler(serverProbe.Ref, Sys.Log));
+                    new TestConductorHandler(serverProbe.Ref));
                 t1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 server = t1.Result; // task will already be complete or cancelled
 
