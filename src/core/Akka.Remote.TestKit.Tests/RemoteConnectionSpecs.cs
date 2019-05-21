@@ -63,7 +63,7 @@ namespace Akka.Remote.TestKit.Tests
             var serverProbe = CreateTestProbe("server");
             var clientProbe = CreateTestProbe("client");
 
-            var serverAddress = IPAddress.Loopback;
+            var serverAddress = IPAddress.Parse("127.0.0.1");
             var serverEndpoint = new IPEndPoint(serverAddress, 0);
 
             IChannel server = null;
