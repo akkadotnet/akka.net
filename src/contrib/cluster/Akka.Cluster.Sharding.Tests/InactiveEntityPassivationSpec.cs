@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             // Make sure "1" hasn't seen a message in 3 seconds and passivates
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(3) - TimeSpan.FromTicks(timeSinceOneSawAMessage));
+            probe.ExpectNoMsg(TimeSpan.FromSeconds(3) - TimeSpan.FromTicks(timeSinceOneSawAMessage) - TimeSpan.FromMilliseconds(40));
             probe.ExpectMsg("1 passivating");
 
             // But it can be re-activated just fine
