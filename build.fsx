@@ -288,7 +288,7 @@ Target "MultiNodeTests" (fun _ ->
 
             let args = StringBuilder()
                     |> append assembly
-                    |> append "-Dmultinode.teamcity=true"
+                    |> append (sprintf "-Dmultinode.teamcity=%b" hasTeamCity)
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
