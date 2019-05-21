@@ -99,9 +99,13 @@ namespace Akka.Cluster.Sharding.Tests
         public void Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
         {
             // Single node cluster
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+            Within(TimeSpan.FromSeconds(5), () =>
+            {
+                Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+                AwaitCondition(() => Cluster.Get(Sys).State.Members.Any(x => x.Status == MemberStatus.Up));
+            });
 
-            var probe = new TestProbe(Sys, new XunitAssertions());
+            var probe = CreateTestProbe();
             var settings = ClusterShardingSettings.Create(Sys);
             var region = ClusterSharding.Get(Sys).Start(
                 "myType",
