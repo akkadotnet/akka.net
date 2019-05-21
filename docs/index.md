@@ -28,7 +28,7 @@ h2:before{
       <h1 class="title">Try <strong>Akka.NET</strong> now!</h1>
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
       <div class="options">
-        <a class="btn btn-lg btn-primary" href="articles/intro/tutorial-1.html">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.html">Read the documentation</a>
+        <a class="btn btn-lg btn-primary" href="articles/intro/tutorial-1.md">Get Started Now</a> <a class="btn btn-lg btn-primary" href="articles/intro/what-is-akka.md">Read the documentation</a>
       </div>
     </div>
 </div>
@@ -98,7 +98,7 @@ h2:before{
                 <p class="lead">
 The Actor Model provides a higher level of abstraction for writing concurrent and distributed systems. It alleviates the developer from having to deal with explicit locking and thread management, making it easier to write correct concurrent and parallel systems. </p>
                 <p>Actors were defined in the 1973 paper by <a href="http://en.wikipedia.org/wiki/Carl_Hewitt">Carl Hewitt</a> but have been popularized by the Erlang language, and used for example at Ericsson with great success to build highly concurrent and reliable telecom systems.</p>
-                <p><a href="/articles/intro/what-are-actors.html">Read more</a></p>
+                <p><a href="/articles/intro/what-problems-does-actor-model-solve.html">Read more</a></p>
             </div>
 
             <div class="col-md-6 text-center">

@@ -773,7 +773,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Applies a throttle to the underlying conneciton
     /// </summary>
-    internal sealed class SetThrottle
+    public sealed class SetThrottle
     {
         readonly Address _address;
         /// <summary>
@@ -856,7 +856,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// ACKs a throttle command
     /// </summary>
-    internal sealed class SetThrottleAck
+    public sealed class SetThrottleAck
     {
         private SetThrottleAck() { }
         // ReSharper disable once InconsistentNaming

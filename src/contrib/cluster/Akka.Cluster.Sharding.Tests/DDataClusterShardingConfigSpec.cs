@@ -28,6 +28,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster.sharding.state-store-mode = ddata
+                akka.remote.dot-netty.tcp.port = 0
             ");
         }
 

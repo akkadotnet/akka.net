@@ -47,10 +47,21 @@ namespace Akka.IO
                 transferToLimit: config.GetString("file-io-transferTo-limit") == "unlimited"
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
-                finishConnectRetries: config.GetInt("finish-connect-retries", 5));
+                finishConnectRetries: config.GetInt("finish-connect-retries", 5),
+                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4"));
         }
 
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, TimeSpan? registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries)
+        public TcpSettings( string    bufferPoolConfigPath,
+                            int       initialSocketAsyncEventArgs,
+                            bool      traceLogging,
+                            int       batchAcceptLimit,
+                            TimeSpan? registerTimeout,
+                            int       receivedMessageSizeLimit,
+                            string    managementDispatcher,
+                            string    fileIoDispatcher,
+                            int       transferToLimit,
+                            int       finishConnectRetries,
+                            bool      outgoingSocketForceIpv4 )
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
@@ -62,6 +73,7 @@ namespace Akka.IO
             FileIODispatcher = fileIoDispatcher;
             TransferToLimit = transferToLimit;
             FinishConnectRetries = finishConnectRetries;
+            OutgoingSocketForceIpv4 = outgoingSocketForceIpv4;
         }
 
         /// <summary>
@@ -135,5 +147,13 @@ namespace Akka.IO
         /// `finishConnect` will succeed, which is the case on Android.
         /// </summary>
         public int FinishConnectRetries { get; }
+
+        /// <summary>
+        /// Enforce outgoing socket connection to use IPv4 address family. Required in
+        /// scenario when IPv6 is not available, for example in Azure Web App sandbox.
+        /// When set to true it is required to set akka.io.dns.inet-address.use-ipv6 to false
+        /// in cases when DnsEndPoint is used to describe the remote address
+        /// </summary>
+        public bool OutgoingSocketForceIpv4 { get; }
     }
 }
