@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
@@ -70,8 +71,21 @@ namespace Akka.Persistence.Tests
         {
             var msg = ExpectMsg<object[]>();
             msg
-                //.Select(x => x.ToString())
                 .ShouldOnlyContainInOrder(ordered);
+        }
+
+        protected void ExpectAnyMsgInOrder(params IEnumerable<object>[] expected)
+        {
+            var msg = ExpectMsg<object[]>();
+            foreach (var e in expected)
+            {
+                if (e.SequenceEqual(msg))
+                    return;
+            }
+
+            false.Should()
+                .BeTrue(
+                    $"[{string.Join(",", msg)}] should match any expected value {string.Join(",", expected.Select(x => "[" + string.Join(",", x) + "]"))}");
         }
     }
 
