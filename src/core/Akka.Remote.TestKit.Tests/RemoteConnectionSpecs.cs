@@ -14,12 +14,10 @@ using System.Threading;
 using FluentAssertions;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.TestKit.Tests
 {
@@ -33,7 +31,7 @@ namespace Akka.Remote.TestKit.Tests
             akka.actor.debug.lifecycle = on
         ";
 
-        public RemoteConnectionSpecs(ITestOutputHelper output) : base(Config, output)
+        public RemoteConnectionSpecs() : base(Config)
         {
             
         }
@@ -107,7 +105,7 @@ namespace Akka.Remote.TestKit.Tests
                 var cts = new CancellationTokenSource();
                     cts.CancelAfter(TimeSpan.FromSeconds(10));
                 var t1 = RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
-                    new TestConductorHandler(serverProbe.Ref, Log));
+                    new TestConductorHandler(serverProbe.Ref));
                 await t1.WithCancellation(cts.Token);
                 server = t1.Result; // task will already be complete or cancelled
 
@@ -145,13 +143,11 @@ namespace Akka.Remote.TestKit.Tests
 
     public class TestConductorHandler : ChannelHandlerAdapter
     {
-        private readonly ILoggingAdapter _log;
         private readonly IActorRef _testActorRef;
 
-        public TestConductorHandler(IActorRef testActorRef, ILoggingAdapter log)
+        public TestConductorHandler(IActorRef testActorRef)
         {
             _testActorRef = testActorRef;
-            _log = log;
         }
 
         public override bool IsSharable => true;
@@ -178,12 +174,6 @@ namespace Akka.Remote.TestKit.Tests
                 //_log.Debug("client {0} sent garbage `{1}`, disconnecting", channel.RemoteAddress, message);
                 context.Channel.CloseAsync();
             }
-        }
-
-        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
-        {
-            _log.Error(exception, "Error caught by {0}", context.Channel.LocalAddress);
-            base.ExceptionCaught(context, exception);
         }
     }
 }
