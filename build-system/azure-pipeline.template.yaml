@@ -37,18 +37,18 @@ jobs:
           testResultsFiles: '**/*.trx' #TestResults folder usually
           testRunTitle: ${{ parameters.name }}
           mergeTestResults: true
-      - script: 'echo 1>&2'
-        failOnStderr: true
-        displayName: 'If above is partially succeeded, then fail'
-        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
       - task: CopyFiles@2
         displayName: 'Copy Build Output'
         inputs:
           sourceFolder: ${{ parameters.outputDirectory }}
-          contents: '*'
+          contents: '**\*'
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: ${{ parameters.name }}
+      - script: 'echo 1>&2'
+        failOnStderr: true
+        displayName: 'If above is partially succeeded, then fail'
+        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
