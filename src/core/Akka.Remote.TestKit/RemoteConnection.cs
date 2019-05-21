@@ -93,7 +93,7 @@ namespace Akka.Remote.TestKit
             return _serverWorkerPool;
         }
 
-        public static Task<IChannel> CreateConnection(Role role, IPEndPoint socketAddress, int poolSize, IChannelHandler upstreamHandler)
+        public static async Task<IChannel> CreateConnection(Role role, IPEndPoint socketAddress, int poolSize, IChannelHandler upstreamHandler)
         {
             if (role == Role.Client)
             {
@@ -106,7 +106,7 @@ namespace Akka.Remote.TestKit
                         ApplyChannelPipeline(channel, upstreamHandler);
                     }));
 
-                return connection.ConnectAsync(socketAddress);
+                return await connection.ConnectAsync(socketAddress).ConfigureAwait(false);
             }
             else //server
             {
@@ -118,7 +118,7 @@ namespace Akka.Remote.TestKit
                     {
                         ApplyChannelPipeline(channel, upstreamHandler);
                     }));
-                return connection.BindAsync(socketAddress);
+                return await connection.BindAsync(socketAddress).ConfigureAwait(false);
             }
         }
 
