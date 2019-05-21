@@ -839,14 +839,13 @@ element into the cycle that is independent from ``source``. We do this by using 
 arc that injects a single element using ``Source.Single``.
 
 > [!WARNING]
-> This approach isn't working in the current version of Akka.NET (1.3.0), the graph is still not printing any elements.
-
+> We have to add an Async call after creating the instance of Concat. Otherwise Concat will wait upstream to be empty and that will never happen in this case.
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b =>
 {
     var zip = b.Add(ZipWith.Apply<int, int, int>(Keep.Right));
     var broadcast = b.Add(new Broadcast<int>(2));
-    var concat = b.Add(new Concat<int, int>());
+    var concat = b.Add(new Concat<int, int>().Async());
     var start = Source.Single(0);
     var print = Flow.Create<int>().Select(s =>
     {
