@@ -11,14 +11,16 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Tests.Journal;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-
+    [Collection("PersistentActorRecoveryTimeout")] // force tests to run sequentially
     public class PersistentActorRecoveryTimeoutSpec : PersistenceSpec
     {
-        private const string JournalId = "persistent-actor-recovery-timeout-spec";
+        private static readonly AtomicCounter JournalIdNumber = new AtomicCounter(0);
+        private static readonly string JournalId = "persistent-actor-recovery-timeout-spec" + JournalIdNumber.GetAndIncrement();
         private readonly IActorRef _journal;
 
         #region internal test classes
