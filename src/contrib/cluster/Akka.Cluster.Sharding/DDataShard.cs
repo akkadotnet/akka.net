@@ -114,6 +114,11 @@ namespace Akka.Cluster.Sharding
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
         public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
         
+        protected override void PostStop()
+        {
+            PassivateIdleTask?.Cancel();
+            base.PostStop();
+        }
 
         protected override bool Receive(object message) => WaitingForState(ImmutableHashSet<int>.Empty)(message);
 
