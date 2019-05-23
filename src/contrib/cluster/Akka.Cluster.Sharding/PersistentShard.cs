@@ -84,6 +84,12 @@ namespace Akka.Cluster.Sharding
 
         public override string PersistenceId { get; }
 
+        protected override void PostStop()
+        {
+            PassivateIdleTask?.Cancel();
+            base.PostStop();
+        }
+
         protected override bool ReceiveCommand(object message)
         {
             switch (message)
