@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(0);
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
-            config.GetInt("min-number-of-hand-over-retries").ShouldBe(10);
+            config.GetInt("min-number-of-hand-over-retries").ShouldBe(15);
         }
 
         [Fact]
