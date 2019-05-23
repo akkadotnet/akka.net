@@ -582,7 +582,7 @@ namespace Akka.Persistence.Tests
                         return msg;
                     }).PipeTo(sender, self); 
 
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                 });
             }
         }
