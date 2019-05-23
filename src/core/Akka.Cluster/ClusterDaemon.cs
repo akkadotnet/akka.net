@@ -980,6 +980,7 @@ namespace Akka.Cluster
         protected readonly UniqueAddress SelfUniqueAddress;
         private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 5;
         private const int MaxGossipsBeforeShuttingDownMyself = 5;
+        private const int MaxTicksBeforeShuttingDownMyself = 4;
 
         private readonly VectorClock.Node _vclockNode;
 
@@ -1000,6 +1001,7 @@ namespace Akka.Cluster
 
         readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
+        private int _selfDownCounter = 0;
 
         private bool _exitingTasksInProgress = false;
         private readonly TaskCompletionSource<Done> _selfExiting = new TaskCompletionSource<Done>();
@@ -1532,7 +1534,7 @@ namespace Akka.Cluster
             }
             else if (Gossip.RemoveUnreachableWithMemberStatus.Contains(selfStatus))
             {
-                _cluster.LogInfo("Trying to join [{0}] to [{1}] member, ignoring. Use a member that is Up instead.", 
+                _cluster.LogInfo("Trying to join [{0}] to [{1}] member, ignoring. Use a member that is Up instead.",
                     node, selfStatus);
             }
             else
@@ -1583,7 +1585,7 @@ namespace Akka.Cluster
 
                     UpdateLatestGossip(newGossip);
 
-                    
+
 
                     if (node.Equals(SelfUniqueAddress))
                     {
@@ -1944,7 +1946,8 @@ namespace Akka.Cluster
                 // ExitingCompleted will be received via CoordinatedShutdown to continue
                 // the leaving process. Meanwhile the gossip state is not marked as seen.
                 _exitingTasksInProgress = true;
-                _cluster.LogInfo("Exiting, starting coordinated shutdown.");
+                if (_coordShutdown.ShutdownReason == null)
+                    _cluster.LogInfo("Exiting, starting coordinated shutdown.");
                 _selfExiting.TrySetResult(Done.Instance);
                 _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
@@ -2162,7 +2165,7 @@ namespace Akka.Cluster
                 var unreachable = _latestGossip.Overview.Reachability.AllUnreachableOrTerminated;
                 var downed = _latestGossip.Members.Where(m => m.Status == MemberStatus.Down)
                     .Select(m => m.UniqueAddress).ToList();
-                if (downed.All(node => unreachable.Contains(node) || _latestGossip.SeenByNode(node)))
+                if (_selfDownCounter >= MaxTicksBeforeShuttingDownMyself || downed.All(node => unreachable.Contains(node) || _latestGossip.SeenByNode(node)))
                 {
                     // the reason for not shutting down immediately is to give the gossip a chance to spread
                     // the downing information to other downed nodes, so that they can shutdown themselves
@@ -2171,6 +2174,10 @@ namespace Akka.Cluster
                     // if other downed know that this node has seen the version
                     SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
                     Shutdown();
+                }
+                else
+                {
+                    _selfDownCounter++;
                 }
             }
         }
@@ -2290,7 +2297,8 @@ namespace Akka.Cluster
                     // the leaving process. Meanwhile the gossip state is not marked as seen.
 
                     _exitingTasksInProgress = true;
-                    _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
+                    if (_coordShutdown.ShutdownReason == null)
+                        _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
                     _selfExiting.TrySetResult(Done.Instance);
                     _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
                 }
@@ -2315,6 +2323,26 @@ namespace Akka.Cluster
                 }
 
                 Publish(_latestGossip);
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting));
+            }
+        }
+
+        /// <summary>
+        /// Gossip the Exiting change to the two oldest nodes for quick dissemination to potential Singleton nodes
+        /// </summary>
+        /// <param name="exitingMembers"></param>
+        private void GossipExitingMembersToOldest(IEnumerable<Member> exitingMembers)
+        {
+            var targets = GossipTargetsForExitingMembers(_latestGossip, exitingMembers);
+            if (targets != null && targets.Any())
+            {
+                if (_log.IsDebugEnabled)
+                    _log.Debug(
+                      "Cluster Node [{0}] - Gossip exiting members [{1}] to the two oldest (per role) [{2}] (singleton optimization).",
+                      SelfUniqueAddress, string.Join(", ", exitingMembers), string.Join(", ", targets));
+
+                foreach (var m in targets)
+                    GossipTo(m.UniqueAddress);
             }
         }
 
@@ -2463,6 +2491,35 @@ namespace Akka.Cluster
         {
             return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
                     _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
+        }
+
+        /// <summary>
+        /// The Exiting change is gossiped to the two oldest nodes for quick dissemination to potential Singleton nodes
+        /// </summary>
+        /// <param name="latestGossip"></param>
+        /// <param name="exitingMembers"></param>
+        /// <returns></returns>
+        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IEnumerable<Member> exitingMembers)
+        {
+            if (exitingMembers.Any())
+            {
+                var roles = exitingMembers.SelectMany(m => m.Roles);
+                var membersSortedByAge = latestGossip.Members.OrderBy(m => m, Member.AgeOrdering);
+                var targets = new HashSet<Member>();
+
+                var t = membersSortedByAge.Take(2).ToArray(); // 2 oldest of all nodes
+                targets.UnionWith(t);
+
+                foreach (var role in roles)
+                {
+                    t = membersSortedByAge.Where(i => i.HasRole(role)).Take(2).ToArray(); // 2 oldest with the role
+                    if (t.Length > 0)
+                        targets.UnionWith(t);
+                }
+
+                return targets;
+            }
+            return null;
         }
 
         /// <summary>

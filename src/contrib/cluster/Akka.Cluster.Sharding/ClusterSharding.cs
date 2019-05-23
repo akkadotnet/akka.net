@@ -1109,7 +1109,7 @@ namespace Akka.Cluster.Sharding
             throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 
-        private IShardAllocationStrategy DefaultShardAllocationStrategy(ClusterShardingSettings settings)
+        public IShardAllocationStrategy DefaultShardAllocationStrategy(ClusterShardingSettings settings)
         {
             return new LeastShardAllocationStrategy(
                 Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,

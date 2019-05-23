@@ -48,7 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal("akka.cluster.singleton", config.GetString("coordinator-singleton"));
             Assert.Equal(string.Empty, config.GetString("use-dispatcher"));
 
-            Assert.Equal(10, config.GetInt("least-shard-allocation-strategy.rebalance-threshold"));
+            Assert.Equal(1, config.GetInt("least-shard-allocation-strategy.rebalance-threshold"));
             Assert.Equal(3, config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"));
 
             Assert.Equal("all", config.GetString("entity-recovery-strategy"));
@@ -61,7 +61,7 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal("singleton", singletonConfig.GetString("singleton-name"));
             Assert.Equal(string.Empty, singletonConfig.GetString("role"));
             Assert.Equal(TimeSpan.FromSeconds(1), singletonConfig.GetTimeSpan("hand-over-retry-interval"));
-            Assert.Equal(10, singletonConfig.GetInt("min-number-of-hand-over-retries"));
+            Assert.Equal(15, singletonConfig.GetInt("min-number-of-hand-over-retries"));
         }
     }
 }
