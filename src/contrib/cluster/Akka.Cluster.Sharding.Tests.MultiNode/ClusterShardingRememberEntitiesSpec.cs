@@ -63,6 +63,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                 "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
+                .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
@@ -158,7 +159,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();
