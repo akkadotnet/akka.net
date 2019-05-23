@@ -574,11 +574,13 @@ namespace Akka.Persistence.Tests
 
                 CommandAsync<string>(async msg =>
                 {
+                    var sender = Sender;
+                    var self = Self;
                     Task.Run(() =>
                     {
                         Thread.Sleep(10);
                         return msg;
-                    }).PipeTo(Sender, Self); //LogicalContext is lost?!?
+                    }).PipeTo(sender, self); 
 
                     Thread.Sleep(3000);
                 });
