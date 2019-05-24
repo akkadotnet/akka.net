@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -29,12 +30,12 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void EndpointRegistry_must_be_able_to_register_a_writeable_endpoint_and_policy()
+        public void EndpointRegistry_must_be_able_to_register_a_writable_endpoint_and_policy()
         {
             var reg = new EndpointRegistry();
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
 
-            Assert.Equal(actorA, reg.RegisterWritableEndpoint(address1, actorA,null,null));
+            Assert.Equal(actorA, reg.RegisterWritableEndpoint(address1, actorA,null));
 
             Assert.IsType<EndpointManager.Pass>(reg.WritableEndpointWithPolicyFor(address1));
             Assert.Equal(actorA, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Pass>().Endpoint);
@@ -68,7 +69,7 @@ namespace Akka.Remote.Tests
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
 
             Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA, 1));
-            Assert.Equal(actorB, reg.RegisterWritableEndpoint(address1, actorB, null,null));
+            Assert.Equal(actorB, reg.RegisterWritableEndpoint(address1, actorB, null));
 
             Assert.Equal(Tuple.Create(actorA,1), reg.ReadOnlyEndpointFor(address1));
             Assert.Equal(actorB, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Pass>().Endpoint);
@@ -85,11 +86,10 @@ namespace Akka.Remote.Tests
         {
             var reg = new EndpointRegistry();
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
-            reg.RegisterWritableEndpoint(address1, actorA, null, null);
+            reg.RegisterWritableEndpoint(address1, actorA, null);
             var deadline = Deadline.Now;
             reg.MarkAsFailed(actorA, deadline);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
-            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().RefuseUid);
             Assert.False(reg.IsReadOnly(actorA));
             Assert.False(reg.IsWritable(actorA));
         }
@@ -107,8 +107,8 @@ namespace Akka.Remote.Tests
         public void EndpointRegistry_must_keep_tombstones_when_removing_an_endpoint()
         {
             var reg = new EndpointRegistry();
-            reg.RegisterWritableEndpoint(address1, actorA, null, null);
-            reg.RegisterWritableEndpoint(address2, actorB, null, null);
+            reg.RegisterWritableEndpoint(address1, actorA, null);
+            reg.RegisterWritableEndpoint(address2, actorB, null);
             var deadline = Deadline.Now;
             reg.MarkAsFailed(actorA, deadline);
             reg.MarkAsQuarantined(address2, 42, deadline);
@@ -117,7 +117,6 @@ namespace Akka.Remote.Tests
             reg.UnregisterEndpoint(actorB);
 
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
-            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().RefuseUid);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Quarantined>().Deadline);
             Assert.Equal(42, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Quarantined>().Uid);
         }
@@ -126,14 +125,13 @@ namespace Akka.Remote.Tests
         public void EndpointRegistry_should_prune_outdated_Gated_directives_properly()
         {
             var reg = new EndpointRegistry();
-            reg.RegisterWritableEndpoint(address1, actorA, null, null);
-            reg.RegisterWritableEndpoint(address2, actorB, null, null);
+            reg.RegisterWritableEndpoint(address1, actorA, null);
+            reg.RegisterWritableEndpoint(address2, actorB, null);
             reg.MarkAsFailed(actorA, Deadline.Now);
             var farIntheFuture = Deadline.Now + TimeSpan.FromSeconds(60);
             reg.MarkAsFailed(actorB, farIntheFuture);
             reg.Prune();
 
-            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
             Assert.Equal(farIntheFuture, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
         }
 
@@ -176,7 +174,7 @@ namespace Akka.Remote.Tests
             Assert.True(reg.IsQuarantined(address1, quarantinedUid));
 
             var writableUid = 43;
-            reg.RegisterWritableEndpoint(address1, TestActor, writableUid, quarantinedUid);
+            reg.RegisterWritableEndpoint(address1, TestActor, writableUid);
             Assert.True(reg.IsWritable(TestActor));
         }
 
@@ -187,33 +185,64 @@ namespace Akka.Remote.Tests
             var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
             var willBeGated = 42;
 
-            reg.RegisterWritableEndpoint(address1, TestActor, willBeGated, null);
+            reg.RegisterWritableEndpoint(address1, TestActor, willBeGated);
             Assert.NotNull(reg.WritableEndpointWithPolicyFor(address1));
             Assert.True(reg.IsWritable(TestActor));
             reg.MarkAsFailed(TestActor, deadline);
             Assert.False(reg.IsWritable(TestActor));
 
             var writableUid = 43;
-            reg.RegisterWritableEndpoint(address1, TestActor, writableUid, willBeGated);
+            reg.RegisterWritableEndpoint(address1, TestActor, writableUid);
             Assert.True(reg.IsWritable(TestActor));
         }
 
         [Fact]
-        public void EndpointRegister_should_not_report_endpoint_as_writeable_if_no_Pass_policy()
+        public void EndpointRegistry_should_not_report_endpoint_as_writable_if_no_Pass_policy()
         {
             var reg = new EndpointRegistry();
             var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
             
             Assert.False(reg.IsWritable(TestActor)); // no policy
 
-            reg.RegisterWritableEndpoint(address1, TestActor, 42, null);
+            reg.RegisterWritableEndpoint(address1, TestActor, 42);
             Assert.True(reg.IsWritable(TestActor)); // pass
             reg.MarkAsFailed(TestActor, deadline); 
             Assert.False(reg.IsWritable(TestActor)); // Gated
-            reg.RegisterWritableEndpoint(address1, TestActor, 43, 42); // restarted
+            reg.RegisterWritableEndpoint(address1, TestActor, 43); // restarted
             Assert.True(reg.IsWritable(TestActor)); // pass
             reg.MarkAsQuarantined(address1, 43, deadline);
-            Assert.False(reg.HasWriteableEndpointFor(address1)); // Quarantined
+            Assert.False(reg.HasWritableEndpointFor(address1)); // Quarantined
+        }
+
+        [Fact]
+        public void EndpointRegistry_should_keep_refuseUid_after_register_new_Endpoint()
+        {
+            var reg = new EndpointRegistry();
+            var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
+
+            reg.RegisterWritableEndpoint(address1, actorA, null);
+            reg.MarkAsQuarantined(address1, 42, deadline);
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
+
+            reg.UnregisterEndpoint(actorA);
+            // Quarantined marker is kept so far
+            var policy = reg.WritableEndpointWithPolicyFor(address1);
+            policy.Should().BeOfType<EndpointManager.Quarantined>();
+            policy.AsInstanceOf<EndpointManager.Quarantined>().Uid.Should().Be(42);
+            policy.AsInstanceOf<EndpointManager.Quarantined>().Deadline.Should().Be(deadline);
+
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
+
+            reg.RegisterWritableEndpoint(address1, actorB, null);
+            // Quarantined marker is gone
+            var policy2 = reg.WritableEndpointWithPolicyFor(address1);
+            policy2.Should().BeOfType<EndpointManager.Pass>();
+            policy2.AsInstanceOf<EndpointManager.Pass>().Endpoint.Should().Be(actorB);
+            // but we still have the refuseUid
+            reg.RefuseUid(address1).Should().Be(42);
+            reg.IsQuarantined(address1, 42).Should().BeTrue();
         }
     }
 }
