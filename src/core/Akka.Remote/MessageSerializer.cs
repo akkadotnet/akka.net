@@ -42,8 +42,10 @@ namespace Akka.Remote
         /// <returns>SerializedMessage.</returns>
         public static SerializedMessage Serialize(ActorSystem system, Address address, object message)
         {
-            var objectType = message.GetType();
-            Serializer serializer = system.Serialization.FindSerializerForType(objectType);
+            var serialization = system.Serialization;
+            var serializer = system.Serialization.FindSerializerFor(message);
+
+            var oldInfo = serialization.
 
             var serializedMsg = new SerializedMessage
             {

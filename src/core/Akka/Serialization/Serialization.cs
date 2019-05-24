@@ -134,7 +134,7 @@ namespace Akka.Serialization
             var info = system.Provider.SerializationInformation;
             if (CurrentTransportInfo == info)
             {
-                CurrentTransportInfo = info;
+                // already set
                 return action();
             }
 

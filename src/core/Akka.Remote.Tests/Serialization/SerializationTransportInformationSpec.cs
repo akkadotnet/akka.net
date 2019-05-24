@@ -185,7 +185,7 @@ namespace Akka.Remote.Tests.Serialization
                 port = 0
             }";
 
-        protected SerializationTransportInformationSpec(ITestOutputHelper helper) : base(DotNettyConfig, helper)
+        public SerializationTransportInformationSpec(ITestOutputHelper helper) : base(DotNettyConfig, helper)
         {
         }
     }
