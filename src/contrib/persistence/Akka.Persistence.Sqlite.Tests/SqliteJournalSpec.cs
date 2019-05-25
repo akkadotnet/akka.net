@@ -24,6 +24,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Initialize();
         }
 
+        protected override bool SupportsSerialization => true;
+
         private static Config CreateSpecConfig(string connectionString)
         {
             return ConfigurationFactory.ParseString(@"

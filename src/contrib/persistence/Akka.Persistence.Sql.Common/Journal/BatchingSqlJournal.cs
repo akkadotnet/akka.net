@@ -1206,9 +1206,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
 
             string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            if (serializer is SerializerWithStringManifest stringManifest)
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(persistent.Payload);
+                manifest = stringManifest.Manifest(persistent.Payload);
             }
             else
             {

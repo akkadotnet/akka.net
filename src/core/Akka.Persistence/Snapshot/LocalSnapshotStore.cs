@@ -199,7 +199,8 @@ namespace Akka.Persistence.Snapshot
             var buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
             var snapshotType = typeof(Serialization.Snapshot);
-            var snapshot = (Serialization.Snapshot)_serialization.Deserialize(buffer, snapshotType);
+            var serializerId = _serialization.FindSerializerForType(snapshotType).Identifier;
+            var snapshot = (Serialization.Snapshot)_serialization.Deserialize(buffer, serializerId, snapshotType);
             return snapshot;
         }
 
