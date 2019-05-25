@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
+using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,9 +32,19 @@ namespace Akka.Persistence.TCK.Snapshot
                     class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
                     plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
                 }
+            }
+            akka.actor{
+                serializers{
+                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+                }
+                serialization-bindings {
+                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
+                }
             }";
 
         protected static readonly Config Config = ConfigurationFactory.ParseString(_specConfigTemplate);
+
+        protected override bool SupportsSerialization => true;
 
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
@@ -240,6 +251,27 @@ namespace Akka.Persistence.TCK.Snapshot
             new Random().NextBytes(bigSnapshot);
             SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
             _senderProbe.ExpectMsg<SaveSnapshotSuccess>();
+        }
+
+
+        [Fact]
+        public void ShouldSerializeSnapshots()
+        {
+            var probe = CreateTestProbe();
+            var metadata = new SnapshotMetadata(Pid, 100L);
+            var snap = new TestPayload(probe.Ref);
+
+            SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<SaveSnapshotSuccess>(o => { Assertions.AssertEqual(metadata, o.Metadata); });
+
+            var pid = Pid;
+            SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<LoadSnapshotResult>(l =>
+            {
+                Assertions.AssertEqual(pid, l.Snapshot.Metadata.PersistenceId);
+                Assertions.AssertEqual(100L, l.Snapshot.Metadata.SequenceNr);
+                Assertions.AssertEqual(l.Snapshot.Snapshot, snap);
+            });
         }
     }
 }
