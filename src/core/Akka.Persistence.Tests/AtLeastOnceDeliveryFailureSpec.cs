@@ -144,9 +144,9 @@ namespace Akka.Persistence.Tests
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.sender.chaos");
                 _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
                 _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
-            }
 
-            public override TimeSpan RedeliverInterval { get { return TimeSpan.FromMilliseconds(500); } }
+                RedeliverInterval = TimeSpan.FromMilliseconds(500);
+            }
 
             public override string PersistenceId { get { return "chaosSender"; } }
 

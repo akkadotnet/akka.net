@@ -65,10 +65,13 @@ namespace Akka.Persistence
         /// Interval between redelivery attempts.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval => _atLeastOnceDeliverySemantic.RedeliverInterval;
+        public TimeSpan RedeliverInterval
+        {
+            get => _atLeastOnceDeliverySemantic.RedeliverInterval;
+            set => _atLeastOnceDeliverySemantic.RedeliverInterval = value;
+        }
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -77,20 +80,26 @@ namespace Akka.Persistence
         /// this helps prevent an overwhelming amount of messages to be sent at once.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual int RedeliveryBurstLimit => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
+        public int RedeliveryBurstLimit
+        {
+            get => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
+            set => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit = value;
+        }
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
         /// <see cref="ActorBase.Self" />. The count is reset after restart.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public int WarnAfterNumberOfUnconfirmedAttempts => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
+        public int WarnAfterNumberOfUnconfirmedAttempts
+        {
+            get => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
+            set => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts = value;
+        }
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -98,10 +107,13 @@ namespace Akka.Persistence
         /// messages and it will throw <see cref="MaxUnconfirmedMessagesExceededException" />.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public int MaxUnconfirmedMessages => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
+        public int MaxUnconfirmedMessages
+        {
+            get => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
+            set => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages = value;
+        }
 
         /// <summary>
         /// Number of messages that have not been confirmed yet.

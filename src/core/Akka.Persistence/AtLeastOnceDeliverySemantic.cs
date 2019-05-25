@@ -315,8 +315,10 @@ namespace Akka.Persistence
         private readonly IActorContext _context;
         private long _deliverySequenceNr;
         private ICancelable _redeliverScheduleCancelable;
-        private readonly PersistenceSettings.AtLeastOnceDeliverySettings _settings;
         private ImmutableSortedDictionary<long, Delivery> _unconfirmed = ImmutableSortedDictionary<long, Delivery>.Empty;
+        private TimeSpan _redeliverInterval;
+        private int _warnAfterNumberOfUnconfirmedAttempts;
+        private int _maxUnconfirmedMessages;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AtLeastOnceDeliverySemantic"/> class.
@@ -326,18 +328,37 @@ namespace Akka.Persistence
         public AtLeastOnceDeliverySemantic(IActorContext context, PersistenceSettings.AtLeastOnceDeliverySettings settings)
         {
             _context = context;
-            _settings = settings;
             _deliverySequenceNr = 0;
+
+            RedeliverInterval = settings.RedeliverInterval;
+            RedeliveryBurstLimit = settings.RedeliveryBurstLimit;
+            WarnAfterNumberOfUnconfirmedAttempts = settings.WarnAfterNumberOfUnconfirmedAttempts;
+            MaxUnconfirmedMessages = settings.MaxUnconfirmedMessages;
         }
 
         /// <summary>
         /// Interval between redelivery attempts.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval => _settings.RedeliverInterval;
+        public TimeSpan RedeliverInterval
+        {
+            get => _redeliverInterval;
+            set
+            {
+                if (_redeliverInterval != value)
+                {
+                    _redeliverInterval = value;
+                    if (_redeliverScheduleCancelable != null)
+                    {
+                        _redeliverScheduleCancelable.Cancel();
+                        _redeliverScheduleCancelable = null;
+                        StartRedeliverTask();
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -346,20 +367,37 @@ namespace Akka.Persistence
         /// this helps prevent an overwhelming amount of messages to be sent at once.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual int RedeliveryBurstLimit => _settings.RedeliveryBurstLimit;
+        public int RedeliveryBurstLimit { get; set; }
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
         /// <see cref="ActorBase.Self" />. The count is reset after restart.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual int WarnAfterNumberOfUnconfirmedAttempts => _settings.WarnAfterNumberOfUnconfirmedAttempts;
+        public int WarnAfterNumberOfUnconfirmedAttempts
+        {
+            get => _warnAfterNumberOfUnconfirmedAttempts;
+            set
+            {
+                if (_warnAfterNumberOfUnconfirmedAttempts != value)
+                {
+                    _warnAfterNumberOfUnconfirmedAttempts = value;
+
+                    var deliveriesAboveThreshold = _unconfirmed.Where(u => u.Value.Attempt >= value)
+                        .Select(u => new UnconfirmedDelivery(u.Key, u.Value.Destination, u.Value.Message))
+                        .ToArray();
+
+                    if (deliveriesAboveThreshold.Length > 0)
+                    {
+                        _context.Self.Tell(new UnconfirmedWarning(deliveriesAboveThreshold));
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -367,10 +405,24 @@ namespace Akka.Persistence
         /// messages and it will throw <see cref="MaxUnconfirmedMessagesExceededException" />.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key.
         /// </summary>
-        public virtual int MaxUnconfirmedMessages => _settings.MaxUnconfirmedMessages;
+        public int MaxUnconfirmedMessages
+        {
+            get => _maxUnconfirmedMessages;
+            set
+            {
+                if (_maxUnconfirmedMessages != value)
+                {
+                    _maxUnconfirmedMessages = value;
+                    if (_unconfirmed.Count >= value)
+                    {
+                        throw new MaxUnconfirmedMessagesExceededException(
+                            $"{_context.Self} has too many unconfirmed messages. Maximum allowed is {value}");
+                    }
+                }
+            }
+        }
 
         /// <summary>
         ///     Number of messages, that have not been confirmed yet.
@@ -380,8 +432,8 @@ namespace Akka.Persistence
         private void StartRedeliverTask()
         {
             if (_redeliverScheduleCancelable != null) return;
-            var interval = new TimeSpan(RedeliverInterval.Ticks / 2);
-            _redeliverScheduleCancelable = _context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, interval, _context.Self,
+            var delay = new TimeSpan(RedeliverInterval.Ticks / 2);
+            _redeliverScheduleCancelable = _context.System.Scheduler.ScheduleTellRepeatedlyCancelable(delay, RedeliverInterval, _context.Self,
                 RedeliveryTick.Instance, _context.Self);
         }
 
