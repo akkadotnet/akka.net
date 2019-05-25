@@ -81,25 +81,21 @@ namespace Akka.Serialization
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
         [ThreadStatic]
-        internal static Information InternalCurrentTransportInfo;
+        internal static Information CurrentTransportInformation;
 
         /// <summary>
         ///  Retrieves the <see cref="Information"/> used for serializing and deserializing
         /// <see cref="IActorRef"/> instances in all serializers.
         /// </summary>
-        public static Information CurrentTransportInformation
+        public static Information GetCurrentTransportInformation()
         {
-            get
+            if (CurrentTransportInformation == null)
             {
-                if (InternalCurrentTransportInfo == null)
-                {
-                    throw new InvalidOperationException(
-                        "CurrentTransportInformation is not set. Use Serialization.WithTransport<T>.");
-                }
-
-                return InternalCurrentTransportInfo;
+                throw new InvalidOperationException(
+                    "CurrentTransportInformation is not set. Use Serialization.WithTransport<T>.");
             }
-            set => InternalCurrentTransportInfo = value;
+
+            return CurrentTransportInformation;
         }
 
         /// <summary>
@@ -133,7 +129,6 @@ namespace Akka.Serialization
         public Serialization(ExtendedActorSystem system)
         {
             System = system;
-            SerializationInfo = system.Provider.SerializationInformation;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null", _nullSerializer);
 
@@ -184,7 +179,7 @@ namespace Akka.Serialization
             }
         }
 
-        private Information SerializationInfo { get; }
+        private Information SerializationInfo => System.Provider.SerializationInformation;
 
         /// <summary>
         /// Performs the requested serialization function while also setting
@@ -237,7 +232,7 @@ namespace Akka.Serialization
         /// <summary>
         /// The ActorSystem to which <see cref="Serialization"/> is bound.
         /// </summary>
-        public ActorSystem System { get; }
+        public ExtendedActorSystem System { get; }
 
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
@@ -417,10 +412,16 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// The serialized path of an actorRef, based on the current transport serialization information.
+        /// If there is no external address available for the requested address then the systems default
+        /// address will be used.
+        ///
+        /// If there is no external address available in the given <see cref="IActorRef"/> then the systems default
+        /// address will be used and that is retrieved from the ThreadLocal <see cref="Information"/>
+        /// that was set with <see cref="Serialization.WithTransportInformation{T}"/>
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The <see cref="IActorRef"/> to be serialized.</param>
+        /// <returns>Absolute path to the serialized actor.</returns>
         public static string SerializedActorPath(IActorRef actorRef)
         {
             if (Equals(actorRef, ActorRefs.NoSender))
@@ -440,18 +441,16 @@ namespace Akka.Serialization
                     var res = path.ToSerializationFormat();
                     return res;
                 }
-                else
+
+                try
                 {
-                    try
-                    {
-                        var defaultAddress = originalSystem.Provider.DefaultAddress;
-                        var res = path.ToSerializationFormatWithAddress(defaultAddress);
-                        return res;
-                    }
-                    catch
-                    {
-                        return path.ToSerializationFormat();
-                    }
+                    var defaultAddress = originalSystem.Provider.DefaultAddress;
+                    var res = path.ToSerializationFormatWithAddress(defaultAddress);
+                    return res;
+                }
+                catch
+                {
+                    return path.ToSerializationFormat();
                 }
             }
 

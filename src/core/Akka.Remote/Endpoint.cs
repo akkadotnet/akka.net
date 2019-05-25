@@ -82,7 +82,7 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
-            Type payloadClass = payload?.GetType();
+            var payloadClass = payload?.GetType();
             var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
