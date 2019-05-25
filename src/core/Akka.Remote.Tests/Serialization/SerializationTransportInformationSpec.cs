@@ -161,7 +161,7 @@ namespace Akka.Remote.Tests.Serialization
             t1.To.Should().Be(echo);
 
             echo.Tell(new JsonSerTestMessage(TestActor, echo));
-            var t2 = ExpectMsg<TestMessage>();
+            var t2 = ExpectMsg<JsonSerTestMessage>();
             t2.From.Should().Be(TestActor);
             t2.To.Should().Be(echo);
 
