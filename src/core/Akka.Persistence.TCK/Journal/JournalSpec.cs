@@ -289,7 +289,7 @@ namespace Akka.Persistence.TCK.Journal
             probe.ExpectMsg<WriteMessagesSuccessful>();
             var pid = Pid;
             var writerGuid = WriterGuid;
-            probe.ExpectMsg<ReplayedMessage>(o =>
+            probe.ExpectMsg<WriteMessageSuccess>(o =>
             {
                 Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
                 Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
@@ -298,7 +298,18 @@ namespace Akka.Persistence.TCK.Journal
                 Assertions.AssertEqual(@event, o.Persistent.Payload);
             });
 
-            Assertions.AssertEqual(probe.ExpectMsg<RecoverySuccess>().HighestSequenceNr, 6L);
+            Journal.Tell(new ReplayMessages(6L, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+
+            _receiverProbe.ExpectMsg<ReplayedMessage>(o =>
+            {
+                Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
+                Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
+                Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
+                Assertions.AssertEqual(ActorRefs.NoSender, o.Persistent.Sender);
+                Assertions.AssertEqual(@event, o.Persistent.Payload);
+            });
+
+            Assertions.AssertEqual(_receiverProbe.ExpectMsg<RecoverySuccess>().HighestSequenceNr, 6L);
         }
 
 #if !CORECLR

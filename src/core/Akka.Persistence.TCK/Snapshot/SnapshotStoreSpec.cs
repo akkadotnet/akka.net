@@ -262,7 +262,11 @@ namespace Akka.Persistence.TCK.Snapshot
             var snap = new TestPayload(probe.Ref);
 
             SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);
-            _senderProbe.ExpectMsg<SaveSnapshotSuccess>(o => { Assertions.AssertEqual(metadata, o.Metadata); });
+            _senderProbe.ExpectMsg<SaveSnapshotSuccess>(o =>
+            {
+                Assertions.AssertEqual(metadata.PersistenceId, o.Metadata.PersistenceId);
+                Assertions.AssertEqual(metadata.SequenceNr, o.Metadata.SequenceNr);
+            });
 
             var pid = Pid;
             SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
