@@ -45,7 +45,7 @@ namespace Akka.Remote
             var serialization = system.Serialization;
             var serializer = system.Serialization.FindSerializerFor(message);
 
-            var oldInfo = serialization.
+            //var oldInfo = serialization.
 
             var serializedMsg = new SerializedMessage
             {

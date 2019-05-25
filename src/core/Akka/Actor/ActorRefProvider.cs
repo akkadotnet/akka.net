@@ -360,9 +360,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the ActorRefProvider
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The concrete ActorSystem implementation.</param>
         public void Init(ActorSystemImpl system)
         {
             _system = system;
@@ -586,20 +586,20 @@ namespace Akka.Actor
         /// </summary>
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
-        private Information _seraliazationInformationCache;
+        private Information _serializationInformationCache;
 
         public Information SerializationInformation
         {
             get
             {
-                if (_seraliazationInformationCache != null)
-                    return _seraliazationInformationCache;
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
 
                 if (_system == null)
                     throw new InvalidOperationException("Too early access of SerializationInformation");
 
                 var info = new Information(_rootPath.Address, _system);
-                _seraliazationInformationCache = info;
+                _serializationInformationCache = info;
                 return info;
             }
         }

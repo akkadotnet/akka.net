@@ -189,20 +189,20 @@ namespace Akka.Remote
         /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
 
-        private Information _seraliazationInformationCache;
+        private Information _serializationInformationCache;
 
         public Information SerializationInformation
         {
             get
             {
-                if (_seraliazationInformationCache != null)
-                    return _seraliazationInformationCache;
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
 
                 if (Transport == null || Transport.DefaultAddress == null)
                     return _local.SerializationInformation; // address not know yet, access before complete init and binding
 
                 var info = new Information(Transport.DefaultAddress, Transport.System);
-                _seraliazationInformationCache = info;
+                _serializationInformationCache = info;
                 return info;
             }
         }

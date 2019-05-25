@@ -78,7 +78,7 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
-            return Serialization.SerializeWithTransport(system, address, () => ToBinary(obj));
+            return Serialization.WithTransport(system, address, () => ToBinary(obj));
         }
 
         /// <summary>
