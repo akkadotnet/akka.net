@@ -50,7 +50,7 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ILoggingAdapter _log;
         private readonly IInternalActorRef _remoteDaemon;
@@ -62,7 +62,7 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
             _system = system;
             _provider = provider;
@@ -1022,7 +1022,7 @@ namespace Akka.Remote
             _refuseUid = refuseUid;
             _codec = codec;
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
-            _system = Context.System;
+            _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
@@ -1045,7 +1045,7 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
