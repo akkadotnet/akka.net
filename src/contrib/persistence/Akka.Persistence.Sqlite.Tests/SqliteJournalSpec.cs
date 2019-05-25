@@ -24,7 +24,8 @@ namespace Akka.Persistence.Sqlite.Tests
             Initialize();
         }
 
-        protected override bool SupportsSerialization => true;
+        // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+        protected override bool SupportsSerialization => false;
 
         private static Config CreateSpecConfig(string connectionString)
         {
