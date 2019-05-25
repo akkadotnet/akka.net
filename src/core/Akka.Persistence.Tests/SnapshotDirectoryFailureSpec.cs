@@ -58,7 +58,7 @@ namespace Akka.Persistence.Tests
         protected override void AtStartup()
         {
             base.AtStartup();
-            try // try to create the directory first.
+            try // try to create the directory first.d
             {
                 _file.Directory.Create();
             }
