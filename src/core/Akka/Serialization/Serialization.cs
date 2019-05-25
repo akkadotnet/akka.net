@@ -302,6 +302,16 @@ namespace Akka.Serialization
             });
         }
 
+        public object Deserialize(byte[] bytes, Type type)
+        {
+            return WithTransport(() =>
+            {
+                var serializer = FindSerializerForType(type);
+
+                return serializer.FromBinary(bytes, type);
+            });
+        }
+
         /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
@@ -349,6 +359,16 @@ namespace Akka.Serialization
             {
                 Serialization.CurrentTransportInformation = oldInfo;
             }
+        }
+
+        public object Deserialize(byte[] bytes, string manifest)
+        {
+            return WithTransport(() =>
+            {
+                var serializer = FindSerializerForType(type);
+
+                return serializer.FromBinary(bytes, type);
+            });
         }
 
         /// <summary>

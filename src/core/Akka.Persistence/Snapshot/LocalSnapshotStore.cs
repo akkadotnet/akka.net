@@ -199,8 +199,7 @@ namespace Akka.Persistence.Snapshot
             var buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
             var snapshotType = typeof(Serialization.Snapshot);
-            var serializer = _serialization.FindSerializerForType(snapshotType, _defaultSerializer);
-            var snapshot = (Serialization.Snapshot)serializer.FromBinary(buffer, snapshotType);
+            var snapshot = (Serialization.Snapshot)_serialization.Deserialize(buffer, snapshotType);
             return snapshot;
         }
 
@@ -211,8 +210,7 @@ namespace Akka.Persistence.Snapshot
         /// <param name="snapshot">TBD</param>
         protected void Serialize(Stream stream, Serialization.Snapshot snapshot)
         {
-            var serializer = _serialization.FindSerializerFor(snapshot, _defaultSerializer);
-            var bytes = serializer.ToBinary(snapshot);
+            var bytes = _serialization.Serialize(snapshot);
             stream.Write(bytes, 0, bytes.Length);
         }
 

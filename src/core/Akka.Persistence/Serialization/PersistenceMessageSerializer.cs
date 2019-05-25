@@ -57,26 +57,42 @@ namespace Akka.Persistence.Serialization
 
         private PersistentPayload GetPersistentPayload(object obj)
         {
-            Serializer serializer = system.Serialization.FindSerializerFor(obj);
-            var payload = new PersistentPayload();
+            PersistentPayload BuildPayload()
+            {
+                var serializer = system.Serialization.FindSerializerFor(obj);
+                var payload = new PersistentPayload();
 
-            if (serializer is SerializerWithStringManifest serializer2)
-            {
-                string manifest = serializer2.Manifest(obj);
-                payload.PayloadManifest = ByteString.CopyFromUtf8(manifest);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                if (serializer is SerializerWithStringManifest serializer2)
                 {
-                    payload.PayloadManifest = ByteString.CopyFromUtf8(obj.GetType().TypeQualifiedName());
+                    var manifest = serializer2.Manifest(obj);
+                    payload.PayloadManifest = ByteString.CopyFromUtf8(manifest);
                 }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                    {
+                        payload.PayloadManifest = ByteString.CopyFromUtf8(obj.GetType().TypeQualifiedName());
+                    }
+                }
+
+                payload.Payload = ByteString.CopyFrom(serializer.ToBinary(obj));
+                payload.SerializerId = serializer.Identifier;
+
+                return payload;
             }
 
-            payload.Payload = ByteString.CopyFrom(serializer.ToBinary(obj));
-            payload.SerializerId = serializer.Identifier;
-
-            return payload;
+            var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Akka.Serialization.Serialization.CurrentTransportInformation =
+                        system.Provider.SerializationInformation;
+                return BuildPayload();
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
+            }
         }
 
         private Proto.Msg.AtomicWrite GetAtomicWrite(AtomicWrite write)
