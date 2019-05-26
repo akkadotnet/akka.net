@@ -10,6 +10,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+#if CORECLR
+using System.Runtime.Loader;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
@@ -678,8 +681,13 @@ namespace Akka.Actor
                     // have to block, because if this method exits the process exits.
                     coord.RunClrHooks().Wait(coord.TotalTimeout);
                 };
-#else
-                // TODO: what to do for NetCore?
+#elif CORECLR
+                // shutdown hook supported from .NET Standard 1.6
+                AssemblyLoadContext.Default.Unloading += (ctx) =>
+                {
+                    // have to block, because if this method exits the process exits.
+                    coord.RunClrHooks().Wait(coord.TotalTimeout);
+                };
 #endif
 
                 coord.AddClrShutdownHook(() =>
