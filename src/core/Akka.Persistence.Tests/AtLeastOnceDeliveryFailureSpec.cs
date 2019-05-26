@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -330,8 +331,8 @@ namespace Akka.Persistence.Tests
 
         internal const int NumberOfMessages = 10;
 
-        public AtLeastOnceDeliveryFailureSpec()
-            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()))
+        public AtLeastOnceDeliveryFailureSpec(ITestOutputHelper output)
+            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()), output)
         {
         }
 
