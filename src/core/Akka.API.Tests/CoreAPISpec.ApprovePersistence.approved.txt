@@ -16,11 +16,11 @@ namespace Akka.Persistence
     {
         protected AtLeastOnceDeliveryActor() { }
         protected AtLeastOnceDeliveryActor(Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings settings) { }
-        public int MaxUnconfirmedMessages { get; }
-        public virtual System.TimeSpan RedeliverInterval { get; }
-        public virtual int RedeliveryBurstLimit { get; }
+        public int MaxUnconfirmedMessages { get; set; }
+        public System.TimeSpan RedeliverInterval { get; set; }
+        public int RedeliveryBurstLimit { get; set; }
         public int UnconfirmedCount { get; }
-        public int WarnAfterNumberOfUnconfirmedAttempts { get; }
+        public int WarnAfterNumberOfUnconfirmedAttempts { get; set; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
@@ -35,11 +35,11 @@ namespace Akka.Persistence
     {
         protected AtLeastOnceDeliveryReceiveActor() { }
         protected AtLeastOnceDeliveryReceiveActor(Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings settings) { }
-        public int MaxUnconfirmedMessages { get; }
-        public virtual System.TimeSpan RedeliverInterval { get; }
-        public int RedeliveryBurstLimit { get; }
+        public int MaxUnconfirmedMessages { get; set; }
+        public System.TimeSpan RedeliverInterval { get; set; }
+        public int RedeliveryBurstLimit { get; set; }
         public int UnconfirmedCount { get; }
-        public int WarnAfterNumberOfUnconfirmedAttempts { get; }
+        public int WarnAfterNumberOfUnconfirmedAttempts { get; set; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
@@ -53,11 +53,11 @@ namespace Akka.Persistence
     public class AtLeastOnceDeliverySemantic
     {
         public AtLeastOnceDeliverySemantic(Akka.Actor.IActorContext context, Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings settings) { }
-        public virtual int MaxUnconfirmedMessages { get; }
-        public virtual System.TimeSpan RedeliverInterval { get; }
-        public virtual int RedeliveryBurstLimit { get; }
+        public int MaxUnconfirmedMessages { get; set; }
+        public System.TimeSpan RedeliverInterval { get; set; }
+        public int RedeliveryBurstLimit { get; set; }
         public int UnconfirmedCount { get; }
-        public virtual int WarnAfterNumberOfUnconfirmedAttempts { get; }
+        public int WarnAfterNumberOfUnconfirmedAttempts { get; set; }
         public bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void Cancel() { }
         public bool ConfirmDelivery(long deliveryId) { }
