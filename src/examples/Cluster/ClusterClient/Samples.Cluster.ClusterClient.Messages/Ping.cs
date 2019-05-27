@@ -1,20 +1,19 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
+// <copyright file="Ping.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Reflection;
-using BenchmarkDotNet.Running;
-
-namespace Akka.Benchmarks
+namespace Samples.Cluster.ClusterClient.Messages
 {
-    class Program
+    public class Ping
     {
-        static void Main(string[] args)
+        public Ping(string msg)
         {
-            BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args);
+            Msg = msg;
         }
+
+        public string Msg { get; }
     }
 }

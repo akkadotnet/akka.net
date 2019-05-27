@@ -1,20 +1,24 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
+// <copyright file="Pong.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Reflection;
-using BenchmarkDotNet.Running;
+using Akka.Actor;
 
-namespace Akka.Benchmarks
+namespace Samples.Cluster.ClusterClient.Messages
 {
-    class Program
+    public class Pong
     {
-        static void Main(string[] args)
+        public Pong(string rsp, Address replyAddr)
         {
-            BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args);
+            Rsp = rsp;
+            ReplyAddr = replyAddr;
         }
+
+        public string Rsp { get; }
+
+        public Address ReplyAddr { get; }
     }
 }
