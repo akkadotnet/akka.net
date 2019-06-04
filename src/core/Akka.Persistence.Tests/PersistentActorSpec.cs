@@ -617,9 +617,7 @@ namespace Akka.Persistence.Tests
         {
             var persistentActor = ActorOf(Props.Create(() => new PersistInRecovery(Name)));
             persistentActor.Tell(GetState.Instance);
-            ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2");
-            persistentActor.Tell(GetState.Instance);
-            ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2", "rc-3");
+            ExpectAnyMsgInOrder(new[]{"a-1", "a-2", "rc-1", "rc-2" }, new[] { "a-1", "a-2", "rc-1", "rc-2", "rc-3" });
             persistentActor.Tell(new Cmd("invalid"));
             persistentActor.Tell(GetState.Instance);
             ExpectMsgInOrder("a-1", "a-2", "rc-1", "rc-2", "rc-3", "invalid");
