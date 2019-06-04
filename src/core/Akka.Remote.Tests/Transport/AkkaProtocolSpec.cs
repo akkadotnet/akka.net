@@ -51,6 +51,7 @@ namespace Akka.Remote.Tests.Transport
         public AkkaProtocolSpec(ITestOutputHelper helper)
             : base(@"
                     akka.actor.provider = remote
+                    akka.remote.dot-netty.tcp.port = 0
                     akka.test.default-timeout = 1.5 s", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);

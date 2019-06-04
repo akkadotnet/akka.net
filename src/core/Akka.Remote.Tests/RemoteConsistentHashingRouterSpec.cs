@@ -20,7 +20,8 @@ namespace Akka.Remote.Tests
     {
 
         public RemoteConsistentHashingRouterSpec()
-            : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
+            : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+                           akka.remote.dot-netty.tcp.port = 0")
         {
             
         }
