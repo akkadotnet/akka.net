@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -116,8 +117,8 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public AtLeastOnceDeliveryCrashSpec()
-            : base(PersistenceSpec.Configuration("AtLeastOnceDeliveryCrashSpec", serialization: "off"))
+        public AtLeastOnceDeliveryCrashSpec(ITestOutputHelper output)
+            : base(PersistenceSpec.Configuration("AtLeastOnceDeliveryCrashSpec", serialization: "off"), output)
         {
         }
 
