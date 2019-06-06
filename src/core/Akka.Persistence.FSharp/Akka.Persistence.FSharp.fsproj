@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.FSharp</AssemblyTitle>
     <Description>F# API for persistence actors in Akka.NET</Description>
-    <TargetFrameworks>$(NetFrameworkLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;F#;Fsharp;persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -17,12 +17,4 @@
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.2.3"/>
-  </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
 </Project>
