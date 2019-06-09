@@ -179,7 +179,9 @@ Target "Build" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = additionalArgs })
 
-        getAffectedProjects.Value.Value|> Seq.iter buildProject
+        match getAffectedProjects.Value with
+        | Some p -> p |> Seq.iter buildProject
+        | None -> buildProject solution // build the entire solution if incrementalist is disabled
 )
 
 //--------------------------------------------------------------------------------
