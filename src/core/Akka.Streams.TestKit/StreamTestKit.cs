@@ -80,7 +80,7 @@ namespace Akka.Streams.TestKit
             {
                 
                 PublisherProbe.ExpectMsg<TestPublisher.RequestMore>(
-                    x => x.NrOfElements == n && Equals(x.Subscription, this),TimeSpan.FromMilliseconds(100));
+                    x => x.NrOfElements == n && Equals(x.Subscription, this));
             }
 
             public long ExpectRequest()
