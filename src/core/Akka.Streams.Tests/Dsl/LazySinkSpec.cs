@@ -293,6 +293,5 @@ namespace Akka.Streams.Tests.Dsl
                 return new FailingLogic(Shape, _ex);
             }
         }
-
     }
 }
