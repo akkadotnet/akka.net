@@ -145,17 +145,32 @@ namespace Akka.Cluster.Sharding
     public sealed class GetClusterShardingStats : IShardRegionQuery
     {
         /// <summary>
-        /// TBD
+        /// The timeout for this operation.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a new GetClusterShardingStats message instance.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The amount of time to allow this operation to run.</param>
         public GetClusterShardingStats(TimeSpan timeout)
         {
             Timeout = timeout;
+        }
+
+        private bool Equals(GetClusterShardingStats other)
+        {
+            return Timeout.Equals(other.Timeout);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is GetClusterShardingStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Timeout.GetHashCode();
         }
     }
 
@@ -166,17 +181,33 @@ namespace Akka.Cluster.Sharding
     public sealed class ClusterShardingStats
     {
         /// <summary>
-        /// TBD
+        /// All of the statistics for a specific shard region organized per-node.
         /// </summary>
         public readonly IImmutableDictionary<Address, ShardRegionStats> Regions;
 
         /// <summary>
-        /// TBD
+        /// Creates a new ClusterShardingStats message.
         /// </summary>
-        /// <param name="regions">TBD</param>
+        /// <param name="regions">The set of sharding statistics per-node.</param>
         public ClusterShardingStats(IImmutableDictionary<Address, ShardRegionStats> regions)
         {
             Regions = regions;
+        }
+
+        private bool Equals(ClusterShardingStats other)
+        {
+            return Regions.Keys.SequenceEqual(other.Regions.Keys) &&
+                   Regions.Values.SequenceEqual(other.Regions.Values);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is ClusterShardingStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Regions.GetHashCode();
         }
     }
 

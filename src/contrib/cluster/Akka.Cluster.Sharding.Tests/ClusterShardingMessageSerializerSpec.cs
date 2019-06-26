@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Serialization;
@@ -137,6 +138,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             CheckSerialization(new ShardRegion.StartEntity("42"));
             CheckSerialization(new ShardRegion.StartEntityAck("13", "37"));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_serialize_ClusterShardingStats()
+        {
+            CheckSerialization(new GetClusterShardingStats(TimeSpan.FromMilliseconds(500)));
+            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty.Add(Address.AllSystems, 
+                new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)))));
         }
     }
 }
