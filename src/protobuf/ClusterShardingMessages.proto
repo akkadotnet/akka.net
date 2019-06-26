@@ -5,6 +5,9 @@
 syntax = "proto3";
 package Akka.Cluster.Sharding.Serialization.Proto.Msg;
 
+import 'duration.proto';
+import "ContainerFormats.proto";
+
 message CoordinatorState {
   message ShardEntry {
     string shardId = 1;
@@ -56,11 +59,6 @@ message ShardRegionStats {
   map<string, int32> stats = 1;
 }
 
-message MapFieldEntry {
-   string key = 1;
-   int32 value = 2;
-}
-
 message StartEntity {
     string entityId = 1;
 }
@@ -68,4 +66,17 @@ message StartEntity {
 message StartEntityAck {
     string entityId = 1;
     string shardId = 2;
+}
+
+message GetClusterShardingStats{
+  google.protobuf.Duration timeout = 1;  
+}
+
+message ClusterShardingStats{ 
+  repeated ShardRegionWithAddress regions = 1;
+}
+
+message ShardRegionWithAddress{
+    Akka.Remote.Serialization.Proto.Msg.AddressData nodeAddress = 1;
+    ShardRegionStats stats = 2;
 }
