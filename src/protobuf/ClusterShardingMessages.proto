@@ -52,6 +52,15 @@ message ShardStats {
   int32 entityCount = 2;
 }
 
+message ShardRegionStats {
+  repeated MapFieldEntry stats = 1;
+}
+
+message MapFieldEntry {
+   string key = 1;
+   int32 value = 2;
+}
+
 message StartEntity {
     string entityId = 1;
 }
