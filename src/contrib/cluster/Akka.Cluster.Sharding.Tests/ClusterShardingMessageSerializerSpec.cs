@@ -144,7 +144,7 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterShardingMessageSerializer_must_serialize_ClusterShardingStats()
         {
             CheckSerialization(new GetClusterShardingStats(TimeSpan.FromMilliseconds(500)));
-            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty.Add(Address.AllSystems, 
+            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty.Add(new Address("akka.tcp", "foo", "localhost", 9110), 
                 new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)))));
         }
     }

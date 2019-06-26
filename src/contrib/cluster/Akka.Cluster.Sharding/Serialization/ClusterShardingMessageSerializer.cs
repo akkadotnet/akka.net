@@ -13,8 +13,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Serialization.Proto.Msg;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using ActorRefMessage = Akka.Remote.Serialization.Proto.Msg.ActorRefData;
 
 namespace Akka.Cluster.Sharding.Serialization
@@ -59,6 +62,9 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string GetShardRegionStatsManifest = "DC";
         private const string ShardRegionStatsManifest = "DD";
 
+        private const string GetClusterShardingStatsManifest = "GS";
+        private const string ClusterShardingStatsManifest = "CS";
+
         #endregion
 
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
@@ -71,9 +77,9 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
-                {EntityStateManifest, EntityStateFromBinary},
-                {EntityStartedManifest, EntityStartedFromBinary},
-                {EntityStoppedManifest, EntityStoppedFromBinary},
+                {EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
+                {EntityStartedManifest, bytes => EntityStartedFromBinary(bytes) },
+                {EntityStoppedManifest, bytes => EntityStoppedFromBinary(bytes) },
 
                 {CoordinatorStateManifest, CoordinatorStateFromBinary},
                 {ShardRegionRegisteredManifest, bytes => new PersistentShardCoordinator.ShardRegionRegistered(ActorRefMessageFromBinary(bytes)) },
@@ -87,7 +93,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 {RegisterProxyManifest, bytes => new PersistentShardCoordinator.RegisterProxy(ActorRefMessageFromBinary(bytes)) },
                 {RegisterAckManifest, bytes => new PersistentShardCoordinator.RegisterAck(ActorRefMessageFromBinary(bytes)) },
                 {GetShardHomeManifest, bytes => new PersistentShardCoordinator.GetShardHome(ShardIdMessageFromBinary(bytes)) },
-                {ShardHomeManifest, ShardHomeFromBinary},
+                {ShardHomeManifest, bytes => ShardHomeFromBinary(bytes) },
                 {HostShardManifest, bytes => new PersistentShardCoordinator.HostShard(ShardIdMessageFromBinary(bytes)) },
                 {ShardStartedManifest, bytes => new PersistentShardCoordinator.ShardStarted(ShardIdMessageFromBinary(bytes)) },
                 {BeginHandOffManifest, bytes => new PersistentShardCoordinator.BeginHandOff(ShardIdMessageFromBinary(bytes)) },
@@ -97,12 +103,14 @@ namespace Akka.Cluster.Sharding.Serialization
                 {GracefulShutdownReqManifest, bytes => new PersistentShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
 
                 {GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
-                {ShardStatsManifest, ShardStatsFromBinary},
+                {ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
                 { GetShardRegionStatsManifest, bytes => GetShardRegionStats.Instance },
                 { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
+                { GetClusterShardingStatsManifest, bytes => GetClusterShardingStatsFromBinary(bytes) },
+                { ClusterShardingStatsManifest, bytes => ClusterShardingStatsFromBinary(bytes) },
 
-                {StartEntityManifest, StartEntityFromBinary },
-                {StartEntityAckManifest, StartEntityAckFromBinary}
+                {StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
+                {StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) }
             };
         }
 
@@ -146,6 +154,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
                 case GetShardRegionStats o: return new byte[0];
                 case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
+                case GetClusterShardingStats o: return GetClusterShardingStatsToProto(o).ToByteArray();
+                case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
@@ -210,6 +220,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case Shard.ShardStats _: return ShardStatsManifest;
                 case GetShardRegionStats _: return GetShardRegionStatsManifest;
                 case ShardRegionStats _: return ShardRegionStatsManifest;
+                case GetClusterShardingStats _: return GetClusterShardingStatsManifest;
+                case ClusterShardingStats _: return ClusterShardingStatsManifest;
             }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
@@ -421,6 +433,62 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             var p = Proto.Msg.ShardRegionStats.Parser.ParseFrom(b);
             return new ShardRegionStats(p.Stats.ToImmutableDictionary());
+        }
+        
+        // GetClusterShardingStats
+        private static Proto.Msg.GetClusterShardingStats GetClusterShardingStatsToProto(GetClusterShardingStats stats)
+        {
+            var p = new Proto.Msg.GetClusterShardingStats();
+            p.Timeout = Duration.FromTimeSpan(stats.Timeout);
+            return p;
+        }
+
+        private static GetClusterShardingStats GetClusterShardingStatsFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.GetClusterShardingStats.Parser.ParseFrom(b);
+            return new GetClusterShardingStats(p.Timeout.ToTimeSpan());
+        }
+        
+        // ClusterShardingStats
+        private static Proto.Msg.ClusterShardingStats ClusterShardingStatsToProto(ClusterShardingStats stats)
+        {
+            var p = new Proto.Msg.ClusterShardingStats();
+            foreach (var s in stats.Regions)
+            {
+                p.Regions.Add(new ShardRegionWithAddress() { NodeAddress = AddressToProto(s.Key), Stats = ShardRegionStatsToProto(s.Value)});
+            }
+
+            return p;
+        }
+
+        private static ClusterShardingStats ClusterShardingStatsFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.ClusterShardingStats.Parser.ParseFrom(b);
+            var dict = new Dictionary<Address, ShardRegionStats>();
+            foreach (var s in p.Regions)
+            {
+                dict[AddressFrom(s.NodeAddress)] = new ShardRegionStats(s.Stats.Stats.ToImmutableDictionary());
+            }
+            return new ClusterShardingStats(dict.ToImmutableDictionary());
+        }
+        
+        private static AddressData AddressToProto(Address address)
+        {
+            var message = new AddressData();
+            message.System = address.System;
+            message.Hostname = address.Host;
+            message.Port = (uint)(address.Port ?? 0);
+            message.Protocol = address.Protocol;
+            return message;
+        }
+        
+        private static Address AddressFrom(AddressData addressProto)
+        {
+            return new Address(
+                addressProto.Protocol,
+                addressProto.System,
+                addressProto.Hostname,
+                addressProto.Port == 0 ? null : (int?)addressProto.Port);
         }
 
         private static string ShardIdMessageFromBinary(byte[] bytes)

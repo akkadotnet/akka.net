@@ -142,7 +142,7 @@ namespace Akka.Cluster.Sharding
     /// the state of the shard regions.
     /// </summary>
     [Serializable]
-    public sealed class GetClusterShardingStats : IShardRegionQuery
+    public sealed class GetClusterShardingStats : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// The timeout for this operation.
@@ -178,7 +178,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetClusterShardingStats"/>, contains statistics about all the sharding regions in the cluster.
     /// </summary>
     [Serializable]
-    public sealed class ClusterShardingStats
+    public sealed class ClusterShardingStats : IClusterShardingSerializable
     {
         /// <summary>
         /// All of the statistics for a specific shard region organized per-node.
@@ -221,7 +221,7 @@ namespace Akka.Cluster.Sharding
     /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats"/>.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionStats : IShardRegionQuery
+    public sealed class GetShardRegionStats : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -277,7 +277,7 @@ namespace Akka.Cluster.Sharding
     /// Entity allocation statistics for a specific shard region.
     /// </summary>
     [Serializable]
-    public sealed class ShardRegionStats
+    public sealed class ShardRegionStats : IClusterShardingSerializable
     {
         /// <summary>
         /// The set of shardId / entity count pairs
