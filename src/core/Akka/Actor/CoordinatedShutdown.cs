@@ -626,13 +626,12 @@ namespace Akka.Actor
                         // We must spawn a separate Task to not block current thread,
                         // since that would have blocked the shutdown of the ActorSystem.
                         var timeout = coord.Timeout(PhaseActorSystemTerminate);
-                        return Task.Run(() =>
+                        Task.Run(() =>
                         {
                             if (!system.WhenTerminated.Wait(timeout) && !coord._runningClrHook)
                             {
                                 Environment.Exit(0);
                             }
-                            return Done.Instance;
                         });
                     }
 

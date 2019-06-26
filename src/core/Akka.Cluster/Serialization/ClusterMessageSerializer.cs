@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Serialization;
@@ -26,7 +27,7 @@ namespace Akka.Cluster.Serialization
 
         public ClusterMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            
+
             _fromBinaryMap = new Dictionary<Type, Func<byte[], object>>
             {
                 [typeof(ClusterHeartbeatSender.Heartbeat)] = bytes => new ClusterHeartbeatSender.Heartbeat(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
@@ -87,7 +88,7 @@ namespace Akka.Cluster.Serialization
             if (_fromBinaryMap.TryGetValue(type, out var factory))
                 return factory(bytes);
 
-            throw new ArgumentException($"{nameof(ClusterMessageSerializer)} cannot deserialize object of type {type}");
+            throw new SerializationException($"{nameof(ClusterMessageSerializer)} cannot deserialize object of type {type}");
         }
 
         //
@@ -265,11 +266,11 @@ namespace Akka.Cluster.Serialization
             var roleMapping = gossip.AllRoles.ToList();
             var hashMapping = gossip.AllHashes.ToList();
 
-            Member MemberFromProto(Proto.Msg.Member member) => 
+            Member MemberFromProto(Proto.Msg.Member member) =>
                 Member.Create(
-                    addressMapping[member.AddressIndex], 
-                    member.UpNumber, 
-                    (MemberStatus)member.Status, 
+                    addressMapping[member.AddressIndex],
+                    member.UpNumber,
+                    (MemberStatus)member.Status,
                     member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet());
 
             var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
@@ -342,7 +343,7 @@ namespace Akka.Cluster.Serialization
 
         private static VectorClock VectorClockFrom(Proto.Msg.VectorClock version, IList<string> hashMapping)
         {
-            return VectorClock.Create(version.Versions.ToImmutableSortedDictionary(version1 => 
+            return VectorClock.Create(version.Versions.ToImmutableSortedDictionary(version1 =>
                     VectorClock.Node.FromHash(hashMapping[version1.HashIndex]), version1 => version1.Timestamp));
         }
 

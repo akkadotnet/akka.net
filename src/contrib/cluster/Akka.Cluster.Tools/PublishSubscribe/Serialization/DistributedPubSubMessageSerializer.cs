@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Remote.Serialization;
@@ -89,7 +90,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             if (_fromBinaryMap.TryGetValue(manifest, out var deserializer))
                 return deserializer(bytes);
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(DistributedPubSubMessageSerializer)}");
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(DistributedPubSubMessageSerializer)}");
         }
 
         /// <summary>
