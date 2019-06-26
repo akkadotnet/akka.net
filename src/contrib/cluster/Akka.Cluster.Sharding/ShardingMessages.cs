@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Akka.Cluster.Sharding
 {
@@ -261,7 +262,21 @@ namespace Akka.Cluster.Sharding
             Stats = stats;
         }
 
+        private bool Equals(ShardRegionStats other)
+        {
+            return Stats.Keys.SequenceEqual(other.Stats.Keys)
+                   && Stats.Values.SequenceEqual(other.Stats.Values);
+        }
 
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is ShardRegionStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Stats != null ? Stats.GetHashCode() : 0);
+        }
     }
 
     /// <summary>
