@@ -23,7 +23,6 @@ using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Tests.Transport
 {
-    [Collection(nameof(AkkaProtocolSpec))]
     public class AkkaProtocolSpec : AkkaSpec
     {
         #region Setup / Config
