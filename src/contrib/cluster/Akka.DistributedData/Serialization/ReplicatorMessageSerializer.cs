@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
 using Akka.Util;
@@ -120,9 +121,9 @@ namespace Akka.DistributedData.Serialization
         }
 
         #endregion
-        
+
         public static readonly Type WriteAckType = typeof(WriteAck);
-        
+
         private readonly SmallCache<Read, byte[]> readCache;
         private readonly SmallCache<Write, byte[]> writeCache;
         private readonly Hyperion.Serializer serializer;
@@ -181,7 +182,7 @@ namespace Akka.DistributedData.Serialization
             if (obj is Write) return writeCache.GetOrAdd((Write) obj);
             if (obj is Read) return readCache.GetOrAdd((Read)obj);
             if (obj is WriteAck) return writeAckBytes;
-            
+
             return Serialize(obj);
         }
 
@@ -198,9 +199,24 @@ namespace Akka.DistributedData.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == WriteAckType) return WriteAck.Instance;
-            using (var stream = new MemoryStream(bytes))
+            try
             {
-                return serializer.Deserialize(stream);
+                using (var stream = new MemoryStream(bytes))
+                {
+                    return serializer.Deserialize(stream);
+                }
+            }
+            catch (TypeLoadException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (NotSupportedException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw new SerializationException(e.Message, e);
             }
         }
     }
