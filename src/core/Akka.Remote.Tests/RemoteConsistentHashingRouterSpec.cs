@@ -15,13 +15,12 @@ using Xunit;
 
 namespace Akka.Remote.Tests
 {
-
+    [Collection(nameof(RemoteConsistentHashingRouterSpec))]
     public class RemoteConsistentHashingRouterSpec : AkkaSpec
     {
 
         public RemoteConsistentHashingRouterSpec()
-            : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                           akka.remote.dot-netty.tcp.port = 0")
+            : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
         {
             
         }
