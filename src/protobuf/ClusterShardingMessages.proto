@@ -53,7 +53,7 @@ message ShardStats {
 }
 
 message ShardRegionStats {
-  repeated MapFieldEntry stats = 1;
+  map<string, int32> stats = 1;
 }
 
 message MapFieldEntry {

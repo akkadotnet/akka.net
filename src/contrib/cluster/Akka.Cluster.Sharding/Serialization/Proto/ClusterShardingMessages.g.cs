@@ -35,13 +35,14 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             "IAEoCRIOCgZyZWdpb24YAiABKAkiHwoLRW50aXR5U3RhdGUSEAoIZW50aXRp",
             "ZXMYASADKAkiIQoNRW50aXR5U3RhcnRlZBIQCghlbnRpdHlJZBgBIAEoCSIh",
             "Cg1FbnRpdHlTdG9wcGVkEhAKCGVudGl0eUlkGAEgASgJIjAKClNoYXJkU3Rh",
-            "dHMSDQoFc2hhcmQYASABKAkSEwoLZW50aXR5Q291bnQYAiABKAUiXwoQU2hh",
-            "cmRSZWdpb25TdGF0cxJLCgVzdGF0cxgBIAMoCzI8LkFra2EuQ2x1c3Rlci5T",
-            "aGFyZGluZy5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5NYXBGaWVsZEVudHJ5",
-            "IisKDU1hcEZpZWxkRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgF",
-            "Ih8KC1N0YXJ0RW50aXR5EhAKCGVudGl0eUlkGAEgASgJIjMKDlN0YXJ0RW50",
-            "aXR5QWNrEhAKCGVudGl0eUlkGAEgASgJEg8KB3NoYXJkSWQYAiABKAliBnBy",
-            "b3RvMw=="));
+            "dHMSDQoFc2hhcmQYASABKAkSEwoLZW50aXR5Q291bnQYAiABKAUimwEKEFNo",
+            "YXJkUmVnaW9uU3RhdHMSWQoFc3RhdHMYASADKAsySi5Ba2thLkNsdXN0ZXIu",
+            "U2hhcmRpbmcuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuU2hhcmRSZWdpb25T",
+            "dGF0cy5TdGF0c0VudHJ5GiwKClN0YXRzRW50cnkSCwoDa2V5GAEgASgJEg0K",
+            "BXZhbHVlGAIgASgFOgI4ASIrCg1NYXBGaWVsZEVudHJ5EgsKA2tleRgBIAEo",
+            "CRINCgV2YWx1ZRgCIAEoBSIfCgtTdGFydEVudGl0eRIQCghlbnRpdHlJZBgB",
+            "IAEoCSIzCg5TdGFydEVudGl0eUFjaxIQCghlbnRpdHlJZBgBIAEoCRIPCgdz",
+            "aGFyZElkGAIgASgJYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -54,7 +55,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.EntityStarted), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.EntityStarted.Parser, new[]{ "EntityId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.EntityStopped), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.EntityStopped.Parser, new[]{ "EntityId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardStats), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardStats.Parser, new[]{ "Shard", "EntityCount" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionStats), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionStats.Parser, new[]{ "Stats" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionStats), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionStats.Parser, new[]{ "Stats" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry.Parser, new[]{ "Key", "Value" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntity), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntity.Parser, new[]{ "EntityId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntityAck), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntityAck.Parser, new[]{ "EntityId", "ShardId" }, null, null, null)
@@ -1431,11 +1432,11 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "stats" field.</summary>
     public const int StatsFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry> _repeated_stats_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry> stats_ = new pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry>();
+    private static readonly pbc::MapField<string, int>.Codec _map_stats_codec
+        = new pbc::MapField<string, int>.Codec(pb::FieldCodec.ForString(10), pb::FieldCodec.ForInt32(16), 10);
+    private readonly pbc::MapField<string, int> stats_ = new pbc::MapField<string, int>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.MapFieldEntry> Stats {
+    public pbc::MapField<string, int> Stats {
       get { return stats_; }
     }
 
@@ -1452,14 +1453,14 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if(!stats_.Equals(other.stats_)) return false;
+      if (!Stats.Equals(other.Stats)) return false;
       return true;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
-      hash ^= stats_.GetHashCode();
+      hash ^= Stats.GetHashCode();
       return hash;
     }
 
@@ -1470,13 +1471,13 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
-      stats_.WriteTo(output, _repeated_stats_codec);
+      stats_.WriteTo(output, _map_stats_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
-      size += stats_.CalculateSize(_repeated_stats_codec);
+      size += stats_.CalculateSize(_map_stats_codec);
       return size;
     }
 
@@ -1497,7 +1498,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             input.SkipLastField();
             break;
           case 10: {
-            stats_.AddEntriesFrom(input, _repeated_stats_codec);
+            stats_.AddEntriesFrom(input, _map_stats_codec);
             break;
           }
         }

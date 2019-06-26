@@ -242,24 +242,26 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// TBD
+    /// Entity allocation statistics for a specific shard region.
     /// </summary>
     [Serializable]
     public sealed class ShardRegionStats
     {
         /// <summary>
-        /// TBD
+        /// The set of shardId / entity count pairs
         /// </summary>
         public readonly IImmutableDictionary<string, int> Stats;
 
         /// <summary>
-        /// TBD
+        /// Creates a new ShardRegionStats instance.
         /// </summary>
-        /// <param name="stats">TBD</param>
+        /// <param name="stats">The set of shardId / entity count pairs</param>
         public ShardRegionStats(IImmutableDictionary<string, int> stats)
         {
             Stats = stats;
         }
+
+
     }
 
     /// <summary>

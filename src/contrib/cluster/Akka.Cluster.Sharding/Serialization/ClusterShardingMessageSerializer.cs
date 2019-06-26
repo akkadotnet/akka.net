@@ -20,7 +20,7 @@ using ActorRefMessage = Akka.Remote.Serialization.Proto.Msg.ActorRefData;
 namespace Akka.Cluster.Sharding.Serialization
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API: Protobuf serializer of Cluster.Sharding messages.
     /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
@@ -56,6 +56,8 @@ namespace Akka.Cluster.Sharding.Serialization
 
         private const string GetShardStatsManifest = "DA";
         private const string ShardStatsManifest = "DB";
+        private const string GetShardRegionStatsManifest = "DC";
+        private const string ShardRegionStatsManifest = "DD";
 
         #endregion
 
@@ -96,6 +98,8 @@ namespace Akka.Cluster.Sharding.Serialization
 
                 {GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
                 {ShardStatsManifest, ShardStatsFromBinary},
+                { GetShardRegionStatsManifest, bytes => GetShardRegionStats.Instance },
+                { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
 
                 {StartEntityManifest, StartEntityFromBinary },
                 {StartEntityAckManifest, StartEntityAckFromBinary}
@@ -140,6 +144,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardRegion.StartEntityAck o: return StartEntityAckToProto(o).ToByteArray();
                 case Shard.GetShardStats o: return new byte[0];
                 case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
+                case GetShardRegionStats o: return new byte[0];
+                case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
@@ -202,6 +208,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardRegion.StartEntityAck _: return StartEntityAckManifest;
                 case Shard.GetShardStats _: return GetShardStatsManifest;
                 case Shard.ShardStats _: return ShardStatsManifest;
+                case GetShardRegionStats _: return GetShardRegionStatsManifest;
+                case ShardRegionStats _: return ShardRegionStatsManifest;
             }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
@@ -378,14 +386,14 @@ namespace Akka.Cluster.Sharding.Serialization
         // Shard.ShardState
         //
 
-        private Proto.Msg.EntityState EntityStateToProto(Shard.ShardState entityState)
+        private static Proto.Msg.EntityState EntityStateToProto(Shard.ShardState entityState)
         {
             var message = new Proto.Msg.EntityState();
             message.Entities.AddRange(entityState.Entries);
             return message;
         }
 
-        private Shard.ShardState EntityStateFromBinary(byte[] bytes)
+        private static Shard.ShardState EntityStateFromBinary(byte[] bytes)
         {
             var msg = Proto.Msg.EntityState.Parser.ParseFrom(bytes);
             return new Shard.ShardState(msg.Entities.ToImmutableHashSet());
@@ -401,7 +409,21 @@ namespace Akka.Cluster.Sharding.Serialization
             return message;
         }
 
-        private string ShardIdMessageFromBinary(byte[] bytes)
+        // ShardRegionStats
+        private static Proto.Msg.ShardRegionStats ShardRegionStatsToProto(ShardRegionStats s)
+        {
+            var message = new Proto.Msg.ShardRegionStats();
+            message.Stats.Add((IDictionary<string,int>)s.Stats);
+            return message;
+        }
+
+        private static ShardRegionStats ShardRegionStatsFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.ShardRegionStats.Parser.ParseFrom(b);
+            return new ShardRegionStats(p.Stats.ToImmutableDictionary());
+        }
+
+        private static string ShardIdMessageFromBinary(byte[] bytes)
         {
             return Proto.Msg.ShardIdMessage.Parser.ParseFrom(bytes).Shard;
         }

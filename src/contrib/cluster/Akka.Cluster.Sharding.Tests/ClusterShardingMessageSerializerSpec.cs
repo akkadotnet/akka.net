@@ -122,12 +122,14 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_GetShardStats()
         {
             CheckSerialization(Shard.GetShardStats.Instance);
+            CheckSerialization(GetShardRegionStats.Instance);
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardStats()
         {
             CheckSerialization(new Shard.ShardStats("a", 23));
+            CheckSerialization(new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)));
         }
 
         [Fact]
