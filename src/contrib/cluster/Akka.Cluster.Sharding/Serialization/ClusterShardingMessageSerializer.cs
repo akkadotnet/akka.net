@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Serialization.Proto.Msg;
 using Akka.Remote.Serialization.Proto.Msg;
@@ -175,7 +176,7 @@ namespace Akka.Cluster.Sharding.Serialization
             if (_fromBinaryMap.TryGetValue(manifest, out var factory))
                 return factory(bytes);
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{this.GetType()}]");
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{this.GetType()}]");
         }
 
         /// <summary>
