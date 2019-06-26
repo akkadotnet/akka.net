@@ -45,7 +45,7 @@ protected override void PreStart()
 }
 ```
 
-> [!INFO]
+> [!NOTE]
 > There is currently still an extension method available for the actor Context. `Context.DI().ActorOf<>`. However this has been officially **deprecated** and will be removed in future versions.
 
 ## Notes
@@ -77,7 +77,7 @@ guideline.
 
 Currently the following Akka.NET Dependency Injection plugins are available:
 
-## AutoFac
+### AutoFac
 
 In order to use this plugin, install the Nuget package with
 `Install-Package Akka.DI.AutoFac`, then follow the instructions:
@@ -91,10 +91,10 @@ var container = builder.Build();
 
 // Create the ActorSystem and Dependency Resolver
 var system = ActorSystem.Create("MySystem");
-var propsResolver = new AutoFacDependencyResolver(container, system);
+system.UseAutofac(container);
 ```
 
-## CastleWindsor
+### CastleWindsor
 
 In order to use this plugin, install the Nuget package with
 `Install-Package Akka.DI.CastleWindsor`, then follow the instructions:
@@ -110,7 +110,7 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new WindsorDependencyResolver(container, system);
 ```
 
-## Ninject
+### Ninject
 
 In order to use this plugin, install the Nuget package with
 `Install-Package Akka.DI.Ninject`, then follow the instructions:
@@ -126,14 +126,8 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ```
 
-## Other frameworks
+### Other frameworks
 
 Support for additional dependency injection frameworks may be added in the
 future, but you can easily implement your own by implementing an
-[Actor Producer Extension](DI Core).
-
-
-
-
-
-
+[Actor Producer Extension](xref:di-core).

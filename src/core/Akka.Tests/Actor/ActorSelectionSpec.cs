@@ -19,6 +19,8 @@ using Xunit;
 
 namespace Akka.Tests.Actor
 {
+    using Akka.Util;
+
     public class ActorSelectionSpec : AkkaSpec
     {
         private const string Config = @"
@@ -457,6 +459,30 @@ namespace Akka.Tests.Actor
             _c2.Tell(new Forward("c21", "hello"), TestActor);
             ExpectMsg("hello");
             LastSender.ShouldBe(_c21);
+        }
+
+        [Theory]
+        [InlineData("worker", "w.rker", false)]
+        [InlineData("w..ker", "w..ker", true)]
+        [InlineData("w^rker", "w^rker", true)]
+        [InlineData("w$rker", "w$rker", true)]
+        [InlineData("w$rk", "w$rker", false)]
+        [InlineData("work.r", "*.r", true)]
+        [InlineData("work.r", "*k.", false)]
+        [InlineData("work.r", "*k.r", true)]
+        [InlineData("worker", "*ke", false)]
+        [InlineData("worker", "*ker", true)]
+        [InlineData("worker", "*ker*", true)]
+        [InlineData("worker", "^worker", false)]
+        [InlineData("worker", "^worker$", false)]
+        [InlineData("worker", "ker*", false)]
+        [InlineData("worker", "worker", true)]
+        [InlineData("worker", "worker$", false)]
+        [InlineData("worker", "worker*", true)]
+        public void Selections_are_implicitly_anchored(string data, string pattern, bool isMatch)
+        {
+            var predicate = isMatch ? "matches" : "does not match";
+            WildcardMatch.Like(data, pattern).ShouldBe(isMatch, $"'{pattern}' {predicate} '{data}'");
         }
 
         #region Test classes

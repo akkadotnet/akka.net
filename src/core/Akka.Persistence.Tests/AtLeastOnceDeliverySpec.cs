@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -39,7 +41,7 @@ namespace Akka.Persistence.Tests
                 _log = Context.GetLogger();
             }
 
-            public override string PersistenceId { get { return _name; } }
+            public override string PersistenceId => _name;
 
             protected override bool ReceiveRecover(object message)
             {
@@ -74,6 +76,16 @@ namespace Akka.Persistence.Tests
                                 Sender.Tell(ReqAck.Instance);
                             });
                         }
+                    })
+                    .With<ReqSelection>(msg =>
+                    {
+                        var c = char.ToUpper(msg.Payload[0]);
+                        var destination = _destinations[c.ToString()];
+                        Persist(new AcceptedSelectionReq(msg.Payload, destination.ToString()), e =>
+                        {
+                            UpdateState(e);
+                            Sender.Tell(ReqAck.Instance);
+                        });
                     })
                     .With<ActionAck>(ack =>
                     {
@@ -116,6 +128,11 @@ namespace Akka.Persistence.Tests
                     {
                         _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}", a.Payload, IsRecovering);
                         Deliver(ActorPath.Parse(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
+                    })
+                    .With<AcceptedSelectionReq>(a =>
+                    {
+                        _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}", a.Payload, IsRecovering);
+                        Deliver(Context.System.ActorSelection(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
                     })
                     .With<ReqDone>(r =>
                     {
@@ -171,7 +188,18 @@ namespace Akka.Persistence.Tests
 
             public string Payload { get; private set; }
         }
+        
+        [Serializable]
+        private class ReqSelection
+        {
+            public ReqSelection(string message)
+            {
+                Payload = message;
+            }
 
+            public string Payload { get; private set; }
+        }
+        
         [Serializable]
         sealed class ReqAck
         {
@@ -200,6 +228,21 @@ namespace Akka.Persistence.Tests
         sealed class AcceptedReq : IEvt
         {
             public AcceptedReq(string payload, string destinationPath)
+            {
+                Payload = payload;
+                DestinationPath = destinationPath;
+            }
+
+            public string Payload { get; private set; }
+
+            //FIXME: change to Akka.Actor.ActorPath when serialization problems will be solved
+            public string DestinationPath { get; private set; }
+        }
+        
+        [Serializable]
+        sealed class AcceptedSelectionReq : IEvt
+        {
+            public AcceptedSelectionReq(string payload, string destinationPath)
             {
                 Payload = payload;
                 DestinationPath = destinationPath;
@@ -289,7 +332,7 @@ namespace Akka.Persistence.Tests
 
             public AtLeastOnceDeliverySnapshot DeliverySnapshot { get; private set; }
         }
-
+        
         private class DeliverToStarSelection : AtLeastOnceDeliveryActor
         {
             private readonly string _name;
@@ -318,16 +361,13 @@ namespace Akka.Persistence.Tests
                 return true;
             }
 
-            public override string PersistenceId
-            {
-                get { return _name; }
-            }
+            public override string PersistenceId => _name;
         }
 
         #endregion
 
-        public AtLeastOnceDeliverySpec()
-            : base(Configuration("AtLeastOnceDeliverySpec"))
+        public AtLeastOnceDeliverySpec(ITestOutputHelper output)
+            : base(Configuration("AtLeastOnceDeliverySpec"), output)
         {
         }
 
@@ -349,6 +389,18 @@ namespace Akka.Persistence.Tests
         {
             Sys.ActorOf(Props.Create(() => new DeliverToStarSelection(Name))).Tell("anything, really.");
             ExpectMsg<string>().Contains("not supported").ShouldBeTrue();
+        }
+
+        [Fact]
+        public void AtLeastOnceDelivery_must_allow_using_ActorSelection_without_wildcards()
+        {
+            var probe = CreateTestProbe();
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
+
+            var mess = new ReqSelection("a-1");
+            sender.Tell(mess);
+            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
         }
 
         [Fact]

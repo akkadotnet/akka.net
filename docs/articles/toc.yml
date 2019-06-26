@@ -2,8 +2,8 @@
   items:
   - name: What is Akka.NET?
     href: intro/what-is-akka.md
-  - name: What are actors?
-    href: intro/what-are-actors.md
+  - name: What problems does the actor model solve?
+    href: intro/what-problems-does-actor-model-solve.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
   - name: Part 1. Top-level Architecture
@@ -56,6 +56,8 @@
     href: actors/fault-tolerance.md
   - name: Dependency Injection
     href: actors/dependency-injection.md
+  - name: Dependency Injection Core
+    href: actors/di-core.md
   - name: Testing Actor Systems
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
@@ -119,7 +121,7 @@
   - name: Streams Cookbook
     href: streams/cookbook.md
   - name: Configuration
-    href: streams/configuration.md
+    href: configuration/akka.streams.md
 - name: Networking
   items:
   - name: I/O

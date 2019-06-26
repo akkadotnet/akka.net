@@ -37,7 +37,7 @@ namespace Akka.Pattern
         /// <param name="body">N/A</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
+        public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
             throw new OpenCircuitException();
         }
@@ -48,7 +48,7 @@ namespace Akka.Pattern
         /// <param name="body">N/A</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
-        public override Task Invoke(Func<Task> body)
+        public override async Task Invoke(Func<Task> body)
         {
             throw new OpenCircuitException();
         }
@@ -106,13 +106,13 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
+        public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
                 throw new OpenCircuitException();
             }
-            return CallThrough(body);
+            return await CallThrough(body);
         }
 
         /// <summary>
@@ -122,13 +122,13 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke(Func<Task> body)
+        public override async Task Invoke(Func<Task> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
                 throw new OpenCircuitException();
             }
-            return CallThrough(body);
+            await CallThrough(body);
         }
 
         /// <summary>

@@ -10,12 +10,14 @@ title: Configuration
 Akka.NET leverages a configuration format, called HOCON, to allow you to configure your Akka.NET applications with whatever level of granularity you want.
 
 #### What is HOCON?
-HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format. It will allow you to configure everything from Akka.NET's `IActorRefProvider` implementation, logging, network transports, and more commonly - how individual actors are deployed.
+HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format.
+It allows you to configure everything from Akka.NET's `IActorRefProvider` implementation: logging, network transports, and (more commonly) how individual actors are deployed.
 
-Values returned by HOCON are strongly typed (i.e. you can fetch out an `int`, a `Timespan`, etc).
+Values returned by HOCON are strongly typed, which means you can fetch out an `int`, a `Timespan`, etc.
 
 #### What can I do with HOCON?
-HOCON allows you to embed easily-readable configuration inside of the otherwise hard-to-read XML in App.config and Web.config.  HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
+HOCON allows you to embed easy-to-read configuration inside of the otherwise hard-to-read XML in App.config and Web.config.
+HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
 
 HOCON also lets you nest and/or chain sections of configuration, creating layers of granularity and providing you a semantically namespaced config.
 
@@ -43,7 +45,7 @@ Deployment is a vague concept, but it's closely tied to HOCON. An actor is "depl
 
 When an actor is instantiated within the `ActorSystem` it can be deployed in one of two places: inside the local process or in another process (this is what `Akka.Remote` does.)
 
-When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor, such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
+When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
 
 We haven't gone over what all these options mean, but *the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON. *
 

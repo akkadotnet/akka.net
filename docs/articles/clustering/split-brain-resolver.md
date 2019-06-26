@@ -4,7 +4,8 @@ title: Split Brain Resolver
 ---
 # Split Brain Resolver
 
-> Note: while this feature is based on [Lightbend Reactive Platform Split Brain Resolver](https://doc.akka.io/docs/akka/rp-16s01p02/scala/split-brain-resolver.html) feature description, however its implementation is a result of free contribution and interpretation of Akka.NET team. Lightbend doesn't take any responsibility for the state and correctness of it.
+> [!NOTE]
+> While this feature is based on [Lightbend Reactive Platform Split Brain Resolver](https://doc.akka.io/docs/akka/rp-16s01p02/scala/split-brain-resolver.html) feature description, however its implementation is a result of free contribution and interpretation of Akka.NET team. Lightbend doesn't take any responsibility for the state and correctness of it.
 
 When working with an Akka.NET cluster, you must consider how to handle [network partitions](https://en.wikipedia.org/wiki/Network_partition) (a.k.a. split brain scenarios) and machine crashes (including .NET CLR/Core and hardware failures). This is crucial for correct behavior of your cluster, especially if you use Cluster Singleton or Cluster Sharding.
 
@@ -21,7 +22,7 @@ To solve this kind of problems we need to determine a common strategy, in which 
 
 Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrary define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
 
-In the past the only available opt-in stategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowning about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
+In the past the only available opt-in strategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowning about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
 
 Split brain resolver feature brings ability to apply different strategies for managing node lifecycle in face of network issues and machine crashes. It works as a custom downing provider. Therefore in order to use it, **all of your Akka.NET cluster nodes must define it with the same configuration**. Here's how minimal configuration looks like:
 
@@ -48,7 +49,7 @@ To decide which strategy to use, you can set `akka.cluster.split-brain-resolver.
 - `keep-oldest`
 - `keep-referee`
 
-All strategies will be applied only after cluster state has reached stability for specified time treshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
+All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
 
 ```hocon
 akka.cluster.split-brain-resolver {
@@ -134,7 +135,7 @@ akka.cluster.split-brain-resolver {
 
 The `keep-oldest` strategy, when a network split has happened, will down a part of the cluster which doesn't contain the oldest node. 
 
-When to use it? This approach is particularly good in combination with Cluster Singleton, which usually is running on the oldest cluster member. It's also usefull, when you have a one starter node configured as `akka.cluster.seed-nodes` for others, which will still allow you to add and remove members using its address.
+When to use it? This approach is particularly good in combination with Cluster Singleton, which usually is running on the oldest cluster member. It's also useful, when you have a one starter node configured as `akka.cluster.seed-nodes` for others, which will still allow you to add and remove members using its address.
 
 Keep in mind, that:
 
@@ -143,7 +144,7 @@ Keep in mind, that:
 3. There is a risk, that if partition will split cluster into two unequal parts i.e. 2 nodes with the oldest one present and 20 remaining ones, the majority of the cluster will go down.
 4. Since the oldest node is determined on the latest known state of the cluster, there is a small risk that during partition, two parts of the cluster will both consider themselves having the oldest member on their side. While this is very rare situation, you still may end up having two independent clusters after split occurrence.
 
-Just like in previous cases, a `role` setting can be used to detemine the oldest member across all having specified role.
+Just like in previous cases, a `role` setting can be used to determine the oldest member across all having specified role.
 
 Configuration:
 
@@ -170,10 +171,10 @@ When to use it? If you have a single node which is running processes crucial to 
 
 Things to keep in mind:
 
-1. With this strategy, cluster will never split into two indenpendent ones, under any circumstances.
+1. With this strategy, cluster will never split into two independent ones, under any circumstances.
 2. A referee node is a single point of failure for the cluster.
 
-You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimun it will down the entire partition even when referee node was reachable.
+You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimum it will down the entire partition even when referee node was reachable.
 
 Configuration:
 

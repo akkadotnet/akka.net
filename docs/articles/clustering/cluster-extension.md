@@ -4,7 +4,7 @@ title: Accessing the Cluster `ActorSystem` Extension
 ---
 
 # Using the Cluster `ActorSystem` Extension Object
-`Akka.Cluster` is actually  an "`ActorSystem` extension" that you can use to access membership information and [cluster gossip](cluster-overview.md#cluster-gossip) directly.
+`Akka.Cluster` is actually  an `ActorSystem` extension that you can use to access membership information and [cluster gossip](cluster-overview.md#cluster-gossip) directly.
 
 ## Getting a Reference to the `Cluster`
 You can get a direct reference to the `Cluster` extension like so (drawn from the [`SimpleClusterListener` example in the Akka.NET project](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)):

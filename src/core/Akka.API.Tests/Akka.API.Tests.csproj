@@ -3,8 +3,32 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <Content Include="CoreAPISpec.ApproveCluster.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveClusterTools.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveCore.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApprovePersistence.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApprovePersistenceQuery.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveRemote.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveStreams.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="CoreAPISpec.ApproveCluster.approved.txt" />
@@ -54,15 +78,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
     <PackageReference Include="ApiApprover" Version="3.0.1" />
     <PackageReference Include="ApprovalTests" Version="3.0.10" />
     <PackageReference Include="ApprovalUtilities" Version="3.0.10" />
     <PackageReference Include="Mono.Cecil" Version="0.9.6.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

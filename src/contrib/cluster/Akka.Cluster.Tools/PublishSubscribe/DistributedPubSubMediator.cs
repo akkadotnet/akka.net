@@ -167,8 +167,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var routees = new List<Routee>();
                 ValueHolder valueHolder;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) && 
-                    bucket.Content.TryGetValue(send.Path, out valueHolder) && 
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) &&
+                    bucket.Content.TryGetValue(send.Path, out valueHolder) &&
                     send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;
@@ -275,7 +275,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         child.Forward(unsubscribe);
                     else
                     {
-                        // no such topic here  
+                        // no such topic here
                     }
                 });
             });
@@ -357,6 +357,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     _registry.Remove(left.Member.Address);
                 }
             });
+            Receive<ClusterEvent.MemberDowned>(downed =>
+            {
+                if (IsMatchingRole(downed.Member))
+                {
+                    _nodes.Remove(downed.Member.Address);
+                    _registry.Remove(downed.Member.Address);
+                }
+            });
             Receive<ClusterEvent.MemberRemoved>(removed =>
             {
                 var member = removed.Member;
@@ -377,6 +385,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<DeltaCount>(_ =>
             {
                 Sender.Tell(deltaCount);
+            });
+            Receive<CountSubscribers>(msg =>
+            {
+                var encTopic = Internal.Utils.EncodeName(msg.Topic);
+                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path / encTopic), msg, Sender, () =>
+                {
+                    var child = Context.Child(encTopic);
+                    if (!child.IsNobody())
+                    {
+                        child.Tell(Count.Instance, Sender);
+                    }
+                    else
+                    {
+                        Sender.Tell(0);
+                    }
+                });
             });
         }
 
