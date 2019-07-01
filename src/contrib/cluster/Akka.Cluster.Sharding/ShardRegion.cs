@@ -454,7 +454,7 @@ namespace Akka.Cluster.Sharding
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
-            if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero)
+            if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities)
             {
                 Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
             }
