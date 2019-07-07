@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="1.0.1" />
+    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
