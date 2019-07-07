@@ -26,7 +26,7 @@ using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 
 namespace Akka.Remote.Tests
 {
-
+    [Collection(nameof(RemotingSpec))]
     public class RemotingSpec : AkkaSpec
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
