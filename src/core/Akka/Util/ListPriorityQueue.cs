@@ -158,7 +158,4 @@ namespace Akka.Util
             return true; // passed all checks
         } // IsConsistent
     } // ListPriorityQueue
-
-
 }
-

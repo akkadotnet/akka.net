@@ -179,7 +179,7 @@ namespace Akka.Cluster
             var oldest = remaining.Union(unreachable).ToImmutableSortedSet(Member.AgeOrdering).First();
             if (remaining.Contains(oldest))
             {
-                return DownIfAlone && context.Remaining.Count == 1 // oldest is current node, and it's alone
+                return DownIfAlone && context.Remaining.Count == 1 && context.Unreachable.Count > 0 // oldest is current node, and it's alone, but not the only node in the cluster
                     ? context.Remaining 
                     : context.Unreachable;
             }

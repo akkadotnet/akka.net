@@ -246,8 +246,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             IPEndPoint ipEndPoint;
 
-            var dns = socketAddress as DnsEndPoint;
-            if (dns != null)
+            if (socketAddress is DnsEndPoint dns)
                 ipEndPoint = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             else
                 ipEndPoint = (IPEndPoint) socketAddress;

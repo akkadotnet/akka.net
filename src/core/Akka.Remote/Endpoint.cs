@@ -132,9 +132,9 @@ namespace Akka.Remote
                     _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
                         payload.GetType());
                 }
-                else if (payload is ISystemMessage)
+                else if (payload is ISystemMessage systemMessage)
                 {
-                    recipient.SendSystemMessage((ISystemMessage)payload);
+                    recipient.SendSystemMessage(systemMessage);
                 }
                 else
                 {
@@ -454,7 +454,13 @@ namespace Akka.Remote
             Reset(); // needs to be called at startup
             _writer = CreateWriter(); // need to create writer at startup
             Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
-            UidConfirmed = Uid.HasValue;
+            UidConfirmed = Uid.HasValue && (Uid != _refuseUid);
+
+            if (Uid.HasValue && Uid == _refuseUid)
+                throw new HopelessAssociation(localAddress, remoteAddress, Uid,
+                    new InvalidOperationException(
+                        $"The remote system [{remoteAddress}] has a UID [{Uid}] that has been quarantined. Association aborted."));
+
             Receiving();
             _autoResendTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.SysResendTimeout, _settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
                     Self);
@@ -472,7 +478,7 @@ namespace Akka.Remote
         /// UID matches the expected one, pending Acks can be processed or must be dropped. It is guaranteed that for any inbound
         /// connections (calling <see cref="CreateWriter"/>) the first message from that connection is <see cref="GotUid"/>, therefore it serves
         /// a separator.
-        /// 
+        ///
         /// If we already have an inbound handle then UID is initially confirmed.
         /// (This actor is never restarted.)
         /// </summary>
@@ -626,6 +632,7 @@ namespace Akka.Remote
             {
                 _writer.Forward(stopped); //forward the request
             });
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         private void GoToIdle()
@@ -736,6 +743,7 @@ namespace Akka.Remote
             });
             Receive<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         /// <summary>
@@ -1095,7 +1103,8 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                AssociateAsync().PipeTo(Self);
+                var self = Self;
+                AssociateAsync().PipeTo(self);
             }
             else
             {
@@ -1468,7 +1477,18 @@ namespace Akka.Remote
             }
             catch (SerializationException ex)
             {
-                _log.Error(ex, "Transient association error (association remains live)");
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
+                return true;
+            }
+            catch(ArgumentException ex)
+            {
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
                 return true;
             }
             catch (EndpointException ex)
@@ -1902,10 +1922,25 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                ackAndMessage.MessageOption.RecipientAddress,
-                                ackAndMessage.MessageOption.SerializedMessage,
-                                ackAndMessage.MessageOption.SenderOptional);
+                            try
+                            {
+                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                    ackAndMessage.MessageOption.RecipientAddress,
+                                    ackAndMessage.MessageOption.SerializedMessage,
+                                    ackAndMessage.MessageOption.SenderOptional);
+                            }
+                            catch (SerializationException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(ArgumentException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(Exception e)
+                            {
+                                throw e;
+                            }
                         }
                     }
                 }
@@ -1916,6 +1951,17 @@ namespace Akka.Remote
                 Become(NotReading);
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
             });
+        }
+
+        private void LogTransientSerializationError(Message msg, Exception error)
+        {
+            var sm = msg.SerializedMessage;
+            _log.Warning(
+              "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
+                "Transient association error (association remains live). {2}",
+              sm.SerializerId,
+              sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
+              error.Message);
         }
 
         private void NotReading()

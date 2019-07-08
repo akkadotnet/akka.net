@@ -38,7 +38,7 @@ namespace Akka.DistributedData.Tests.Serialization
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
         public void ReplicatorMessageSerializer_should_serialize_Replicator_message()
         {
             var ref1 = Sys.ActorOf(Props.Empty, "ref1");

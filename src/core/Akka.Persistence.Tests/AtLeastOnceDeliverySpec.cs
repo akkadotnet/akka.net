@@ -13,6 +13,7 @@ using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -365,8 +366,8 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public AtLeastOnceDeliverySpec()
-            : base(Configuration("AtLeastOnceDeliverySpec"))
+        public AtLeastOnceDeliverySpec(ITestOutputHelper output)
+            : base(Configuration("AtLeastOnceDeliverySpec"), output)
         {
         }
 

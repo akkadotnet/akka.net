@@ -172,10 +172,9 @@ namespace Akka.Cluster.Sharding
                     var encName = Uri.EscapeDataString(start.TypeName);
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
-                    var shardRegion = Context.Child(encName);
                     var replicator = Replicator(settings);
 
-                    if (Equals(shardRegion, ActorRefs.Nobody))
+                    var shardRegion = Context.Child(encName).GetOrElse(() =>
                     {
                         if (Equals(Context.Child(coordinatorSingletonManagerName), ActorRefs.Nobody))
                         {
@@ -185,11 +184,11 @@ namespace Akka.Cluster.Sharding
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
                                 : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
 
-                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
+                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2, -1).WithDeploy(Deploy.Local);
                             var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
                             Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
                         }
-                        shardRegion = Context.ActorOf(ShardRegion.Props(
+                        return Context.ActorOf(ShardRegion.Props(
                             typeName: start.TypeName,
                             entityProps: start.EntityProps,
                             settings: settings,
@@ -199,7 +198,7 @@ namespace Akka.Cluster.Sharding
                             handOffStopMessage: start.HandOffStopMessage,
                             replicator: replicator,
                             majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
-                    }
+                    });
 
                     Sender.Tell(new Started(shardRegion));
                 }
@@ -220,20 +219,14 @@ namespace Akka.Cluster.Sharding
                     var settings = startProxy.Settings;
                     var encName = Uri.EscapeDataString(startProxy.TypeName + "Proxy");
                     var coordinatorPath = CoordinatorPath(Uri.EscapeDataString(startProxy.TypeName));
-                    var shardRegion = Context.Child(encName);
-
-                    if (Equals(shardRegion, ActorRefs.Nobody))
-                    {
-
-                        shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
-                            typeName: startProxy.TypeName,
-                            settings: settings,
-                            coordinatorPath: coordinatorPath,
-                            extractEntityId: startProxy.ExtractEntityId,
-                            extractShardId: startProxy.ExtractShardId,
-                            replicator: Context.System.DeadLetters,
-                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
-                    }
+                    var shardRegion = Context.Child(encName).GetOrElse(() => Context.ActorOf(ShardRegion.ProxyProps(
+                        typeName: startProxy.TypeName,
+                        settings: settings,
+                        coordinatorPath: coordinatorPath,
+                        extractEntityId: startProxy.ExtractEntityId,
+                        extractShardId: startProxy.ExtractShardId,
+                        replicator: Context.System.DeadLetters,
+                        majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName));
 
                     Sender.Tell(new Started(shardRegion));
                 }

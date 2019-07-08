@@ -293,7 +293,7 @@ namespace Akka.Actor
         {
             Deploy = deploy;
             inputType = type;
-            Arguments = args;
+            Arguments = args ?? noArgs;
             producer = CreateProducer(inputType, Arguments);
         }
 

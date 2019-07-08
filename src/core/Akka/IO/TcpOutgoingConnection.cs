@@ -12,7 +12,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.IO
 {
@@ -27,7 +26,12 @@ namespace Akka.IO
         private SocketAsyncEventArgs _connectArgs;
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
-            : base(tcp, new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false }, connect.PullMode)
+            : base(
+                   tcp,
+                   tcp.Settings.OutgoingSocketForceIpv4
+                       ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
+                       : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
+                   connect.PullMode)
         {
             _commander = commander;
             _connect = connect;
