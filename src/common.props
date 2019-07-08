@@ -12,6 +12,7 @@
     <XunitVersion>2.3.1</XunitVersion>
     <TestSdkVersion>15.9.0</TestSdkVersion>
     <HyperionVersion>0.9.8</HyperionVersion>
+    <NBenchVersion>1.2.2</NBenchVersion>
     <NewtonsoftJsonVersion>9.0.1</NewtonsoftJsonVersion>
     <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
