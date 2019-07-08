@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="NBench" Version="$(NBenchVersion)" />
+    <DotNetCliToolReference Include="dotnet-nbench" Version="$(NBenchVersion)" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
