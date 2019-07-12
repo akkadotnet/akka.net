@@ -33,6 +33,8 @@ namespace Akka.Persistence.Snapshot
         private readonly DirectoryInfo _dir;
         private readonly ISet<SnapshotMetadata> _saving;
 
+        private static readonly Type WrapperType = typeof(Serialization.Snapshot);
+        private readonly Akka.Serialization.Serializer _wrapperSerializer;
         private readonly Akka.Serialization.Serialization _serialization;
 
         private readonly string _defaultSerializer;
@@ -51,6 +53,7 @@ namespace Akka.Persistence.Snapshot
             _defaultSerializer = config.GetString("serializer");
 
             _serialization = Context.System.Serialization;
+            _wrapperSerializer = _serialization.FindSerializerForType(WrapperType);
             _saving = new SortedSet<SnapshotMetadata>(SnapshotMetadata.Comparer); // saving in progress
             _log = Context.GetLogger();
         }
@@ -198,9 +201,8 @@ namespace Akka.Persistence.Snapshot
         {
             var buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
-            var snapshotType = typeof(Serialization.Snapshot);
-            var serializerId = _serialization.FindSerializerForType(snapshotType).Identifier;
-            var snapshot = (Serialization.Snapshot)_serialization.Deserialize(buffer, serializerId, snapshotType);
+
+            var snapshot = _wrapperSerializer.FromBinary<Serialization.Snapshot>(buffer);
             return snapshot;
         }
 
@@ -211,7 +213,7 @@ namespace Akka.Persistence.Snapshot
         /// <param name="snapshot">TBD</param>
         protected void Serialize(Stream stream, Serialization.Snapshot snapshot)
         {
-            var bytes = _serialization.Serialize(snapshot);
+            var bytes = _wrapperSerializer.ToBinary(snapshot);
             stream.Write(bytes, 0, bytes.Length);
         }
 
