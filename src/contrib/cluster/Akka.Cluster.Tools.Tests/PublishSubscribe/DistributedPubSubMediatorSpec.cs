@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
+    [Collection(nameof(DistributedPubSubMediatorSpec))]
     public class DistributedPubSubMediatorSpec : AkkaSpec
     {
         public DistributedPubSubMediatorSpec() : base(GetConfig()) { }
