@@ -15,7 +15,6 @@ using Xunit;
 
 namespace Akka.Remote.Tests
 {
-
     public class RemoteConsistentHashingRouterSpec : AkkaSpec
     {
 
