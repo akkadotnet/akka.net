@@ -200,8 +200,16 @@ namespace Akka.Serialization
             }
             else
             {
-                CurrentTransportInformation = info;
-                return action();
+                var oldInfo = CurrentTransportInformation;
+                try
+                {
+                    CurrentTransportInformation = info;
+                    return action();
+                }
+                finally
+                {
+                    CurrentTransportInformation = oldInfo;
+                }
             }
         }
 
