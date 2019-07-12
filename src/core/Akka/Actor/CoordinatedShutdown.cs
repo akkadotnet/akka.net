@@ -674,7 +674,7 @@ namespace Akka.Actor
                 var exitTask = TerminateOnClrExit(coord);
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += exitTask;
-                system.WhenTerminated.ContinueWith(tr => { AppDomain.CurrentDomain.ProcessExit -= ExtendedActorSystem; });
+                system.WhenTerminated.ContinueWith(tr => { AppDomain.CurrentDomain.ProcessExit -= exitTask; });
 #else
                 // TODO: what to do for NetCore?
 #endif
