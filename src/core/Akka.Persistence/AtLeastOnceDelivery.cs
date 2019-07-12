@@ -62,16 +62,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryActor"/> class.
+        /// </summary>
+        /// <param name="overrideSettings">A lambda to tweak the default AtLeastOnceDelivery settings.</param>
+        protected AtLeastOnceDeliveryActor(Func<PersistenceSettings.AtLeastOnceDeliverySettings, PersistenceSettings.AtLeastOnceDeliverySettings> overrideSettings)
+        {
+            var settings = overrideSettings(Extension.Settings.AtLeastOnceDelivery);
+            _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, settings);
+        }
+
+        /// <summary>
         /// Interval between redelivery attempts.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
-        /// configuration key.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
-        public TimeSpan RedeliverInterval
-        {
-            get => _atLeastOnceDeliverySemantic.RedeliverInterval;
-            set => _atLeastOnceDeliverySemantic.RedeliverInterval = value;
-        }
+        public TimeSpan RedeliverInterval => _atLeastOnceDeliverySemantic.RedeliverInterval;
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -80,26 +87,20 @@ namespace Akka.Persistence
         /// this helps prevent an overwhelming amount of messages to be sent at once.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
-        /// configuration key.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
-        public int RedeliveryBurstLimit
-        {
-            get => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
-            set => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit = value;
-        }
+        public int RedeliveryBurstLimit => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
         /// <see cref="ActorBase.Self" />. The count is reset after restart.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
-        /// configuration key.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
-        public int WarnAfterNumberOfUnconfirmedAttempts
-        {
-            get => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
-            set => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts = value;
-        }
+        public int WarnAfterNumberOfUnconfirmedAttempts => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -107,13 +108,10 @@ namespace Akka.Persistence
         /// messages and it will throw <see cref="MaxUnconfirmedMessagesExceededException" />.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
-        /// configuration key.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
-        public int MaxUnconfirmedMessages
-        {
-            get => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
-            set => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages = value;
-        }
+        public int MaxUnconfirmedMessages => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
 
         /// <summary>
         /// Number of messages that have not been confirmed yet.

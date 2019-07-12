@@ -316,9 +316,6 @@ namespace Akka.Persistence
         private long _deliverySequenceNr;
         private ICancelable _redeliverScheduleCancelable;
         private ImmutableSortedDictionary<long, Delivery> _unconfirmed = ImmutableSortedDictionary<long, Delivery>.Empty;
-        private TimeSpan _redeliverInterval;
-        private int _warnAfterNumberOfUnconfirmedAttempts;
-        private int _maxUnconfirmedMessages;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AtLeastOnceDeliverySemantic"/> class.
@@ -342,23 +339,7 @@ namespace Akka.Persistence
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
         /// configuration key.
         /// </summary>
-        public TimeSpan RedeliverInterval
-        {
-            get => _redeliverInterval;
-            set
-            {
-                if (_redeliverInterval != value)
-                {
-                    _redeliverInterval = value;
-                    if (_redeliverScheduleCancelable != null)
-                    {
-                        _redeliverScheduleCancelable.Cancel();
-                        _redeliverScheduleCancelable = null;
-                        StartRedeliverTask();
-                    }
-                }
-            }
-        }
+        public TimeSpan RedeliverInterval { get; }
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -369,7 +350,7 @@ namespace Akka.Persistence
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
         /// configuration key.
         /// </summary>
-        public int RedeliveryBurstLimit { get; set; }
+        public int RedeliveryBurstLimit { get; }
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
@@ -378,26 +359,7 @@ namespace Akka.Persistence
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
         /// configuration key.
         /// </summary>
-        public int WarnAfterNumberOfUnconfirmedAttempts
-        {
-            get => _warnAfterNumberOfUnconfirmedAttempts;
-            set
-            {
-                if (_warnAfterNumberOfUnconfirmedAttempts != value)
-                {
-                    _warnAfterNumberOfUnconfirmedAttempts = value;
-
-                    var deliveriesAboveThreshold = _unconfirmed.Where(u => u.Value.Attempt >= value)
-                        .Select(u => new UnconfirmedDelivery(u.Key, u.Value.Destination, u.Value.Message))
-                        .ToArray();
-
-                    if (deliveriesAboveThreshold.Length > 0)
-                    {
-                        _context.Self.Tell(new UnconfirmedWarning(deliveriesAboveThreshold));
-                    }
-                }
-            }
-        }
+        public int WarnAfterNumberOfUnconfirmedAttempts { get; }
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -407,22 +369,7 @@ namespace Akka.Persistence
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
         /// configuration key.
         /// </summary>
-        public int MaxUnconfirmedMessages
-        {
-            get => _maxUnconfirmedMessages;
-            set
-            {
-                if (_maxUnconfirmedMessages != value)
-                {
-                    _maxUnconfirmedMessages = value;
-                    if (_unconfirmed.Count >= value)
-                    {
-                        throw new MaxUnconfirmedMessagesExceededException(
-                            $"{_context.Self} has too many unconfirmed messages. Maximum allowed is {value}");
-                    }
-                }
-            }
-        }
+        public int MaxUnconfirmedMessages { get; }
 
         /// <summary>
         ///     Number of messages, that have not been confirmed yet.
