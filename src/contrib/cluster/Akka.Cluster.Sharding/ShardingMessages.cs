@@ -142,7 +142,7 @@ namespace Akka.Cluster.Sharding
     /// the state of the shard regions.
     /// </summary>
     [Serializable]
-    public sealed class GetClusterShardingStats : IShardRegionQuery, IClusterShardingSerializable
+    public sealed class GetClusterShardingStats : IShardRegionQuery, IClusterShardingSerializable, IEquatable<GetClusterShardingStats>
     {
         /// <summary>
         /// The timeout for this operation.
@@ -158,9 +158,9 @@ namespace Akka.Cluster.Sharding
             Timeout = timeout;
         }
 
-        private bool Equals(GetClusterShardingStats other)
+        public bool Equals(GetClusterShardingStats other)
         {
-            return Timeout.Equals(other.Timeout);
+            return other != null && Timeout.Equals(other.Timeout);
         }
 
         public override bool Equals(object obj)
@@ -178,7 +178,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetClusterShardingStats"/>, contains statistics about all the sharding regions in the cluster.
     /// </summary>
     [Serializable]
-    public sealed class ClusterShardingStats : IClusterShardingSerializable
+    public sealed class ClusterShardingStats : IClusterShardingSerializable, IEquatable<ClusterShardingStats>
     {
         /// <summary>
         /// All of the statistics for a specific shard region organized per-node.
@@ -194,10 +194,10 @@ namespace Akka.Cluster.Sharding
             Regions = regions;
         }
 
-        private bool Equals(ClusterShardingStats other)
+        public bool Equals(ClusterShardingStats other)
         {
-            return Regions.Keys.SequenceEqual(other.Regions.Keys) &&
-                   Regions.Values.SequenceEqual(other.Regions.Values);
+            return other != null && (Regions.Keys.SequenceEqual(other.Regions.Keys) &&
+                                     Regions.Values.SequenceEqual(other.Regions.Values));
         }
 
         public override bool Equals(object obj)
@@ -277,7 +277,7 @@ namespace Akka.Cluster.Sharding
     /// Entity allocation statistics for a specific shard region.
     /// </summary>
     [Serializable]
-    public sealed class ShardRegionStats : IClusterShardingSerializable
+    public sealed class ShardRegionStats : IClusterShardingSerializable, IEquatable<ShardRegionStats>
     {
         /// <summary>
         /// The set of shardId / entity count pairs
@@ -293,10 +293,10 @@ namespace Akka.Cluster.Sharding
             Stats = stats;
         }
 
-        private bool Equals(ShardRegionStats other)
+        public bool Equals(ShardRegionStats other)
         {
-            return Stats.Keys.SequenceEqual(other.Stats.Keys)
-                   && Stats.Values.SequenceEqual(other.Stats.Values);
+            return other != null && (Stats.Keys.SequenceEqual(other.Stats.Keys)
+                                     && Stats.Values.SequenceEqual(other.Stats.Values));
         }
 
         public override bool Equals(object obj)

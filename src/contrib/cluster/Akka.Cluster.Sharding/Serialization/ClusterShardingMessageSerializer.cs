@@ -27,6 +27,8 @@ namespace Akka.Cluster.Sharding.Serialization
     /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
+        private static readonly byte[] Empty = new byte[0];
+
         #region manifests
 
         private const string CoordinatorStateManifest = "AA";
@@ -150,9 +152,9 @@ namespace Akka.Cluster.Sharding.Serialization
                 case Shard.EntityStopped o: return EntityStoppedToProto(o).ToByteArray();
                 case ShardRegion.StartEntity o: return StartEntityToProto(o).ToByteArray();
                 case ShardRegion.StartEntityAck o: return StartEntityAckToProto(o).ToByteArray();
-                case Shard.GetShardStats o: return new byte[0];
+                case Shard.GetShardStats o: return Empty;
                 case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
-                case GetShardRegionStats o: return new byte[0];
+                case GetShardRegionStats o: return Empty;
                 case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
                 case GetClusterShardingStats o: return GetClusterShardingStatsToProto(o).ToByteArray();
                 case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
