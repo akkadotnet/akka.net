@@ -17,6 +17,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
+    [Collection(nameof(AtLeastOnceDeliverySpec))]
     public class AtLeastOnceDeliverySpec : PersistenceSpec
     {
 

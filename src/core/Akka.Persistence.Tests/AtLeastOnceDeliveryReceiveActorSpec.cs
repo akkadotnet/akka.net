@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
+    [Collection(nameof(AtLeastOnceDeliveryReceiveActorSpec))]
     public class AtLeastOnceDeliveryReceiveActorSpec : PersistenceSpec
     {
         #region internal test classes
