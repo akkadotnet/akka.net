@@ -646,7 +646,7 @@ namespace Akka.Persistence.Tests
             resCarr.Except(c).Any().ShouldBeFalse();
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void PersistentReceive_must_limit_the_number_of_messages_redelivered_at_once()
         {
             var probe = CreateTestProbe();
