@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_requested_parallelism()
         {
             var probe = CreateTestProbe();
