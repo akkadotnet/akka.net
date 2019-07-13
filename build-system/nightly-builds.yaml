@@ -23,4 +23,4 @@ steps:
   displayName: 'FAKE Build'
   inputs:
     filename: build.cmd
-    arguments: 'Nuget nugetpublishurl=$(nightlyUrl) nugetkey=$(nightlyKey)'
+    arguments: 'Nuget nugetprerelease=dev nugetpublishurl=$(nightlyUrl) nugetkey=$(nightlyKey)'
