@@ -19,6 +19,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    [Collection(nameof(ObservableSinkSpec))]
     public class ObservableSinkSpec : AkkaSpec
     {
         #region internal classes
