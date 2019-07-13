@@ -28,7 +28,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    [Collection(nameof(FlowSelectAsyncUnorderedSpec)]
+    [Collection(nameof(FlowSelectAsyncUnorderedSpec))]
     public class FlowSelectAsyncUnorderedSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
