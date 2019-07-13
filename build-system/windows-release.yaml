@@ -1,118 +1,40 @@
 # Release task for PbLib projects
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
+
+pool:
+  vmImage: vs2017-win2016
+  demands: Cmd
+
 trigger:
   branches:
     include:
       - refs/tags/*
 
+pr: none
+
 variables:
+  - group: signingSecrets #create this group with SECRET variables `signingUsername` and `signingPassword`
+  - group: nugetKeys #create this group with SECRET variables `nugetKey`
   - name: githubConnectionName
-    value: releases
+    value: yourConnection #replace this
   - name: projectName
-    value: lighthouse 
+    value: yourProjectName #replace this
   - name: githubRepositoryName
-    value: petabridge/lighthouse 
-  - name: dockerConnectionName
-    value: PetabridgeDocker
+    value: yourOrganization/yourRepo #replace this
 
-jobs:
-  - job: publishNetCore
-    pool:
-      vmImage: windows-2019
-      demands: Cmd
-    steps:
-    - task: BatchScript@1
-      displayName: 'dotnet publish'
-      inputs:
-        filename: build.cmd
-        arguments: 'PublishCode'
-    - task: CopyFiles@2
-      displayName: 'Copy dotnet publish Output'
-      inputs:
-        sourceFolder: src/Lighthouse/bin/Release/netcoreapp2.1/publish/
-        targetFolder: $(Build.ArtifactStagingDirectory)/bin/Release/netcoreapp2.1/publish/
-    - task: CopyFiles@2
-      displayName: 'Copy Dockerfiles'
-      inputs:
-        sourceFolder: src/Lighthouse
-        contents: Dockerfile-*
-        targetFolder: $(Build.ArtifactStagingDirectory)
-    - task: PublishBuildArtifacts@1
-      inputs:
-        pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-    - task: GitHubRelease@0
-      displayName: 'GitHub release (create)'
-      inputs:
-        gitHubConnection: $(githubConnectionName)
-        repositoryName: $(githubRepositoryName)
-        title: '$(projectName) v$(Build.SourceBranchName)'
-        releaseNotesFile: 'RELEASE_NOTES.md'
-        assets: |
-         bin\nuget\*.nupkg
+steps:
+- task: BatchScript@1
+  displayName: 'FAKE Build'
+  inputs:
+    filename: build.cmd
+    arguments: 'All SignClientUser=$(signingUsername) SignClientSecret=$(signingPassword) nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(nugetKey)'
 
-  - job:  linuxImageDeploy
-    pool:
-      vmImage: ubuntu-16.04
-    dependsOn: publishNetCore
-    steps:
-      - task: DownloadBuildArtifacts@0
-        inputs:
-          buildType: 'current'
-          downloadType: 'single'
-          artifactName: 'drop'
-          itemPattern: drop/**
-          downloadPath: '$(Agent.BuildDirectory)'
-      - task: Docker@2
-        displayName: "Login to Docker Hub"
-        inputs:
-          command: login
-          containerRegistry: $(dockerConnectionName)
-      - task: Docker@2
-        displayName: Docker Build (Linux)
-        inputs:
-          command: buildAndPush
-          Dockerfile: $(Agent.BuildDirectory)/drop/Dockerfile-linux
-          repository: petabridge/lighthouse
-          tags: |
-            latest
-            linux-latest
-            $(Build.SourceBranchName)
-            $(Build.SourceBranchName)-linux
-      - task: Docker@2
-        displayName: Logout of Docker Hub
-        inputs:
-          command: logout
-          containerRegistry: $(dockerConnectionName)
-
-  - job:  windowsImageDeploy
-    pool:
-      vmImage: windows-2019
-    dependsOn: publishNetCore
-    steps:
-      - task: DownloadBuildArtifacts@0
-        inputs:
-          buildType: 'current'
-          downloadType: 'single'
-          artifactName: 'drop'
-          itemPattern: drop/**
-          downloadPath: '$(Agent.BuildDirectory)'
-      - task: Docker@2
-        displayName: "Login to Docker Hub"
-        inputs:
-          command: login
-          containerRegistry: $(dockerConnectionName)
-      - task: Docker@2
-        displayName: Docker Build (Windows)
-        inputs:
-          command: buildAndPush
-          Dockerfile: $(Agent.BuildDirectory)/drop/Dockerfile-windows
-          repository: petabridge/lighthouse
-          tags: |
-            windows-latest
-            $(Build.SourceBranchName)-nanoserver
-      - task: Docker@2
-        displayName: Logout of Docker Hub
-        inputs:
-          command: logout
-          containerRegistry: $(dockerConnectionName)
+- task: GitHubRelease@0
+  displayName: 'GitHub release (create)'
+  inputs:
+    gitHubConnection: $(githubConnectionName)
+    repositoryName: $(githubRepositoryName)
+    title: '$(projectName) v$(Build.SourceBranchName)'
+    releaseNotesFile: 'RELEASE_NOTES.md'
+    assets: |
+     bin\nuget\*.nupkg

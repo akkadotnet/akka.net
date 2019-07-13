@@ -1,0 +1,26 @@
+# Release task for PbLib projects
+# See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
+
+pool:
+  vmImage: vs2017-win2016
+  demands: Cmd
+
+trigger: none
+pr: none
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily midnight build
+  branches:
+    include:
+    - dev
+
+variables:
+  - group: nugetKeys #create this group with SECRET variables `nugetKey`
+
+steps:
+- task: BatchScript@1
+  displayName: 'FAKE Build'
+  inputs:
+    filename: build.cmd
+    arguments: 'Nuget nugetprerelease=dev nugetpublishurl=$(nightlyUrl) nugetkey=$(nightlyKey)'
