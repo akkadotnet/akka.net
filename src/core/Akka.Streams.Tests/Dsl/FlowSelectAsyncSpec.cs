@@ -333,7 +333,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on AzureDevOps")]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>
