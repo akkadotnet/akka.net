@@ -31,7 +31,7 @@ namespace Akka.Actor
         /// </summary>
         public const int UndefinedUid = 0;
         private Props _props;
-        private static readonly Props terminatedProps = new TerminatedProps();
+        private IScope _scope;
 
         private const int DefaultState = 0;
         private const int SuspendedState = 1;
@@ -152,10 +152,6 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal static Props TerminatedProps { get { return terminatedProps; } }
 
         /// <summary>
         /// TBD
@@ -188,6 +184,7 @@ namespace Akka.Actor
              * this is processed before anything else.
              */
             var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            _scope = _props.CreateScope(_systemImpl);
 
             Create createMessage;
             /*
@@ -348,11 +345,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual ActorBase CreateNewActorInstance()
         {
-            var actor = _props.NewActor();
-
-            // Apply default of custom behaviors to actor.
-            var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
-            pipeline.AfterActorIncarnated(actor, this);
+            var actor = _scope.Create();
+            if (actor is IActorStash stashed)
+            {
+                stashed.Stash = this.CreateStash(stashed);
+            }
 
             var initializableActor = actor as IInitializableActor;
             if (initializableActor != null)
@@ -424,7 +421,8 @@ namespace Akka.Actor
         protected void ClearActorCell()
         {
             UnstashAll();
-            _props = terminatedProps;
+            _scope.Dispose();
+            _props = TerminatedProps.Instance;
         }
 
         /// <summary>
@@ -452,7 +450,6 @@ namespace Akka.Actor
                     }
                 }
 
-                ReleaseActor(actor);
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
@@ -460,11 +457,6 @@ namespace Akka.Actor
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
             _state = _state.ClearBehaviorStack();
-        }
-
-        private void ReleaseActor(ActorBase a)
-        {
-            _props.Release(a);
         }
 
         /// <summary>

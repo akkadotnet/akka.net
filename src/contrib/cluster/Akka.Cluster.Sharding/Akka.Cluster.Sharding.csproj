@@ -5,9 +5,9 @@
     <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
     <Description>Sharded actors with managed lifecycle for Akka.NET cluster</Description>
     <VersionSuffix>beta</VersionSuffix>
-    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

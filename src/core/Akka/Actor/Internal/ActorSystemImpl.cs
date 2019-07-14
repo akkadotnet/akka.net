@@ -18,6 +18,7 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Akka.Actor.Internal
@@ -45,7 +46,7 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private IServiceProvider _serviceProvider;
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -85,9 +86,9 @@ namespace Akka.Actor.Internal
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
+            ConfigureServices();
         }
-
+        
         /// <inheritdoc cref="ActorSystem"/>
         public override IActorRefProvider Provider { get { return _provider; } }
 
@@ -119,7 +120,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
+        public override IServiceProvider ServiceProvider => _serviceProvider;
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -436,6 +437,18 @@ namespace Akka.Actor.Internal
             }
         }
 
+        private void ConfigureServices()
+        {
+            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+            var serviceProvider = new DefaultServiceProviderFactory();
+            var builder = serviceProvider.CreateBuilder(new ServiceCollection());
+
+            builder.Add(new ServiceDescriptor(typeof(ExtendedActorSystem), this));
+            builder.Add(new ServiceDescriptor(typeof(ActorSystem), this));
+
+            _serviceProvider = builder.BuildServiceProvider();
+        }
+
         private void ConfigureLoggers()
         {
             _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
@@ -444,12 +457,6 @@ namespace Akka.Actor.Internal
         private void ConfigureDispatchers()
         {
             _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
-        }
-
-        private void ConfigureActorProducerPipeline()
-        {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         private void ConfigureTerminationCallbacks()
