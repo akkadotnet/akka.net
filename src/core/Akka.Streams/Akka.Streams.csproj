@@ -3,9 +3,9 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Streams</AssemblyTitle>
     <Description>Reactive stream support for Akka.NET</Description>
-    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />

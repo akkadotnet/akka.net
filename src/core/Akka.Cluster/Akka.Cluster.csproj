@@ -4,9 +4,9 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster</AssemblyTitle>
     <Description>Cluster support for Akka.NET</Description>
-    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

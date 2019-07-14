@@ -67,9 +67,10 @@ namespace Akka.Actor
                     
                     failedActor.AroundPreRestart(cause, optionalMessage);
 
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
-                    pipeline.BeforeActorIncarnated(failedActor, this);
+                    if (failedActor is IActorStash stashed)
+                    {
+                        stashed.Stash.UnstashAll();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -286,9 +287,10 @@ namespace Akka.Actor
                 {
                     a.AroundPostStop();
 
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(a.GetType());
-                    pipeline.BeforeActorIncarnated(a, this);
+                    if (a is IActorStash stashed)
+                    {
+                        stashed.Stash.UnstashAll();
+                    }
                 }
             }
             catch (Exception x)

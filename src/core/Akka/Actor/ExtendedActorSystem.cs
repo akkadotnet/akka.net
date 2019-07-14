@@ -40,11 +40,10 @@ namespace Akka.Actor
         public abstract IInternalActorRef SystemGuardian { get; }
 
         /// <summary>
-        /// Gets the actor producer pipeline resolver for current actor system. It may be used by
-        /// Akka plugins to inject custom behavior directly into actor creation chain.
+        /// Gets the service provider used for resolution of dependencies and inner
+        /// actor system services creation.
         /// </summary>
-        [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
-        public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
+        public abstract IServiceProvider ServiceProvider { get; }
 
         /// <summary>
         /// Creates a new system actor in the "/system" namespace. This actor 
