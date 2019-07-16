@@ -670,16 +670,12 @@ namespace Akka.Actor
             var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
             if (runByClrShutdownHook)
             {
-#if APPDOMAIN
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
                 {
                     // have to block, because if this method exits the process exits.
                     coord.RunClrHooks().Wait(coord.TotalTimeout);
                 };
-#else
-                // TODO: what to do for NetCore?
-#endif
 
                 coord.AddClrShutdownHook(() =>
                 {
