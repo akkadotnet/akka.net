@@ -133,9 +133,9 @@ namespace Akka.TestKit
         }
 
 
-        protected void Intercept<T>(Action actionThatThrows) where T : Exception
+        protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            Assert.Throws<T>(() => actionThatThrows());
+            return Assert.Throws<T>(() => actionThatThrows());
         }
 
         protected void Intercept(Action actionThatThrows)
