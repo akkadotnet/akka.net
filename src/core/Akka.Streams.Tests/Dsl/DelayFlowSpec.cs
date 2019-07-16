@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip = "Racy - timing is rather sensitive on Azure DevOps")]
         public void DelayFlow_should_work_with_fixed_delay()
         {
             var fixedDelay = TimeSpan.FromSeconds(1);
