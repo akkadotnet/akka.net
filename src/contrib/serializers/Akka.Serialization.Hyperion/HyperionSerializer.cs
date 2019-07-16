@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -33,7 +34,7 @@ namespace Akka.Serialization
         /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
-        public HyperionSerializer(ExtendedActorSystem system) 
+        public HyperionSerializer(ExtendedActorSystem system)
             : this(system, HyperionSerializerSettings.Default)
         {
         }
@@ -43,7 +44,7 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
         /// <param name="config">Configuration passed from related HOCON config path.</param>
-        public HyperionSerializer(ExtendedActorSystem system, Config config) 
+        public HyperionSerializer(ExtendedActorSystem system, Config config)
             : this(system, HyperionSerializerSettings.Create(config))
         {
         }
@@ -70,7 +71,7 @@ namespace Akka.Serialization
                     preserveObjectReferences: settings.PreserveObjectReferences,
                     versionTolerance: settings.VersionTolerance,
                     surrogates: new[] { akkaSurrogate },
-                    knownTypes: provider.GetKnownTypes(), 
+                    knownTypes: provider.GetKnownTypes(),
                     ignoreISerializable:true));
         }
 
@@ -106,10 +107,25 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var ms = new MemoryStream(bytes))
+            try
             {
-                var res = _serializer.Deserialize<object>(ms);
-                return res;
+                using (var ms = new MemoryStream(bytes))
+                {
+                    var res = _serializer.Deserialize<object>(ms);
+                    return res;
+                }
+            }
+            catch (TypeLoadException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch(NotSupportedException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw new SerializationException(e.Message, e);
             }
         }
 
@@ -169,23 +185,23 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// When true, it tells <see cref="HyperionSerializer"/> to keep 
+        /// When true, it tells <see cref="HyperionSerializer"/> to keep
         /// track of references in serialized/deserialized object graph.
         /// </summary>
         public readonly bool PreserveObjectReferences;
 
         /// <summary>
-        /// When true, it tells <see cref="HyperionSerializer"/> to encode 
+        /// When true, it tells <see cref="HyperionSerializer"/> to encode
         /// a list of currently serialized fields into type manifest.
         /// </summary>
         public readonly bool VersionTolerance;
 
         /// <summary>
-        /// A type implementing <see cref="IKnownTypesProvider"/>, that will 
-        /// be used when <see cref="HyperionSerializer"/> is being constructed 
-        /// to provide a list of message types that are supposed to be known 
-        /// implicitly by all communicating parties. Implementing class must 
-        /// provide either a default constructor or a constructor taking 
+        /// A type implementing <see cref="IKnownTypesProvider"/>, that will
+        /// be used when <see cref="HyperionSerializer"/> is being constructed
+        /// to provide a list of message types that are supposed to be known
+        /// implicitly by all communicating parties. Implementing class must
+        /// provide either a default constructor or a constructor taking
         /// <see cref="ExtendedActorSystem"/> as its only parameter.
         /// </summary>
         public readonly Type KnownTypesProvider;

@@ -42,7 +42,9 @@ namespace Akka.TestKit
               #  }
               #}
             }
-          }");
+          }
+          # use random ports to avoid race conditions with binding contention
+          akka.remote.dot-netty.tcp.port = 0");
 
         private static int _systemNumber = 0;
 
