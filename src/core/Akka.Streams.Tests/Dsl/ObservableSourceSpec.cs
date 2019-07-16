@@ -17,6 +17,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    [Collection(nameof(ObservableSourceSpec))]
     public class ObservableSourceSpec : AkkaSpec
     {
         #region internal classes
