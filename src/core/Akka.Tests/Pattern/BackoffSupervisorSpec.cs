@@ -85,7 +85,7 @@ namespace Akka.Tests.Pattern
         private IActorRef Create(BackoffOptions options) => Sys.ActorOf(BackoffSupervisor.Props(options));
         #endregion
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
             var supervisor = Create(OnStopOptions());
