@@ -31,6 +31,40 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="CoreAPISpec.ApproveCluster.approved.txt" />
+    <None Remove="CoreAPISpec.ApproveClusterTools.approved.txt" />
+    <None Remove="CoreAPISpec.ApproveCore.approved.txt" />
+    <None Remove="CoreAPISpec.ApprovePersistence.approved.txt" />
+    <None Remove="CoreAPISpec.ApprovePersistenceQuery.approved.txt" />
+    <None Remove="CoreAPISpec.ApproveRemote.approved.txt" />
+    <None Remove="CoreAPISpec.ApproveStreams.approved.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="CoreAPISpec.ApproveCluster.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveClusterTools.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveCore.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApprovePersistence.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApprovePersistenceQuery.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveRemote.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CoreAPISpec.ApproveStreams.approved.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
