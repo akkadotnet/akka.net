@@ -25,7 +25,7 @@ To [see the full set of changes for Akka.NET v1.3.14, click here](https://github
 | 1 | 65 | 47 | Ondrej Pialek |
 | 1 | 3 | 3 | Abi |
 | 1 | 18 | 16 | Peter Huang |
-| 1 | 1 | 2 | Maciej WÛdke |
+| 1 | 1 | 2 | Maciej W√≥dke |
 | 1 | 1 | 1 | Wessel Kranenborg |
 | 1 | 1 | 1 | Kaiwei Li |
 | 1 | 1 | 1 | jdsartori |
@@ -52,7 +52,7 @@ We expect to release more beta versions in the future, and if you wish to [get a
 | 1 | 3 | 3 | Abi |
 | 1 | 2 | 3 | Onur Gumus |
 | 1 | 18 | 16 | Peter Huang |
-| 1 | 1 | 2 | Maciej WÛdke |
+| 1 | 1 | 2 | Maciej W√≥dke |
 | 1 | 1 | 1 | jdsartori |
 | 1 | 1 | 1 | Wessel Kranenborg |
 
@@ -157,7 +157,7 @@ To [see the full set of changes for Akka.NET 1.3.10, click here](https://github.
 | 2 | 60 | 8 | Marcus Weaver |
 | 2 | 57 | 12 | moerwald |
 | 2 | 278 | 16 | Peter Shrosbree |
-| 2 | 2 | 2 | F·bio Beir„o |
+| 2 | 2 | 2 | F√°bio Beir√£o |
 | 1 | 71 | 71 | Sean Gilliam |
 | 1 | 6 | 0 | basbossinkdivverence |
 | 1 | 24 | 5 | Ismael Hamed |
@@ -241,7 +241,7 @@ To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.
 | 1 | 86 | 79 | Nick Polideropoulos |
 | 1 | 78 | 0 | v1rusw0rm |
 | 1 | 4 | 4 | Joshua Garnett |
-| 1 | 32 | 17 | Jarl Sveinung Fl¯ Rasmussen |
+| 1 | 32 | 17 | Jarl Sveinung Fl√∏ Rasmussen |
 | 1 | 27 | 1 | Sam13 |
 | 1 | 250 | 220 | Maxim Cherednik |
 | 1 | 184 | 124 | Josh Taylor |
@@ -250,7 +250,7 @@ To [see the full set of changes for Akka.NET v1.3.9, click here](https://github.
 | 1 | 1 | 1 | Vasily Kirichenko |
 | 1 | 1 | 1 | Samuel Kelemen |
 | 1 | 1 | 1 | Nyola Mike |
-| 1 | 1 | 1 | F·bio Beir„o |
+| 1 | 1 | 1 | F√°bio Beir√£o |
 
 #### 1.3.8 June 04 2018 ####
 **Maintenance Release for Akka.NET 1.3**
@@ -285,7 +285,7 @@ Relevant documentation for Akka.Streams pre-materialization, for those who are i
 | --- | --- | --- | --- |
 | 17 | 498 | 171 | Aaron Stannard |
 | 4 | 1054 | 23 | Bartosz Sypytkowski |
-| 2 | 2 | 2 | F·bio Beir„o |
+| 2 | 2 | 2 | F√°bio Beir√£o |
 | 2 | 16 | 2 | Aaron Palmer |
 | 1 | 1063 | 4 | Oleksandr Bogomaz |
 | 1 | 1 | 1 | Ismael Hamed |
@@ -356,7 +356,7 @@ You can see [the full set of changes for Akka.NET v1.3.6 here](hhttps://github.c
 | 1 | 64 | 6 | Robert |
 | 1 | 23 | 29 | nathvi |
 | 1 | 2 | 1 | Sebastien Bacquet |
-| 1 | 1 | 2 | Ond≈?ej Pi√°lek |
+| 1 | 1 | 2 | Ond√Ö?ej Pi√É¬°lek |
 | 1 | 1 | 1 | Steffen Skov |
 | 1 | 1 | 1 | Sean Gilliam |
 | 1 | 1 | 1 | Matthew Herman |
