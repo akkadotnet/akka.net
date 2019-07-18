@@ -451,33 +451,49 @@ namespace Akka.Actor
         {
             if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
-                var ser = _systemImpl.Serialization;
-                if (props.Arguments != null)
+                var oldInfo = Serialization.Serialization.CurrentTransportInformation;
+                try
                 {
-                    foreach (var argument in props.Arguments)
+                    if (oldInfo == null)
+                        Serialization.Serialization.CurrentTransportInformation =
+                            SystemImpl.Provider.SerializationInformation;
+                    
+                    var ser = _systemImpl.Serialization;
+                    if (props.Arguments != null)
                     {
-                        if (argument != null && !(argument is INoSerializationVerificationNeeded))
+                        foreach (var argument in props.Arguments)
                         {
-                            var serializer = ser.FindSerializerFor(argument);
-                            var bytes = serializer.ToBinary(argument);
-                            var manifestSerializer = serializer as SerializerWithStringManifest;
-                            if (manifestSerializer != null)
+                            if (argument != null && !(argument is INoSerializationVerificationNeeded))
                             {
-                                var manifest = manifestSerializer.Manifest(argument);
-                                if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
+                                var serializer = ser.FindSerializerFor(argument);
+                                var bytes = serializer.ToBinary(argument);
+                                if (serializer is SerializerWithStringManifest manifestSerializer)
                                 {
-                                    throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
+                                    var manifest = manifestSerializer.Manifest(argument);
+                                    if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
+                                    {
+                                        throw new ArgumentException(
+                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
+                                            nameof(name));
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().TypeQualifiedName()) == null)
+                                else
                                 {
-                                    throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
+                                    if (ser.Deserialize(bytes, serializer.Identifier,
+                                            argument.GetType().TypeQualifiedName()) == null)
+                                    {
+                                        throw new ArgumentException(
+                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
+                                            nameof(name));
+                                    }
                                 }
                             }
                         }
                     }
+                }
+                finally
+                {
+                    Serialization.Serialization.CurrentTransportInformation = oldInfo;
                 }
             }
 

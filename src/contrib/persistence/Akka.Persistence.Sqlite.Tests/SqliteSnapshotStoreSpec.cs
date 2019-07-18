@@ -40,5 +40,7 @@ namespace Akka.Persistence.Sqlite.Tests
                     }
                 }");
         }
+
+        protected override bool SupportsSerialization => true;
     }
 }
