@@ -1,5 +1,28 @@
-#### 1.4.0 June 14 2018 ####
-Placeholder for nightlies.
+#### 1.4.0-beta1 July 17 2019 ####
+**First pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4 has a ways to go before it's fully ready for market, but this is the first publicly available release on NuGet and it contains some massive changes.
+
+* Akka.Cluster.Sharding's default "persistent" mode has been stabilized and errors that users have ran into during `ShardCoordinator` recovery, such as [Exception in PersistentShardCoordinator ReceiveRecover](https://github.com/akkadotnet/akka.net/issues/3414)
+* StreamRefs have been added to Akka.Streams, which allows streams to run across process boundaries and over Akka.Remote / Akka.Cluster.
+* Akka.NET now targets .NET Standard 2.0, which means many annoying polyfills and other hacks we needed to add in order to support .NET Core 1.1 are now gone and replaced with standard APIs.
+* Lots of small bug fixes and API changes have been added to Akka core and other libraries.
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 39 | 3479 | 1731 | Aaron Stannard |
+| 6 | 5255 | 531 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 3 | 3 | Abi |
+| 1 | 2 | 3 | Onur Gumus |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | jdsartori |
+| 1 | 1 | 1 | Wessel Kranenborg |
 
 #### 1.3.13 April 30 2019 ####
 **Maintenance Release for Akka.NET 1.3**
