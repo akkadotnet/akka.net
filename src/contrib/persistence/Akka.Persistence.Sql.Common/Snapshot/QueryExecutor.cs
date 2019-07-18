@@ -337,8 +337,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             var snapshotType = snapshot.GetType();
             var serializer = Serialization.FindSerializerForType(snapshotType, Configuration.DefaultSerializer);
-
-            var binary = serializer.ToBinary(snapshot);
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+            var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.ToBinary(snapshot));
             AddParameter(command, "@Payload", DbType.Binary, binary);
         }
 
@@ -585,8 +585,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             if (reader.IsDBNull(5))
             {
                 var type = Type.GetType(manifest, true);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                obj = serializer.FromBinary(binary, type);
+                obj = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.FromBinary(binary, type));
             }
             else
             {

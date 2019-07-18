@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -39,12 +40,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
         private readonly SnapshotStoreSettings _settings;
 
+        private readonly ExtendedActorSystem _actorSystem;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
         {
+            _actorSystem = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
@@ -224,7 +228,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var snapshotType = snapshot.GetType();
             var serializer = Context.System.Serialization.FindSerializerForType(snapshotType, _settings.DefaultSerializer);
 
-            var binary = serializer.ToBinary(snapshot);
+            var binary  = Akka.Serialization.Serialization.WithTransport(_actorSystem,
+                () => serializer.ToBinary(snapshot));
+            
 
             return new SnapshotEntry(
                 persistenceId: metadata.PersistenceId,
