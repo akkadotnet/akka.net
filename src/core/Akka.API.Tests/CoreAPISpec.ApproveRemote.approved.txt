@@ -188,6 +188,7 @@ namespace Akka.Remote
         public Akka.Actor.IActorRef RemoteWatcher { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
+        public Akka.Serialization.Information SerializationInformation { get; }
         public Akka.Actor.Settings Settings { get; }
         public Akka.Actor.LocalActorRef SystemGuardian { get; }
         public Akka.Actor.IInternalActorRef TempContainer { get; }

@@ -6,6 +6,8 @@
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <RuntimeIdentifier Condition=" '$(TargetFramework)' == 'net452' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
+    <TargetFrameworks>$(NetCoreTestVersion)</TargetFrameworks>
+   
   </PropertyGroup>
  
   <ItemGroup>
