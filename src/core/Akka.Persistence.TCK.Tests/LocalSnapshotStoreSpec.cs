@@ -30,6 +30,8 @@ namespace Akka.Persistence.TCK.Tests
             Initialize();
         }
 
+        protected override bool SupportsSerialization => true;
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
