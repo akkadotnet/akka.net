@@ -33,9 +33,7 @@ namespace Akka.Remote.Serialization
             payloadProto.SerializerId = serializer.Identifier;
 
             // get manifest
-            var manifestSerializer = serializer as SerializerWithStringManifest;
-
-            if (manifestSerializer != null)
+            if (serializer is SerializerWithStringManifest manifestSerializer)
             {
                 var manifest = manifestSerializer.Manifest(payload);
                 if (!string.IsNullOrEmpty(manifest))
