@@ -264,6 +264,7 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes TerminationWatcher = Attributes.CreateName("terminationWatcher");
+        public static readonly Attributes Watch = Attributes.CreateName("watch");
         /// <summary>
         /// TBD
         /// </summary>
