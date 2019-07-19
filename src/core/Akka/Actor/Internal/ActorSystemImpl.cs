@@ -86,7 +86,7 @@ namespace Akka.Actor.Internal
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureServices();
+            ConfigureDependencies();
         }
         
         /// <inheritdoc cref="ActorSystem"/>
@@ -437,16 +437,28 @@ namespace Akka.Actor.Internal
             }
         }
 
-        private void ConfigureServices()
+        private void ConfigureDependencies()
         {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            var serviceProvider = new DefaultServiceProviderFactory();
-            var builder = serviceProvider.CreateBuilder(new ServiceCollection());
+            var defaultDependencyResolverType = typeof(DependencyResolver);
+            var defaultDependencyResolverName = defaultDependencyResolverType.FullName;
+            var dependencyResolverType = Type.GetType(Settings.Config.GetString("akka.dependency-resolver-class", defaultDependencyResolverName), throwOnError: true);
+            if (!defaultDependencyResolverType.IsAssignableFrom(dependencyResolverType))
+            {
+                throw new ConfigurationException($"Type [{dependencyResolverType.FullName}] must inherit from [{defaultDependencyResolverName}]. Use `akka.dependency-resolver-class` HOCON config to set a fully qualified type name of correct dependency resolver.");
+            }
 
-            builder.Add(new ServiceDescriptor(typeof(ExtendedActorSystem), this));
-            builder.Add(new ServiceDescriptor(typeof(ActorSystem), this));
+            var dependencyResolver = Activator.CreateInstance(dependencyResolverType) as DependencyResolver;
+            if (dependencyResolver is null)
+            {
+                throw new ConfigurationException($"Couldn't create instance of [{dependencyResolverType}], make sure it provides a default constructor and that it inherits from [{defaultDependencyResolverName}].");
+            }
 
-            _serviceProvider = builder.BuildServiceProvider();
+            var serviceProviderFactory = dependencyResolver.ServiceProviderFactory(this);
+            var builder = serviceProviderFactory.CreateBuilder(new ServiceCollection());
+            dependencyResolver.ConfigureDependencies(this, builder);
+            _serviceProvider = serviceProviderFactory.CreateServiceProvider(builder);
+            
+            Log.Debug("Configured dependency resolver: '{0}'", dependencyResolverType.FullName);
         }
 
         private void ConfigureLoggers()

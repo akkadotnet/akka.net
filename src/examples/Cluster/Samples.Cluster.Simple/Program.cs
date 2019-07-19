@@ -7,6 +7,7 @@
 
 using System;
 using System.Configuration;
+using System.IO;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -24,13 +25,13 @@ namespace Samples.Cluster.Simple
 
         public static void StartUp(string[] ports)
         {
-            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
+            var fallbackConfig = ConfigurationFactory.ParseString(File.ReadAllText("reference.conf"));
             foreach (var port in ports)
             {
                 //Override the configuration of the port
                 var config =
                     ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
-                        .WithFallback(section.AkkaConfig);
+                        .WithFallback(fallbackConfig);
 
                 //create an Akka system
                 var system = ActorSystem.Create("ClusterSystem", config);

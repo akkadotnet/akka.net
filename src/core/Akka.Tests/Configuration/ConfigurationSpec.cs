@@ -63,16 +63,16 @@ namespace Akka.Tests.Configuration
             settings.SchedulerClass.ShouldBe(typeof (HashedWheelTimerScheduler).FullName);
         }
 
-#if CONFIGURATION
-        [Fact]
-        public void Deserializes_hocon_configuration_from_net_config_file()
-        {
-            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
-            Assert.NotNull(section);
-            Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
-            var akkaConfig = section.AkkaConfig;
-            Assert.NotNull(akkaConfig);
-        }
+#if NET461
+//        [Fact]
+//        public void Deserializes_hocon_configuration_from_net_config_file()
+//        {
+//            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
+//            Assert.NotNull(section);
+//            Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
+//            var akkaConfig = section.AkkaConfig;
+//            Assert.NotNull(akkaConfig);
+//        }
 #endif
 
         [Fact]

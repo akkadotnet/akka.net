@@ -7,6 +7,7 @@
 
 using System;
 using System.Configuration;
+using System.IO;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -20,8 +21,7 @@ namespace Samples.Cluster.Transformation
 
         static void Main(string[] args)
         {
-            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
-            _clusterConfig = section.AkkaConfig;
+            _clusterConfig = ConfigurationFactory.ParseString(File.ReadAllText("reference.conf"));
             LaunchBackend(new []{ "2551" });
             LaunchBackend(new[] { "2552" });
             LaunchBackend(new string[0]);

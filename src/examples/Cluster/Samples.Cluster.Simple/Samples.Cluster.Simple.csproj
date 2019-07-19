@@ -13,4 +13,10 @@
    <ItemGroup>
     <Reference Include="System.Configuration" />
   </ItemGroup>
+  
+   <ItemGroup>
+     <None Update="reference.conf">
+       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+     </None>
+   </ItemGroup>
 </Project>
