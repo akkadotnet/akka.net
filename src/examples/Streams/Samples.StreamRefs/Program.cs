@@ -39,37 +39,17 @@ namespace Samples.StreamRefs
             var cancelHandle = source.Item1;
             var runHandle = source.Item2;
             var sourceRef = Akka.Streams.Dsl.StreamRefs.SourceRef<int>();
+            var sinkRef = Akka.Streams.Dsl.StreamRefs.SinkRef<int>();
 
-            //var graph = GraphDsl.Create(sourceRef, (builder, shape) =>
-            //{
-            //    var graphSource = builder.Add(runHandle);
-            //    var broadcast = builder.Add(new Broadcast<int>(2));
+            var sourceActorRef = await runHandle.RunWith(sourceRef, actorSystem.Materializer());
+            var sinkActorRef = await Sink.ForEach<int>(i => Console.WriteLine(i)).RunWith(sinkRef, actorSystem.Materializer());
 
-            //    builder.From(graphSource).Via(broadcast);
-            //    builder.From(broadcast.Out(0)).To(shape);
+            var myFlow = Flow.Create<int>().Select(x => x + 1).Where(x => x % 2 == 0)
+                .RunWith(sourceActorRef.Source, sinkActorRef.Sink, actorSystem.Materializer());
 
-            //    var countingFlow = Flow.Create<int>().Async().GroupedWithin(int.MaxValue, TimeSpan.FromSeconds(1));
 
-            //    builder.From(broadcast.Out(1)).Via(countingFlow).To(Sink.ForEach<IEnumerable<int>>(i =>
-            //    {
-            //        var arr = i.ToArray();
-            //        actorSystem.Log.Info("Emitted {0} events totaling {1}", arr.Length, arr.Sum());
-            //    }));
 
-            //    return ClosedShape.Instance;
-            //});
-
-            //var actorRef = await actorSystem.Materializer().Materialize(graph);
-
-            var actorRef = await runHandle.RunWith(sourceRef, actorSystem.Materializer());
-
-            await actorRef.Source.RunForeach(i =>
-            {
-                if (i % 5 == 0)
-                {
-                    actorSystem.Log.Info("{0}", i);
-                }
-            }, actorSystem.Materializer());
+            await actorSystem.WhenTerminated;
         }
     }
 }
