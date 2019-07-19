@@ -31,9 +31,9 @@ namespace Akka.Tests.Actor
             services.AddSingleton<DependencyResolverSpec.ISingletonActorDependency, DependencyResolverSpec.SingletonActorDependency>();
             
             // actors
-            services.AddTransient<DependencyResolverSpec.TestActor2>();
-            services.AddTransient<DependencyResolverSpec.TestActor3>();
-            services.AddTransient<DependencyResolverSpec.TestActor4>();
+            services.AddTransient<DependencyResolverSpec.TestActor2>(); // transient dependency
+            services.AddTransient<DependencyResolverSpec.TestActor3>(); // scoped dependency
+            services.AddTransient<DependencyResolverSpec.TestActor4>(); // singleton dependency
         }
     }
     
