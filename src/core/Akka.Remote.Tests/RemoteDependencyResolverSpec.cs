@@ -9,6 +9,7 @@
 
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +34,7 @@ namespace Akka.Remote.Tests
         private static Config TestConfig = ConfigurationFactory.ParseString(@"
             akka.loglevel = DEBUG
             akka.actor.provider = remote
-            akka.remote.dot-netty.tcp.host = ""127.0.0.1""
+            akka.remote.dot-netty.tcp.hostname = ""127.0.0.1""
             akka.remote.dot-netty.tcp.port = 2551
             akka.actor.deployment {
                 /service2 {
@@ -56,7 +57,7 @@ namespace Akka.Remote.Tests
                 akka.loglevel = DEBUG
                 akka.actor.provider = remote
                 akka.dependency-resolver-class = ""Akka.Remote.Tests.CustomRemoteDependencyResolver, Akka.Remote.Tests""
-                akka.remote.dot-netty.tcp.host = ""127.0.0.1""
+                akka.remote.dot-netty.tcp.hostname = ""127.0.0.1""
                 akka.remote.dot-netty.tcp.port = 2552");
             using (var remoteSystem = ActorSystem.Create("remote", remoteConfig.WithFallback(TestKit.Xunit2.TestKit.DefaultConfig)))
             {
@@ -70,7 +71,7 @@ namespace Akka.Remote.Tests
                 ExpectMsg("AkkaSpec::service1 replied A");
                 
                 // remote deploy behind the router 
-                var remoteActor = Watch(Sys.ActorOf(props, "service2"));
+                var remoteActor = Watch(Sys.ActorOf(props.WithRouter(FromConfig.Instance), "service2"));
                 remoteActor.Tell("B");
                 ExpectMsg("remote::$a replied B");
                 remoteActor.Tell("C");
