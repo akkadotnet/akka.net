@@ -217,7 +217,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase, new() => new Props(typeof(TActor), NoArgs, Deploy.None, supervisorStrategy);
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase => new Props(typeof(TActor), NoArgs, Deploy.None, supervisorStrategy);
 
         /// <summary>
         /// Creates an actor of a specified type.
