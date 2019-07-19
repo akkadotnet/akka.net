@@ -116,7 +116,7 @@ namespace Akka.Actor
             public ActorBase Create()
             {
                 var result = _inner.ServiceProvider.GetService(_props.Type);
-                if (result == null)
+                if (result is null)
                 {
                     // fallback to activator to retain backward compatibility
                     result = Activator.CreateInstance(_props.Type);

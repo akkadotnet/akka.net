@@ -351,8 +351,7 @@ namespace Akka.Actor
                 stashed.Stash = this.CreateStash(stashed);
             }
 
-            var initializableActor = actor as IInitializableActor;
-            if (initializableActor != null)
+            if (actor is IInitializableActor initializableActor)
             {
                 initializableActor.Init();
             }
