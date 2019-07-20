@@ -4973,7 +4973,7 @@ namespace Akka.Util.Internal
     }
     public class static InterlockedSpin
     {
-        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.Tuple<bool, T, TReturn>> updateIfTrue)
+        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.ValueTuple<bool, T, TReturn>> updateIfTrue)
             where T :  class { }
         public static T Swap<T>(ref T reference, System.Func<T, T> updater)
             where T :  class { }

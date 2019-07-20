@@ -18,8 +18,7 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
-        private Dictionary<Address, Tuple<int, Deadline>> _addressToRefuseUid = new Dictionary<Address, Tuple<int, Deadline>>();
-        private readonly Dictionary<Address, Tuple<IActorRef, int>> _addressToReadonly = new Dictionary<Address, Tuple<IActorRef, int>>();
+        private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new Dictionary<Address, (int, Deadline)>();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
             new Dictionary<Address, EndpointManager.EndpointPolicy>();
@@ -91,7 +90,7 @@ namespace Akka.Remote
         /// <returns>The <see cref="endpoint"/> actor reference.</returns>
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
-            _addressToReadonly[address] = Tuple.Create(endpoint, uid);
+            _addressToReadonly[address] = (endpoint, uid);
             _readonlyToAddress[endpoint] = address;
             return endpoint;
         }
@@ -139,7 +138,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">The remote address to check.</param>
         /// <returns>A tuple containing the actor reference and the remote system UID, if they exist. Otherwise <c>null</c>.</returns>
-        public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
+        public (IActorRef, int) ReadOnlyEndpointFor(Address address)
         {
             _addressToReadonly.TryGetValue(address, out var tmp);
             return tmp;

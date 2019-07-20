@@ -40,9 +40,9 @@ namespace Akka.Remote.Tests
         {
             protected override void OnReceive(object message)
             {
-                var tuple = message as Tuple<Props, string>;
-                if (tuple != null)
+                if (message is ValueTuple<Props, string>)
                 {
+                    var tuple = ((Props, string))message;
                     Sender.Tell(Context.ActorOf(tuple.Item1, tuple.Item2));
                 }
             }
@@ -343,7 +343,7 @@ namespace Akka.Remote.Tests
             // it's used for the pool of the SimpleDnsManager "/IO-DNS/inet-address"
             var probe = CreateTestProbe(masterSystem);
             var parent = ((ExtendedActorSystem)masterSystem).SystemActorOf(FromConfig.Instance.Props(Props.Create<Parent>()), "sys-parent");
-            parent.Tell(Tuple.Create(FromConfig.Instance.Props(EchoActorProps), "round"), probe);
+            parent.Tell((FromConfig.Instance.Props(EchoActorProps), "round"), probe);
             var router = probe.ExpectMsg<IActorRef>();
             var replies = CollectRouteePaths(probe, router, 10);
             var children = new HashSet<ActorPath>(replies);

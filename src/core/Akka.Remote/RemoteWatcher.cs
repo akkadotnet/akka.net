@@ -278,7 +278,7 @@ namespace Akka.Remote
 
             readonly int _watching;
             readonly int _watchingNodes;
-            readonly ImmutableHashSet<Tuple<IActorRef, IActorRef>> _watchingRefs;
+            readonly ImmutableHashSet<(IActorRef, IActorRef)> _watchingRefs;
             readonly ImmutableHashSet<Address> _watchingAddresses;
 
             /// <summary>
@@ -286,8 +286,9 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="watching">TBD</param>
             /// <param name="watchingNodes">TBD</param>
-            public Stats(int watching, int watchingNodes) : this(watching, watchingNodes, 
-                ImmutableHashSet<Tuple<IActorRef, IActorRef>>.Empty, ImmutableHashSet<Address>.Empty) { }
+            public Stats(int watching, int watchingNodes) : this(watching, watchingNodes,
+                ImmutableHashSet<(IActorRef, IActorRef)>.Empty, ImmutableHashSet<Address>.Empty)
+            { }
 
             /// <summary>
             /// TBD
@@ -296,7 +297,7 @@ namespace Akka.Remote
             /// <param name="watchingNodes">TBD</param>
             /// <param name="watchingRefs">TBD</param>
             /// <param name="watchingAddresses">TBD</param>
-            public Stats(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
+            public Stats(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
                 _watching = watching;
                 _watchingNodes = watchingNodes;
@@ -317,7 +318,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public ImmutableHashSet<Tuple<IActorRef, IActorRef>> WatchingRefs => _watchingRefs;
+            public ImmutableHashSet<(IActorRef, IActorRef)> WatchingRefs => _watchingRefs;
 
             /// <summary>
             /// TBD
@@ -350,7 +351,7 @@ namespace Akka.Remote
             /// <param name="watchingRefs">TBD</param>
             /// <param name="watchingAddresses">TBD</param>
             /// <returns>TBD</returns>
-            public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
+            public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
             {
                 return new Stats(watching, watchingNodes, watchingRefs ?? WatchingRefs, watchingAddresses ?? WatchingAddresses);
             }
@@ -455,12 +456,12 @@ namespace Akka.Remote
             {
                 var watchSet = ImmutableHashSet.Create(Watching.SelectMany(pair =>
                 {
-                    var list = new List<Tuple<IActorRef, IActorRef>>(pair.Value.Count);
+                    var list = new List<(IActorRef, IActorRef)>(pair.Value.Count);
                     var wee = pair.Key;
-                    list.AddRange(pair.Value.Select(wer => Tuple.Create<IActorRef, IActorRef>(wee, wer)));
+                    list.AddRange(pair.Value.Select(wer => ((IActorRef)wee, (IActorRef)wer)));
                     return list;
                 }).ToArray());
-                Sender.Tell(new Stats(watchSet.Count(), WatchingNodes.Count, watchSet,
+                Sender.Tell(new Stats(watchSet.Count, WatchingNodes.Count, watchSet,
                     ImmutableHashSet.Create(WatchingNodes.ToArray())));
             }
             else

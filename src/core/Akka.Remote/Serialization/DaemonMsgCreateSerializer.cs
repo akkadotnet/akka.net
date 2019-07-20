@@ -203,7 +203,7 @@ namespace Akka.Remote.Serialization
             return system.Provider.ResolveActorRef(actorRefData.Path);
         }
 
-        private Tuple<int, bool, string, byte[]> Serialize(object obj)
+        private (int, bool, string, byte[]) Serialize(object obj)
         {
             var serializer = system.Serialization.FindSerializerFor(obj);
 
@@ -223,7 +223,7 @@ namespace Akka.Remote.Serialization
                 manifest = obj == null ? "null" : obj.GetType().TypeQualifiedName();
             }
 
-            return Tuple.Create(serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
+            return (serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
         }
     }
 }

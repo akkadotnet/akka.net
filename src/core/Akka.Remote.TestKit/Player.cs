@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
@@ -188,10 +189,10 @@ namespace Akka.Remote.TestKit
         {
             readonly IChannel _channel;
             public IChannel Channel { get { return _channel; } }
-            readonly Tuple<string, IActorRef> _runningOp;
-            public Tuple<string, IActorRef> RunningOp { get { return _runningOp; } }
-            
-            public Data(IChannel channel, Tuple<string, IActorRef> runningOp)
+            readonly (string, IActorRef) _runningOp;
+            public (string, IActorRef) RunningOp { get { return _runningOp; } }
+
+            public Data(IChannel channel, (string, IActorRef) runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
@@ -209,7 +210,7 @@ namespace Akka.Remote.TestKit
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != this.GetType()) return false;
-                return Equals((Data) obj);
+                return Equals((Data)obj);
             }
 
             /// <inheritdoc/>
@@ -217,8 +218,8 @@ namespace Akka.Remote.TestKit
             {
                 unchecked
                 {
-                    return ((_channel != null ? _channel.GetHashCode() : 0) * 397) 
-                        ^ (_runningOp != null ? _runningOp.GetHashCode() : 0);
+                    return ((_channel != null ? _channel.GetHashCode() : 0) * 397)
+                        ^ (_runningOp.GetHashCode());
                 }
             }
 
@@ -244,7 +245,7 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            public Data Copy(Tuple<string, IActorRef> runningOp)
+            public Data Copy((string, IActorRef) runningOp)
             {
                 return new Data(Channel, runningOp);
             }
@@ -349,7 +350,7 @@ namespace Akka.Remote.TestKit
 
         public void InitFSM()
         {
-            StartWith(State.Connecting, new Data(null, null));
+            StartWith(State.Connecting, new Data(null, (default(string), default(IActorRef))));
 
             When(State.Connecting, @event =>
             {
@@ -361,7 +362,7 @@ namespace Akka.Remote.TestKit
                 if (connected != null)
                 {
                     connected.Channel.WriteAndFlushAsync(new Hello(_name.Name, TestConductor.Get(Context.System).Address));
-                    return GoTo(State.AwaitDone).Using(new Data(connected.Channel, null));
+                    return GoTo(State.AwaitDone).Using(new Data(connected.Channel, (default(string), default(IActorRef))));
                 }
                 if (@event.FsmEvent is ConnectionFailure)
                 {
@@ -413,8 +414,10 @@ namespace Akka.Remote.TestKit
                     return Stay();
                 }
                 var toServer = @event.FsmEvent as IToServer;
+                var runningOpIsEmpty = string.IsNullOrEmpty(@event.StateData.RunningOp.Item1) &&
+                                       EqualityComparer<IActorRef>.Default.Equals(@event.StateData.RunningOp.Item2, default(IActorRef));
                 if (toServer != null && @event.StateData.Channel != null &&
-                    @event.StateData.RunningOp == null)
+                    runningOpIsEmpty)
                 {
                     @event.StateData.Channel.WriteAndFlushAsync(toServer.Msg);
                     string token = null;
@@ -425,10 +428,10 @@ namespace Akka.Remote.TestKit
                         var getAddress = @event.FsmEvent as ToServer<GetAddress>;
                         if (getAddress != null) token = getAddress.Msg.Node.Name;
                     }
-                    return Stay().Using(@event.StateData.Copy(runningOp: Tuple.Create(token, Sender)));
+                    return Stay().Using(@event.StateData.Copy(runningOp: (token, Sender)));
                 }
                 if (toServer != null && @event.StateData.Channel != null &&
-                    @event.StateData.RunningOp != null)
+                    !runningOpIsEmpty)
                 {
                     _log.Error("cannot write {0} while waiting for {1}", toServer.Msg, @event.StateData.RunningOp);
                     return Stay();
@@ -438,7 +441,7 @@ namespace Akka.Remote.TestKit
                     var barrierResult = @event.FsmEvent as BarrierResult;
                     if (barrierResult != null)
                     {
-                        if (@event.StateData.RunningOp == null)
+                        if (runningOpIsEmpty)
                         {
                             _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
@@ -464,12 +467,12 @@ namespace Akka.Remote.TestKit
                             }
                             @event.StateData.RunningOp.Item2.Tell(response);
                         }
-                        return Stay().Using(@event.StateData.Copy(runningOp: null));
+                        return Stay().Using(@event.StateData.Copy(runningOp: (default(string), default(IActorRef))));
                     }
                     var addressReply = @event.FsmEvent as AddressReply;
                     if (addressReply != null)
                     {
-                        if (@event.StateData.RunningOp == null)
+                        if (runningOpIsEmpty)
                         {
                             _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
@@ -477,7 +480,7 @@ namespace Akka.Remote.TestKit
                         {
                             @event.StateData.RunningOp.Item2.Tell(addressReply.Addr);
                         }
-                        return Stay().Using(@event.StateData.Copy(runningOp: null));
+                        return Stay().Using(@event.StateData.Copy(runningOp: (default(string), default(IActorRef))));
                     }
                     var throttleMsg = @event.FsmEvent as ThrottleMsg;
                     if (@event.FsmEvent is ThrottleMsg)

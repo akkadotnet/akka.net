@@ -63,7 +63,7 @@ namespace Akka.Tests.Pattern
                     return;
                 });
 
-                Receive<Tuple<string, string>>(str => str.Item1.Equals("TO_PARENT"), msg =>
+                Receive<(string, string)>(str => str.Item1.Equals("TO_PARENT"), msg =>
                 {
                     Context.Parent.Tell(msg.Item2);
                 });
@@ -210,7 +210,7 @@ namespace Akka.Tests.Pattern
             probe.ExpectMsg("STARTED");
             var child = probe.LastSender;
 
-            child.Tell(Tuple.Create("TO_PARENT", "TEST_MESSAGE"));
+            child.Tell(("TO_PARENT", "TEST_MESSAGE"));
             probe.ExpectMsg("TEST_MESSAGE");
         }
 

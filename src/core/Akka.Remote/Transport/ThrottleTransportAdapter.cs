@@ -338,10 +338,10 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         protected readonly Transport WrappedTransport;
-        private Dictionary<Address, Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>> _throttlingModes
-            = new Dictionary<Address, Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>>();
+        private Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes
+            = new Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)>();
 
-        private List<Tuple<Address, ThrottlerHandle>> _handleTable = new List<Tuple<Address, ThrottlerHandle>>();
+        private List<(Address, ThrottlerHandle)> _handleTable = new List<(Address, ThrottlerHandle)>();
 
         /// <summary>
         /// TBD
@@ -394,14 +394,14 @@ namespace Akka.Remote.Transport
                 wrappedHandle.OutboundThrottleMode.Value = GetOutboundMode(naked);
                 wrappedHandle.ReadHandlerSource.Task.ContinueWith(tr => new ListenerAndMode(tr.Result, inMode), TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(wrappedHandle.ThrottlerActor);
-                _handleTable.Add(Tuple.Create(naked, wrappedHandle));
+                _handleTable.Add((naked, wrappedHandle));
                 ar.StatusPromise.SetResult(wrappedHandle);
             }
             else if (message is SetThrottle)
             {
                 var st = message as SetThrottle;
                 var naked = NakedAddress(st.Address);
-                _throttlingModes[naked] = new Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>(st.Mode, st.Direction);
+                _throttlingModes[naked] = (st.Mode, st.Direction);
                 var ok = Task.FromResult(SetThrottleAck.Instance);
                 var modes = new List<Task<SetThrottleAck>>() { ok };
                 foreach (var handle in _handleTable)
@@ -479,7 +479,7 @@ namespace Akka.Remote.Transport
             {
                 var chkin = message as Checkin;
                 var naked = NakedAddress(chkin.Origin);
-                _handleTable.Add(new Tuple<Address, ThrottlerHandle>(naked, chkin.ThrottlerHandle));
+                _handleTable.Add((naked, chkin.ThrottlerHandle));
                 SetMode(naked, chkin.ThrottlerHandle);
             }
         }
@@ -575,7 +575,7 @@ namespace Akka.Remote.Transport
         /// <param name="nanoTimeOfSend">TBD</param>
         /// <param name="tokens">TBD</param>
         /// <returns>TBD</returns>
-        public abstract Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens);
+        public abstract (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens);
         /// <summary>
         /// TBD
         /// </summary>
@@ -606,9 +606,9 @@ namespace Akka.Remote.Transport
         }
 
         /// <inheritdoc/>
-        public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
+        public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
-            return Tuple.Create<ThrottleMode, bool>(this, false);
+            return (this, false);
         }
 
         /// <inheritdoc/>
@@ -638,9 +638,9 @@ namespace Akka.Remote.Transport
         }
 
         /// <inheritdoc/>
-        public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
+        public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
-            return Tuple.Create<ThrottleMode, bool>(this, true);
+            return (this, true);
         }
 
         /// <inheritdoc/>
@@ -683,16 +683,16 @@ namespace Akka.Remote.Transport
         }
 
         /// <inheritdoc/>
-        public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
+        public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
             if (IsAvailable(nanoTimeOfSend, tokens))
             {
-                return Tuple.Create<ThrottleMode, bool>(Copy(
+                return (Copy(
                     nanoTimeOfLastSend: nanoTimeOfSend,
                     availableTokens: Math.Min(_availableTokens - tokens + TokensGenerated(nanoTimeOfSend), _capacity))
                     , true);
             }
-            return Tuple.Create<ThrottleMode, bool>(this, false);
+            return (this, false);
         }
 
         /// <inheritdoc/>

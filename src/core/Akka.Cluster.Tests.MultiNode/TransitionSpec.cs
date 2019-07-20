@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             // sorts the addresses and provides the address of the node with the lowest port number
             // as that node will be the leader
-            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
+            return roles.Select(x => (x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)

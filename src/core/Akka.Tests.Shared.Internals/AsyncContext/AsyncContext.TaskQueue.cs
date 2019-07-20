@@ -15,21 +15,21 @@ namespace Nito.AsyncEx
             /// <summary>
             /// The underlying blocking collection.
             /// </summary>
-            private readonly BlockingCollection<Tuple<Task, bool>> _queue;
+            private readonly BlockingCollection<(Task, bool)> _queue;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="TaskQueue"/> class.
             /// </summary>
             public TaskQueue()
             {
-                _queue = new BlockingCollection<Tuple<Task, bool>>();
+                _queue = new BlockingCollection<(Task, bool)>();
             }
 
             /// <summary>
             /// Gets a blocking enumerable that removes items from the queue. This enumerable only completes after <see cref="CompleteAdding"/> has been called.
             /// </summary>
             /// <returns>A blocking enumerable that removes items from the queue.</returns>
-            public IEnumerable<Tuple<Task, bool>> GetConsumingEnumerable()
+            public IEnumerable<(Task, bool)> GetConsumingEnumerable()
             {
                 return _queue.GetConsumingEnumerable();
             }
@@ -54,7 +54,7 @@ namespace Nito.AsyncEx
             {
                 try
                 {
-                    return _queue.TryAdd(Tuple.Create(item, propagateExceptions));
+                    return _queue.TryAdd((item, propagateExceptions));
                 }
                 catch (InvalidOperationException)
                 {

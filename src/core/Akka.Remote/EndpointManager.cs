@@ -298,7 +298,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="addressesPromise">TBD</param>
             /// <param name="results">TBD</param>
-            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> results)
+            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)> results)
             {
                 Results = results;
                 AddressesPromise = addressesPromise;
@@ -312,7 +312,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public IList<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> Results
+            public IList<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)> Results
             { get; private set; }
         }
 
@@ -698,7 +698,7 @@ namespace Akka.Remote
             {
                 //Stop writers
                 var policy =
-                Tuple.Create(_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
+                (_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
                 if (policy.Item1 is Pass pass && policy.Item2 == null)
                 {
                     var endpoint = pass.Endpoint;
@@ -744,10 +744,10 @@ namespace Akka.Remote
                 }
 
                 // Stop inbound read-only associations
-                var readPolicy = Tuple.Create(_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
-                if (readPolicy.Item1?.Item1 != null && quarantine.Uid == null)
+                var readPolicy = (_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
+                if (readPolicy.Item1.Item1 != null && quarantine.Uid == null)
                     Context.Stop(readPolicy.Item1.Item1);
-                else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
+                else if (readPolicy.Item1.Item1 != null && quarantine.Uid != null && readPolicy.Item1.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
                 else { } // nothing to stop
 
                 bool MatchesQuarantine(AkkaProtocolHandle handle)
@@ -915,7 +915,7 @@ namespace Akka.Remote
         {
             var readonlyEndpoint = _endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
             var handle = ((AkkaProtocolHandle)ia.Association);
-            if (readonlyEndpoint != null)
+            if (readonlyEndpoint.Item1 != null)
             {
                 var endpoint = readonlyEndpoint.Item1;
                 if (_pendingReadHandoffs.TryGetValue(endpoint, out var protocolHandle))
@@ -980,9 +980,9 @@ namespace Akka.Remote
             }
         }
 
-        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+        private Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>
             _listens;
-        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+        private Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>
             Listens
         {
             get
@@ -1028,7 +1028,7 @@ namespace Akka.Remote
                         catch (Exception ex)
                         {
                             var ei = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex);
-                            var task = new Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>(() =>
+                            var task = new Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>(() =>
                             {
                                 ei.Throw();
                                 return null;
@@ -1052,7 +1052,7 @@ namespace Akka.Remote
 
                     // Collect all transports, listen addresses, and listener promises in one Task
                     var tasks = transports.Select(x => x.Listen().ContinueWith(
-                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously));
+                        result => (new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously));
                     _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously);
                 }
                 return _listens;

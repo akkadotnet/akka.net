@@ -47,10 +47,10 @@ namespace Akka.Routing
             _virtualNodesFactor = virtualNodesFactor;
         }
 
-        private Tuple<int[], T[]> _ring = null;
-        private Tuple<int[], T[]> RingTuple
+        private (int[], T[])? _ring = null;
+        private (int[], T[]) RingTuple
         {
-            get { return _ring ?? (_ring = Tuple.Create(_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
+            get { return ((int[], T[]))(_ring ?? (_ring = (_nodes.Keys.ToArray(), _nodes.Values.ToArray()))); }
         }
 
         private int[] NodeHashRing
