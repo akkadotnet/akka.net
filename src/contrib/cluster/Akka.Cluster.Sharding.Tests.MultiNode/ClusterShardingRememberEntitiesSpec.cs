@@ -125,7 +125,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : (default(string), default(object));
 
         internal ExtractShardId extractShardId = message =>
         {
@@ -136,7 +136,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case ShardRegion.StartEntity msg:
                     return msg.EntityId.ToString();
             }
-            return null;
+            return default(string);
         };
 
         private Lazy<IActorRef> _region;

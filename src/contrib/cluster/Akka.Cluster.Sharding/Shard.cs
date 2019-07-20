@@ -36,7 +36,7 @@ namespace Akka.Cluster.Sharding
         ImmutableDictionary<IActorRef, EntityId> IdByRef { get; set; }
         ImmutableDictionary<string, long> LastMessageTimestamp { get; set; }
         ImmutableHashSet<IActorRef> Passivating { get; set; }
-        ImmutableDictionary<EntityId, ImmutableList<Tuple<Msg, IActorRef>>> MessageBuffers { get; set; }
+        ImmutableDictionary<EntityId, ImmutableList<(Msg, IActorRef)>> MessageBuffers { get; set; }
         void Unhandled(object message);
         void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange;
         void EntityTerminated(IActorRef tref);
@@ -378,7 +378,7 @@ namespace Akka.Cluster.Sharding
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
         public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ImmutableDictionary<string, ImmutableList<(object, IActorRef)>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<(object, IActorRef)>>.Empty;
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
@@ -470,12 +470,11 @@ namespace Akka.Cluster.Sharding
                 case Shard.IShardQuery sq:
                     shard.HandleShardRegionQuery(sq);
                     return true;
-                case ShardRegion.RestartShard _:
+                case var _ when !shard.ExtractEntityId(message).Equals((default(string), default(object))):
                     return true;
                 case Shard.PassivateIdleTick _:
                     shard.PassivateIdleEntities();
                     return true;
-                case var _ when shard.ExtractEntityId(message) != null:
                     shard.DeliverMessage(message, shard.Context.Sender);
                     return true;
             }
@@ -623,7 +622,7 @@ namespace Akka.Cluster.Sharding
                     shard.Log.Debug("Passivating started on entity {0}", id);
 
                     shard.Passivating = shard.Passivating.Add(entity);
-                    shard.MessageBuffers = shard.MessageBuffers.Add(id, ImmutableList<Tuple<object, IActorRef>>.Empty);
+                    shard.MessageBuffers = shard.MessageBuffers.Add(id, ImmutableList<(object, IActorRef)>.Empty);
 
                     entity.Tell(stopMessage);
                 }
@@ -717,7 +716,7 @@ namespace Akka.Cluster.Sharding
                         else
                         {
                             shard.Log.Debug("Message for entity [{0}] buffered", id);
-                            shard.MessageBuffers = shard.MessageBuffers.SetItem(id, buffer.Add(Tuple.Create(message, sender)));
+                            shard.MessageBuffers = shard.MessageBuffers.SetItem(id, buffer.Add((message, sender)));
                         }
                     }
                     else

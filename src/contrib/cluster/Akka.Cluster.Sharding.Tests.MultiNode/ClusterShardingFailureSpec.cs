@@ -152,11 +152,11 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case Get msg:
-                    return Tuple.Create(msg.Id, message);
+                    return (msg.Id, message);
                 case Add msg:
-                    return Tuple.Create(msg.Id, message);
+                    return (msg.Id, message);
             }
-            return null;
+            return (default(string), default(object));
         };
 
         internal ExtractShardId extractShardId = message =>
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case Add msg:
                     return msg.Id[0].ToString();
             }
-            return null;
+            return default(string);
         };
 
         private Lazy<IActorRef> _region;

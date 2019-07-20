@@ -197,11 +197,11 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case EntityEnvelope env:
-                    return Tuple.Create(env.Id.ToString(), env.Payload);
+                    return (env.Id.ToString(), env.Payload);
                 case Get msg:
-                    return Tuple.Create(msg.CounterId.ToString(), message);
+                    return (msg.CounterId.ToString(), message);
             }
-            return null;
+            return (default(string), default(object));
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>
@@ -215,7 +215,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case ShardRegion.StartEntity msg:
                     return (long.Parse(msg.EntityId) % NumberOfShards).ToString();
             }
-            return null;
+            return default(string);
         };
 
         public const int NumberOfShards = 12;

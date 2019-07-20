@@ -143,8 +143,8 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? Tuple.Create(p.Id, message) : null;
-        internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id, message) : (default(string), default(object));
+        internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : default(string);
 
         private readonly Lazy<IActorRef> _region;
 

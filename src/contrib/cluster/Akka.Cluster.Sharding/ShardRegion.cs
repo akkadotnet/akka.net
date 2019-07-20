@@ -529,7 +529,7 @@ namespace Akka.Cluster.Sharding
                 case StartEntity _:
                     DeliverStartEntity(message, Sender);
                     return true;
-                case var _ when ExtractEntityId(message) != null:
+                case var _ when !ExtractEntityId(message).Equals((default(string), default(object))):
                     DeliverMessage(message, Sender);
                     return true;
                 default:
@@ -774,10 +774,10 @@ namespace Akka.Cluster.Sharding
                 }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
         }
 
-        private Task<Tuple<ShardId, T>[]> AskAllShardsAsync<T>(object message)
+        private Task<(ShardId, T)[]> AskAllShardsAsync<T>(object message)
         {
             var timeout = TimeSpan.FromSeconds(3);
-            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => Tuple.Create(entity.Key, t.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion));
+            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => (entity.Key, t.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion));
             return Task.WhenAll(tasks);
         }
 

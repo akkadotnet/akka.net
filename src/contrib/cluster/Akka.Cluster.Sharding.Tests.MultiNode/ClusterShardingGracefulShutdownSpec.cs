@@ -106,9 +106,9 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : (default(string), default(object));
 
-        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
+        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : default(string);
 
         private readonly Lazy<IActorRef> _region;
 
