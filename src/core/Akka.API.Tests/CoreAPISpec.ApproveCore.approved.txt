@@ -711,7 +711,11 @@ namespace Akka.Actor
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
         public Envelope(object message, Akka.Actor.IActorRef sender) { }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+        [set: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Message { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+        [set: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }

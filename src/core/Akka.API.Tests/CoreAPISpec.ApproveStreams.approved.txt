@@ -3456,6 +3456,7 @@ namespace Akka.Streams.Implementation.Fusing
         public struct Abort : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
         {
             public Abort(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct AsyncInput : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3464,6 +3465,7 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly System.Action<object> Handler;
             public readonly Akka.Streams.Stage.GraphStageLogic Logic;
             public AsyncInput(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, Akka.Streams.Stage.GraphStageLogic logic, object @event, System.Action<object> handler) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public class BatchingActorInputBoundary : Akka.Streams.Implementation.Fusing.GraphInterpreter.UpstreamBoundaryStageLogic
@@ -3502,6 +3504,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             public readonly int Id;
             public Cancel(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct ExposedPublisher : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3509,6 +3512,7 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly int Id;
             public readonly Akka.Streams.Implementation.IActorPublisher Publisher;
             public ExposedPublisher(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, Akka.Streams.Implementation.IActorPublisher publisher) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public interface IBoundaryEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
@@ -3519,6 +3523,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             public readonly int Id;
             public OnComplete(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct OnError : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3526,6 +3531,7 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly System.Exception Cause;
             public readonly int Id;
             public OnError(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, System.Exception cause) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct OnNext : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3533,6 +3539,7 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly object Event;
             public readonly int Id;
             public OnNext(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, object @event) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct OnSubscribe : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3540,6 +3547,7 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly int Id;
             public readonly Reactive.Streams.ISubscription Subscription;
             public OnSubscribe(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, Reactive.Streams.ISubscription subscription) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct RequestMore : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
@@ -3547,17 +3555,20 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly long Demand;
             public readonly int Id;
             public RequestMore(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id, long demand) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct Resume : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
         {
             public Resume(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public struct SubscribePending : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Streams.Implementation.Fusing.ActorGraphInterpreter.IBoundaryEvent
         {
             public readonly int Id;
             public SubscribePending(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, int id) { }
+            [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
     }
@@ -4563,7 +4574,9 @@ namespace Akka.Streams.Stage
     public struct LogicAndMaterializedValue<TMaterialized> : Akka.Streams.Stage.ILogicAndMaterializedValue<TMaterialized>
     {
         public LogicAndMaterializedValue(Akka.Streams.Stage.GraphStageLogic logic, TMaterialized materializedValue) { }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Streams.Stage.GraphStageLogic Logic { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public TMaterialized MaterializedValue { get; }
     }
     public abstract class OutGraphStageLogic : Akka.Streams.Stage.GraphStageLogic, Akka.Streams.Stage.IOutHandler
@@ -4707,7 +4720,9 @@ namespace Akka.Streams.Util
     {
         public static readonly Akka.Streams.Util.Option<T> None;
         public Option(T value) { }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public bool HasValue { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public T Value { get; }
         public bool Equals(Akka.Streams.Util.Option<T> other) { }
         public override bool Equals(object obj) { }

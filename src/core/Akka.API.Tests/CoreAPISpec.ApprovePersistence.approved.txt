@@ -1078,7 +1078,9 @@ namespace Akka.Persistence.Journal
     {
         public Tagged(object payload, System.Collections.Generic.IEnumerable<string> tags) { }
         public Tagged(object payload, System.Collections.Immutable.IImmutableSet<string> tags) { }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Payload { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public System.Collections.Immutable.IImmutableSet<string> Tags { get; }
     }
     public abstract class WriteJournalBase : Akka.Actor.ActorBase
