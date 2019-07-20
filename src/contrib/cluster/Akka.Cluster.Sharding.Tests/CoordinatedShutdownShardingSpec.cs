@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private readonly ExtractEntityId _extractEntityId = message => Tuple.Create(message.ToString(), message);
+        private readonly ExtractEntityId _extractEntityId = message => (message.ToString(), message);
 
         private readonly ExtractShardId _extractShard = message => (message.GetHashCode() % 10).ToString();
 

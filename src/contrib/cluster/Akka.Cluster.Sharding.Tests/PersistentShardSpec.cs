@@ -55,13 +55,14 @@ namespace Akka.Cluster.Sharding.Tests
         public void Persistent_Shard_must_remember_entities_started_with_StartEntity()
         {
             Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
+            ExtractEntityId extractEntityId = _ => ("entity-1", (object)"msg");
 
             var props = Props.Create(() => new PersistentShard(
               "cats",
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => Tuple.Create("entity-1", (object)"msg"),
+              extractEntityId,
               _ => "shard-1",
               PoisonPill.Instance
             ));

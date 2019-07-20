@@ -24,13 +24,14 @@ namespace Akka.Cluster.Sharding.Tests
             clusterSharding = ClusterSharding.Get(Sys);
         }
 
-        private Tuple<string, object> ExtractEntityId(object message)
+        private (string, object)? ExtractEntityId(object message)
         {
             switch (message)
             {
                 case int i:
-                    return new Tuple<string, object>(i.ToString(), message);
+                    return (i.ToString(), message);
             }
+
             throw new NotSupportedException();
         }
 
@@ -88,7 +89,7 @@ namespace Akka.Cluster.Sharding.Tests
             var shardName = "test";
             var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
             var handOffStopper = Sys.ActorOf(
-                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instsnce, TimeSpan.FromMilliseconds(10)))
+                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
               );
 
             Watch(emptyHandlerActor);
@@ -102,7 +103,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class HandOffStopMessage : INoSerializationVerificationNeeded
         {
-            public static readonly HandOffStopMessage Instsnce = new HandOffStopMessage();
+            public static readonly HandOffStopMessage Instance = new HandOffStopMessage();
             private HandOffStopMessage()
             {
             }

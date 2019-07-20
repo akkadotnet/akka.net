@@ -496,7 +496,7 @@ namespace Akka.Remote.Tests
 
                 // Hijack associations through the test transport
                 AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
-                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                var testTransport = registry.TransportFor(rawLocalAddress).GetValueOrDefault().Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
                 // Force an outbound associate on the real system (which we will hijack)
@@ -578,7 +578,7 @@ namespace Akka.Remote.Tests
 
                 // Hijack associations through the test transport
                 AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
-                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                var testTransport = registry.TransportFor(rawLocalAddress).GetValueOrDefault().Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
                 // Force an outbound associate on the real system (which we will hijack)

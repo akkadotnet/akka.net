@@ -213,7 +213,7 @@ namespace Akka.Cluster.Sharding
                 else
                 {
                     // Note; we only do this if remembering, otherwise the buffer is an overhead
-                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender));
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
                     ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
                 }
             }

@@ -84,11 +84,16 @@ namespace Akka.Cluster.Sharding.Tests
 
         #endregion
 
-        protected ClusterShardingSettings settings;
-        protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
+        protected ClusterShardingSettings Settings { get; set; }
+
+        private readonly TimeSpan _smallTolerance = TimeSpan.FromMilliseconds(300);
+        protected TimeSpan SmallTolerance
+        {
+            get => _smallTolerance;
+        } 
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is int msg ? Tuple.Create(msg.ToString(), message) : null;
+            message is int msg ? (ValueTuple<string,object>?) (msg.ToString(), message) : null;
 
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
@@ -112,17 +117,17 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected IActorRef Start(TestProbe probe)
         {
-            settings = ClusterShardingSettings.Create(Sys);
+            Settings = ClusterShardingSettings.Create(Sys);
             // single node cluster
             Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
 
             return ClusterSharding.Get(Sys).Start(
                 "myType",
                 Entity.Props(probe.Ref),
-                settings,
+                Settings,
                 _extractEntityId,
                 _extractShard,
-                ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
+                ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(Settings),
                 Passivate.Instance);
         }
 
@@ -146,7 +151,7 @@ namespace Akka.Cluster.Sharding.Tests
             probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            return Settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + SmallTolerance;
         }
     }
 

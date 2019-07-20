@@ -296,8 +296,6 @@ namespace Akka.DistributedData
         private ImmutableHashSet<Address> _weaklyUpNodes = ImmutableHashSet<Address>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private ImmutableHashSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
         private Address _leader = null;
         private bool IsLeader => _leader != null && _leader == _selfAddress;
@@ -855,9 +853,7 @@ namespace Akka.DistributedData
             return keys.Any(key =>
             {
                 (DataEnvelope, Digest) tuple;
-                return _dataEntries.TryGetValue(key, out tuple)
-                    ? tuple.Item1.Pruning.ContainsKey(node)
-                    : false;
+                return _dataEntries.TryGetValue(key, out tuple) && tuple.Item1.Pruning.ContainsKey(node);
             });
         }
 

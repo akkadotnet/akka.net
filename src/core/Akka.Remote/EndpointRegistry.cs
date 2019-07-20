@@ -9,16 +9,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Remote
 {
     /// <summary>
-    /// Not threadsafe - only to be used in HeadActor
+    /// Not thread safe - only to be used in HeadActor
     /// </summary>
     internal class EndpointRegistry
     {
         private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new Dictionary<Address, (int, Deadline)>();
+        private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new Dictionary<Address, (IActorRef, int)>();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
             new Dictionary<Address, EndpointManager.EndpointPolicy>();
@@ -78,7 +78,7 @@ namespace Akka.Remote
         /// <param name="timeOfRelease">The timeframe for releasing quarantine.</param>
         public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid, Deadline timeOfRelease)
         {
-            _addressToRefuseUid[remoteAddress] = Tuple.Create(refuseUid, timeOfRelease);
+            _addressToRefuseUid[remoteAddress] = (refuseUid, timeOfRelease);
         }
 
         /// <summary>
@@ -281,7 +281,7 @@ namespace Akka.Remote
         public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
         {
             _addressToWritable[address] = new EndpointManager.Quarantined(uid, timeOfRelease);
-            _addressToRefuseUid[address] = Tuple.Create(uid, timeOfRelease);
+            _addressToRefuseUid[address] = (uid, timeOfRelease);
         }
 
         /// <summary>

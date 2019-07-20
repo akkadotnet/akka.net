@@ -56,7 +56,7 @@ namespace Akka.IO
             }
         }
 
-        private Tuple<Send, IActorRef> _pendingSend = null;
+        private (Send, IActorRef)? _pendingSend = null;
         private bool WritePending => _pendingSend != null;
 
         private Receive Resolving(DnsEndPoint remoteAddress) => message =>
@@ -139,7 +139,7 @@ namespace Akka.IO
                         {
                             if (!send.Payload.IsEmpty)
                             {
-                                _pendingSend = Tuple.Create(send, Sender);
+                                _pendingSend = (send, Sender);
                                 DoWrite();
                             }
                             else
@@ -152,8 +152,8 @@ namespace Akka.IO
                     }
                 case SocketSent sent:
                     {
-                        if (_pendingSend.Item1.WantsAck)
-                            _pendingSend.Item2.Tell(_pendingSend.Item1.Ack);
+                        if (_pendingSend != null && _pendingSend.Value.Item1.WantsAck)
+                            _pendingSend.Value.Item2.Tell(_pendingSend.Value.Item1.Ack);
                         if (Udp.Settings.TraceLogging)
                             Log.Debug("Wrote [{0}] bytes to socket", sent.EventArgs.BytesTransferred);
                         _pendingSend = null;
@@ -184,8 +184,10 @@ namespace Akka.IO
         {
             try
             {
-                var send = _pendingSend.Item1;
-                var sender = _pendingSend.Item2;
+                if (_pendingSend == null)
+                    return;
+                
+                var send = _pendingSend.Value.Item1;
                 var data = send.Payload;
 
                 var bytesWritten = _socket.Send(data.Buffers);
@@ -240,12 +242,6 @@ namespace Akka.IO
             e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
             if (!_socket.ReceiveAsync(e))
                 Self.Tell(new SocketReceived(e));
-        }
-
-        private void SendAsync(SocketAsyncEventArgs e)
-        {
-            if (!_socket.SendToAsync(e))
-                Self.Tell(new SocketSent(e));
         }
     }
 }
