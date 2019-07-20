@@ -26,7 +26,6 @@ using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 
 namespace Akka.Remote.Tests
 {
-
     public class RemotingSpec : AkkaSpec
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
@@ -235,7 +234,7 @@ namespace Akka.Remote.Tests
             ExpectMsg(76);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void Remoting_must_lookup_actors_across_node_boundaries()
         {
             Action<IActorDsl> act = dsl =>
@@ -433,7 +432,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));

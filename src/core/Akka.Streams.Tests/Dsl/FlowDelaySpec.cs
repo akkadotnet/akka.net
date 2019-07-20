@@ -20,6 +20,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    [Collection(nameof(FlowDelaySpec))] // timing sensitive since it involves hard delays
     public class FlowDelaySpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
