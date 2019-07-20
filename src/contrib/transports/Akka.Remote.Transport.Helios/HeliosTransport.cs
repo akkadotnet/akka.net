@@ -324,7 +324,7 @@ namespace Akka.Remote.Transport.Helios
         /// <exception cref="ConfigurationException">TBD</exception>
         /// <exception cref="Exception">TBD</exception>
         /// <returns>TBD</returns>
-        public override async Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             EndPoint listenAddress;
             IPAddress ip;
@@ -361,7 +361,7 @@ namespace Akka.Remote.Transport.Helios
 #pragma warning restore 4014
 
 
-                return Tuple.Create(addr, AssociationListenerPromise);
+                return (addr, AssociationListenerPromise);
             }
             catch (Exception ex)
             {

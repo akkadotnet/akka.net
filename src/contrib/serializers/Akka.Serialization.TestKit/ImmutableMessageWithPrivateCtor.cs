@@ -39,7 +39,7 @@ namespace Akka.Tests.Serialization
             }
         }
 
-        public ImmutableMessageWithPrivateCtor(Tuple<string, string> nonConventionalArg)
+        public ImmutableMessageWithPrivateCtor((string, string) nonConventionalArg)
         {
             Foo = nonConventionalArg.Item1;
             Bar = nonConventionalArg.Item2;
