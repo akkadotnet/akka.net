@@ -27,10 +27,10 @@ namespace Akka.DistributedData
         public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData<TValue> =>
             ORDictionary<TKey, TValue>.Empty.SetItem(node, key, value);
 
-        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(params Tuple<UniqueAddress, TKey, TValue>[] elements) where TValue : IReplicatedData<TValue> =>
+        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(params (UniqueAddress, TKey, TValue)[] elements) where TValue : IReplicatedData<TValue> =>
             elements.Aggregate(ORDictionary<TKey, TValue>.Empty, (acc, t) => acc.SetItem(t.Item1, t.Item2, t.Item3));
 
-        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<Tuple<UniqueAddress, TKey, TValue>> elements) where TValue : IReplicatedData<TValue> =>
+        public static ORDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<(UniqueAddress, TKey, TValue)> elements) where TValue : IReplicatedData<TValue> =>
             elements.Aggregate(ORDictionary<TKey, TValue>.Empty, (acc, t) => acc.SetItem(t.Item1, t.Item2, t.Item3));
     }
 
