@@ -542,7 +542,7 @@ Target "RunTestsFull" DoNothing
 Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Restore" ==> "Build"
+"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build"
 "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
