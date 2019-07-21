@@ -110,7 +110,7 @@ open BuildIncremental.IncrementalTests
 Target "RunTests" (fun _ ->    
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match getBuildParamOrDefault "incremental" "" with
+        match getBuildParamOrDefault "notUsed" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
                     getIncrementalUnitTests Net |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
