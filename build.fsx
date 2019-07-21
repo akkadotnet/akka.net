@@ -91,8 +91,8 @@ type Runtime =
 
 let getTestAssembly runtime project =
     let assemblyPath = match runtime with
-                        | NetCore -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ fileNameWithoutExt project + ".dll")
-                        | NetFramework -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetFrameworkVersion @@ fileNameWithoutExt project + ".dll")
+                        | NetCore -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
+                        | NetFramework -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net45" @@ fileNameWithoutExt project + ".dll")
 
     if Seq.isEmpty assemblyPath then
         None
