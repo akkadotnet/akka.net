@@ -152,6 +152,7 @@ Target "RunTestsNetCore" (fun _ ->
                    ++ "./**/*.Tests.fsproj"
      
     let runSingleProject project =
+        log (sprintf "Running in folder %s" (Directory.GetParent project).FullName)
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
