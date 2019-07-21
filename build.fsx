@@ -129,14 +129,9 @@ Target "RunTests" (fun _ ->
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "test -f net452 -c Release -- -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+            info.Arguments <- (sprintf "test --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework net452 --results-directory %s -- -parallel none -teamcity" outputTests)) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
-
-        // dotnet process will be killed by ExecProcess (or throw if can't) '
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not
-        killProcess "xunit.console"
-        killProcess "dotnet"
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -156,14 +151,9 @@ Target "RunTestsNetCore" (fun _ ->
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "test -f netcoreapp1.1 -c Release -- -nobuild -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+            info.Arguments <- (sprintf "test --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework netcoreapp1.1 --results-directory %s -- -parallel none -teamcity" outputTests)) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
-
-        // dotnet process will be killed by FAKE.ExecProcess (or throw if can't)
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not be killed
-        killProcess "xunit.console"
-        killProcess "dotnet"
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
