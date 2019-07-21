@@ -553,16 +553,27 @@ Target "HelpNuget" <| fun _ ->
 //  Target dependencies
 //--------------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------------
+//  Target dependencies
+//--------------------------------------------------------------------------------
+
 Target "BuildRelease" DoNothing
 Target "All" DoNothing
 Target "Nuget" DoNothing
+Target "RunTestsFull" DoNothing
+Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "Build"
+"Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
-// "RunTests" step doesn't require Clean ==> "RestorePackages" step
-"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
+"Build" ==> "RunTests"
+"Build" ==> "RunTestsNetCore"
+//"Build" ==> "NBench"
+
+"BuildRelease" ==> "MultiNodeTestsNetCore"
+"BuildRelease" ==> "MultiNodeTests"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
@@ -575,6 +586,7 @@ Target "Nuget" DoNothing
 "RunTests" ==> "All"
 "RunTestsNetCore" ==> "All"
 "MultiNodeTests" ==> "All"
+"MultiNodeTestsNetCore" ==> "All"
 "NBench" ==> "All"
 
 RunTargetOrDefault "Help"
