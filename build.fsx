@@ -85,6 +85,19 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 // Tests targets 
 //--------------------------------------------------------------------------------
+type Runtime =
+    | NetCore
+    | NetFramework
+
+let getTestAssembly runtime project =
+    let assemblyPath = match runtime with
+                        | NetCore -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ fileNameWithoutExt project + ".dll")
+                        | NetFramework -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetFrameworkVersion @@ fileNameWithoutExt project + ".dll")
+
+    if Seq.isEmpty assemblyPath then
+        None
+    else
+        Some (assemblyPath |> Seq.head)
 
 module internal ResultHandling =
     let (|OK|Failure|) = function
