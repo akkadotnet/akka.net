@@ -172,10 +172,13 @@ Target "MultiNodeTests" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
 
-    let multiNodeTestAssemblies = 
+    let projects = 
         match (isWindows) with 
         | true -> !! "./src/**/*.Tests.MultiNode.csproj"
         | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+
+    let multiNodeTestAssemblies = 
+        projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -203,11 +206,13 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
-    let multiNodeTestAssemblies = 
+    let projects = 
         match (isWindows) with 
         | true -> !! "./src/**/*.Tests.MultiNode.csproj"
         | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
 
+    let multiNodeTestAssemblies = 
+        projects |> Seq.choose (getTestAssembly Runtime.NetCore)
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
