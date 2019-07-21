@@ -1,6 +1,5 @@
 ﻿#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
-#load "./buildIncremental.fsx"
 
 open System
 open System.IO
@@ -105,19 +104,13 @@ module internal ResultHandling =
         buildErrorMessage
         >> Option.iter (failBuildWithMessage errorLevel)
 
-open BuildIncremental.IncrementalTests
 
 Target "RunTests" (fun _ ->    
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match getBuildParamOrDefault "notUsed" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests Net |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            (getIncrementalUnitTests Net) |> Seq.iter log
-                            getUnitTestProjects Net
-        | _ -> log "All test projects will be run..."
-               getUnitTestProjects Net
+        match (isWindows) with 
+        | true -> !! "./src/**/*.Tests.csproj"
+        | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
     
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -139,14 +132,11 @@ Target "RunTests" (fun _ ->
 Target "RunTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match getBuildParamOrDefault "notUsed" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests NetCore |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests NetCore |> Seq.iter log
-                            getUnitTestProjects NetCore
-        | _ -> log "All test projects will be run..."
-               getUnitTestProjects NetCore
+        match (isWindows) with 
+        | true -> !! "./src/**/*.Tests.csproj"
+                    ++ "./**/*.Tests.fsproj"
+        | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                   ++ "./**/*.Tests.fsproj"
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -170,14 +160,9 @@ Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
 
     let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "notUsed" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalMNTRTests() |> Seq.iter log
-                            getAllMntrTestAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestAssemblies()
+        match (isWindows) with 
+        | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+        | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -206,14 +191,10 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
     let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "notUsed" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalNetCoreMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalNetCoreMNTRTests() |> Seq.iter log
-                            getAllMntrTestNetCoreAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestNetCoreAssemblies()
+        match (isWindows) with 
+        | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+        | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -250,13 +231,10 @@ Target "NBench" <| fun _ ->
     printfn "Using NBench.Runner: %s" nbenchTestPath
 
     let nbenchTestAssemblies = 
-        match getBuildParamOrDefault "notUsed" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalPerfTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalPerfTests() |> Seq.iter log
-                            getAllPerfTestAssemblies()
-        | _ -> getAllPerfTestAssemblies()
+        match (isWindows) with 
+        | true -> !! "./src/**/*.Tests.Performance.csproj"
+        | _ -> !! "./src/**/*.Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+
 
     let runNBench assembly =
         let includes = getBuildParam "include"
