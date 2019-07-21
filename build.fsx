@@ -139,7 +139,7 @@ Target "RunTests" (fun _ ->
 Target "RunTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match getBuildParamOrDefault "incremental" "" with
+        match getBuildParamOrDefault "notUsed" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
                     getIncrementalUnitTests NetCore |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
@@ -170,7 +170,7 @@ Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
 
     let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
+        match getBuildParamOrDefault "notUsed" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
                     getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
@@ -206,7 +206,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
     let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
+        match getBuildParamOrDefault "notUsed" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
                     getIncrementalNetCoreMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
@@ -250,7 +250,7 @@ Target "NBench" <| fun _ ->
     printfn "Using NBench.Runner: %s" nbenchTestPath
 
     let nbenchTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
+        match getBuildParamOrDefault "notUsed" "" with
         | "true" -> log "The following test projects would be run under Incremental Test config..."
                     getIncrementalPerfTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
