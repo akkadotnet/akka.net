@@ -112,7 +112,7 @@ akka{
 Both TCP and HTTP are enabled in this scenario. But how do I know which transport is being used when I send a message to a `RemoteActorRef`? That's indicated by the protocol scheme used in the `Address` of the remote actor:
 
     akka.tcp://MySystem@localhost:8081/user/actor #dot-netty.tcp
-    akka.udp://MySystem@localhost:8082/user/actor #magic.http
+    akka.http://MySystem@localhost:8082/user/actor #magic.http
 
 So if you want to send a message to a remote actor over HTTP, you'd write something like this:
 
