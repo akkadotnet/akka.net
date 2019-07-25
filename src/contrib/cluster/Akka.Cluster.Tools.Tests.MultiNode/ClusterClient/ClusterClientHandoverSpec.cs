@@ -159,13 +159,17 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
             RunOn(() =>
             {
-                _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
-                ExpectMsg<string>().Should().Be("hello");
-
                 // bugfix verification for https://github.com/akkadotnet/akka.net/issues/3840
                 // need to make sure that no dead contacts are hanging around
                 _clusterClient.Tell(GetContactPoints.Instance);
-                ExpectMsg<ContactPoints>().ContactPointsList.Count.Should().Be(1);
+                var contacts = ExpectMsg<ContactPoints>().ContactPointsList;
+                contacts.Count.Should().Be(1);
+                contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
+
+                _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                ExpectMsg<string>().Should().Be("hello");
+
+               
             }, _config.Client);
             EnterBarrier("handover-successful");
         }
