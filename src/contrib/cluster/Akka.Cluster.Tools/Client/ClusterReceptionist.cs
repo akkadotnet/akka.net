@@ -295,7 +295,7 @@ namespace Akka.Cluster.Tools.Client
 
         #region RingOrdering
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal class RingOrdering : IComparer<Address>
         {
@@ -306,13 +306,13 @@ namespace Akka.Cluster.Tools.Client
             private RingOrdering() { }
 
             /// <summary>
-            /// TBD
+            /// Generates a hash for the node address.
             /// </summary>
-            /// <param name="node">TBD</param>
+            /// <param name="node">The node being added to the hash ring.</param>
             /// <exception cref="IllegalStateException">
             /// This exception is thrown when the specified <paramref name="node"/> has a host/port that is undefined.
             /// </exception>
-            /// <returns>TBD</returns>
+            /// <returns>A stable hashcode for the address.</returns>
             public static int HashFor(Address node)
             {
                 // cluster node identifier is the host and port of the address; protocol and system is assumed to be the same
@@ -328,13 +328,13 @@ namespace Akka.Cluster.Tools.Client
                 var ha = HashFor(x);
                 var hb = HashFor(y);
 
-                if (ha == hb) return 0;
-                return ha < hb || Member.AddressOrdering.Compare(x, y) < 0 ? -1 : 1;
+                if (ha == hb) return Member.AddressOrdering.Compare(x, y);
+                return ha.CompareTo(hb);
             }
         }
         #endregion
 
-        private ILoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRef _pubSubMediator;
         private readonly ClusterReceptionistSettings _settings;
         private readonly Cluster _cluster;
@@ -475,10 +475,8 @@ namespace Akka.Cluster.Tools.Client
                     UpdateClientInteractions(Sender);
                 }
             }
-            else if (message is ClusterEvent.CurrentClusterState)
+            else if (message is ClusterEvent.CurrentClusterState state)
             {
-                var state = (ClusterEvent.CurrentClusterState)message;
-
                 _nodes = ImmutableSortedSet<Address>.Empty.WithComparer(RingOrdering.Instance)
                     .Union(state.Members
                         .Where(m => m.Status != MemberStatus.Joining && IsMatchingRole(m))
@@ -486,19 +484,16 @@ namespace Akka.Cluster.Tools.Client
 
                 _consistentHash = ConsistentHash.Create(_nodes, _virtualNodesFactor);
             }
-            else if (message is ClusterEvent.MemberUp)
+            else if (message is ClusterEvent.MemberUp up)
             {
-                var up = (ClusterEvent.MemberUp)message;
                 if (IsMatchingRole(up.Member))
                 {
                     _nodes = _nodes.Add(up.Member.Address);
                     _consistentHash = ConsistentHash.Create(_nodes, _virtualNodesFactor);
                 }
             }
-            else if (message is ClusterEvent.MemberRemoved)
+            else if (message is ClusterEvent.MemberRemoved removed)
             {
-                var removed = (ClusterEvent.MemberRemoved)message;
-
                 if (removed.Member.Address.Equals(_cluster.SelfAddress))
                 {
                     Context.Stop(Self);
@@ -525,9 +520,8 @@ namespace Akka.Cluster.Tools.Client
                 var subscriber = Sender;
                 _subscribers = _subscribers.Where(c => !c.Equals(subscriber)).ToImmutableList();
             }
-            else if (message is Terminated)
+            else if (message is Terminated terminated)
             {
-                var terminated = (Terminated)message;
                 Self.Tell(UnsubscribeClusterClients.Instance, terminated.ActorRef);
             }
             else if (message is GetClusterClients)
