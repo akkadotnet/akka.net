@@ -483,7 +483,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
         public void ClusterClient_must_report_removal_of_a_receptionist()
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
                 RunOn(() =>
                 {
@@ -636,7 +636,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     Sys.Stop(c);
                 }, _config.Client);
 
-                EnterBarrier("after-7");
+                EnterBarrier("after-8");
             });
         }
 
