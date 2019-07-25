@@ -481,7 +481,6 @@ namespace Akka.Cluster.Tools.Client
                         _log.Debug("Client [{0}] gets ContactPoints [{1}]", Sender.Path, string.Join(", ", contacts.ContactPoints));
 
                     Sender.Tell(contacts);
-                    UpdateClientInteractions(Sender);
                 }
             }
             else if (message is ClusterEvent.CurrentClusterState state)
