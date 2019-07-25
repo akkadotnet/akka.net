@@ -216,7 +216,7 @@ namespace Akka.Routing
             {
                 var nodeHash = HashFor(node.ToString());
                 var vnodes = Enumerable.Range(1, virtualNodesFactor)
-                    .Select(x => ConcatenateNodeHash(nodeHash, x));
+                    .Select(x => ConcatenateNodeHash(nodeHash, x)).ToList();
                 foreach(var vnode in vnodes)
                     sortedDict.Add(vnode, node);
             }
