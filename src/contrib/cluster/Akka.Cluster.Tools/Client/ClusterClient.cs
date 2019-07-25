@@ -285,10 +285,8 @@ namespace Akka.Cluster.Tools.Client
                     Self);
             }
 
-            if (message is ClusterReceptionist.Contacts)
+            if (message is ClusterReceptionist.Contacts contacts)
             {
-                var contacts = (ClusterReceptionist.Contacts)message;
-
                 if (contacts.ContactPoints.Count > 0)
                 {
                     _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
@@ -298,9 +296,8 @@ namespace Akka.Cluster.Tools.Client
 
                 PublishContactPoints();
             }
-            else if (message is ActorIdentity)
+            else if (message is ActorIdentity actorIdentify)
             {
-                var actorIdentify = (ActorIdentity)message;
                 var receptionist = actorIdentify.Subject;
 
                 if (receptionist != null)
@@ -325,19 +322,16 @@ namespace Akka.Cluster.Tools.Client
             {
                 SendGetContacts();
             }
-            else if (message is Send)
+            else if (message is Send send)
             {
-                var send = (Send)message;
                 Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
             }
-            else if (message is SendToAll)
+            else if (message is SendToAll sendToAll)
             {
-                var sendToAll = (SendToAll)message;
                 Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
             }
-            else if (message is Publish)
+            else if (message is Publish publish)
             {
-                var publish = (Publish)message;
                 Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
             else if (message is ReconnectTimeout)
@@ -357,19 +351,16 @@ namespace Akka.Cluster.Tools.Client
         {
             return message =>
             {
-                if (message is Send)
+                if (message is Send send)
                 {
-                    var send = (Send)message;
                     receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
                 }
-                else if (message is SendToAll)
+                else if (message is SendToAll sendToAll)
                 {
-                    var sendToAll = (SendToAll)message;
                     receptionist.Forward(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
                 }
-                else if (message is Publish)
+                else if (message is Publish publish)
                 {
-                    var publish = (Publish)message;
                     receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
                 }
                 else if (message is HeartbeatTick)
@@ -395,10 +386,8 @@ namespace Akka.Cluster.Tools.Client
                 {
                     receptionist.Tell(ClusterReceptionist.GetContacts.Instance);
                 }
-                else if (message is ClusterReceptionist.Contacts)
+                else if (message is ClusterReceptionist.Contacts contacts)
                 {
-                    var contacts = (ClusterReceptionist.Contacts)message;
-
                     // refresh of contacts
                     if (contacts.ContactPoints.Count > 0)
                     {
@@ -434,9 +423,8 @@ namespace Akka.Cluster.Tools.Client
                 var subscriber = Sender;
                 _subscribers = _subscribers.Where(c => !c.Equals(subscriber)).ToImmutableList();
             }
-            else if (message is Terminated)
+            else if (message is Terminated terminated)
             {
-                var terminated = (Terminated)message;
                 Self.Tell(UnsubscribeContactPoints.Instance, terminated.ActorRef);
             }
             else if (message is GetContactPoints)
@@ -629,7 +617,7 @@ namespace Akka.Cluster.Tools.Client
     public sealed class GetContactPoints : IGetContactPoints
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of this message.
         /// </summary>
         public static readonly GetContactPoints Instance = new GetContactPoints();
         private GetContactPoints() { }
@@ -650,7 +638,7 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// The set of actor paths contacted by this <see cref="ClusterClient"/>.
         /// </summary>
         public IImmutableSet<ActorPath> ContactPointsList { get; }
     }
