@@ -277,6 +277,18 @@ namespace Akka.Cluster.Tools.Client
             public static CheckDeadlines Instance { get; } = new CheckDeadlines();
             private CheckDeadlines() { }
         }
+
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Used to signal that a <see cref="ClusterClientReceptionist"/> we've connected to
+        /// has terminated.
+        /// </summary>
+        internal sealed class ReceptionistShutdown : IClusterClientMessage
+        {
+            public static readonly ReceptionistShutdown Instance = new ReceptionistShutdown();
+            private ReceptionistShutdown() { }
+        }
         #endregion
 
         /// <summary>
@@ -380,10 +392,6 @@ namespace Akka.Cluster.Tools.Client
                 Self);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PreStart()
         {
             base.PreStart();
@@ -394,14 +402,15 @@ namespace Akka.Cluster.Tools.Client
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             _cluster.Unsubscribe(Self);
             _checkDeadlinesTask.Cancel();
+            foreach (var c in _clientInteractions.Keys)
+            {
+                c.Tell(ClusterReceptionist.ReceptionistShutdown.Instance);
+            }
         }
 
         private bool IsMatchingRole(Member member)

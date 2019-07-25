@@ -308,6 +308,7 @@ namespace Akka.Cluster.Tools.Client
                     Context.Become(Active(receptionist));
                     connectTimerCancelable?.Cancel();
                     _failureDetector.HeartBeat();
+                    Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
                 }
                 else
                 {
@@ -339,6 +340,10 @@ namespace Akka.Cluster.Tools.Client
                 _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
                 Context.Stop(Self);
             }
+            else if(message is ClusterReceptionist.ReceptionistShutdown)
+            {
+                // ok, haven't chosen a receptionist yet
+            }
             else
             {
                 return ContactPointMessages(message);
@@ -368,10 +373,7 @@ namespace Akka.Cluster.Tools.Client
                     if (!_failureDetector.IsAvailable)
                     {
                         _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
-                        SendGetContacts();
-                        ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
-                        Context.Become(Establishing);
-                        _failureDetector.HeartBeat();
+                        Reestablish();
                     }
                     else
                     {
@@ -400,6 +402,14 @@ namespace Akka.Cluster.Tools.Client
                 {
                     // ok, from previous establish, already handled
                 }
+                else if (message is ClusterReceptionist.ReceptionistShutdown)
+                {
+                    if (receptionist.Equals(Sender))
+                    {
+                        _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
+                        Reestablish();
+                    }
+                }
                 else
                 {
                     return ContactPointMessages(message);
@@ -407,6 +417,14 @@ namespace Akka.Cluster.Tools.Client
 
                 return true;
             };
+        }
+
+        private void Reestablish()
+        {
+            SendGetContacts();
+            ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
+            Context.Become(Establishing);
+            _failureDetector.HeartBeat();
         }
 
         private bool ContactPointMessages(object message)
