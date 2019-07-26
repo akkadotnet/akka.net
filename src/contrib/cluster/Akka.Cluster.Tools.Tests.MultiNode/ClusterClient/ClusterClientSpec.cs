@@ -654,13 +654,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
                     reply.Msg.Should().Be("bonjour4-ack");
                     reply.Node.Should().Be(remainingContacts.First().Address);
-                    
-                    // TODO: bug, cannot compare with a logsource
-                    var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
 
-                    EventFilter.Info(start: "Connected to").ExpectOne(() =>
+                    // TODO: bug, cannot compare with a logsource
+                    // TODO: need to implement https://github.com/akkadotnet/akka.net/issues/3867 for this to work
+                    //var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
+                    var logSource = c.ToString();
+
+                    EventFilter.Info(start: "Connected to", source:logSource).ExpectOne(() =>
                     {
-                        EventFilter.Info(start: "Lost contact").ExpectOne(() =>
+                        EventFilter.Info(start: "Lost contact", source:logSource).ExpectOne(() =>
                         {
                             // shutdown server
                             TestConductor.Shutdown(_remainingServerRoleNames.First()).Wait();
