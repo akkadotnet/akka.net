@@ -41,7 +41,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
+                akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.client.heartbeat-interval = 1s
@@ -284,10 +285,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             ClusterClient_must_communicate_to_any_node_in_cluster();
             ClusterClient_must_work_with_ask();
             ClusterClient_must_demonstrate_usage();
-            //ClusterClient_must_report_events();
-            //ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
-            //ClusterClient_must_reestablish_connection_to_receptionist_after_partition();
-            //ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart();
+            ClusterClient_must_report_events();
+            ClusterClient_must_report_removal_of_a_receptionist();
+            ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
+            ClusterClient_must_reestablish_connection_to_receptionist_after_partition();
+            ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart();
         }
 
         public void ClusterClient_must_startup_cluster()
@@ -463,9 +465,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                             {
                                 var probe = CreateTestProbe();
                                 l.Tell(ClusterClientSpecConfig.TestReceptionistListener.GetLatestClusterClients.Instance, probe.Ref);
+
+                                // "ask-client" might still be around, filter
                                 probe.ExpectMsg<ClusterClientSpecConfig.TestReceptionistListener.LatestClusterClients>()
                                     .ClusterClients.Should()
-                                    .BeEquivalentTo(expectedClients);
+                                    .Contain(expectedClients);
                             });
                         });
 
@@ -475,6 +479,46 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
                 EnterBarrier("after-5");
             });
+        }
+
+        public void ClusterClient_must_report_removal_of_a_receptionist()
+        {
+            Within(TimeSpan.FromSeconds(30), () =>
+            {
+                RunOn(() =>
+                {
+                    var unreachableContact = Node(_config.Client) / "system" / "receptionist";
+                    var expectedRoles =
+                        ImmutableHashSet.Create(_config.First, _config.Second, _config.Third, _config.Fourth);
+                    var expectedContacts = expectedRoles.Select(x => Node(x) / "system" / "receptionist").ToImmutableHashSet();
+
+                    // We need to slow down things otherwise our receptionists can sometimes tell us
+                    // that our unreachableContact is unreachable before we get a chance to
+                    // subscribe to events.
+                    foreach (var role in expectedRoles)
+                    {
+                        TestConductor.Blackhole(_config.Client, role, ThrottleTransportAdapter.Direction.Both)
+                            .Wait();
+                    }
+
+                    var c = Sys.ActorOf(
+                        ClusterClient.Props(ClusterClientSettings.Create(Sys)
+                            .WithInitialContacts(expectedContacts.Add(unreachableContact))), "client5");
+
+                    var probe = CreateTestProbe();
+                    c.Tell(SubscribeContactPoints.Instance, probe.Ref);
+
+                    foreach (var role in expectedRoles)
+                    {
+                        TestConductor.PassThrough(_config.Client, role, ThrottleTransportAdapter.Direction.Both)
+                            .Wait();
+                    }
+
+                    probe.FishForMessage(o => (o is ContactPointRemoved cp && cp.ContactPoint.Equals(unreachableContact)), TimeSpan.FromSeconds(10), "removal");
+                }, _config.Client);
+
+                EnterBarrier("after-7");
+            }); 
         }
 
         public void ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown()
@@ -515,6 +559,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     });
                     Sys.Stop(c);
                 }, _config.Client);
+
                 EnterBarrier("verified-3");
                 ReceiveWhile(2.Seconds(), msg =>
                 {
@@ -591,7 +636,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     Sys.Stop(c);
                 }, _config.Client);
 
-                EnterBarrier("after-7");
+                EnterBarrier("after-8");
             });
         }
 
@@ -609,13 +654,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
                     reply.Msg.Should().Be("bonjour4-ack");
                     reply.Node.Should().Be(remainingContacts.First().Address);
-                    
-                    // TODO: bug, cannot compare with a logsource
-                    var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
 
-                    EventFilter.Info(start: "Connected to").ExpectOne(() =>
+                    // TODO: bug, cannot compare with a logsource
+                    // TODO: need to implement https://github.com/akkadotnet/akka.net/issues/3867 for this to work
+                    //var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
+                    var logSource = c.ToString();
+
+                    EventFilter.Info(start: "Connected to", source:logSource).ExpectOne(() =>
                     {
-                        EventFilter.Info(start: "Lost contact").ExpectOne(() =>
+                        EventFilter.Info(start: "Lost contact", source:logSource).ExpectOne(() =>
                         {
                             // shutdown server
                             TestConductor.Shutdown(_remainingServerRoleNames.First()).Wait();
