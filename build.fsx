@@ -43,8 +43,8 @@ let runIncrementally = hasBuildParam "incremental"
 let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
-let testNetFrameworkVersion = "net461"
-let testNetCoreVersion = "netcoreapp2.1"
+let testNetFrameworkVersion = "net452"
+let testNetCoreVersion = "netcoreapp1.1"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -237,7 +237,7 @@ Target "RunTests" (fun _ ->
             info.WorkingDirectory <- (Directory.GetParent project).FullName
             info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -262,7 +262,7 @@ Target "RunTestsNetCore" (fun _ ->
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
         CreateDir outputTests
         projects |> Seq.iter (runSingleProject)

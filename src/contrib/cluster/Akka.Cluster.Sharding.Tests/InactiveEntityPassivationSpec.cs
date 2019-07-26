@@ -103,8 +103,9 @@ namespace Akka.Cluster.Sharding.Tests
             return ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = cluster
-                akka.cluster.sharding.passivate-idle-entity-after = 3s")
+                akka.cluster.sharding.passivate-idle-entity-after = 3s
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+                akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
         }
