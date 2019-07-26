@@ -215,7 +215,7 @@ namespace Akka.Cluster.Tools.Client
 
             SendGetContacts();
 
-            _contactPathsPublished = ImmutableHashSet<ActorPath>.Empty;
+            _contactPathsPublished = _contactPaths;
             _subscribers = ImmutableList<IActorRef>.Empty;
 
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
