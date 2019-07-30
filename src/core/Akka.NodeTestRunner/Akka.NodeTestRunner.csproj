@@ -4,7 +4,7 @@
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <RuntimeIdentifiers>win7-x86</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

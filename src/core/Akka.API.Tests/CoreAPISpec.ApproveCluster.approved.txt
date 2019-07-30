@@ -92,6 +92,10 @@ namespace Akka.Cluster
             public override int GetHashCode() { }
             public override string ToString() { }
         }
+        public sealed class MemberDowned : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberDowned(Akka.Cluster.Member member) { }
+        }
         public sealed class MemberExited : Akka.Cluster.ClusterEvent.MemberStatusChange
         {
             public MemberExited(Akka.Cluster.Member member) { }

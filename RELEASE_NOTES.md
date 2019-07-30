@@ -1,3 +1,32 @@
+#### 1.3.14 July 29 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+You know what? We're going to stop promising that _this_ is the last 1.3.x release, because even though we've said that twice... We now have _another_ 1.3.x release. 
+
+1.3.14 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far. These include:
+
+* Akka.Cluster.Sharding: default "persistent" mode has been stabilized and errors that users have ran into during `ShardCoordinator` recovery, such as [Exception in PersistentShardCoordinator ReceiveRecover](https://github.com/akkadotnet/akka.net/issues/3414);
+* [Akka.Remote: no longer disassociates when serialization errors are thrown](https://github.com/akkadotnet/akka.net/pull/3782) in the remoting pipeline - the connection will now stay open;
+* [Akka.Cluster.Tools: mission-critical `ClusterClient` and `ClusterClientReceptionist` fixes](https://github.com/akkadotnet/akka.net/pull/3866);
+* [SourceLink debugging support for Akka.NET](https://github.com/akkadotnet/akka.net/pull/3848); and
+* [Akka.Persistence: Allow AtLeastOnceDelivery parameters to be set from deriving classes](https://github.com/akkadotnet/akka.net/pull/3810); 
+* [Akka.Persistence.Sql: BatchingSqlJournal now preserves Sender in PersistCallback](https://github.com/akkadotnet/akka.net/pull/3779); and
+* [Akka: bugfix - coordinated shutdown timesout when exit-clr = on](https://github.com/akkadotnet/akka.net/issues/3815).
+
+To [see the full set of changes for Akka.NET v1.3.14, click here](https://github.com/akkadotnet/akka.net/pull/3869).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 2893 | 828 | Aaron Stannard |
+| 3 | 1706 | 347 | zbynek001 |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3 | 3 | Abi |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | jdsartori |
+
 #### 1.3.13 April 30 2019 ####
 **Maintenance Release for Akka.NET 1.3**
 Well, we thought 1.3.12 would be the final release for Akka.NET v1.3.* - but then we found some nasty bugs prior to merging any of the v1.4 features into our development branch. But finally, for real this time - this is really the last v1.3.13 release.

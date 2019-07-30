@@ -42,5 +42,8 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                     }
                 }");
         }
+
+        // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+        protected override bool SupportsSerialization => false;
     }
 }

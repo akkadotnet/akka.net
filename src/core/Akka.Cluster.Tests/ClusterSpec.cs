@@ -593,6 +593,7 @@ namespace Akka.Cluster.Tests
 
                 Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
 
+                probe.ExpectMsg<ClusterEvent.MemberDowned>();
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();

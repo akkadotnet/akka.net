@@ -78,5 +78,40 @@ namespace Akka.Cluster.Sharding.Tests
 
             region.Should().BeSameAs(proxy);
         }
+
+        [Fact]
+        public void HandOffStopper_must_stop_the_entity_even_if_the_entity_doesnt_handle_handOffStopMessage()
+        {
+
+            var probe = CreateTestProbe();
+            var shardName = "test";
+            var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
+            var handOffStopper = Sys.ActorOf(
+                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instsnce, TimeSpan.FromMilliseconds(10)))
+              );
+
+            Watch(emptyHandlerActor);
+            ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
+
+            probe.ExpectMsg(new PersistentShardCoordinator.ShardStopped(shardName), TimeSpan.FromSeconds(1));
+
+            Watch(handOffStopper);
+            ExpectTerminated(handOffStopper, TimeSpan.FromSeconds(1));
+        }
+
+        internal class HandOffStopMessage : INoSerializationVerificationNeeded
+        {
+            public static readonly HandOffStopMessage Instsnce = new HandOffStopMessage();
+            private HandOffStopMessage()
+            {
+            }
+        }
+
+        internal class EmptyHandlerActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+            }
+        }
     }
 }

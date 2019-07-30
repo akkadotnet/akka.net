@@ -23,27 +23,35 @@ namespace Akka.Persistence
         protected AtLeastOnceDeliveryReceiveActor()
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, Extension.Settings.AtLeastOnceDelivery);
-
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryReceiveActor"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">Custom AtLeastOnceDelivery settings</param>
         protected AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings settings)
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, settings);
+        }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryReceiveActor"/> class.
+        /// </summary>
+        /// <param name="overrideSettings">A lambda to tweak the default AtLeastOnceDelivery settings.</param>
+        protected AtLeastOnceDeliveryReceiveActor(Func<PersistenceSettings.AtLeastOnceDeliverySettings, PersistenceSettings.AtLeastOnceDeliverySettings> overrideSettings)
+        {
+            var settings = overrideSettings(Extension.Settings.AtLeastOnceDelivery);
+            _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, settings);
         }
 
         /// <summary>
         /// Interval between redelivery attempts.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval => _atLeastOnceDeliverySemantic.RedeliverInterval;
+        public TimeSpan RedeliverInterval => _atLeastOnceDeliverySemantic.RedeliverInterval;
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -52,8 +60,8 @@ namespace Akka.Persistence
         /// this helps prevent an overwhelming amount of messages to be sent at once.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
         public int RedeliveryBurstLimit => _atLeastOnceDeliverySemantic.RedeliveryBurstLimit;
 
@@ -62,8 +70,8 @@ namespace Akka.Persistence
         /// <see cref="ActorBase.Self" />. The count is reset after restart.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
         public int WarnAfterNumberOfUnconfirmedAttempts => _atLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts;
 
@@ -73,8 +81,8 @@ namespace Akka.Persistence
         /// messages and it will throw <see cref="MaxUnconfirmedMessagesExceededException" />.
         /// 
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
-        /// configuration key. This method can be overridden by implementation classes to return
-        /// non-default values.
+        /// configuration key. Custom value may be provided via the
+        /// <see cref="AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings)"/> constructor.
         /// </summary>
         public int MaxUnconfirmedMessages => _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages;
 

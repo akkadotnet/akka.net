@@ -45,7 +45,7 @@ namespace Akka.Cluster.Sharding
         public Shard.ShardState State { get; set; } = Shard.ShardState.Empty;
         public ImmutableDictionary<string, IActorRef> RefById { get; set; } = ImmutableDictionary<string, IActorRef>.Empty;
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
-        public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; }
+        public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
         public ICancelable PassivateIdleTask { get; }
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Sharding
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
-            PassivateIdleTask = Settings.PassivateIdleEntityAfter > TimeSpan.Zero
+            PassivateIdleTask = Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
 
@@ -114,6 +114,11 @@ namespace Akka.Cluster.Sharding
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
         public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
         
+        protected override void PostStop()
+        {
+            PassivateIdleTask?.Cancel();
+            base.PostStop();
+        }
 
         protected override bool Receive(object message) => WaitingForState(ImmutableHashSet<int>.Empty)(message);
 
