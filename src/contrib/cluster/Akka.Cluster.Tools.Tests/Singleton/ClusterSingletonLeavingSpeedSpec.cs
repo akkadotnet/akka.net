@@ -116,7 +116,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private void ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
         {
             List<Tuple<TimeSpan, TimeSpan>> durations = new List<Tuple<TimeSpan, TimeSpan>>();
-
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = 0; i < _systems.Length; i++)

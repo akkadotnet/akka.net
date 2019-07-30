@@ -1,4 +1,4 @@
-﻿#I @"tools/FAKE/tools"
+#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
 open System
@@ -397,7 +397,7 @@ Target "CreateNuget" (fun _ ->
 
         projects |> Seq.iter (runSingleProject)
 )
-open Fake.TemplateHelper
+
 Target "PublishMntr" (fun _ ->
     if not skipBuild.Value then
         let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"

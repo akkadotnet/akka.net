@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -28,7 +29,7 @@ namespace Akka.Actor
         /// </summary>
         public IChildrenContainer ChildrenContainer
         {
-            get { return _childrenContainerDoNotCallMeDirectly; } 
+            get { return _childrenContainerDoNotCallMeDirectly; }
         }
 
         private IReadOnlyCollection<IActorRef> Children
@@ -371,18 +372,21 @@ namespace Akka.Actor
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(name, out stats))
+                if (TryGetChildRestartStatsByName(name, out var stats))
                 {
                     child = stats.Child;
+                    return true;
+                }
+                else if (TryGetFunctionRef(name, out var functionRef))
+                {
+                    child = functionRef;
                     return true;
                 }
             }
             else
             {
                 var nameAndUid = SplitNameAndUid(name);
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
+                if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
                 {
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
@@ -531,4 +535,3 @@ namespace Akka.Actor
         }
     }
 }
-
