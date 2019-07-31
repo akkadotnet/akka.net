@@ -64,7 +64,7 @@ namespace Akka.Remote.Tests.Serialization
                     return Encoding.UTF8.GetBytes($"{fromStr},{toStr}");
             }
 
-            throw new ApplicationException($"Unrecognized message type {obj}");
+            throw new Exception($"Unrecognized message type {obj}");
         }
 
         public override object FromBinary(byte[] bytes, string manifest)
