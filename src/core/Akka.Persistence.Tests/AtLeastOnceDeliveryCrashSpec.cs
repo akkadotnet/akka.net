@@ -122,7 +122,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on AzureDevOps")]
         public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();

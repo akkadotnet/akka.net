@@ -205,12 +205,12 @@ namespace Akka.Actor
                 else
                 {
                     var gotType = mailbox.MessageQueue == null ? "null" : mailbox.MessageQueue.GetType().FullName;
-                    createMessage = new Create(new ActorInitializationException(Self,$"Actor [{Self}] requires mailbox type [{req}] got [{gotType}]"));
+                    createMessage = new Create(new ActorInitializationException(Self, $"Actor [{Self}] requires mailbox type [{req}] got [{gotType}]"));
                 }
             }
             else
             {
-               createMessage = new Create(null);
+                createMessage = new Create(null);
             }
 
             SwapMailbox(mailbox);
@@ -220,7 +220,7 @@ namespace Akka.Actor
             var self = Self;
             mailbox.SystemEnqueue(self, createMessage);
 
-            if(sendSupervise)
+            if (sendSupervise)
             {
                 Parent.SendSystemMessage(new Supervise(self, async: false));
             }
@@ -328,7 +328,7 @@ namespace Akka.Actor
         private ActorBase NewActor()
         {
             PrepareForNewActor();
-            ActorBase instance=null;
+            ActorBase instance = null;
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
@@ -524,30 +524,41 @@ namespace Akka.Actor
             DeadLetter deadLetter;
             var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
 
-            if (!(unwrapped is INoSerializationVerificationNeeded))
-            {
-                var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
-                if(deadLetter != null)
-                    return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
-                return new Envelope(deserializedMsg, envelope.Sender);
-            }
+            if (unwrapped is INoSerializationVerificationNeeded)
+                return envelope;
 
-            return envelope;
+            var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            if (deadLetter != null)
+                return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
+            return new Envelope(deserializedMsg, envelope.Sender);
+
         }
 
         private object SerializeAndDeserializePayload(object obj)
         {
-            Serializer serializer = _systemImpl.Serialization.FindSerializerFor(obj);
-            byte[] bytes = serializer.ToBinary(obj);
-
-            var manifestSerializer = serializer as SerializerWithStringManifest;
-            if (manifestSerializer != null)
+            var serializer = _systemImpl.Serialization.FindSerializerFor(obj);
+            var oldInfo = Serialization.Serialization.CurrentTransportInformation;
+            try
             {
-                var manifest = manifestSerializer.Manifest(obj);
-                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
-            }
+                if (oldInfo == null)
+                    Serialization.Serialization.CurrentTransportInformation =
+                        SystemImpl.Provider.SerializationInformation;
 
-            return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, obj.GetType().TypeQualifiedName());
+                var bytes = serializer.ToBinary(obj);
+
+                if (serializer is SerializerWithStringManifest manifestSerializer)
+                {
+                    var manifest = manifestSerializer.Manifest(obj);
+                    return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+                }
+
+                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier,
+                    obj.GetType().TypeQualifiedName());
+            }
+            finally
+            {
+                Serialization.Serialization.CurrentTransportInformation = oldInfo;
+            }
         }
     }
 }

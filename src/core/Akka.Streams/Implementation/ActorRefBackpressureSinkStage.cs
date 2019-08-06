@@ -30,7 +30,8 @@ namespace Akka.Streams.Implementation
             private readonly int _maxBuffer;
             private readonly List<TIn> _buffer;
             private readonly Type _ackType;
-            private StageActorRef _self;
+
+            public IActorRef Self => StageActor.Ref;
 
             public Logic(ActorRefBackpressureSinkStage<TIn> stage, int maxBuffer) : base(stage.Shape)
             {
@@ -65,7 +66,7 @@ namespace Akka.Streams.Implementation
 
             public override void OnUpstreamFailure(Exception ex)
             {
-                _stage._actorRef.Tell(_stage._onFailureMessage(ex), _self);
+                _stage._actorRef.Tell(_stage._onFailureMessage(ex), Self);
                 _completionSignalled = true;
                 FailStage(ex);
             }
@@ -100,9 +101,8 @@ namespace Akka.Streams.Implementation
             public override void PreStart()
             {
                 SetKeepGoing(true);
-                _self = GetStageActorRef(Receive);
-                _self.Watch(_stage._actorRef);
-                _stage._actorRef.Tell(_stage._onInitMessage, _self);
+                GetStageActor(Receive).Watch(_stage._actorRef);
+                _stage._actorRef.Tell(_stage._onInitMessage, Self);
                 Pull(_stage._inlet);
             }
 
@@ -110,14 +110,14 @@ namespace Akka.Streams.Implementation
             {
                 var msg = _buffer[0];
                 _buffer.RemoveAt(0);
-                _stage._actorRef.Tell(msg, _self);
+                _stage._actorRef.Tell(msg, Self);
                 if (_buffer.Count == 0 && _completeReceived)
                     Finish();
             }
 
             private void Finish()
             {
-                _stage._actorRef.Tell(_stage._onCompleteMessage, _self);
+                _stage._actorRef.Tell(_stage._onCompleteMessage, Self);
                 _completionSignalled = true;
                 CompleteStage();
             }
@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation
             public override void PostStop()
             {
                 if(!_completionSignalled)
-                    StageActorRef.Tell(_stage._onFailureMessage(new AbruptStageTerminationException(this)));
+                    Self.Tell(_stage._onFailureMessage(new AbruptStageTerminationException(this)));
             }
 
             public override string ToString() => "ActorRefBackpressureSink";
