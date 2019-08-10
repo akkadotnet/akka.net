@@ -42,7 +42,7 @@ namespace Akka.Persistence.TestKit
 
         public void SetInterceptor(IJournalInterceptor interceptor)
             =>  _journal.Ask(
-                new TestJournal.UseWriteInterceptor(interceptor),
+                new TestJournal.UseRecoveryInterceptor(interceptor),
                 TimeSpan.FromSeconds(3)
             ).Wait();
     }
