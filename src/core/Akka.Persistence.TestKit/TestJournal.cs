@@ -15,14 +15,10 @@ namespace Akka.Persistence.TestKit
     using System.Collections.Immutable;
     using System.Threading.Tasks;
 
-    public interface ITestJournal
-    {
-        JournalWriteBehavior OnWrite { get; }
-    }
-
     public sealed class TestJournal : MemoryJournal
     {
-        private IJournalWriteInterceptor _writeInterceptor = JournalWriteInterceptors.Noop.Instance;
+        private IJournalInterceptor _writeInterceptor = JournalInterceptors.Noop.Instance;
+        private IJournalInterceptor _recoveryInterceptor = JournalInterceptors.Noop.Instance;
 
         protected override bool ReceivePluginInternal(object message)
         {
@@ -30,6 +26,11 @@ namespace Akka.Persistence.TestKit
             {
                 case UseWriteInterceptor use:
                     _writeInterceptor = use.Interceptor;
+                    Sender.Tell(Ack.Instance);
+                    return true;
+
+                case UseRecoveryInterceptor use:
+                    _recoveryInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
                 
@@ -53,10 +54,12 @@ namespace Akka.Persistence.TestKit
                     }
                     catch (TestJournalRejectionException rejected)
                     {
+                        // i.e. problems with data: corrupted data-set, problems in serialization, constraints, etc.
                         exceptions.Add(rejected);
                     }
                     catch (TestJournalFailureException)
                     {
+                        // i.e. data-store problems: network, invalid credentials, etc.
                         throw;
                     }
                 }
@@ -65,24 +68,52 @@ namespace Akka.Persistence.TestKit
             return exceptions.ToImmutableList();
         }
 
-        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
+        public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
-            return base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
+            var highest = HighestSequenceNr(persistenceId);
+            if (highest != 0L && max != 0L)
+            {
+                var messages = Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max);
+                foreach (var p in messages)
+                {
+                    try
+                    {
+                        await _recoveryInterceptor.InterceptAsync(p);
+                        recoveryCallback(p);
+                    }
+                    catch (TestJournalFailureException)
+                    {
+                        // i.e. problems with data: corrupted data-set, problems in serialization
+                        // i.e. data-store problems: network, invalid credentials, etc.
+                        throw;
+                    }
+                }
+            }
         }
 
         public static ITestJournal FromRef(IActorRef actor)
         {
-            return  new TestJournalWrapper(actor);
+            return new TestJournalWrapper(actor);
         }
 
         public sealed class UseWriteInterceptor
         {
-            public UseWriteInterceptor(IJournalWriteInterceptor interceptor)
+            public UseWriteInterceptor(IJournalInterceptor interceptor)
             {
                 Interceptor = interceptor;
             }
 
-            public IJournalWriteInterceptor Interceptor { get; }
+            public IJournalInterceptor Interceptor { get; }
+        }
+
+        public sealed class UseRecoveryInterceptor
+        {
+            public UseRecoveryInterceptor(IJournalInterceptor interceptor)
+            {
+                Interceptor = interceptor;
+            }
+
+            public IJournalInterceptor Interceptor { get; }
         }
 
         public sealed class Ack
@@ -99,7 +130,9 @@ namespace Akka.Persistence.TestKit
 
             private readonly IActorRef _actor;
 
-            public JournalWriteBehavior OnWrite => new JournalWriteBehavior(_actor);
+            public JournalWriteBehavior OnWrite => new JournalWriteBehavior(new JournalWriteBehaviorSetter(_actor));
+
+            public JournalRecoveryBehavior OnRecovery => new JournalRecoveryBehavior(new JournalRecoveryBehaviorSetter(_actor));
         }
     }
 }

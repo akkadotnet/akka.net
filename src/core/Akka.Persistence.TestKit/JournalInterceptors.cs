@@ -3,39 +3,39 @@
     using System;
     using System.Threading.Tasks;
 
-    internal static class JournalWriteInterceptors
+    internal static class JournalInterceptors
     {
-        internal class Noop : IJournalWriteInterceptor
+        internal class Noop : IJournalInterceptor
         {
-            public static readonly IJournalWriteInterceptor Instance = new Noop();
+            public static readonly IJournalInterceptor Instance = new Noop();
 
             public Task InterceptAsync(IPersistentRepresentation message) => Task.FromResult(true);
         }
 
-        internal class Failure : IJournalWriteInterceptor
+        internal class Failure : IJournalInterceptor
         {
-            public static readonly IJournalWriteInterceptor Instance = new Failure();
+            public static readonly IJournalInterceptor Instance = new Failure();
 
             public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalFailureException(); 
         }
 
-        internal class Rejection : IJournalWriteInterceptor
+        internal class Rejection : IJournalInterceptor
         {
-            public static readonly IJournalWriteInterceptor Instance = new Rejection();
+            public static readonly IJournalInterceptor Instance = new Rejection();
 
             public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalRejectionException(); 
         }
         
-        internal class Delay : IJournalWriteInterceptor
+        internal class Delay : IJournalInterceptor
         {
-            public Delay(TimeSpan delay, IJournalWriteInterceptor next)
+            public Delay(TimeSpan delay, IJournalInterceptor next)
             {
                 _delay = delay;
                 _next = next;
             }
 
             private readonly TimeSpan _delay;
-            private readonly IJournalWriteInterceptor _next;
+            private readonly IJournalInterceptor _next;
 
             public async Task InterceptAsync(IPersistentRepresentation message)
             {
@@ -44,16 +44,16 @@
             }
         }
 
-        internal sealed class OnCondition : IJournalWriteInterceptor
+        internal sealed class OnCondition : IJournalInterceptor
         {
-            public OnCondition(Func<IPersistentRepresentation, Task<bool>> predicate, IJournalWriteInterceptor next, bool negate = false)
+            public OnCondition(Func<IPersistentRepresentation, Task<bool>> predicate, IJournalInterceptor next, bool negate = false)
             {
                 _predicate = predicate;
                 _next = next;
                 _negate = negate;
             }
 
-            public OnCondition(Func<IPersistentRepresentation, bool> predicate, IJournalWriteInterceptor next, bool negate = false)
+            public OnCondition(Func<IPersistentRepresentation, bool> predicate, IJournalInterceptor next, bool negate = false)
             {
                 _predicate = message => Task.FromResult(predicate(message));
                 _next = next;
@@ -61,7 +61,7 @@
             }
 
             private readonly Func<IPersistentRepresentation, Task<bool>> _predicate;
-            private readonly IJournalWriteInterceptor _next;
+            private readonly IJournalInterceptor _next;
             private readonly bool _negate;
 
             public async Task InterceptAsync(IPersistentRepresentation message)
@@ -74,16 +74,16 @@
             }
         }
 
-        internal class OnType : IJournalWriteInterceptor
+        internal class OnType : IJournalInterceptor
         {
-            public OnType(Type messageType, IJournalWriteInterceptor next)
+            public OnType(Type messageType, IJournalInterceptor next)
             {
                 _messageType = messageType;
                 _next = next;
             }
 
             private readonly Type _messageType;
-            private readonly IJournalWriteInterceptor _next;
+            private readonly IJournalInterceptor _next;
 
             public async Task InterceptAsync(IPersistentRepresentation message)
             {

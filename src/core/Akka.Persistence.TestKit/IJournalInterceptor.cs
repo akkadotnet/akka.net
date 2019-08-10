@@ -2,7 +2,7 @@
 {
     using System.Threading.Tasks;
 
-    public interface IJournalWriteInterceptor
+    public interface IJournalInterceptor
     {
         Task InterceptAsync(IPersistentRepresentation message);
     }
