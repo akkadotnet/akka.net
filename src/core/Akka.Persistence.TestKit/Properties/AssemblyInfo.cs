@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
@@ -19,3 +20,5 @@ using System.Runtime.InteropServices;
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("66023c4f-f246-446d-b212-2b8f20755671")]
+
+[assembly: InternalsVisibleTo("Akka.Persistence.TestKit.Tests")]
