@@ -34,7 +34,7 @@ namespace Akka.Tests
 
             //assert
             var children = system.Provider.Guardian.Children;
-            Assert.True(children.Any(c => c == child));
+            Assert.Contains(children, c => c == child);
         }
 
         [Fact]

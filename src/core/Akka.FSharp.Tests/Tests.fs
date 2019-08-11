@@ -11,5 +11,6 @@ module Tests
 open Xunit
 
 let equals (expected: 'a) (value: 'a) = Assert.Equal<'a>(expected, value) 
+let notEquals (notExpected: 'a) (value: 'a) = Assert.NotEqual<'a>(notExpected, value) 
 let success = ()
 

@@ -242,8 +242,7 @@ namespace Akka.Tests.Actor
 
             var nonTerminatedOrNonstartedActors = created.Cast<ActorRefWithCell>()
                 .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)).ToList();
-            Assert.Equal(0, 
-                nonTerminatedOrNonstartedActors.Count);
+            Assert.Empty(nonTerminatedOrNonstartedActors);
         }
 
         #region Extensions tests

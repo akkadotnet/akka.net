@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -18,6 +19,8 @@ using Xunit;
 
 namespace Akka.Tests.Actor
 {
+    using Akka.Util;
+
     public class ActorSelectionSpec : AkkaSpec
     {
         private const string Config = @"
@@ -36,9 +39,9 @@ namespace Akka.Tests.Actor
             _c2 = Sys.ActorOf(Props, "c2");
             _c21 = _c2.Ask<IActorRef>(new Create("c21")).Result;
 
-            _all = new[] {_c1, _c2, _c21};
+            _all = new[] { _c1, _c2, _c21 };
         }
-        
+
         private ActorSystemImpl SystemImpl => Sys as ActorSystemImpl;
         private IInternalActorRef User => SystemImpl.Guardian;
         private IInternalActorRef System => SystemImpl.SystemGuardian;
@@ -76,7 +79,7 @@ namespace Akka.Tests.Actor
             var actorRef = result as IActorRef;
             if (actorRef != null)
                 return actorRef;
-            
+
             var selection = result as ActorSelection;
             return selection != null ? Identify(selection) : null;
         }
@@ -228,12 +231,12 @@ namespace Akka.Tests.Actor
                 AskNode(looker, new SelectString(elements.Join("/") + "/")).ShouldBe(result);
             };
 
-            check(_c1, User, new[] {".."});
+            check(_c1, User, new[] { ".." });
 
-            foreach (var l in new [] {_c1, _c2})
+            foreach (var l in new[] { _c1, _c2 })
                 foreach (var r in _all)
                 {
-                    var elements = new List<string> {".."};
+                    var elements = new List<string> { ".." };
                     elements.AddRange(r.Path.Elements.Drop(1));
                     check(l, r, elements.ToArray());
                 }
@@ -254,7 +257,7 @@ namespace Akka.Tests.Actor
                     AskNode(looker, new SelectString(target.Path.ToString())).ShouldBe(target);
                     AskNode(looker, new SelectString(target.Path.ToString() + "/")).ShouldBe(target);
                 }
-                if(!Equals(target, Root))
+                if (!Equals(target, Root))
                     AskNode(_c1, new SelectString("../../" + target.Path.Elements.Join("/") + "/")).ShouldBe(target);
             };
 
@@ -315,8 +318,8 @@ namespace Akka.Tests.Actor
         {
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
-            var actors = ReceiveWhile(_ => LastSender, msgs:3).Distinct();
-            actors.ShouldAllBeEquivalentTo(new[] {_c1, _c2});
+            var actors = ReceiveWhile(_ => LastSender, msgs: 3).Distinct();
+            actors.ShouldAllBeEquivalentTo(new[] { _c1, _c2 });
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
@@ -324,8 +327,8 @@ namespace Akka.Tests.Actor
         public void An_ActorSelection_must_drop_messages_which_cannot_be_delivered()
         {
             new ActorSelection(_c21, "../../*/c21").Tell(new GetSender(TestActor), _c2);
-            
-            var actors = ReceiveWhile(_ => LastSender, msgs : 2).Distinct();
+
+            var actors = ReceiveWhile(_ => LastSender, msgs: 2).Distinct();
             actors.Should().HaveCount(1).And.Subject.First().ShouldBe(_c21);
             ExpectNoMsg(TimeSpan.FromSeconds(1));
 
@@ -344,11 +347,11 @@ namespace Akka.Tests.Actor
             var task = Sys.ActorSelection("user/none").ResolveOne(Dilated(TimeSpan.FromSeconds(1)));
             task.Invoking(t => t.Wait()).ShouldThrow<ActorNotFoundException>();
         }
-        
+
         [Fact]
         public void An_ActorSelection_must_compare_equally()
         {
-            new ActorSelection(_c21,"../*/hello").ShouldBe(new ActorSelection(_c21, "../*/hello"));
+            new ActorSelection(_c21, "../*/hello").ShouldBe(new ActorSelection(_c21, "../*/hello"));
             new ActorSelection(_c21, "../*/hello").GetHashCode().ShouldBe(new ActorSelection(_c21, "../*/hello").GetHashCode());
             new ActorSelection(_c2, "../*/hello").ShouldNotBe(new ActorSelection(_c21, "../*/hello"));
             new ActorSelection(_c2, "../*/hello").GetHashCode().ShouldNotBe(new ActorSelection(_c21, "../*/hello").GetHashCode());
@@ -381,6 +384,30 @@ namespace Akka.Tests.Actor
             d.Recipient.Path.ToStringWithoutAddress().ShouldBe("/user/missing");
         }
 
+        [Theory]
+        [InlineData("/user/foo/*/bar")]
+        [InlineData("/user/foo/bar/*")]
+        public void Bugfix3420_A_wilcard_ActorSelection_that_selects_no_actors_must_go_to_DeadLetters(string actorPathStr)
+        {
+            var actorA = Sys.ActorOf(act =>
+            {
+                act.ReceiveAny((o, context) =>
+                {
+                    context.ActorSelection(actorPathStr).Tell(o);
+                });
+            }, "a");
+
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+
+            // deliver two ActorSelections - one from outside any actors, one from inside
+            // they have different anchors to start with, so the results may differ
+            Sys.ActorSelection(actorPathStr).Tell("foo");
+            ExpectMsg<DeadLetter>().Message.Should().Be("foo");
+
+            actorA.Tell("foo");
+            ExpectMsg<DeadLetter>().Message.Should().Be("foo");
+        }
+
         [Fact]
         public void An_ActorSelection_must_identify_actors_with_wildcard_selection_correctly()
         {
@@ -396,7 +423,7 @@ namespace Akka.Tests.Actor
             probe.ReceiveN(2)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ShouldAllBeEquivalentTo(new[] {b1, b2});
+                .ShouldAllBeEquivalentTo(new[] { b1, b2 });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b1/*").Tell(new Identify(2), probe.Ref);
@@ -432,6 +459,30 @@ namespace Akka.Tests.Actor
             _c2.Tell(new Forward("c21", "hello"), TestActor);
             ExpectMsg("hello");
             LastSender.ShouldBe(_c21);
+        }
+
+        [Theory]
+        [InlineData("worker", "w.rker", false)]
+        [InlineData("w..ker", "w..ker", true)]
+        [InlineData("w^rker", "w^rker", true)]
+        [InlineData("w$rker", "w$rker", true)]
+        [InlineData("w$rk", "w$rker", false)]
+        [InlineData("work.r", "*.r", true)]
+        [InlineData("work.r", "*k.", false)]
+        [InlineData("work.r", "*k.r", true)]
+        [InlineData("worker", "*ke", false)]
+        [InlineData("worker", "*ker", true)]
+        [InlineData("worker", "*ker*", true)]
+        [InlineData("worker", "^worker", false)]
+        [InlineData("worker", "^worker$", false)]
+        [InlineData("worker", "ker*", false)]
+        [InlineData("worker", "worker", true)]
+        [InlineData("worker", "worker$", false)]
+        [InlineData("worker", "worker*", true)]
+        public void Selections_are_implicitly_anchored(string data, string pattern, bool isMatch)
+        {
+            var predicate = isMatch ? "matches" : "does not match";
+            WildcardMatch.Like(data, pattern).ShouldBe(isMatch, $"'{pattern}' {predicate} '{data}'");
         }
 
         #region Test classes
@@ -502,7 +553,7 @@ namespace Akka.Tests.Actor
                 Receive<SelectPath>(s => Sender.Tell(Context.ActorSelection(s.Path)));
                 Receive<GetSender>(g => g.To.Tell(Sender));
                 Receive<Forward>(f => Context.ActorSelection(f.Path).Tell(f.Message, Sender));
-                ReceiveAny(msg=>Sender.Tell(msg));
+                ReceiveAny(msg => Sender.Tell(msg));
             }
         }
 

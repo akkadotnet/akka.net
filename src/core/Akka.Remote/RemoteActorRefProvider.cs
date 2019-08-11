@@ -19,6 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -187,6 +188,24 @@ namespace Akka.Remote
 
         /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+
+        private Information _serializationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
+
+                if (Transport == null || Transport.DefaultAddress == null)
+                    return _local.SerializationInformation; // address not know yet, access before complete init and binding
+
+                var info = new Information(Transport.DefaultAddress, Transport.System);
+                _serializationInformationCache = info;
+                return info;
+            }
+        }
 
         /// <inheritdoc/>
         public Settings Settings { get { return _local.Settings; } }
@@ -463,8 +482,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            ActorPath actorPath;
-            if (TryParseCachedPath(path, out actorPath))
+            if (TryParseCachedPath(path, out var actorPath))
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
@@ -500,7 +518,7 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            // using thread local LRU cache, which will call InternalRresolveActorRef
+            // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {
@@ -520,8 +538,7 @@ namespace Akka.Remote
             if (path == String.Empty)
                 return ActorRefs.NoSender;
 
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (ActorPath.TryParse(path, out var actorPath))
                 return ResolveActorRef(actorPath);
 
             _log.Debug("resolve of unknown path [{0}] failed", path);

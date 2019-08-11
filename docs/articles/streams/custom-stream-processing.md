@@ -4,7 +4,7 @@ title: Custom stream processing
 ---
 
 # Custom stream processing
-While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for preformance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
+While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for performance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
@@ -69,7 +69,7 @@ class NumbersSource : GraphStage<SourceShape<int>>
     // Define the (sole) output port of this stage 
     public Outlet<int> Out { get; } = new Outlet<int>("NumbersSource");
 
-    // Define the shape of this tage, which is SourceShape with the port we defined above
+    // Define the shape of this stage, which is SourceShape with the port we defined above
     public override SourceShape<int> Shape => new SourceShape<int>(Out);
 
     //this is where the actual logic will be created
@@ -121,7 +121,7 @@ The following operations are available for *input* ports:
  * `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
  * `Cancel(in)` closes the input port.
 
-The events corresponding to an *input* port can be received in an `Action` registrered to the input port using `setHandler(in, action)`. This handler has three callbacks:
+The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
 
 
 * `onPush` is called when the output port has now a new element. Now it is possible to acquire this element using `Grab(in)` and/or call `Pull(in)` on the port to request the next element. It is not mandatory to grab the element, but if it is pulled while the element has not been grabbed it will drop the buffered element.
@@ -362,9 +362,9 @@ If we attempt to draw the sequence of events, it shows that there is one "event 
 
 ### Completion
 
-Completion handling usually (but not exclusively) comes into the picture when processing stages need to emit a few more elements after their upstream source has been completed. We have seen an example of this in our first `Duplicator` implementation where the last element needs to be doubled even after the upstream neighbour stage has been completed. This can be done by overriding the `onUpstreamFinish` callback in `SetHandler(in, action)`.
+Completion handling usually (but not exclusively) comes into the picture when processing stages need to emit a few more elements after their upstream source has been completed. We have seen an example of this in our first `Duplicator` implementation where the last element needs to be doubled even after the upstream neighbor stage has been completed. This can be done by overriding the `onUpstreamFinish` callback in `SetHandler(in, action)`.
 
-Stages by default automatically stop once all of their ports (input and output) have been closed externally or internally. It is possible to opt out from this behavior by invoking `SetKeepGoing(true)` (which is not supported from the stages constructor and usually done in `PreStart`). In this case the stage **must** be explicitly closed by calling `CompleteStage()` or `FailStage(exception)`. This feature carries the risk of leaking streams and actors, therefore it should be used with care.
+Stages by default automatically stop once all of their ports (input and output) have been closed externally or internally. It is possible to opt out from this behavior by invoking `SetKeepGoing(true)` (which is not supported from the stage's constructor and usually done in `PreStart`). In this case the stage **must** be explicitly closed by calling `CompleteStage()` or `FailStage(exception)`. This feature carries the risk of leaking streams and actors, therefore it should be used with care.
 
 ### Logging inside GraphStages
 

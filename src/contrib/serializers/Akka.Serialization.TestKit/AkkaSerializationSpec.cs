@@ -403,7 +403,7 @@ akka.actor {
             var aref = ActorOf<BlackHoleActor>();
             var surrogate = aref.ToSurrogate(Sys) as ActorRefBase.Surrogate;
             var uid = aref.Path.Uid;
-            Assert.True(surrogate.Path.Contains("#" + uid));
+            Assert.Contains("#" + uid, surrogate.Path);
         }
 
         [Fact]

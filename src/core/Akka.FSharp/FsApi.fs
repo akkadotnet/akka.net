@@ -10,7 +10,7 @@ namespace Akka.FSharp
 open Akka.Actor
 open System
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Linq.QuotationEvaluation
+open FSharp.Quotations.Evaluator
 
 module Serialization = 
     open MBrace.FsPickler
@@ -29,7 +29,7 @@ module Serialization =
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinarySerializer()
-        override __.Identifier = 9
+        override __.Identifier = 99
         override __.IncludeManifest = true        
         override __.ToBinary(o) = serializeToBinary fsp o        
         override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
@@ -37,7 +37,7 @@ module Serialization =
                         
     let internal exprSerializationSupport (system: ActorSystem) =
         let serializer = ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializer("Expr serializer", serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<AutoOpen>]
@@ -285,7 +285,7 @@ module Actors =
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
                         member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
         
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(QuotationEvaluator.Evaluate actor)
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
@@ -374,14 +374,15 @@ module Linq =
 
     let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
             match f with
-            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
+            | Lambda(_, (Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
             | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
                 Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
             | _ -> failwith "Doesn't match"
  
     type Expression = 
-        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = toExpression<FunActor<'Message, 'v>> f
-        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
+        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
+        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = 
+            toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
         
 [<RequireQualifiedAccess>]
 module Configuration = 
@@ -412,7 +413,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
     member __.Expr = expr
-    member private this.Compiled = lazy this.Expr.Compile()()
+    member private this.Compiled = lazy (QuotationEvaluator.Evaluate this.Expr)
     interface IDecider with
         member this.Decide (e: exn): Directive = this.Compiled.Value (e)
     interface ISurrogated with

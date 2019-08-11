@@ -174,7 +174,7 @@ namespace Akka.Event
             {
                 response = askTask.Result;
             }
-            catch (TaskCanceledException)
+            catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
             {
                 Publish(new Warning(loggingBusName, GetType(),
                      string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
@@ -247,8 +247,7 @@ namespace Akka.Event
         {
             protected override bool Receive(object message)
             {
-                var msg = message as UnhandledMessage;
-                if (msg == null) 
+                if (!(message is UnhandledMessage msg)) 
                     return false;
 
                 Context.System.EventStream.Publish(ToDebug(msg));
@@ -257,9 +256,12 @@ namespace Akka.Event
 
             private static Debug ToDebug(UnhandledMessage message)
             {
+                // avoid NREs when we have ActorRefs.NoSender
+                var sender = Equals(message.Sender, ActorRefs.NoSender) ? "NoSender" : message.Sender.Path.ToString();
+
                 var msg = string.Format(
                     CultureInfo.InvariantCulture, "Unhandled message from {0} : {1}",
-                    message.Sender.Path,
+                    sender,
                     message.Message
                     );
 

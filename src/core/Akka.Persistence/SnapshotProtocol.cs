@@ -27,7 +27,7 @@ namespace Akka.Persistence
     public interface ISnapshotResponse : ISnapshotMessage { }
 
     /// <summary>
-    /// TBD
+    /// Metadata for all persisted snapshot records.
     /// </summary>
     [Serializable]
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
@@ -64,7 +64,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="persistenceId">The id of the persistent actor fro which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, TimestampNotSpecified)

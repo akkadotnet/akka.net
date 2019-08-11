@@ -1,6 +1,6 @@
 ---
-uid: what-are-actors
-title: What Are Actors
+uid: what-problems-does-actor-model-solve
+title: What problems does the actor model solve?
 ---
 # What problems does the actor model solve?
 
@@ -186,7 +186,7 @@ In this way, actors actually achieve the execution we imagined for objects:
 ![actors interact with each other by sending messages](/images/actor_graph.png)
 
 An important difference of passing messages instead of calling methods is that messages have no return value.
-By sending a message, an actor delegates work to another actor. As we saw in @ref:[The illusion of a call stack](what-are-actors.md#the-illusion-of-a-call-stack),
+By sending a message, an actor delegates work to another actor. As we saw in [The illusion of a call stack](what-problems-does-actor-model-solve.md#the-illusion-of-a-call-stack),
 if it expected a return value, the sending actor would either need to block or to execute the other actor's work on the same thread.
 Instead, the receiving actor delivers the results in a reply message.
 

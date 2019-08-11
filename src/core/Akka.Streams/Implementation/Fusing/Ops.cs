@@ -3067,7 +3067,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _groupEmitted = true;
                 Push(_stage._out, _buffer);
-                _buffer = new List<T>();
+                _buffer = new List<T>(_stage._count);
                 if (!_finished)
                     StartNewGroup();
                 else

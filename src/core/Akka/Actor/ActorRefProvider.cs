@@ -10,18 +10,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// The Actor Reference Provider API.
+    ///
+    /// The factory used to produce and create <see cref="IActorRef"/> instances used inside an <see cref="ActorSystem"/>.
     /// </summary>
     public interface IActorRefProvider
     {
@@ -133,6 +137,12 @@ namespace Akka.Actor
 
         /// <summary>Gets the external address of the default transport. </summary>
         Address DefaultAddress { get; }
+
+        /// <summary>
+        /// INTERNAL API.
+        /// </summary>
+        [InternalApi]
+        Information SerializationInformation { get; }
     }
 
     /// <summary>
@@ -350,9 +360,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the ActorRefProvider
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The concrete ActorSystem implementation.</param>
         public void Init(ActorSystemImpl system)
         {
             _system = system;
@@ -572,12 +582,30 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The default address of the current <see cref="ActorSystem"/>.
         /// </summary>
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
+        private Information _serializationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
+
+                if (_system == null)
+                    throw new InvalidOperationException("Too early access of SerializationInformation");
+
+                var info = new Information(_rootPath.Address, _system);
+                _serializationInformationCache = info;
+                return info;
+            }
+        }
+
         /// <summary>
-        /// TBD
+        /// The built-in logger for the ActorRefProvider
         /// </summary>
         public ILoggingAdapter Log { get { return _log; } }
     }

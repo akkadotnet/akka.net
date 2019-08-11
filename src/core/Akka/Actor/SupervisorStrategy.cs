@@ -371,6 +371,11 @@ namespace Akka.Actor
         {
         }
 
+        public OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries)
+        {
+            return new OneForOneStrategy(maxNrOfRetries, _withinTimeRangeMilliseconds, _decider);
+        }
+
         /// <summary>
         /// Determines which <see cref="Directive"/> this strategy uses to handle <paramref name="exception">exceptions</paramref>
         /// that occur in the <paramref name="child"/> actor.

@@ -53,11 +53,28 @@ namespace Akka.Cluster.Sharding
 
     /// <summary>
     /// The default implementation of <see cref="Akka.Cluster.Sharding.LeastShardAllocationStrategy"/> allocates new shards
-    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards. It picks shards
-    /// for rebalancing handoff from the <see cref="ShardRegion"/> with most number of previously allocated shards.
+    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards.
+    ///
+    /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
+    /// evenly spread on the remaining nodes (by picking regions with least shards).
+    ///
+    /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
+    /// It picks shards for rebalancing from the `ShardRegion` with most number of previously allocated shards.
+    ///
     /// They will then be allocated to the <see cref="ShardRegion"/> with least number of previously allocated shards,
     /// i.e. new members in the cluster. There is a configurable threshold of how large the difference
-    /// must be to begin the rebalancing. The number of ongoing rebalancing processes can be limited.
+    /// must be to begin the rebalancing.The difference between number of shards in the region with most shards and
+    /// the region with least shards must be greater than the `rebalanceThreshold` for the rebalance to occur.
+    ///
+    /// A `rebalanceThreshold` of 1 gives the best distribution and therefore typically the best choice.
+    /// A higher threshold means that more shards can be rebalanced at the same time instead of one-by-one.
+    /// That has the advantage that the rebalance process can be quicker but has the drawback that the
+    /// the number of shards (and therefore load) between different nodes may be significantly different.
+    /// Given the recommendation of using 10x shards than number of nodes and `rebalanceThreshold=10` can result
+    /// in one node hosting ~2 times the number of shards of other nodes.Example: 1000 shards on 100 nodes means
+    /// 10 shards per node.One node may have 19 shards and others 10 without a rebalance occurring.
+    ///
+    /// The number of ongoing rebalancing processes can be limited by `maxSimultaneousRebalance`.
     /// </summary>
     [Serializable]
     public class LeastShardAllocationStrategy : IShardAllocationStrategy
@@ -85,7 +102,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations)
         {
-            var min = GetMinBy(currentShardAllocations, kv => kv.Value.Count);
+            var min = currentShardAllocations.OrderBy(i => i.Value.Count).FirstOrDefault();
             return Task.FromResult(min.Key);
         }
 
@@ -99,51 +116,21 @@ namespace Akka.Cluster.Sharding
         {
             if (rebalanceInProgress.Count < _maxSimultaneousRebalance)
             {
-                var leastShardsRegion = GetMinBy(currentShardAllocations, kv => kv.Value.Count);
-                var shards =
-                    currentShardAllocations.Select(kv => kv.Value.Where(s => !rebalanceInProgress.Contains(s)).ToArray());
-                var mostShards = GetMaxBy(shards, x => x.Length);
+                var leastShardsRegion = currentShardAllocations.OrderBy(i => i.Value.Count).FirstOrDefault();
+                var mostShards = currentShardAllocations.Select(kv => kv.Value.Where(s => !rebalanceInProgress.Contains(s))).OrderByDescending(i => i.Count()).FirstOrDefault()?.ToArray();
 
                 var difference = mostShards.Length - leastShardsRegion.Value.Count;
                 if (difference >= _rebalanceThreshold)
                 {
-                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.Take(Math.Min(difference, _maxSimultaneousRebalance - rebalanceInProgress.Count)).ToImmutableHashSet());
+                    var n = Math.Min(
+                        Math.Min(difference - _rebalanceThreshold, _rebalanceThreshold),
+                        _maxSimultaneousRebalance - rebalanceInProgress.Count);
+
+                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.OrderBy(i => i).Take(n).ToImmutableHashSet());
                 }
             }
 
             return Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet<ShardId>.Empty);
-        }
-
-        private static T GetMinBy<T>(IEnumerable<T> collection, Func<T, int> extractor)
-        {
-            var minSize = int.MaxValue;
-            var result = default(T);
-            foreach (var value in collection)
-            {
-                var x = extractor(value);
-                if (x < minSize)
-                {
-                    minSize = x;
-                    result = value;
-                }
-            }
-            return result;
-        }
-
-        private static T GetMaxBy<T>(IEnumerable<T> collection, Func<T, int> extractor)
-        {
-            var minSize = int.MinValue;
-            var result = default(T);
-            foreach (var value in collection)
-            {
-                var x = extractor(value);
-                if (x > minSize)
-                {
-                    minSize = x;
-                    result = value;
-                }
-            }
-            return result;
         }
     }
 }

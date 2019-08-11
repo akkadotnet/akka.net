@@ -174,7 +174,7 @@ You can also call `DeferAsync` with `Persist`.
 
 It is possible to call `Persist` and `PersistAsync` inside their respective callback blocks and they will properly retain both the thread safety (including the right value of `Sender`) as well as stashing guarantees.
 
-In general it is encouraged to create command handlers which do not need to resort to nested event persisting, however there are situations where it may be useful. It is important to understand the ordering of callback execution in those situations, as well as their implication on the stashing behaviour (that persist enforces). In the following example two persist calls are issued, and each of them issues another persist inside its callback:
+In general it is encouraged to create command handlers which do not need to resort to nested event persisting, however there are situations where it may be useful. It is important to understand the ordering of callback execution in those situations, as well as their implication on the stashing behavior (that persist enforces). In the following example two persist calls are issued, and each of them issues another persist inside its callback:
 
 [!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersists.cs?range=8-36)]
 
@@ -219,7 +219,7 @@ protected override void PreStart()
 
 If persistence of an event is rejected before it is stored, e.g. due to serialization error, `OnPersistRejected` will be invoked (logging a warning by default), and the actor continues with next message.
 
-If there is a problem with recovering the state of the actor from the journal when the actor is started, `OnRecoveryFailure` is called (logging the error by default), and the actor will be stopped. Note that failure to load snapshot is also treated like this, but you can disable loading of snapshots if you for example know that serialization format has changed in an incompatible way, see [Recovery customization](#recovery customization).
+If there is a problem with recovering the state of the actor from the journal when the actor is started, `OnRecoveryFailure` is called (logging the error by default), and the actor will be stopped. Note that failure to load snapshot is also treated like this, but you can disable loading of snapshots if you for example know that serialization format has changed in an incompatible way, see [Recovery customization](#recovery-customization).
 
 ## Atomic writes
 Each event is of course stored atomically, but it is also possible to store several events atomically by using the `PersistAll` or `PersistAllAsync` method. That means that all events passed to that method are stored or none of them are stored if there is an error.
@@ -269,7 +269,7 @@ This can be dangerous when used with `UntypedPersistentActor` due to the fact th
 > [!WARNING]
 > Consider using explicit shut-down messages instead of `PoisonPill` when working with persistent actors.
 
-The example below highlights how messages arrive in the Actor's mailbox and how they interact with its internal stashing mechanism when `Persist()` is used. Notice the early stop behaviour that occurs when `PoisonPill` is used:
+The example below highlights how messages arrive in the Actor's mailbox and how they interact with its internal stashing mechanism when `Persist()` is used. Notice the early stop behavior that occurs when `PoisonPill` is used:
 
 [!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=9-35)]
 

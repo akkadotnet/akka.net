@@ -24,3 +24,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]

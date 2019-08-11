@@ -25,7 +25,7 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Gets a <see cref="IWriteConsistency"/> setup, which will acknowledge success of an
-        /// <see cref="Update"/> or <see cref="Delete"/> operation immediately as soon, as 
+        /// <see cref="Update{T}(IKey{T}, T, IWriteConsistency)">Update</see> or <see cref="Delete"/> operation immediately as soon, as 
         /// result will be confirmed by the local replica only.
         /// </summary>
         public static WriteLocal WriteLocal => Akka.DistributedData.WriteLocal.Instance;

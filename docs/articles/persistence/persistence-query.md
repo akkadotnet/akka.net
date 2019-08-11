@@ -7,9 +7,6 @@ Akka persistence query complements Persistence by providing a universal asynchro
 
 The most typical use case of persistence query is implementing the so-called query side (also known as "read side") in the popular CQRS architecture pattern - in which the writing side of the application (e.g. implemented using akka persistence) is completely separated from the "query side". Akka Persistence Query itself is not directly the query side of an application, however it can help to migrate data from the write side to the query side database. In very simple scenarios Persistence Query may be powerful enough to fulfill the query needs of your app, however we highly recommend (in the spirit of CQRS) of splitting up the write/read sides into separate datastores as the need arises.
 
-> [!WARNING]
-> This module is marked as `experimental` as of its introduction in Akka.Net 1.1.0. We will continue to improve this API based on our users’ feedback, which implies that while we try to keep incompatible changes to a minimum the binary compatibility guarantee for maintenance releases does not apply to the contents of the Akka.Persistence.Query package.
-
 ## Design overview
 Akka Persistence Query is purposely designed to be a very loosely specified API. This is in order to keep the provided APIs general enough for each journal implementation to be able to expose its best features, e.g. a SQL journal can use complex SQL queries or if a journal is able to subscribe to a live event stream this should also be possible to expose the same API - a typed stream of events.
 
@@ -253,7 +250,7 @@ public class ExampleStore
 {
     public Task<object> Save(object evt)
     {
-        return Task.FromResult(default(object));
+        return Task.FromResult(evt);
     }
 }
 ```

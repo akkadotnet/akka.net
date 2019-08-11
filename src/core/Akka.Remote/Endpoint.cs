@@ -50,7 +50,7 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ILoggingAdapter _log;
         private readonly IInternalActorRef _remoteDaemon;
@@ -62,11 +62,11 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
-            this._system = system;
-            this._provider = provider;
-            this._log = log;
+            _system = system;
+            _provider = provider;
+            _log = log;
             _remoteDaemon = provider.RemoteDaemon;
             _settings = provider.RemoteSettings;
         }
@@ -82,7 +82,7 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
-            Type payloadClass = payload?.GetType();
+            var payloadClass = payload?.GetType();
             var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
@@ -109,20 +109,17 @@ namespace Akka.Remote
                     var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     _log.Debug("received local message [{0}]", msgLog);
                 }
-                if (payload is ActorSelectionMessage)
+                if (payload is ActorSelectionMessage sel)
                 {
-                    var sel = (ActorSelectionMessage)payload;
-
-                    var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                     if (_settings.UntrustedMode
-                        && (!_settings.TrustedSelectionPaths.Contains(actorPath)
+                        && (!_settings.TrustedSelectionPaths.Contains(FormatActorPath(sel))
                             || sel.Message is IPossiblyHarmful
                             || !recipient.Equals(_provider.RootGuardian)))
                     {
                         _log.Debug(
                             "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
                             "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
-                            actorPath);
+                            FormatActorPath(sel));
                     }
                     else
                     {
@@ -135,9 +132,9 @@ namespace Akka.Remote
                     _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
                         payload.GetType());
                 }
-                else if (payload is ISystemMessage)
+                else if (payload is ISystemMessage systemMessage)
                 {
-                    recipient.SendSystemMessage((ISystemMessage)payload);
+                    recipient.SendSystemMessage(systemMessage);
                 }
                 else
                 {
@@ -172,6 +169,11 @@ namespace Akka.Remote
                     "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
                     payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
             }
+        }
+
+        private static string FormatActorPath(ActorSelectionMessage sel)
+        {
+            return "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
         }
     }
 
@@ -452,7 +454,13 @@ namespace Akka.Remote
             Reset(); // needs to be called at startup
             _writer = CreateWriter(); // need to create writer at startup
             Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
-            UidConfirmed = Uid.HasValue;
+            UidConfirmed = Uid.HasValue && (Uid != _refuseUid);
+
+            if (Uid.HasValue && Uid == _refuseUid)
+                throw new HopelessAssociation(localAddress, remoteAddress, Uid,
+                    new InvalidOperationException(
+                        $"The remote system [{remoteAddress}] has a UID [{Uid}] that has been quarantined. Association aborted."));
+
             Receiving();
             _autoResendTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.SysResendTimeout, _settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
                     Self);
@@ -470,7 +478,7 @@ namespace Akka.Remote
         /// UID matches the expected one, pending Acks can be processed or must be dropped. It is guaranteed that for any inbound
         /// connections (calling <see cref="CreateWriter"/>) the first message from that connection is <see cref="GotUid"/>, therefore it serves
         /// a separator.
-        /// 
+        ///
         /// If we already have an inbound handle then UID is initially confirmed.
         /// (This actor is never restarted.)
         /// </summary>
@@ -624,6 +632,7 @@ namespace Akka.Remote
             {
                 _writer.Forward(stopped); //forward the request
             });
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         private void GoToIdle()
@@ -734,6 +743,7 @@ namespace Akka.Remote
             });
             Receive<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
+            Receive<Ungate>(_ => { }); //ok, not gated
         }
 
         /// <summary>
@@ -1012,7 +1022,7 @@ namespace Akka.Remote
             _refuseUid = refuseUid;
             _codec = codec;
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
-            _system = Context.System;
+            _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
@@ -1035,7 +1045,7 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
@@ -1093,7 +1103,8 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                AssociateAsync().PipeTo(Self);
+                var self = Self;
+                AssociateAsync().PipeTo(self);
             }
             else
             {
@@ -1466,7 +1477,18 @@ namespace Akka.Remote
             }
             catch (SerializationException ex)
             {
-                _log.Error(ex, "Transient association error (association remains live)");
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
+                return true;
+            }
+            catch(ArgumentException ex)
+            {
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
                 return true;
             }
             catch (EndpointException ex)
@@ -1900,10 +1922,25 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                ackAndMessage.MessageOption.RecipientAddress,
-                                ackAndMessage.MessageOption.SerializedMessage,
-                                ackAndMessage.MessageOption.SenderOptional);
+                            try
+                            {
+                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                    ackAndMessage.MessageOption.RecipientAddress,
+                                    ackAndMessage.MessageOption.SerializedMessage,
+                                    ackAndMessage.MessageOption.SenderOptional);
+                            }
+                            catch (SerializationException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(ArgumentException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(Exception e)
+                            {
+                                throw e;
+                            }
                         }
                     }
                 }
@@ -1914,6 +1951,17 @@ namespace Akka.Remote
                 Become(NotReading);
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
             });
+        }
+
+        private void LogTransientSerializationError(Message msg, Exception error)
+        {
+            var sm = msg.SerializedMessage;
+            _log.Warning(
+              "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
+                "Transient association error (association remains live). {2}",
+              sm.SerializerId,
+              sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
+              error.Message);
         }
 
         private void NotReading()

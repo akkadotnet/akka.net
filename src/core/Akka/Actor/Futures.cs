@@ -100,7 +100,24 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            return Ask<T>(self, _ => message, timeout, cancellationToken);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="messageFactory">Factory method that creates a message that can encapsulate the 'Sender' IActorRef</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the system can't resolve the target provider.
+        /// </exception>
+        /// <returns>TBD</returns>
+        public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef,object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             await SynchronizationContextManager.RemoveContext;
 
@@ -108,7 +125,8 @@ namespace Akka.Actor
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            var result = await Ask(self, message, provider, timeout, cancellationToken);
+
+            var result = await Ask(self, messageFactory, provider, timeout, cancellationToken);
             if (result is T t)
                 return t;
 
@@ -133,23 +151,11 @@ namespace Akka.Actor
 
             return null;
         }
-
-        private const int RunContinuationsAsynchronously = 64;
-        private static readonly bool isRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
-
-
-        private static async Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
+        
+        private static async Task<object> Ask(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider,
             TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            TaskCompletionSource<object> result;
-            if (isRunContinuationsAsynchronouslyAvailable)
-            {
-                result = new TaskCompletionSource<object>((TaskCreationOptions)RunContinuationsAsynchronously);
-            }
-            else
-            {
-                result = new TaskCompletionSource<object>();
-            }
+            TaskCompletionSource<object> result = TaskEx.NonBlockingTaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
@@ -175,9 +181,10 @@ namespace Akka.Actor
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path, isRunContinuationsAsynchronouslyAvailable);
+            var future = new FutureActorRef(result, () => { }, path, TaskEx.IsRunContinuationsAsynchronouslyAvailable);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
+            var message = messageFactory(future);
             self.Tell(message, future);
 
             try

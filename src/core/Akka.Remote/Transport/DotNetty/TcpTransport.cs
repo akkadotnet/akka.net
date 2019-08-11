@@ -209,17 +209,18 @@ namespace Akka.Remote.Transport.DotNetty
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
                 return await handler.StatusFuture.ConfigureAwait(false);
             }
+            catch (ConnectException c)
+            {
+                throw HandleConnectException(remoteAddress, c, null);
+            }
             catch (AggregateException e) when (e.InnerException is ConnectException)
             {
                 var cause = (ConnectException)e.InnerException;
-                var socketException = cause?.InnerException as SocketException;
-
-                if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
-                {
-                    throw new InvalidAssociationException(socketException.Message + " " + remoteAddress);
-                }
-
-                throw new InvalidAssociationException("Failed to associate with " + remoteAddress, e);
+                throw HandleConnectException(remoteAddress, cause, e);
+            }
+            catch (ConnectTimeoutException t)
+            {
+                throw new InvalidAssociationException(t.Message);
             }
             catch (AggregateException e) when (e.InnerException is ConnectTimeoutException)
             {
@@ -229,12 +230,23 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
+        private static Exception HandleConnectException(Address remoteAddress, ConnectException cause, AggregateException e)
+        {
+            var socketException = cause?.InnerException as SocketException;
+
+            if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
+            {
+                return new InvalidAssociationException(socketException.Message + " " + remoteAddress);
+            }
+
+            return new InvalidAssociationException("Failed to associate with " + remoteAddress, e ?? (Exception)cause);
+        }
+
         private async Task<IPEndPoint> MapEndpointAsync(EndPoint socketAddress)
         {
             IPEndPoint ipEndPoint;
 
-            var dns = socketAddress as DnsEndPoint;
-            if (dns != null)
+            if (socketAddress is DnsEndPoint dns)
                 ipEndPoint = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             else
                 ipEndPoint = (IPEndPoint) socketAddress;

@@ -38,8 +38,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided 
-        /// <paramref name="persistenceId"/>, within boundaries of <paramref name="fromSequenceNr"/> 
+        /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided
+        /// <paramref name="persistenceId"/>, within boundaries of <paramref name="fromSequenceNr"/>
         /// and <paramref name="toSequenceNr"/> up to <paramref name="max"/> number of events.
         /// </summary>
         /// <param name="connection">TBD</param>
@@ -53,8 +53,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task SelectByPersistenceIdAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> callback);
 
         /// <summary>
-        /// Asynchronously replays <paramref name="callback"/> on all selected events, which have been tagged using 
-        /// provided <paramref name="tag"/>, within boundaries of <paramref name="fromOffset"/> and 
+        /// Asynchronously replays <paramref name="callback"/> on all selected events, which have been tagged using
+        /// provided <paramref name="tag"/>, within boundaries of <paramref name="fromOffset"/> and
         /// <paramref name="toOffset"/>, up to <paramref name="max"/> number of elements.
         /// Returns highest sequence number from selected events.
         /// </summary>
@@ -76,7 +76,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
-
+        
         /// <summary>
         /// Asynchronously inserts a collection of events and theirs tags into a journal table.
         /// </summary>
@@ -172,6 +172,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public string DefaultSerializer { get; }
 
         /// <summary>
+        /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
+        /// </summary>
+        public bool UseSequentialAccess { get; }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -188,6 +193,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
+        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -202,7 +208,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             string orderingColumnName,
             string serializerIdColumnName,
             TimeSpan timeout,
-            string defaultSerializer)
+            string defaultSerializer,
+            bool useSequentialAccess)
         {
             SchemaName = schemaName;
             JournalEventsTableName = journalEventsTableName;
@@ -218,6 +225,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             OrderingColumnName = orderingColumnName;
             DefaultSerializer = defaultSerializer;
             SerializerIdColumnName = serializerIdColumnName;
+            UseSequentialAccess = useSequentialAccess;
         }
 
         /// <summary>
@@ -235,7 +243,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public abstract class AbstractQueryExecutor : IJournalQueryExecutor
     {
-        // indexes of particular fields returned from all events queries 
+        // indexes of particular fields returned from all events queries
         // they must match `allEventColumnNames` order
         /// <summary>
         /// TBD
@@ -321,7 +329,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     SELECT m.{Configuration.SequenceNrColumnName} as SeqNr FROM {Configuration.FullMetaTableName} m WHERE m.{Configuration.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
-                DELETE FROM {Configuration.FullJournalTableName} 
+                DELETE FROM {Configuration.FullJournalTableName}
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;
+                DELETE FROM {Configuration.FullMetaTableName}
                 WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} <= @ToSequenceNr;";
 
             UpdateSequenceNrSql = $@"
@@ -335,6 +345,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
                 AND e.{Configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr
                 ORDER BY {Configuration.SequenceNrColumnName} ASC;";
+
+            HighestTagOrderingSql =
+                $@"
+                SELECT MAX(e.{Configuration.OrderingColumnName}) as Ordering
+                FROM {Configuration.FullJournalTableName} e
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering AND e.{Configuration.TagsColumnName} LIKE @Tag";
 
             ByTagSql =
                 $@"
@@ -390,6 +406,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         protected virtual string ByPersistenceIdSql { get; }
+        /// <summary>
+        /// Query to return the highest ordering number for a tag
+        /// </summary>
+        protected virtual string HighestTagOrderingSql { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -461,7 +481,18 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, fromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
+                {
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
                     var i = 0L;
                     while ((i++) < max && await reader.ReadAsync(cancellationToken))
@@ -494,19 +525,34 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                CommandBehavior commandBehavior;
+
+                if (Configuration.UseSequentialAccess)
                 {
-                    var maxSequenceNr = 0L;
+                    commandBehavior = CommandBehavior.SequentialAccess;
+                }
+                else
+                {
+                    commandBehavior = CommandBehavior.Default;
+                }
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                {
                     while (await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
-                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
                         callback(new ReplayedTaggedMessage(persistent, tag, ordering));
                     }
-
-                    return maxSequenceNr;
                 }
+            }
+
+            using (var command = GetCommand(connection, HighestTagOrderingSql))
+            {
+                AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
+                return maxOrdering;
             }
         }
 
@@ -644,20 +690,26 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payloadType = e.Payload.GetType();
             var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
 
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
             string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () =>
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(e.Payload);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                
+                if (serializer is SerializerWithStringManifest stringManifest)
                 {
-                    manifest = e.Payload.GetType().TypeQualifiedName();
+                    manifest = stringManifest.Manifest(e.Payload);
                 }
-            }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                    {
+                        manifest = e.Payload.GetType().TypeQualifiedName();
+                    }
+                }
 
-            var binary = serializer.ToBinary(e.Payload);
+                return serializer.ToBinary(e.Payload);
+            });
+           
 
             AddParameter(command, "@PersistenceId", DbType.String, e.PersistenceId);
             AddParameter(command, "@SequenceNr", DbType.Int64, e.SequenceNr);
@@ -700,11 +752,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
                 var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                deserialized = deserializer.FromBinary((byte[])payload, type);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+                deserialized = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => deserializer.FromBinary((byte[])payload, type) );
             }
             else
             {
                 var serializerId = reader.GetInt32(SerializerIdIndex);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 deserialized = Serialization.Deserialize((byte[])payload, serializerId, manifest);
             }
 

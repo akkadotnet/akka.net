@@ -42,7 +42,7 @@ Here is how everything is wired together:
 [!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-apply-event)]
 
 `AndThen` can be used to define actions which will be executed following event’s persistence - convenient for "side effects" like sending a message or logging. Notice that actions defined in andThen block are not executed on recovery:
-```C#
+```cs
 GoTo(Paid.Instance).Applying(OrderExecuted.Instance).AndThen(cart =>
 {
     if (cart is NonEmptyShoppingCart nonShoppingCart)
@@ -52,7 +52,7 @@ GoTo(Paid.Instance).Applying(OrderExecuted.Instance).AndThen(cart =>
 });
 ```
 A snapshot of state data can be persisted by calling the `SaveStateSnapshot()` method:
-```C#
+```cs
 Stop().Applying(OrderDiscarded.Instance).AndThen(cart =>
 {
     reportActor.Tell(ShoppingCardDiscarded.Instance);

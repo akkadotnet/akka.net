@@ -37,3 +37,5 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
 [assembly: InternalsVisibleTo("Akka.Streams")]
+[assembly: InternalsVisibleTo("Akka.Benchmarks")]
+[assembly: InternalsVisibleTo("Akka.Persistence.TCK")]

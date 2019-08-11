@@ -642,10 +642,13 @@ namespace Akka.Remote
 
             if (!addressTerminated)
             {
-                foreach (var watcher in Watching[watchee])
+                if (Watching.TryGetValue(watchee, out var watchers))
                 {
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    watcher.SendSystemMessage(new DeathWatchNotification(watchee, existenceConfirmed, addressTerminated));
+                    foreach (var watcher in watchers)
+                    {
+                        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                        watcher.SendSystemMessage(new DeathWatchNotification(watchee, existenceConfirmed, addressTerminated));
+                    }
                 }
             }
 

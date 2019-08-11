@@ -34,3 +34,15 @@ let ``IActorRef should be possible to use as a Key`` () =
         let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
         Set.empty.Add(aref).Count 
         |> equals 1
+
+[<Fact>]
+let ``System.create should support extensions`` () =
+    let extensionConfig = 
+        """
+            akka.actor.provider = cluster
+            akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider, Akka.Cluster.Tools"]
+        """
+        |> Configuration.parse
+    System.create "my-system" extensionConfig
+    |> notEquals null
+    
