@@ -21,10 +21,6 @@
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="test-journal.conf" />
-  </ItemGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>

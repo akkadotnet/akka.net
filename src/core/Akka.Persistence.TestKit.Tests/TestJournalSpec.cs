@@ -4,27 +4,14 @@ namespace Akka.Persistence.TestKit.Tests
     using System.Threading.Tasks;
     using Actor;
     using Akka.Persistence.TestKit;
-    using Akka.TestKit;
-    using Configuration;
     using Xunit;
-    using Xunit.Abstractions;
 
-    public class TestJournalSpec : AkkaSpec
+    public class TestJournalSpec : PersistenceTestKit
     {
-        public TestJournalSpec(ITestOutputHelper output = null)
-            : base(GetConfig().ToString(), output)
-        {
-            _journal = TestJournal.FromRef(GetJournalRef(Sys));
-        }
-        
-        private readonly ITestJournal _journal;
-
         [Fact]
         public void must_return_ack_after_new_write_interceptor_is_set()
         {
-            var journalActor = GetJournalRef(Sys);
-            
-            journalActor.Tell(new TestJournal.UseWriteInterceptor(null), TestActor);
+            JournalActorRef.Tell(new TestJournal.UseWriteInterceptor(null), TestActor);
 
             ExpectMsg<TestJournal.Ack>(TimeSpan.FromSeconds(3));
         }
@@ -35,8 +22,9 @@ namespace Akka.Persistence.TestKit.Tests
             var actor = Sys.ActorOf<PersistActor>();
 
             // should pass
-            _journal.OnWrite.Pass();
+            Journal.OnWrite.Pass();
             actor.Tell("write", TestActor);
+            
             ExpectMsg("ack", TimeSpan.FromSeconds(3));
         }
 
@@ -46,7 +34,7 @@ namespace Akka.Persistence.TestKit.Tests
             var actor = Sys.ActorOf<PersistActor>();
             Watch(actor);
 
-            _journal.OnWrite.Fail();
+            Journal.OnWrite.Fail();
             actor.Tell("write", TestActor);
             
             ExpectTerminated(actor, TimeSpan.FromSeconds(3));
@@ -58,7 +46,7 @@ namespace Akka.Persistence.TestKit.Tests
             var actor = Sys.ActorOf<PersistActor>();
             Watch(actor);
 
-            _journal.OnWrite.Reject();
+            Journal.OnWrite.Reject();
             actor.Tell("write", TestActor);
 
             ExpectMsg("rejected", TimeSpan.FromSeconds(3));
@@ -71,17 +59,12 @@ namespace Akka.Persistence.TestKit.Tests
             await actor.Ask("write");
             await actor.GracefulStop(TimeSpan.FromSeconds(3));
 
-            _journal.OnRecovery.Fail();
+            Journal.OnRecovery.Fail();
             actor = Sys.ActorOf<PersistActor>();
             Watch(actor);
 
             ExpectTerminated(actor, TimeSpan.FromSeconds(3));
         }
-
-        static IActorRef GetJournalRef(ActorSystem sys) => Persistence.Instance.Apply(sys).JournalFor(null);
-
-        static Config GetConfig()
-            => ConfigurationFactory.FromResource<TestJournalSpec>("Akka.Persistence.TestKit.Tests.test-journal.conf");
     }
 
     public class PersistActor : UntypedPersistentActor
