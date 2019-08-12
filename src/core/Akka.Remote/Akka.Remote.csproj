@@ -14,7 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.3.0" />
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
