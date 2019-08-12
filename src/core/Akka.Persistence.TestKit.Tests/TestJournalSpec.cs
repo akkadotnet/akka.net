@@ -59,11 +59,14 @@ namespace Akka.Persistence.TestKit.Tests
             await actor.Ask("write");
             await actor.GracefulStop(TimeSpan.FromSeconds(3));
 
-            Journal.OnRecovery.Fail();
-            actor = Sys.ActorOf<PersistActor>();
-            Watch(actor);
+            WithFailingJournalRecovery(() =>
+            {
+                actor = Sys.ActorOf<PersistActor>();
+                Watch(actor);
 
-            ExpectTerminated(actor, TimeSpan.FromSeconds(3));
+                ExpectTerminated(actor, TimeSpan.FromSeconds(3));
+            });         
+
         }
     }
 
