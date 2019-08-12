@@ -187,7 +187,7 @@ namespace Akka.Cluster.Sharding
         /// Passivate entities that have not received any message in this interval.
         /// Note that only messages sent through sharding are counted, so direct messages
         /// to the <see cref="IActorRef"/> of the actor or messages that it sends to itself are not counted as activity.
-        /// Use 0 to disable automatic passivation.
+        /// Use 0 to disable automatic passivation. It is always disabled if `RememberEntities` is enabled.
         /// </summary>
         public readonly TimeSpan PassivateIdleEntityAfter;
         

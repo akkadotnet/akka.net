@@ -32,6 +32,8 @@ namespace Akka.Persistence.TCK.Tests
             Initialize();
         }
 
+        protected override bool SupportsSerialization => true;
+
         [Fact]
         public void MemorySnapshotStore_is_threadsafe()
         {

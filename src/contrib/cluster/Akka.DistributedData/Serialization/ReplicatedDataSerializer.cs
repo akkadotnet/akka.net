@@ -7,6 +7,7 @@
 
 using System;
 using System.IO;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util;
 using Hyperion;
@@ -17,7 +18,7 @@ namespace Akka.DistributedData.Serialization
     public sealed class ReplicatedDataSerializer : Serializer
     {
         private readonly Hyperion.Serializer _serializer;
-        
+
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
             var akkaSurrogate =
@@ -63,10 +64,25 @@ namespace Akka.DistributedData.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var ms = new MemoryStream(bytes))
+            try
             {
-                var res = _serializer.Deserialize(ms);
-                return res;
+                using (var ms = new MemoryStream(bytes))
+                {
+                    var res = _serializer.Deserialize(ms);
+                    return res;
+                }
+            }
+            catch (TypeLoadException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (NotSupportedException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw new SerializationException(e.Message, e);
             }
         }
     }

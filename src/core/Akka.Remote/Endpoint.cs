@@ -50,7 +50,7 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ILoggingAdapter _log;
         private readonly IInternalActorRef _remoteDaemon;
@@ -62,7 +62,7 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
             _system = system;
             _provider = provider;
@@ -82,7 +82,7 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
-            Type payloadClass = payload?.GetType();
+            var payloadClass = payload?.GetType();
             var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
@@ -478,7 +478,7 @@ namespace Akka.Remote
         /// UID matches the expected one, pending Acks can be processed or must be dropped. It is guaranteed that for any inbound
         /// connections (calling <see cref="CreateWriter"/>) the first message from that connection is <see cref="GotUid"/>, therefore it serves
         /// a separator.
-        /// 
+        ///
         /// If we already have an inbound handle then UID is initially confirmed.
         /// (This actor is never restarted.)
         /// </summary>
@@ -1022,7 +1022,7 @@ namespace Akka.Remote
             _refuseUid = refuseUid;
             _codec = codec;
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
-            _system = Context.System;
+            _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
@@ -1045,7 +1045,7 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
@@ -1477,7 +1477,18 @@ namespace Akka.Remote
             }
             catch (SerializationException ex)
             {
-                _log.Error(ex, "Transient association error (association remains live)");
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
+                return true;
+            }
+            catch(ArgumentException ex)
+            {
+                _log.Error(
+                  ex,
+                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  send.Message.GetType());
                 return true;
             }
             catch (EndpointException ex)
@@ -1911,10 +1922,25 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                ackAndMessage.MessageOption.RecipientAddress,
-                                ackAndMessage.MessageOption.SerializedMessage,
-                                ackAndMessage.MessageOption.SenderOptional);
+                            try
+                            {
+                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                    ackAndMessage.MessageOption.RecipientAddress,
+                                    ackAndMessage.MessageOption.SerializedMessage,
+                                    ackAndMessage.MessageOption.SenderOptional);
+                            }
+                            catch (SerializationException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(ArgumentException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
+                            catch(Exception e)
+                            {
+                                throw e;
+                            }
                         }
                     }
                 }
@@ -1925,6 +1951,17 @@ namespace Akka.Remote
                 Become(NotReading);
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
             });
+        }
+
+        private void LogTransientSerializationError(Message msg, Exception error)
+        {
+            var sm = msg.SerializedMessage;
+            _log.Warning(
+              "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
+                "Transient association error (association remains live). {2}",
+              sm.SerializerId,
+              sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
+              error.Message);
         }
 
         private void NotReading()

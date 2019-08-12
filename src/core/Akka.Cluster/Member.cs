@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster
 {
@@ -90,6 +91,20 @@ namespace Akka.Cluster
             UpNumber = upNumber;
             Status = status;
             Roles = roles;
+        }
+
+        /// <summary>
+        /// Used when `akka.actor.serialize-messages = on`.
+        /// </summary>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
+        [JsonConstructor]
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, IEnumerable<string> roles)
+         : this(uniqueAddress, upNumber, status, roles.ToImmutableHashSet())
+        {
+
         }
 
         /// <summary>
