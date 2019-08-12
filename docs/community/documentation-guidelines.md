@@ -12,7 +12,7 @@ There is a ton of work that still needs to be done, especially in the API docume
 
 ## Website
 
-This the project uses [Markdown](http://daringfireball.net/projects/markdown/syntax) for crafting the documents for the website. The rendering of the website is done with Marked.JS. Thus, any editor based on this will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
+This project uses [Markdown](http://daringfireball.net/projects/markdown/syntax) for crafting the documents for the website. The rendering of the website is done with Marked.JS. Thus, any editor based on this will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
 
 To contribute to the website's documentation, go to the github project page [getakka.net](https://github.com/akkadotnet/getakka.net). Please be sure to read the [Readme.md](https://github.com/akkadotnet/getakka.net/blob/master/README.md) before getting started to get acquainted with the project's workflow.
 
