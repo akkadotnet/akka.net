@@ -2142,6 +2142,20 @@ namespace Akka.Streams.Dsl
             => (Source<T, TMat3>)InternalFlowOperations.OrElseMaterialized(flow, secondary, materializedFunction);
 
         /// <summary>
+        /// Starts a new kind of a source, that is able to keep a context object and propagate it across
+        /// stages. Can be finished with <see cref="SourceWithContext{TCtx,TOut,TMat}.AsSource"/>.
+        /// </summary>
+        /// <param name="flow"></param>
+        /// <param name="fn">Function used to extract context object out of the incoming events.</param>
+        /// <typeparam name="TCtx">Type of a context.</typeparam>
+        /// <typeparam name="TOut">Type of produced events.</typeparam>
+        /// <typeparam name="TMat">Type of materialized value.</typeparam>
+        /// <returns></returns>
+        public static SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(
+            this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
+            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => Tuple.Create(x, fn(x))));
+      
+        /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
         /// 
         /// '''Emits when''' upstream emits 
