@@ -11,15 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="test-journal.conf" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="test-journal.conf" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>

@@ -19,85 +19,85 @@ namespace Akka.Persistence.TestKit
 
         protected readonly IJournalBehaviorSetter Setter;
 
-        protected void SetInterceptor(IJournalInterceptor interceptor) => Setter.SetInterceptor(interceptor);
+        public Task SetInterceptorAsync(IJournalInterceptor interceptor) => Setter.SetInterceptorAsync(interceptor);
 
-        public void Pass() => SetInterceptor(JournalInterceptors.Noop.Instance);
+        public Task Pass() => SetInterceptorAsync(JournalInterceptors.Noop.Instance);
 
-        public void PassWithDelay(TimeSpan delay)
+        public Task PassWithDelay(TimeSpan delay)
         {
             if (delay <= TimeSpan.Zero)
             {
                 throw new ArgumentException("Delay must be greater than zero", nameof(delay));
             }
 
-            SetInterceptor(new JournalInterceptors.Delay(delay, JournalInterceptors.Noop.Instance));
+            return SetInterceptorAsync(new JournalInterceptors.Delay(delay, JournalInterceptors.Noop.Instance));
         }
 
-        public void Fail() => SetInterceptor(JournalInterceptors.Failure.Instance);
+        public Task Fail() => SetInterceptorAsync(JournalInterceptors.Failure.Instance);
 
-        public void FailOnType<TMessage>() => FailOnType(typeof(TMessage));
+        public Task FailOnType<TMessage>() => FailOnType(typeof(TMessage));
 
-        public void FailOnType(Type messageType)
+        public Task FailOnType(Type messageType)
         {
             if (messageType is null)
             {
                 throw new ArgumentNullException(nameof(messageType));
             }
 
-            SetInterceptor(new JournalInterceptors.OnType(messageType, JournalInterceptors.Failure.Instance));
+            return SetInterceptorAsync(new JournalInterceptors.OnType(messageType, JournalInterceptors.Failure.Instance));
         }
 
-        public void FailIf(Func<IPersistentRepresentation, bool> predicate)
+        public Task FailIf(Func<IPersistentRepresentation, bool> predicate)
         {
             if (predicate is null)
             {
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance));
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance));
         }
 
-        public void FailIf(Func<IPersistentRepresentation, Task<bool>> predicate)
+        public Task FailIf(Func<IPersistentRepresentation, Task<bool>> predicate)
         {
             if (predicate is null)
             {
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance));
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance));
         }
 
-        public void FailUnless(Func<IPersistentRepresentation, bool> predicate)
+        public Task FailUnless(Func<IPersistentRepresentation, bool> predicate)
         {
             if (predicate is null)
             {
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance, negate: true));
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance, negate: true));
         }
 
-        public void FailUnless(Func<IPersistentRepresentation, Task<bool>> predicate)
+        public Task FailUnless(Func<IPersistentRepresentation, Task<bool>> predicate)
         {
             if (predicate is null)
             {
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance, negate: true));
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(predicate, JournalInterceptors.Failure.Instance, negate: true));
         }
 
-        public void FailWithDelay(TimeSpan delay)
+        public Task FailWithDelay(TimeSpan delay)
         {
             if (delay <= TimeSpan.Zero)
             {
                 throw new ArgumentException("Delay must be greater than zero", nameof(delay));
             }
 
-            SetInterceptor(new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance));
+            return SetInterceptorAsync(new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance));
         }
 
-        public void FailIfWithDelay(TimeSpan delay, Func<IPersistentRepresentation, Task<bool>> predicate)
+        public Task FailIfWithDelay(TimeSpan delay, Func<IPersistentRepresentation, Task<bool>> predicate)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -109,13 +109,13 @@ namespace Akka.Persistence.TestKit
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(
                 predicate, 
                 new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance)
             ));
         }
 
-        public void FailIfWithDelay(TimeSpan delay, Func<IPersistentRepresentation, bool> predicate)
+        public Task FailIfWithDelay(TimeSpan delay, Func<IPersistentRepresentation, bool> predicate)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -127,13 +127,13 @@ namespace Akka.Persistence.TestKit
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(
                 predicate, 
                 new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance)
             ));
         }
 
-        public void FailUnlessWithDelay(TimeSpan delay, Func<IPersistentRepresentation, bool> predicate)
+        public Task FailUnlessWithDelay(TimeSpan delay, Func<IPersistentRepresentation, bool> predicate)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -145,14 +145,14 @@ namespace Akka.Persistence.TestKit
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            SetInterceptor(new JournalInterceptors.OnCondition(
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(
                 predicate, 
                 new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance),
                 negate: true
             ));
         }
 
-        public void FailUnlessWithDelay(TimeSpan delay, Func<IPersistentRepresentation, Task<bool>> predicate)
+        public Task FailUnlessWithDelay(TimeSpan delay, Func<IPersistentRepresentation, Task<bool>> predicate)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -164,16 +164,16 @@ namespace Akka.Persistence.TestKit
                 throw new ArgumentNullException(nameof(predicate));
             }
             
-            SetInterceptor(new JournalInterceptors.OnCondition(
+            return SetInterceptorAsync(new JournalInterceptors.OnCondition(
                 predicate, 
                 new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance),
                 negate: true
             ));
         }
 
-        public void FailOnTypeWithDelay<TMessage>(TimeSpan delay) => FailOnTypeWithDelay(delay, typeof(TMessage));
+        public Task FailOnTypeWithDelay<TMessage>(TimeSpan delay) => FailOnTypeWithDelay(delay, typeof(TMessage));
 
-        public void FailOnTypeWithDelay(TimeSpan delay, Type messageType)
+        public Task FailOnTypeWithDelay(TimeSpan delay, Type messageType)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -185,7 +185,7 @@ namespace Akka.Persistence.TestKit
                 throw new ArgumentNullException(nameof(messageType));
             }
 
-            SetInterceptor(new JournalInterceptors.OnType(
+            return SetInterceptorAsync(new JournalInterceptors.OnType(
                 messageType, 
                 new JournalInterceptors.Delay(delay, JournalInterceptors.Failure.Instance)
             ));

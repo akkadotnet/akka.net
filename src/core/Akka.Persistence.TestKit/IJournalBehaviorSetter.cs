@@ -8,11 +8,12 @@
 namespace Akka.Persistence.TestKit
 {
     using System;
+    using System.Threading.Tasks;
     using Actor;
 
     public interface IJournalBehaviorSetter
     {
-        void SetInterceptor(IJournalInterceptor interceptor);
+        Task SetInterceptorAsync(IJournalInterceptor interceptor);
     }
 
     internal class JournalWriteBehaviorSetter : IJournalBehaviorSetter
@@ -24,11 +25,11 @@ namespace Akka.Persistence.TestKit
 
         private readonly IActorRef _journal;
 
-        public void SetInterceptor(IJournalInterceptor interceptor)
-            =>  _journal.Ask(
+        public Task SetInterceptorAsync(IJournalInterceptor interceptor)
+            => _journal.Ask<TestJournal.Ack>(
                 new TestJournal.UseWriteInterceptor(interceptor),
                 TimeSpan.FromSeconds(3)
-            ).Wait();
+            );
     }
 
     internal class JournalRecoveryBehaviorSetter : IJournalBehaviorSetter
@@ -40,10 +41,10 @@ namespace Akka.Persistence.TestKit
 
         private readonly IActorRef _journal;
 
-        public void SetInterceptor(IJournalInterceptor interceptor)
-            =>  _journal.Ask(
+        public Task SetInterceptorAsync(IJournalInterceptor interceptor)
+            => _journal.Ask<TestJournal.Ack>(
                 new TestJournal.UseRecoveryInterceptor(interceptor),
                 TimeSpan.FromSeconds(3)
-            ).Wait();
+            );
     }
 }

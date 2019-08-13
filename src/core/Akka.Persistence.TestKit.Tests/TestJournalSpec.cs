@@ -17,36 +17,36 @@ namespace Akka.Persistence.TestKit.Tests
         }
 
         [Fact]
-        public void works_as_memory_journal_by_default()
+        public async Task works_as_memory_journal_by_default()
         {
             var actor = Sys.ActorOf<PersistActor>();
 
             // should pass
-            Journal.OnWrite.Pass();
+            await Journal.OnWrite.Pass();
             actor.Tell("write", TestActor);
             
             ExpectMsg("ack", TimeSpan.FromSeconds(3));
         }
 
         [Fact]
-        public void when_fail_on_write_is_set_all_writes_to_journal_will_fail()
+        public async Task when_fail_on_write_is_set_all_writes_to_journal_will_fail()
         {
             var actor = Sys.ActorOf<PersistActor>();
             Watch(actor);
 
-            Journal.OnWrite.Fail();
+            await Journal.OnWrite.Fail();
             actor.Tell("write", TestActor);
             
             ExpectTerminated(actor, TimeSpan.FromSeconds(3));
         }
 
         [Fact]
-        public void when_reject_on_write_is_set_all_writes_to_journal_will_be_rejected()
+        public async Task when_reject_on_write_is_set_all_writes_to_journal_will_be_rejected()
         {
             var actor = Sys.ActorOf<PersistActor>();
             Watch(actor);
 
-            Journal.OnWrite.Reject();
+            await Journal.OnWrite.Reject();
             actor.Tell("write", TestActor);
 
             ExpectMsg("rejected", TimeSpan.FromSeconds(3));
@@ -66,7 +66,19 @@ namespace Akka.Persistence.TestKit.Tests
 
                 ExpectTerminated(actor, TimeSpan.FromSeconds(3));
             });         
+        }
 
+        [Fact]
+        public async Task new_api()
+        {
+            await WithJournalWrite(write => write.Fail(), () =>
+            {
+                var actor = Sys.ActorOf<PersistActor>();
+                Watch(actor);
+
+                actor.Tell("write", TestActor);
+                ExpectTerminated(actor, TimeSpan.FromSeconds(3));
+            });
         }
     }
 
