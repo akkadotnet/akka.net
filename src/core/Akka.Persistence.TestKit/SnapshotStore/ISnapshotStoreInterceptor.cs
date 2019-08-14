@@ -11,6 +11,6 @@ namespace Akka.Persistence.TestKit
 
     public interface ISnapshotStoreInterceptor
     {
-        Task Intercept(string persistenceId, SnapshotSelectionCriteria criteria);
+        Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria);
     }
 }

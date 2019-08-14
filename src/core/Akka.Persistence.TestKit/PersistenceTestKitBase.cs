@@ -18,13 +18,22 @@ namespace Akka.Persistence.TestKit
         protected PersistenceTestKitBase(ITestKitAssertions assertions, string actorSystemName = null, string testActorName = null)
             : base(assertions, GetConfig(), actorSystemName, testActorName)
         {
-            JournalActorRef = GetJournalRef(Sys);
+            _persistenceExtension = Persistence.Instance.Apply(Sys);
+
+            JournalActorRef = _persistenceExtension.JournalFor(null);
             Journal = TestJournal.FromRef(JournalActorRef);
+
+            SnapshotsActorRef = _persistenceExtension.SnapshotStoreFor(null);
+            Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
         }
 
+        private readonly PersistenceExtension _persistenceExtension;
+
         public IActorRef JournalActorRef { get; }
+        public IActorRef SnapshotsActorRef { get; }
 
         public ITestJournal Journal { get; } 
+        public ITestSnapshotStore Snapshots { get; } 
 
         public async Task WithJournalRecovery(Func<JournalRecoveryBehavior, Task> behaviorSelector, Func<Task> execution)
         {
@@ -66,37 +75,66 @@ namespace Akka.Persistence.TestKit
                 return Task.FromResult(new object());
             });
 
-        public void WithFailingJournalRecovery(Action execution)
+        public async Task WithSnapshotSave(Func<SnapshotStoreSaveBehavior, Task> behaviorSelector, Func<Task> execution)
         {
             try
             {
-                Journal.OnRecovery.Fail();
-                execution();
+                await behaviorSelector(Snapshots.OnSave);
+                await execution();
             }
             finally
             {
-                // restore normal functionality
-                Journal.OnRecovery.Pass();
+                await Snapshots.OnSave.Pass();
             }
         }
 
-        public void WithFailingJournalWrites(Action execution)
+        public async Task WithSnapshotLoad(Func<SnapshotStoreLoadBehavior, Task> behaviorSelector, Func<Task> execution)
         {
             try
             {
-                Journal.OnWrite.Fail();
-                execution();
+                await behaviorSelector(Snapshots.OnLoad);
+                await execution();
             }
             finally
             {
-                // restore normal functionality
-                Journal.OnWrite.Pass();
+                await Snapshots.OnLoad.Pass();
             }
-        }       
+        }
 
-        static IActorRef GetJournalRef(ActorSystem sys)
-            => Persistence.Instance.Apply(sys).JournalFor(null);
+        public async Task WithSnapshotDelete(Func<SnapshotStoreDeleteBehavior, Task> behaviorSelector, Func<Task> execution)
+        {
+            try
+            {
+                await behaviorSelector(Snapshots.OnDelete);
+                await execution();
+            }
+            finally
+            {
+                await Snapshots.OnDelete.Pass();
+            }
+        }
 
+        public Task WithSnapshotSave(Func<SnapshotStoreSaveBehavior, Task> behaviorSelector, Action execution)
+            => WithSnapshotSave(behaviorSelector, () =>
+            {
+                execution();
+                return Task.FromResult(true);
+            });
+
+        public Task WithSnapshotLoad(Func<SnapshotStoreLoadBehavior, Task> behaviorSelector, Action execution)
+            => WithSnapshotLoad(behaviorSelector, () =>
+            {
+                execution();
+                return Task.FromResult(true);
+            });
+
+        public Task WithSnapshotDelete(Func<SnapshotStoreDeleteBehavior, Task> behaviorSelector, Action execution)
+            => WithSnapshotDelete(behaviorSelector, () =>
+            {
+                execution();
+                return Task.FromResult(true);
+            });
+        
         static Config GetConfig()
             => ConfigurationFactory.FromResource<PersistenceTestKit>("Akka.Persistence.TestKit.test-journal.conf");
     }

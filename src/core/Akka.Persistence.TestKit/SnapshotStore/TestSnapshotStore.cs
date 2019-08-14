@@ -33,25 +33,25 @@
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
-            await _saveInterceptor.Intercept(metadata.PersistenceId, ToSelectionCriteria(metadata));
+            await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
             await base.SaveAsync(metadata, snapshot);
         }
 
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            await _loadInterceptor.Intercept(persistenceId, criteria);
+            await _loadInterceptor.InterceptAsync(persistenceId, criteria);
             return await base.LoadAsync(persistenceId, criteria);
         }
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
-            await _deleteInterceptor.Intercept(metadata.PersistenceId, ToSelectionCriteria(metadata));
+            await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
             await base.DeleteAsync(metadata);
         }
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            await _deleteInterceptor.Intercept(persistenceId, criteria);
+            await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
             await base.DeleteAsync(persistenceId, criteria);
         }
 
