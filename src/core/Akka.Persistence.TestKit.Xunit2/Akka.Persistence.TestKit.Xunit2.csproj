@@ -2,7 +2,7 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.TestKit</AssemblyTitle>
+    <AssemblyTitle>Akka.Persistence.TestKit.Xunit2</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
@@ -11,12 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="config.conf" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
-    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
 

@@ -136,6 +136,6 @@ namespace Akka.Persistence.TestKit
             });
         
         static Config GetConfig()
-            => ConfigurationFactory.FromResource<PersistenceTestKit>("Akka.Persistence.TestKit.test-journal.conf");
+            => ConfigurationFactory.FromResource<PersistenceTestKitBase>("Akka.Persistence.TestKit.config.conf");
     }
 }
