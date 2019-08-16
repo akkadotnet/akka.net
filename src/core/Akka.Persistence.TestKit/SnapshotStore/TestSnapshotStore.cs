@@ -6,9 +6,9 @@
 
     public class TestSnapshotStore : MemorySnapshotStore
     {
-        private ISnapshotStoreInterceptor _saveInterceptor;
-        private ISnapshotStoreInterceptor _loadInterceptor;
-        private ISnapshotStoreInterceptor _deleteInterceptor;
+        private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+        private ISnapshotStoreInterceptor _loadInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+        private ISnapshotStoreInterceptor _deleteInterceptor = SnapshotStoreInterceptors.Noop.Instance;
 
         protected override bool ReceivePluginInternal(object message)
         {
@@ -16,14 +16,17 @@
             {
                 case UseSaveInterceptor use:
                     _saveInterceptor = use.Interceptor;
+                    Sender.Tell(Ack.Instance);
                     return true;
 
                 case UseLoadInterceptor use:
                     _loadInterceptor = use.Interceptor;
+                    Sender.Tell(Ack.Instance);
                     return true;
 
                 case UseDeleteInterceptor use:
                     _deleteInterceptor = use.Interceptor;
+                    Sender.Tell(Ack.Instance);
                     return true;
 
                 default:

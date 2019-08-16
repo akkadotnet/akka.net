@@ -53,23 +53,7 @@ namespace Akka.Persistence.TestKit.Tests
         }
 
         [Fact]
-        public async Task during_recovery_by_setting_fail_will_cause_recovery_failure()
-        {
-            var actor = Sys.ActorOf<PersistActor>();
-            await actor.Ask("write");
-            await actor.GracefulStop(TimeSpan.FromSeconds(3));
-
-            WithFailingJournalRecovery(() =>
-            {
-                actor = Sys.ActorOf<PersistActor>();
-                Watch(actor);
-
-                ExpectTerminated(actor, TimeSpan.FromSeconds(3));
-            });         
-        }
-
-        [Fact]
-        public async Task new_api()
+        public async Task journal_must_reset_state_to_pass()
         {
             await WithJournalWrite(write => write.Fail(), () =>
             {
@@ -79,41 +63,12 @@ namespace Akka.Persistence.TestKit.Tests
                 actor.Tell("write", TestActor);
                 ExpectTerminated(actor, TimeSpan.FromSeconds(3));
             });
-        }
-    }
 
-    public class PersistActor : UntypedPersistentActor
-    {
-        public override string PersistenceId  => "foo";
+            var actor2 = Sys.ActorOf<PersistActor>();
+            Watch(actor2);
 
-        protected override void OnCommand(object message)
-        {
-            var sender = Sender;
-            switch (message as string)
-            {
-                case "write":
-                    Persist(message, _ =>
-                    {
-                        sender.Tell("ack");
-                    });
-                    
-                    break;
-                
-                default:
-                    return;
-            }
-        }
-
-        protected override void OnRecover(object message)
-        {
-            // noop
-        }
-
-        protected override void OnPersistRejected(Exception cause, object @event, long sequenceNr)
-        {
-            Sender.Tell("rejected");
-
-            base.OnPersistRejected(cause, @event, sequenceNr);
+            actor2.Tell("write", TestActor);
+            ExpectMsg("ack", TimeSpan.FromSeconds(3));
         }
     }
 }

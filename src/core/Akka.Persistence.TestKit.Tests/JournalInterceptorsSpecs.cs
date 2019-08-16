@@ -6,7 +6,7 @@
     using FluentAssertions;
     using Xunit;
 
-    public class JournalWriteInterceptorsSpecs
+    public class JournalInterceptorsSpecs
     {
         [Fact]
         public void noop_immediately_returns_without_exception()
