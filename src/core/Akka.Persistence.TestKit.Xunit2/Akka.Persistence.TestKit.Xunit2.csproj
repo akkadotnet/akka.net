@@ -3,9 +3,9 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.TestKit.Xunit2</AssemblyTitle>
-    <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
+    <Description>TestKit for writing tests for Akka.NET Persistance module using xUnit</Description>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
+    <PackageTags>$(AkkaPackageTags);testkit;persistance;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>

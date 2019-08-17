@@ -13,30 +13,64 @@ namespace Akka.Persistence.TestKit
     using Akka.TestKit;
     using Configuration;
 
+    /// <summary>
+    /// This class represents an Akka.NET Persistence TestKit base class which is testing framework agnostic.
+    /// </summary>
     public abstract class PersistenceTestKitBase : TestKitBase
     {
+        /// <summary>
+        /// Create a new instance of the <see cref="PersistenceTestKitBase"/> class.
+        /// A new system with the specified configuration will be created.
+        /// </summary>
+        /// <param name="assertions">Test framework integration</param>
+        /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="testActorName">Optional: The name of the TestActor.</param>
         protected PersistenceTestKitBase(ITestKitAssertions assertions, string actorSystemName = null, string testActorName = null)
             : base(assertions, GetConfig(), actorSystemName, testActorName)
         {
-            _persistenceExtension = Persistence.Instance.Apply(Sys);
+            var persistenceExtension = Persistence.Instance.Apply(Sys);
 
-            JournalActorRef = _persistenceExtension.JournalFor(null);
+            JournalActorRef = persistenceExtension.JournalFor(null);
             Journal = TestJournal.FromRef(JournalActorRef);
 
-            SnapshotsActorRef = _persistenceExtension.SnapshotStoreFor(null);
+            SnapshotsActorRef = persistenceExtension.SnapshotStoreFor(null);
             Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
         }
 
-        private readonly PersistenceExtension _persistenceExtension;
-
+        /// <summary>
+        /// Actor reference to persistence Journal used by current actor system.
+        /// </summary>
         public IActorRef JournalActorRef { get; }
+
+        /// <summary>
+        /// Actor reference to persistence Snapshot Store used by current actor system.
+        /// </summary>
         public IActorRef SnapshotsActorRef { get; }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public ITestJournal Journal { get; } 
+
+        /// <summary>
+        /// 
+        /// </summary>
         public ITestSnapshotStore Snapshots { get; } 
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Journal Behavior applied to Recovery operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Recovery behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Journal behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public async Task WithJournalRecovery(Func<JournalRecoveryBehavior, Task> behaviorSelector, Func<Task> execution)
         {
+            if (behaviorSelector == null) throw new ArgumentNullException(nameof(behaviorSelector));
+            if (execution == null) throw new ArgumentNullException(nameof(execution));
+
             try
             {
                 await behaviorSelector(Journal.OnRecovery);
@@ -48,8 +82,20 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Journal Behavior applied to Write operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Write behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Journal behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public async Task WithJournalWrite(Func<JournalWriteBehavior, Task> behaviorSelector, Func<Task> execution)
         {
+            if (behaviorSelector == null) throw new ArgumentNullException(nameof(behaviorSelector));
+            if (execution == null) throw new ArgumentNullException(nameof(execution));
+
             try
             {
                 await behaviorSelector(Journal.OnWrite);
@@ -61,22 +107,56 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Journal Behavior applied to Recovery operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Recovery behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Journal behavior.</param>
+        /// <param name="execution">Delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public Task WithJournalRecovery(Func<JournalRecoveryBehavior, Task> behaviorSelector, Action execution)
             => WithJournalRecovery(behaviorSelector, () =>
             {
+                if (execution == null) throw new ArgumentNullException(nameof(execution));
+
                 execution();
                 return Task.FromResult(new object());
             });
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Journal Behavior applied to Write operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Write behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Journal behavior.</param>
+        /// <param name="execution">Delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public Task WithJournalWrite(Func<JournalWriteBehavior, Task> behaviorSelector, Action execution)
             => WithJournalWrite(behaviorSelector, () =>
             {
+                if (execution == null) throw new ArgumentNullException(nameof(execution));
+
                 execution();
                 return Task.FromResult(new object());
             });
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Save operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Save behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public async Task WithSnapshotSave(Func<SnapshotStoreSaveBehavior, Task> behaviorSelector, Func<Task> execution)
         {
+            if (behaviorSelector == null) throw new ArgumentNullException(nameof(behaviorSelector));
+            if (execution == null) throw new ArgumentNullException(nameof(execution));
+
             try
             {
                 await behaviorSelector(Snapshots.OnSave);
@@ -88,8 +168,20 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Load operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Load behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public async Task WithSnapshotLoad(Func<SnapshotStoreLoadBehavior, Task> behaviorSelector, Func<Task> execution)
         {
+            if (behaviorSelector == null) throw new ArgumentNullException(nameof(behaviorSelector));
+            if (execution == null) throw new ArgumentNullException(nameof(execution));
+
             try
             {
                 await behaviorSelector(Snapshots.OnLoad);
@@ -101,8 +193,20 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Delete operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Delete behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public async Task WithSnapshotDelete(Func<SnapshotStoreDeleteBehavior, Task> behaviorSelector, Func<Task> execution)
         {
+            if (behaviorSelector == null) throw new ArgumentNullException(nameof(behaviorSelector));
+            if (execution == null) throw new ArgumentNullException(nameof(execution));
+
             try
             {
                 await behaviorSelector(Snapshots.OnDelete);
@@ -114,27 +218,72 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Save operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Save behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public Task WithSnapshotSave(Func<SnapshotStoreSaveBehavior, Task> behaviorSelector, Action execution)
             => WithSnapshotSave(behaviorSelector, () =>
             {
+                if (execution == null) throw new ArgumentNullException(nameof(execution));
+
                 execution();
                 return Task.FromResult(true);
             });
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Load operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Load behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public Task WithSnapshotLoad(Func<SnapshotStoreLoadBehavior, Task> behaviorSelector, Action execution)
             => WithSnapshotLoad(behaviorSelector, () =>
             {
+                if (execution == null) throw new ArgumentNullException(nameof(execution));
+
                 execution();
                 return Task.FromResult(true);
             });
 
+        /// <summary>
+        /// Execute <paramref name="execution"/> delegate with Snapshot Store Behavior applied to Delete operation.
+        /// </summary>
+        /// <remarks>
+        /// After <paramref name="execution"/> will be executed, Delete behavior will be reverted back to normal.
+        /// </remarks>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Async delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
+        /// <param name="behaviorSelector">Delegate which will select Snapshot Store behavior.</param>
+        /// <param name="execution">Delegate which will be executed with applied Journal behavior.</param>
+        /// <returns><see cref="Task"/> which must be awaited.</returns>
         public Task WithSnapshotDelete(Func<SnapshotStoreDeleteBehavior, Task> behaviorSelector, Action execution)
             => WithSnapshotDelete(behaviorSelector, () =>
             {
+                if (execution == null) throw new ArgumentNullException(nameof(execution));
+
                 execution();
                 return Task.FromResult(true);
             });
         
+        /// <summary>
+        /// Loads from embedded resources actor system persistence configuration with <see cref="TestJournal"/> and
+        /// <see cref="TestSnapshotStore"/> configured as default persistence plugins.
+        /// </summary>
+        /// <returns>Actor system configuration object.</returns>
+        /// <seealso cref="Config"/>
         static Config GetConfig()
             => ConfigurationFactory.FromResource<PersistenceTestKitBase>("Akka.Persistence.TestKit.config.conf");
     }
