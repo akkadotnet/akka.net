@@ -4,10 +4,18 @@ namespace Akka.Persistence.TestKit.Tests
     using System.Threading.Tasks;
     using Actor;
     using Akka.Persistence.TestKit;
+    using Akka.TestKit;
     using Xunit;
 
     public class TestJournalSpec : PersistenceTestKit
     {
+        public TestJournalSpec()
+        {
+            _probe = CreateTestProbe();
+        }
+
+        private readonly TestProbe _probe;
+
         [Fact]
         public void must_return_ack_after_new_write_interceptor_is_set()
         {
@@ -19,37 +27,37 @@ namespace Akka.Persistence.TestKit.Tests
         [Fact]
         public async Task works_as_memory_journal_by_default()
         {
-            var actor = Sys.ActorOf<PersistActor>();
+            var actor = ActorOf(() => new PersistActor(_probe));
 
-            // should pass
             await Journal.OnWrite.Pass();
             actor.Tell("write", TestActor);
             
-            ExpectMsg("ack", TimeSpan.FromSeconds(3));
+            _probe.ExpectMsg("ack");
         }
 
         [Fact]
         public async Task when_fail_on_write_is_set_all_writes_to_journal_will_fail()
         {
-            var actor = Sys.ActorOf<PersistActor>();
+            var actor = ActorOf(() => new PersistActor(_probe));
             Watch(actor);
 
             await Journal.OnWrite.Fail();
             actor.Tell("write", TestActor);
-            
-            ExpectTerminated(actor, TimeSpan.FromSeconds(3));
+
+            _probe.ExpectMsg("failure");
+            ExpectTerminated(actor);
         }
 
         [Fact]
         public async Task when_reject_on_write_is_set_all_writes_to_journal_will_be_rejected()
         {
-            var actor = Sys.ActorOf<PersistActor>();
+            var actor = ActorOf(() => new PersistActor(_probe));
             Watch(actor);
 
             await Journal.OnWrite.Reject();
             actor.Tell("write", TestActor);
 
-            ExpectMsg("rejected", TimeSpan.FromSeconds(3));
+            _probe.ExpectMsg("rejected");
         }
 
         [Fact]
@@ -57,18 +65,19 @@ namespace Akka.Persistence.TestKit.Tests
         {
             await WithJournalWrite(write => write.Fail(), () =>
             {
-                var actor = Sys.ActorOf<PersistActor>();
+                var actor = ActorOf(() => new PersistActor(_probe));
                 Watch(actor);
 
                 actor.Tell("write", TestActor);
-                ExpectTerminated(actor, TimeSpan.FromSeconds(3));
+                _probe.ExpectMsg("failure");
+                ExpectTerminated(actor);
             });
 
-            var actor2 = Sys.ActorOf<PersistActor>();
+            var actor2 = ActorOf(() => new PersistActor(_probe));
             Watch(actor2);
 
             actor2.Tell("write", TestActor);
-            ExpectMsg("ack", TimeSpan.FromSeconds(3));
+            _probe.ExpectMsg("ack");
         }
     }
 }

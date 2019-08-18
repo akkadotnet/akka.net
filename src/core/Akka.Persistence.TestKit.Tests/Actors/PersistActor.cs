@@ -12,17 +12,23 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class PersistActor : UntypedPersistentActor
     {
+        public PersistActor(IActorRef probe)
+        {
+            _probe = probe;
+        }
+
+        private readonly IActorRef _probe;
+
         public override string PersistenceId  => "foo";
 
         protected override void OnCommand(object message)
         {
-            var sender = Sender;
             switch (message as string)
             {
                 case "write":
                     Persist(message, _ =>
                     {
-                        sender.Tell("ack");
+                        _probe.Tell("ack");
                     });
                     
                     break;
@@ -34,12 +40,18 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnRecover(object message)
         {
-            // noop
+        }
+
+        protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
+        {
+            _probe.Tell("failure");
+
+            base.OnPersistFailure(cause, @event, sequenceNr);
         }
 
         protected override void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
-            Sender.Tell("rejected");
+            _probe.Tell("rejected");
 
             base.OnPersistRejected(cause, @event, sequenceNr);
         }
