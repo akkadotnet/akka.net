@@ -11,6 +11,9 @@ namespace Akka.Persistence.TestKit
     using System.Threading.Tasks;
     using Actor;
 
+    /// <summary>
+    ///     Setter strategy for <see cref="TestJournal"/> which will set write interceptor.
+    /// </summary>
     internal class JournalWriteBehaviorSetter : IJournalBehaviorSetter
     {
         internal JournalWriteBehaviorSetter(IActorRef journal)

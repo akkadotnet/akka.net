@@ -11,6 +11,9 @@ namespace Akka.Persistence.TestKit
     using System.Threading.Tasks;
     using Actor;
 
+    /// <summary>
+    ///     Setter strategy for <see cref="TestSnapshotStore"/> which will set save interceptor.
+    /// </summary>
     internal class SnapshotStoreSaveBehaviorSetter : ISnapshotStoreBehaviorSetter
     {
         internal SnapshotStoreSaveBehaviorSetter(IActorRef snapshots)

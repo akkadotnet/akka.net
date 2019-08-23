@@ -9,8 +9,14 @@ namespace Akka.Persistence.TestKit
 {
     using System.Threading.Tasks;
 
+    /// <summary>
+    ///     Interface to object which will intercept all action in <see cref="TestSnapshotStore"/>.
+    /// </summary>
     public interface ISnapshotStoreInterceptor
     {
+        /// <summary>
+        ///     Method will be called for each load, save or delete attempt in <see cref="TestSnapshotStore"/>.
+        /// </summary>
         Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria);
     }
 }

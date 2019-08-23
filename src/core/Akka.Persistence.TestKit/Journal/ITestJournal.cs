@@ -7,10 +7,19 @@
 
 namespace Akka.Persistence.TestKit
 {
+    /// <summary>
+    ///     <see cref="TestJournal"/> proxy object interface. Used to simplify communication with <see cref="TestJournal"/> actor instance.
+    /// </summary>
     public interface ITestJournal
     {
+        /// <summary>
+        ///     List of interceptors to alter write behavior of proxied journal.
+        /// </summary>
         JournalWriteBehavior OnWrite { get; }
         
+        /// <summary>
+        ///     List of interceptors to alter recovery behavior of proxied journal.
+        /// </summary>
         JournalRecoveryBehavior OnRecovery { get; }
     }
 }

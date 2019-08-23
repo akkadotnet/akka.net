@@ -18,13 +18,4 @@ namespace Akka.Persistence.TestKit
         public TestJournalFailureException(string message, Exception inner) : base(message, inner) { }
         protected TestJournalFailureException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
-
-    [Serializable]
-    public class TestJournalRejectionException : Exception
-    {
-        public TestJournalRejectionException() { }
-        public TestJournalRejectionException(string message) : base(message) { }
-        public TestJournalRejectionException(string message, Exception inner) : base(message, inner) { }
-        protected TestJournalRejectionException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-    }
 }

@@ -11,6 +11,9 @@ namespace Akka.Persistence.TestKit
     using System.Threading.Tasks;
     using Actor;
 
+    /// <summary>
+    ///     Setter strategy for <see cref="TestSnapshotStore"/> which will set delete interceptor.
+    /// </summary>
     internal class SnapshotStoreDeleteBehaviorSetter : ISnapshotStoreBehaviorSetter
     {
         internal SnapshotStoreDeleteBehaviorSetter(IActorRef snapshots)

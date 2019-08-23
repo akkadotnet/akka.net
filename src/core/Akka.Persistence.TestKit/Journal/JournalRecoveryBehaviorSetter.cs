@@ -11,6 +11,9 @@ namespace Akka.Persistence.TestKit
     using System.Threading.Tasks;
     using Actor;
 
+    /// <summary>
+    /// Setter strategy for TestJournal which will set recovery interceptor.
+    /// </summary>
     internal class JournalRecoveryBehaviorSetter : IJournalBehaviorSetter
     {
         internal JournalRecoveryBehaviorSetter(IActorRef journal)

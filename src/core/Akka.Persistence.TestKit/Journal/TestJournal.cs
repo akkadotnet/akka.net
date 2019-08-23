@@ -15,6 +15,9 @@ namespace Akka.Persistence.TestKit
     using System.Collections.Immutable;
     using System.Threading.Tasks;
 
+    /// <summary>
+    ///     In-memory persistence journal implementation which behavior could be controlled by interceptors.
+    /// </summary>
     public sealed class TestJournal : MemoryJournal
     {
         private IJournalInterceptor _writeInterceptor = JournalInterceptors.Noop.Instance;
@@ -91,6 +94,14 @@ namespace Akka.Persistence.TestKit
             }
         }
 
+        /// <summary>
+        ///     Create proxy object from journal actor reference which can alter behavior of journal.
+        /// </summary>
+        /// <remarks>
+        ///     Journal actor must be of <see cref="TestJournal"/> type.
+        /// </remarks>
+        /// <param name="actor">Journal actor reference.</param>
+        /// <returns>Proxy object to control <see cref="TestJournal"/>.</returns>
         public static ITestJournal FromRef(IActorRef actor)
         {
             return new TestJournalWrapper(actor);

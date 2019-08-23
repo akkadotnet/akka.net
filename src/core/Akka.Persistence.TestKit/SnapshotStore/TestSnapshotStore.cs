@@ -4,6 +4,9 @@
     using Actor;
     using Snapshot;
 
+    /// <summary>
+    ///     In-memory persistence snapshot store implementation which behavior could be controlled by interceptors.
+    /// </summary>
     public class TestSnapshotStore : MemorySnapshotStore
     {
         private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
@@ -62,6 +65,14 @@
             => new SnapshotSelectionCriteria(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr,
                 metadata.Timestamp);
 
+        /// <summary>
+        ///     Create proxy object from snapshot store actor reference which can alter behavior of snapshot store.
+        /// </summary>
+        /// <remarks>
+        ///     Snapshot store actor must be of <see cref="TestSnapshotStore"/> type.
+        /// </remarks>
+        /// <param name="actor">Journal actor reference.</param>
+        /// <returns>Proxy object to control <see cref="TestSnapshotStore"/>.</returns>
         public static ITestSnapshotStore FromRef(IActorRef actor)
         {
             return new TestSnapshotStoreWrapper(actor);
