@@ -8,7 +8,7 @@
     <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

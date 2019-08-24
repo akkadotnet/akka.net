@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
     <IsPackable>false</IsPackable>
     <NoWarn></NoWarn>
-    <TargetFramework>netstandard2.0</TargetFramework> 
+    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks> 
   </PropertyGroup>
 
   <ItemGroup>
