@@ -501,13 +501,14 @@ namespace Akka.Configuration.Hocon
         {
             return ToString(0);
         }
-
+        
         /// <summary>
         /// Returns a HOCON string representation of this <see cref="HoconValue"/>.
         /// </summary>
         /// <param name="indent">The number of spaces to indent the string.</param>
+        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
         /// <returns>A HOCON string representation of this <see cref="HoconValue"/>.</returns>
-        public virtual string ToString(int indent)
+        internal string ToString(int indent, bool includeFallback)
         {
             if (IsString())
             {
@@ -518,12 +519,12 @@ namespace Akka.Configuration.Hocon
             {
                 if (indent == 0)
                 {
-                    return GetObject().ToString(indent + 1);
+                    return GetObject().ToString(indent + 1, includeFallback);
                 }
                 else
                 {
                     var i = new string(' ', indent * 2);
-                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
+                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1, includeFallback));
                 }
             }
             if (IsArray())
@@ -531,6 +532,17 @@ namespace Akka.Configuration.Hocon
                 return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString(indent + 1))));
             }
             return "<<unknown value>>";
+        }
+
+
+        /// <summary>
+        /// Returns a HOCON string representation of this <see cref="HoconValue"/>.
+        /// </summary>
+        /// <param name="indent">The number of spaces to indent the string.</param>
+        /// <returns>A HOCON string representation of this <see cref="HoconValue"/>.</returns>
+        public virtual string ToString(int indent)
+        {
+            return ToString(indent, false);
         }
 
         private string QuoteIfNeeded(string text)

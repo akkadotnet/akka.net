@@ -1098,6 +1098,25 @@ ip = ""::1""
             else
                 actual.ShouldBe(expected, $"'{value}' should be null");
         }
+
+        [Fact]
+        public void should_contain_fall_back_value_if_call_to_string_with_include_fallback()
+        {
+            const string config1AsString = @"akka {
+                keyA: valueA
+            }";
+            const string config2AsString = @"akka {
+                 keyB: valueB
+             }";
+            var config1 = ConfigurationFactory.ParseString(config1AsString);
+            var config2 = ConfigurationFactory.ParseString(config2AsString);
+
+            var configWithFallback = config1.WithFallback(config2);
+
+            var configToString = configWithFallback.ToString(true);
+            Assert.Contains("keyA: valueA", configToString);
+            Assert.Contains("keyB: valueB", configToString);
+        }
     }
 }
 
