@@ -598,5 +598,14 @@ namespace Akka.Streams.Dsl
 
             return new Sink<TIn, IPublisher<TIn>>(publisherSink);
         }
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="IObservable{T}"/>. It supports multiple subscribers.
+        /// Since observables have no notion of backpressure, it will push incoming elements as fast as possible, potentially risking
+        /// process overrun.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static Sink<T, IObservable<T>> AsObservable<T>() => FromGraph(new ObservableSinkStage<T>());
     }
 }

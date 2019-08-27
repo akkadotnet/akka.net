@@ -1,16 +1,26 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2018 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2019 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.4.0</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.3.1</XunitVersion>
-    <TestSdkVersion>15.7.2</TestSdkVersion>
+    <TestSdkVersion>15.9.0</TestSdkVersion>
+    <HyperionVersion>0.9.8</HyperionVersion>
+    <NewtonsoftJsonVersion>12.0.2</NewtonsoftJsonVersion>
+    <NBenchVersion>1.2.2</NBenchVersion>
+    <ProtobufVersion>3.9.1</ProtobufVersion>
+    <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
+    <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
+    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
+    <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
+    <FsCheckVersion>2.9.0</FsCheckVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
@@ -18,5 +28,17 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageReleaseNotes>Placeholder for nightlies.</PackageReleaseNotes>
+  </PropertyGroup>
+  <!-- SourceLink support for all Akka.NET projects -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" PrivateAssets="All" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 </Project>

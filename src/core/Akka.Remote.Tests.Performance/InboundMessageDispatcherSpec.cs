@@ -86,7 +86,7 @@ namespace Akka.Remote.Tests.Performance
             _systemAddress = RARP.For(_actorSystem).Provider.DefaultAddress;
             _inboundMessageDispatcherCounter = context.GetCounter(MessageDispatcherThroughputCounterName);
             _message = new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
-            _dispatcher = new DefaultMessageDispatcher(_actorSystem, RARP.For(_actorSystem).Provider, _actorSystem.Log);
+            _dispatcher = new DefaultMessageDispatcher(_actorSystem.AsInstanceOf<ExtendedActorSystem>(), RARP.For(_actorSystem).Provider, _actorSystem.Log);
             _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter, RARP.For(_actorSystem).Provider);
         }
 

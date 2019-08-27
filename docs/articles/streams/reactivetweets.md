@@ -172,7 +172,7 @@ elements*" this can be expressed using the ``Buffer`` element:
 ```csharp
 tweetSource
     .Buffer(10, OverflowStrategy.DropHead)
-    .Selet(SlowComputation)
+    .Select(SlowComputation)
     .RunWith(Sink.Ignore<ComputationResult>(), mat);
 ```
 

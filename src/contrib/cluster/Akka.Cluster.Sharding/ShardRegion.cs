@@ -129,7 +129,7 @@ namespace Akka.Cluster.Sharding
             public readonly ShardId ShardId;
 
             /// <summary>
-            /// Creates a new instance of a <see cref="StartEntityAck"/> class, used to confirm that 
+            /// Creates a new instance of a <see cref="StartEntityAck"/> class, used to confirm that
             /// <see cref="StartEntity"/> request has succeed.
             /// </summary>
             /// <param name="entityId">An identifier of a newly started entity.</param>
@@ -175,6 +175,12 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal class HandOffStopper : ReceiveActor
         {
+            private ILoggingAdapter _log;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -183,22 +189,30 @@ namespace Akka.Cluster.Sharding
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <returns>TBD</returns>
-            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
+            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
-                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage)).WithDeploy(Deploy.Local);
+                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
             }
 
             /// <summary>
-            /// TBD
+            ///Sends stopMessage (e.g. `PoisonPill`) to the entities and when all of
+            /// them have terminated it replies with `ShardStopped`.
+            /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
             /// </summary>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
-            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
+            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
 
+                Receive<ReceiveTimeout>(t =>
+                {
+                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard, stopping the remaining entities.", stopMessage.GetType(), shard);
+                    foreach (var r in remaining)
+                        Context.Stop(r);
+                });
                 Receive<Terminated>(t =>
                 {
                     remaining.Remove(t.ActorRef);
@@ -208,6 +222,8 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
+
+                Context.SetReceiveTimeout(handoffTimeout);
 
                 foreach (var aref in remaining)
                 {
@@ -243,7 +259,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="replicator"></param>
         /// <param name="majorityMinCap"></param>
         /// <returns>TBD</returns>
-        internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        internal static Props Props(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, null, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage, replicator, majorityMinCap)).WithDeploy(Deploy.Local);
         }
@@ -271,7 +287,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Props EntityProps;
+        public readonly Func<string, Props> EntityProps;
         /// <summary>
         /// TBD
         /// </summary>
@@ -349,7 +365,7 @@ namespace Akka.Cluster.Sharding
         /// <summary> When using proxy the data center can be different from the own data center</summary>
         private readonly string _targetDcRole;
 
-        public ShardRegion(string typeName, Props entityProps, string dataCenter, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
+        public ShardRegion(string typeName, Func<string, Props> entityProps, string dataCenter, ClusterShardingSettings settings, string coordinatorPath, ExtractEntityId extractEntityId, ExtractShardId extractShardId, object handOffStopMessage, IActorRef replicator, int majorityMinCap)
         {
             TypeName = typeName;
             EntityProps = entityProps;
@@ -419,16 +435,24 @@ namespace Akka.Cluster.Sharding
         {
             get
             {
-                if (EntityProps != null && !EntityProps.Equals(Actor.Props.None))
+                if (EntityProps != null)
                     return new PersistentShardCoordinator.Register(Self);
                 return new PersistentShardCoordinator.RegisterProxy(Self);
             }
         }
 
+
         /// <inheritdoc cref="ActorBase.PreStart"/>
+        /// <summary>
+        /// Subscribe to MemberEvent, re-subscribe when restart
+        /// </summary>
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+            if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities)
+            {
+                Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
+            }
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
@@ -520,7 +544,6 @@ namespace Akka.Cluster.Sharding
         {
             var coordinator = CoordinatorSelection;
             coordinator?.Tell(RegistrationMessage);
-
             if (ShardBuffers.Count != 0 && _retryCount >= RetryCountThreshold)
             {
                 if (coordinator != null)
@@ -666,22 +689,27 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
+                    SendGracefulShutdownToCoordinator();
+
                     if (ShardBuffers.Count != 0) _retryCount++;
 
                     if (_coordinator == null) Register();
                     else
                     {
-                        SendGracefulShutdownToCoordinator();
                         RequestShardBufferHomes();
-                        TryCompleteGracefulShutdown();
                     }
+
+                    TryCompleteGracefulShutdown();
+
                     break;
+
                 case GracefulShutdown _:
                     Log.Debug("Starting graceful shutdown of region and all its shards");
                     GracefulShutdownInProgress = true;
                     SendGracefulShutdownToCoordinator();
                     TryCompleteGracefulShutdown();
                     break;
+
                 default:
                     Unhandled(command);
                     break;
@@ -919,7 +947,7 @@ namespace Akka.Cluster.Sharding
             //TODO: change on ConcurrentDictionary.GetOrAdd?
             if (!Shards.TryGetValue(id, out var region))
             {
-                if (EntityProps == null || EntityProps.Equals(Actor.Props.Empty))
+                if (EntityProps == null)
                     throw new IllegalStateException("Shard must not be allocated to a proxy only ShardRegion");
 
                 if (ShardsByRef.Values.All(shardId => shardId != id))
@@ -974,6 +1002,14 @@ namespace Akka.Cluster.Sharding
                         else if (MatchingRole(m))
                             ChangeMembers(MembersByAge.Remove(m));
                     }
+                    break;
+
+                case ClusterEvent.MemberDowned md:
+                    if (md.Member.UniqueAddress == Cluster.SelfUniqueAddress)
+                    {
+                        Context.Stop(Self);
+                    }
+                    Log.Info("Self downed, stopping ShardRegion [{0}]", Self.Path);
                     break;
                 case ClusterEvent.IMemberEvent _:
                     // these are expected, no need to warn about them

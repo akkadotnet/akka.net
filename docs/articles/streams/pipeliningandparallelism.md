@@ -52,7 +52,7 @@ parallelisable (for example because the result of a processing step depends on a
 step). One drawback is that if the processing times of the stages are very different then some of the stages will not
 be able to operate at full throughput because they will wait on a previous or subsequent stage most of the time. In the
 pancake example frying the second half of the pancake is usually faster than frying the first half, ``fryingPan2`` will
-not be able to operate at full capacity [*1](_).
+not be able to operate at full capacity <a href="#foot-note-1">[1]</a>.
 
 > [!NOTE]
 > Asynchronous stream processing stages have internal buffers to make communication between them more efficient.
@@ -171,5 +171,5 @@ compared to the parallel pipelines. This pattern rebalances after each step, whi
 at the entry point of the pipeline. This only matters however if the processing time distribution has a large
 deviation.
 
-[*1](_) Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan
+<a name="foot-note-1">[1]</a> Bartosz's reason for this seemingly suboptimal procedure is that he prefers the temperature of the second pan
        to be slightly lower than the first in order to achieve a more homogeneous result.

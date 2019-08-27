@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Actor.Internal
 {
@@ -22,10 +23,15 @@ namespace Akka.Actor.Internal
         {
             //Intentionally left blank
         }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public new static IChildrenContainer Instance { get { return _instance; } }
+        public new static IChildrenContainer Instance
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _instance;
+        }
 
         /// <summary>
         /// TBD

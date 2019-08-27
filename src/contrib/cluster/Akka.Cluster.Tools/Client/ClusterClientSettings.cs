@@ -211,7 +211,7 @@ namespace Akka.Cluster.Tools.Client
             TimeSpan? reconnectTimeout = null)
         {
             return new ClusterClientSettings(
-                initialContacts,
+                initialContacts ?? InitialContacts,
                 establishingGetContactsInterval ?? EstablishingGetContactsInterval,
                 refreshContactsInterval ?? RefreshContactsInterval,
                 heartbeatInterval ?? HeartbeatInterval,

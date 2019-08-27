@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -51,6 +52,34 @@ namespace Akka.Remote.Tests.Transport
                 }");
         }
 
+        private static Config TestThumbprintConfig(string thumbPrint)
+        {
+            var config = ConfigurationFactory.ParseString(@"
+            akka {
+                loglevel = DEBUG
+                actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+                remote {
+                    dot-netty.tcp {
+                        port = 0
+                        hostname = ""127.0.0.1""
+                        enable-ssl = ""true""
+                        log-transport = true
+                    }
+                }
+            }");
+            return false
+                ? config
+                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
+                    suppress-validation = ""true""
+                    certificate {
+                        use-thumprint-over-file = true
+                        thumbprint = """ + thumbPrint + @"""
+                        store-location = ""current-user""
+                        store-name = ""My""
+                    }
+                }");
+        }
+
         private ActorSystem sys2;
         private Address address1;
         private Address address2;
@@ -69,12 +98,29 @@ namespace Akka.Remote.Tests.Transport
             echoPath = new RootActorPath(address2) / "user" / "echo";
         }
 
+        private void SetupThumbprint(string certPath, string password)
+        {
+            InstallCert();
+            sys2 = ActorSystem.Create("sys2", TestThumbprintConfig(Thumbprint));
+            InitializeLogger(sys2);
+
+            var echo = sys2.ActorOf(Props.Create<Echo>(), "echo");
+
+            address1 = RARP.For(Sys).Provider.DefaultAddress;
+            address2 = RARP.For(sys2).Provider.DefaultAddress;
+            echoPath = new RootActorPath(address2) / "user" / "echo";
+        }
+
         #endregion
 
         // WARNING: YOU NEED TO RUN TEST IN ADMIN MODE IN ORDER TO ADD/REMOVE CERTIFICATES TO CERT STORE!
         public DotNettySslSupportSpec(ITestOutputHelper output) : base(TestConfig(ValidCertPath, Password), output)
         {
         }
+
+        private string Thumbprint { get; set; }
+
+        
         
         [Fact]
         public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
@@ -87,6 +133,25 @@ namespace Akka.Remote.Tests.Transport
             var probe = CreateTestProbe();
             Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
             probe.ExpectMsg("hello");
+        }
+
+        [Fact]
+        public void Secure_transport_should_be_possible_between_systems_using_thumbprint()
+        {
+            // skip this test due to linux/mono certificate issues
+            if (IsMono) return;
+            try
+            {
+                SetupThumbprint(ValidCertPath, Password);
+
+                var probe = CreateTestProbe();
+                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                probe.ExpectMsg("hello");
+            }
+            finally
+            {
+                RemoveCert();
+            }
         }
 
         [Fact]
@@ -112,8 +177,55 @@ namespace Akka.Remote.Tests.Transport
             {
                 Shutdown(sys2, TimeSpan.FromSeconds(3));
             }
+
         }
 
+        private void InstallCert()
+        {
+            var store = new X509Store("My", StoreLocation.CurrentUser);
+            try
+            {
+                store.Open(OpenFlags.ReadWrite);
+
+
+                var cert = new X509Certificate2(ValidCertPath, Password);
+                Thumbprint = cert.Thumbprint;
+                store.Add(cert);
+            }
+            finally
+            {
+#if NET452 //netstandard 1.6 doesn't have close on store
+                store.Close();
+#else
+#endif
+            }
+
+        }
+
+
+        private void RemoveCert()
+        {
+            var store = new X509Store("My", StoreLocation.CurrentUser);
+            try
+            {
+
+
+                
+                store.Open(OpenFlags.ReadWrite);
+                var certs = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
+                if (certs.Count > 0)
+                {
+                    store.Remove(certs[0]);
+                }
+            }
+            finally
+            {
+#if NET452 //NetStandard1.6 doesn't have close on store.
+                store.Close();
+#else
+#endif
+            }
+        }
         public class Echo : ReceiveActor
         {
             public Echo()

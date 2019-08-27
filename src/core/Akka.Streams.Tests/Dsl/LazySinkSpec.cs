@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
                     Fallback<TestSubscriber.Probe<int>>());
                 var taskProbe = Source.From(Enumerable.Range(0, 11)).RunWith(lazySink, Materializer);
-                var probe = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var probe = taskProbe.AwaitResult(RemainingOrDefault);
                 probe.Request(100);
                 Enumerable.Range(0, 11).ForEach(i => probe.ExpectNext(i));
             }, Materializer);
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
 
                 p.SetResult(this.SinkProbe<int>());
-                var probe = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var probe = taskProbe.AwaitResult(RemainingOrDefault);
                 probe.Request(100);
                 probe.ExpectNext(0);
                 Enumerable.Range(1,10).ForEach(i =>
@@ -94,8 +94,8 @@ namespace Akka.Streams.Tests.Dsl
                 var lazySink = Sink.LazySink((int _) => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)),
                     () => Task.FromResult(0));
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                var taskResult = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
-                taskResult.AwaitResult(TimeSpan.FromMilliseconds(300)).ShouldBe(0);
+                var taskResult = taskProbe.AwaitResult(RemainingOrDefault);
+                taskResult.AwaitResult(RemainingOrDefault).ShouldBe(0);
             }, Materializer);
         }
 
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                 var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
                     Fallback<TestSubscriber.Probe<int>>());
                 var taskProbe = Source.Single(1).RunWith(lazySink, Materializer);
-                var taskResult = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var taskResult = taskProbe.AwaitResult(RemainingOrDefault);
                 taskResult.Request(1).ExpectNext(1).ExpectComplete();
             }, Materializer);
         }
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
-                var probe = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var probe = taskProbe.AwaitResult(RemainingOrDefault);
                 probe.Request(1).ExpectNext(0);
                 sourceSub.SendError(Ex);
                 probe.ExpectError().Should().Be(Ex);
@@ -188,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
                 sourceSub.ExpectRequest(1);
-                var probe = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var probe = taskProbe.AwaitResult(RemainingOrDefault);
                 probe.Request(1).ExpectNext(0);
                 probe.Cancel();
                 sourceSub.ExpectCancellation();
@@ -218,7 +218,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.SendNext(0);
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(1);
-                var probe = taskProbe.AwaitResult(TimeSpan.FromMilliseconds(300));
+                var probe = taskProbe.AwaitResult(RemainingOrDefault);
                 probe.Request(1);
                 probe.ExpectNext(1);
                 probe.Cancel();

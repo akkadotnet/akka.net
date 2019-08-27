@@ -66,8 +66,7 @@ namespace Akka.Cluster
             Roles = configuredRoles.Add(DcRolePrefix + SelfDataCenter);
 
             MinNrOfMembers = cc.GetInt("min-nr-of-members");
-            //TODO:
-            //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
+
             _useDispatcher = cc.GetString("use-dispatcher");
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             GossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");

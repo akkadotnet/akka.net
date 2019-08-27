@@ -11,7 +11,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Remote
 {
     public class AddressUid : Akka.Actor.IExtension
@@ -28,6 +28,7 @@ namespace Akka.Remote
     public class AkkaProtocolSettings
     {
         public AkkaProtocolSettings(Akka.Configuration.Config config) { }
+        public System.TimeSpan HandshakeTimeout { get; }
         public Akka.Configuration.Config TransportFailureDetectorConfig { get; }
         public string TransportFailureDetectorImplementationClass { get; }
         public System.TimeSpan TransportHeartBeatInterval { get; }
@@ -188,6 +189,7 @@ namespace Akka.Remote
         public Akka.Actor.IActorRef RemoteWatcher { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
+        public Akka.Serialization.Information SerializationInformation { get; }
         public Akka.Actor.Settings Settings { get; }
         public Akka.Actor.LocalActorRef SystemGuardian { get; }
         public Akka.Actor.IInternalActorRef TempContainer { get; }
@@ -510,7 +512,10 @@ namespace Akka.Remote.Transport
         public Akka.Actor.Address LocalAddress { get; set; }
         public System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IHandleEventListener> ReadHandlerSource { get; set; }
         public Akka.Actor.Address RemoteAddress { get; set; }
+        [System.ObsoleteAttribute("Use the method that states reasons to make sure disassociation reasons are logged" +
+            ".")]
         public abstract void Disassociate();
+        public void Disassociate(string reason, Akka.Event.ILoggingAdapter log) { }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Remote.Transport.AssociationHandle other) { }
         public override int GetHashCode() { }
@@ -609,6 +614,19 @@ namespace Akka.Remote.Transport
         public Akka.Actor.Address AugmentScheme(Akka.Actor.Address address) { }
         public string RemoveScheme(string scheme) { }
         public Akka.Actor.Address RemoveScheme(Akka.Actor.Address address) { }
+    }
+    public sealed class SetThrottle
+    {
+        public SetThrottle(Akka.Actor.Address address, Akka.Remote.Transport.ThrottleTransportAdapter.Direction direction, Akka.Remote.Transport.ThrottleMode mode) { }
+        public Akka.Actor.Address Address { get; }
+        public Akka.Remote.Transport.ThrottleTransportAdapter.Direction Direction { get; }
+        public Akka.Remote.Transport.ThrottleMode Mode { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class SetThrottleAck
+    {
+        public static Akka.Remote.Transport.SetThrottleAck Instance { get; }
     }
     public sealed class ShutdownAttempt : Akka.Remote.Transport.Activity
     {

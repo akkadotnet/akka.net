@@ -60,9 +60,18 @@ namespace Akka.Streams.Tests.Dsl
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, n));
+                task.AwaitResult().ShouldBeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
             }
+        }
+
+        [Fact]
+        public void MergeSorted_must_work_with_custom_comparer()
+        {
+            var task = Source.From(new[] { 1, 5 })
+                    .MergeSorted(Source.From(new[] { 0, 1, 2, 7 }), (l, r) => 2 * l.CompareTo(r))
+                    .RunWith(Sink.Seq<int>(), Materializer);
+
+            task.AwaitResult().ShouldBeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
         }
     }
 }

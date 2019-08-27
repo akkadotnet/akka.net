@@ -27,6 +27,8 @@ namespace DocsExamples.Testkit
 
     public class TestKitSampleTest : TestKit
     {
+    
+        private TimeSpan EpsilonValueForWithins => new TimeSpan(0, 0, 1); // https://github.com/akkadotnet/akka.net/issues/2130
 
         [Fact]
         public void Test()
@@ -58,7 +60,7 @@ namespace DocsExamples.Testkit
                 
                 // Will wait for the rest of the 3 seconds
                 ExpectNoMsg();
-            });
+            }, EpsilonValueForWithins);
         }
     }
 }

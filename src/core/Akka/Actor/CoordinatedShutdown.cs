@@ -123,27 +123,66 @@ namespace Akka.Actor
         /// predefined reasons, but external libraries applications may also define
         /// other reasons.
         /// </summary>
-        public enum Reason : int
+        public class Reason
         {
-            /// <summary>
-            /// The reason for the shutdown was unknown. Needed for backwards compatibility.
-            /// </summary>
-            Unknown = 1,
+            protected Reason()
+            {
 
-            /// <summary>
-            /// The shutdown was initiated by a CLR shutdown hook, e.g. triggered by SIGTERM.
-            /// </summary>
-            ClrExit = 2,
+            }
+        }
 
-            /// <summary>
-            /// The shutdown was initiated by Cluster downing.
-            /// </summary>
-            ClusterDowning = 3,
+        /// <summary>
+        /// The reason for the shutdown was unknown. Needed for backwards compatibility.
+        /// </summary>
+        public class UnknownReason : Reason
+        {
+            public static Reason Instance = new UnknownReason();
 
-            /// <summary>
-            /// The shutdown was initiated by Cluster leaving.
-            /// </summary>
-            ClusterLeaving = 4
+            private UnknownReason()
+            {
+
+            }
+        }
+
+        /// <summary>
+        /// The shutdown was initiated by a CLR shutdown hook
+        /// </summary>
+        public class ClrExitReason : Reason
+        {
+            public static Reason Instance = new ClrExitReason();
+
+            private ClrExitReason()
+            {
+
+            }
+        }
+
+
+        /// <summary>
+        /// The shutdown was initiated by Cluster downing.
+        /// </summary>
+        public class ClusterDowningReason : Reason
+        {
+            public static Reason Instance = new ClusterDowningReason();
+
+            private ClusterDowningReason()
+            {
+
+            }
+        }
+
+
+        /// <summary>
+        /// The shutdown was initiated by Cluster leaving.
+        /// </summary>
+        public class ClusterLeavingReason : Reason
+        {
+            public static Reason Instance = new ClusterLeavingReason();
+
+            private ClusterLeavingReason()
+            {
+
+            }
         }
 
         #endregion
@@ -185,6 +224,7 @@ namespace Akka.Actor
         public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
         public const string PhaseActorSystemTerminate = "actor-system-terminate";
 
+
         /// <summary>
         /// The <see cref="ActorSystem"/>
         /// </summary>
@@ -209,7 +249,7 @@ namespace Akka.Actor
 
         private readonly ConcurrentBag<Func<Task>> _clrShutdownTasks = new ConcurrentBag<Func<Task>>();
         private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<CancellationToken, Task>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<CancellationToken, Task>>>>();
-        private readonly AtomicCounter _runStarted = new AtomicCounter(0);
+        private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
         private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
         private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
@@ -218,7 +258,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// INTERNAL API
-        /// 
+        ///
         /// Signals when CLR shutdown hooks have been completed
         /// </summary>
         internal Task<Done> ClrShutdownTask => _hooksRunPromise.Task;
@@ -228,18 +268,11 @@ namespace Akka.Actor
         /// <see cref="Run(Akka.Actor.CoordinatedShutdown.Reason)"/> method.
         /// Null if the shutdown has not been started.
         /// </summary>
-        public Reason? ShutdownReason
-        {
-            get
-            {
-                var value = _runStarted.Current;
-                return value == 0 ? default(Reason?) : (Reason)value;
-            }
-        }
-
+        public Reason ShutdownReason => _runStarted.Value;
+        
         /// <summary>
         /// Add a task to a phase. It doesn't remove previously added tasks.
-        /// 
+        ///
         /// Tasks added to the same phase are executed in parallel without any
         /// ordering assumptions. Next phase will not start until all tasks of
         /// previous phase have completed.
@@ -251,8 +284,8 @@ namespace Akka.Actor
         /// Tasks should typically be registered as early as possible after system
         /// startup. When running the <see cref="CoordinatedShutdown"/> tasks that have been
         /// registered will be performed but tasks that are added too late will not be run.
-        /// 
-        /// 
+        ///
+        ///
         /// It is possible to add a task to a later phase from within a task in an earlier phase
         /// and it will be performed.
         /// </remarks>
@@ -303,7 +336,7 @@ namespace Akka.Actor
         /// <summary>
         /// Add a shutdown hook that will execute when the CLR process begins
         /// its shutdown sequence, invoked via <see cref="AppDomain.ProcessExit"/>.
-        /// 
+        ///
         /// Added hooks may run in any order concurrently, but they are run before
         /// the Akka.NET internal shutdown hooks execute.
         /// </summary>
@@ -319,10 +352,10 @@ namespace Akka.Actor
 
         /// <summary>
         /// INTERNAL API
-        /// 
+        ///
         /// Should only be called directly by the <see cref="AppDomain.ProcessExit"/> event
         /// in production.
-        /// 
+        ///
         /// Safe to call multiple times, but hooks will only be run once.
         /// </summary>
         /// <returns>Returns a <see cref="Task"/> that will be completed once the process exits.</returns>
@@ -363,7 +396,7 @@ namespace Akka.Actor
         /// It is safe to call this method multiple times. It will only run once.
         /// </remarks>
         [Obsolete("Use `Run(Reason)` instead")]
-        public Task<Done> Run(string fromPhase = null) => Run(Reason.Unknown, fromPhase);
+        public Task<Done> Run(string fromPhase = null) => Run(UnknownReason.Instance, fromPhase);
 
         /// <summary>
         /// Run tasks of all phases including and after the given phase.
@@ -373,11 +406,11 @@ namespace Akka.Actor
         /// <returns>A task that is completed when all such tasks have been completed, or
         /// there is failure when <see cref="Phase.Recover"/> is disabled.</returns>
         /// <remarks>
-        /// It is safe to call this method multiple times. It will only run once.
+        /// It is safe to call this method multiple times. It will only run the shutdown sequence once.
         /// </remarks>
         public Task<Done> Run(Reason reason, string fromPhase)
         {
-            if (_runStarted.CompareAndSet(0, (int)reason))
+            if (_runStarted.CompareAndSet(null, reason))
             {
                 var runningPhases = (fromPhase == null
                     ? OrderedPhases // all
@@ -536,7 +569,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// INTERNAL API
-        /// 
+        ///
         /// Primes the <see cref="CoordinatedShutdown"/> with the default phase for
         /// <see cref="ActorSystem.Terminate"/>
         /// </summary>
@@ -591,16 +624,12 @@ namespace Akka.Actor
             var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
             if (runByClrShutdownHook)
             {
-#if APPDOMAIN
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
                 {
                     // have to block, because if this method exits the process exits.
                     coord.RunClrHooks().Wait(coord.TotalTimeout);
                 };
-#else
-                // TODO: what to do for NetCore?
-#endif
 
                 coord.AddClrShutdownHook(() =>
                 {
@@ -612,7 +641,7 @@ namespace Akka.Actor
                             coord.Log.Info("Starting coordinated shutdown from CLR termination hook.");
                             try
                             {
-                                coord.Run(Reason.ClrExit).Wait(coord.TotalTimeout);
+                                coord.Run(ClrExitReason.Instance).Wait(coord.TotalTimeout);
                             }
                             catch (Exception ex)
                             {

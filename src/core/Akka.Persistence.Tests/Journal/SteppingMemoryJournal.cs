@@ -66,6 +66,7 @@ namespace Akka.Persistence.Tests.Journal
             return ConfigurationFactory.ParseString(@"
 akka.persistence.journal.stepping-inmem.class="""+ typeof(SteppingMemoryJournal).FullName + @", Akka.Persistence.Tests""
 akka.persistence.journal.plugin = ""akka.persistence.journal.stepping-inmem""
+akka.persistence.journal.stepping-inmem.plugin-dispatcher = ""akka.actor.default-dispatcher""
 akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
         }
 

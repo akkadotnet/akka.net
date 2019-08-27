@@ -78,6 +78,11 @@ namespace Akka.Cluster
         public UniqueAddress SelfUniqueAddress { get; }
 
         /// <summary>
+        /// Used to retain the <see cref="InfoLogger"/> instance that decorates the cluster.
+        /// </summary>
+        internal InfoLogger CurrentInfoLogger { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Cluster"/> class.
         /// </summary>
         /// <param name="system">The actor system that hosts the cluster.</param>
@@ -95,6 +100,8 @@ namespace Akka.Cluster
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
+
+            CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
             LogInfo("Starting up...");
 
@@ -559,6 +566,58 @@ namespace Akka.Cluster
             }
         }
         
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Used for logging important messages with the cluster's address appended.
+        /// </summary>
+        internal class InfoLogger
+        {
+            private readonly ILoggingAdapter _log;
+            private readonly ClusterSettings _settings;
+            private readonly Address _selfAddress;
+
+            public InfoLogger(ILoggingAdapter log, ClusterSettings settings, Address selfAddress)
+            {
+                _log = log;
+                _settings = settings;
+                _selfAddress = selfAddress;
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
+            /// </summary>
+            /// <param name="message">The message being logged.</param>
+            internal void LogInfo(string message)
+            {
+                if(_settings.LogInfo)
+                    _log.Info("Cluster Node [{0}] - {1}", _selfAddress, message);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The argument that fills in the template placeholder.</param>
+            internal void LogInfo(string template, object arg1)
+            {
+                if (_settings.LogInfo)
+                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
+            /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
+            internal void LogInfo(string template, object arg1, object arg2)
+            {
+                if (_settings.LogInfo)
+                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1, arg2);
+            }
+        }
+
         /// <summary>
         /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>

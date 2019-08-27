@@ -319,6 +319,22 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Member status changed to `MemberStatus.Down` and will be removed
+        /// when all members have seen the `Down` status.
+        /// </summary>
+        public sealed class MemberDowned : MemberStatusChange
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MemberJoined"/> class.
+            /// </summary>
+            /// <param name="member">The node that changed state.</param>
+            public MemberDowned(Member member)
+                : base(member, MemberStatus.Down)
+            {
+            }
+        }
+
+        /// <summary>
         /// <para>
         /// This class represents a <see cref="MemberStatusChange"/> event where the
         /// cluster node changed its status to <see cref="MemberStatus.Removed"/>.
@@ -944,7 +960,7 @@ namespace Akka.Cluster
         private readonly EventStream _eventStream;
 
         /// <summary>
-        /// The current snapshot state corresponding to latest gossip 
+        /// The current snapshot state corresponding to latest gossip
         /// to mimic what you would have seen if you were listening to the events.
         /// </summary>
         private void SendCurrentClusterState(IActorRef receiver)

@@ -234,6 +234,24 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void DomainEvents_must_be_produced_for_downed_members()
+        {
+            var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, eUp)));
+            var t2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, eDown)));
+
+            var g1 = t1.Item1;
+            var g2 = t2.Item1;
+
+            ClusterEvent.DiffMemberEvents(State(g1), State(g2))
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberDowned(eDown)));
+
+            ClusterEvent.DiffUnreachable(State(g1), State(g2))
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+        }
+
+        [Fact]
         public void DomainEvents_must_be_produced_for_removed_members()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, dExiting)));

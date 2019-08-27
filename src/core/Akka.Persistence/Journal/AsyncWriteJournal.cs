@@ -252,7 +252,7 @@ namespace Akka.Persistence.Journal
                     {
                         var highSequenceNr = t.Result;
                         var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
-                        if (highSequenceNr == 0L || message.FromSequenceNr > toSequenceNr)
+                        if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                         {
                             promise.SetResult(highSequenceNr);
                         }

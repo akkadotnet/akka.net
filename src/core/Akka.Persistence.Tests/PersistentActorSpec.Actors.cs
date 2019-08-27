@@ -1121,6 +1121,45 @@ namespace Akka.Persistence.Tests
                 return false;
             }
         }
+
+        internal class PersistInRecovery : ExamplePersistentActor
+        {
+            public PersistInRecovery(string name)
+                : base(name)
+            { }
+
+            protected override bool ReceiveRecover(object message)
+            {
+                switch (message)
+                {
+                    case Evt evt when evt.Data?.ToString() == "invalid":
+                        Persist(new Evt("invalid-recovery"), UpdateStateHandler);
+                        return true;
+                    case Evt evt:
+                        return UpdateState(evt);
+                    case RecoveryCompleted _:
+                        PersistAsync(new Evt("rc-1"), UpdateStateHandler);
+                        Persist(new Evt("rc-2"), UpdateStateHandler);
+                        PersistAsync(new Evt("rc-3"), UpdateStateHandler);
+                        return true;
+                }
+
+                return false;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (CommonBehavior(message)) return true;
+
+                if (message is Cmd cmd)
+                {
+                    Persist(new Evt(cmd.Data), UpdateStateHandler);
+                    return true;
+                }
+
+                return false;
+            }
+        }
     }
 }
 

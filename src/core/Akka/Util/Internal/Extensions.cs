@@ -170,7 +170,7 @@ namespace Akka.Util.Internal
         /// <param name="this">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static TimeSpan Max(this TimeSpan @this, TimeSpan other) 
+        public static TimeSpan Max(this TimeSpan @this, TimeSpan other)
         {
             return @this > other ? @this : other;
         }
