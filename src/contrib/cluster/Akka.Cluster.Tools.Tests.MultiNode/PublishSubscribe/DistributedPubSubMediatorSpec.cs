@@ -747,7 +747,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                 RunOn(() =>
                 {
-                    TestConductor.Exit(_third, 0).Wait();
+                    // added timeout in order to avoid locking up specs
+                    TestConductor.Exit(_third, 0).Wait(TimeSpan.FromSeconds(10));
                 }, _first);
                 EnterBarrier("third-shutdown");
 
