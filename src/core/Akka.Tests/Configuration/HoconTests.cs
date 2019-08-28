@@ -1114,8 +1114,10 @@ ip = ""::1""
             var configWithFallback = config1.WithFallback(config2);
 
             var configToString = configWithFallback.ToString(true);
-            Assert.Contains("keyA: valueA", configToString);
-            Assert.Contains("keyB: valueB", configToString);
+            Assert.Contains("keyA", configToString);
+            Assert.Contains("keyB", configToString);
+            Assert.Contains("valueA", configToString);
+            Assert.Contains("valueB", configToString);
         }
     }
 }
