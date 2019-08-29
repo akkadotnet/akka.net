@@ -41,6 +41,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
+                akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
             ").WithFallback(DistributedPubSub.DefaultConfig());
         }
     }
@@ -747,8 +748,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                 RunOn(() =>
                 {
-                    // added timeout in order to avoid locking up specs
-                    TestConductor.Exit(_third, 0).Wait(TimeSpan.FromSeconds(10));
+                    TestConductor.Exit(_third, 0).Wait();
                 }, _first);
                 EnterBarrier("third-shutdown");
 
