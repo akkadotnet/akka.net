@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Runtime.CompilerServices;
 using Akka.Annotations;
 using Akka.Streams.Implementation;
 
@@ -67,5 +68,47 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>TBD</returns>
         IGraph<TShape, TMaterialized> Async();
+    }
+
+    /// <summary>
+    /// Allows creating additional API on top of an existing Graph by extending from this class and
+    /// accessing the delegate
+    /// </summary>
+    /// <typeparam name="TShape"></typeparam>
+    /// <typeparam name="TMat"></typeparam>
+    public abstract class GraphDelegate<TShape, TMat> : IGraph<TShape, TMat>
+        where TShape : Shape
+    {
+        protected readonly IGraph<TShape, TMat> Inner;
+
+        protected GraphDelegate(IGraph<TShape, TMat> inner)
+        {
+            Inner = inner;
+        }
+
+        public TShape Shape
+        {
+            [MethodImpl((MethodImplOptions.AggressiveInlining))]
+            get => Inner.Shape;
+        }
+
+        public IModule Module
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Inner.Module;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IGraph<TShape, TMat> WithAttributes(Attributes attributes) => 
+            Inner.WithAttributes(attributes);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IGraph<TShape, TMat> AddAttributes(Attributes attributes) => Inner.AddAttributes(attributes);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IGraph<TShape, TMat> Named(string name) => Inner.Named(name);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IGraph<TShape, TMat> Async() => Inner.Async();
     }
 }
