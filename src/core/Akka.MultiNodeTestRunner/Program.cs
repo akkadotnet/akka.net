@@ -32,6 +32,8 @@ using System.Runtime.Loader;
 
 namespace Akka.MultiNodeTestRunner
 {
+    using Shared.AzureDevOps;
+
     /// <summary>
     /// Entry point for the MultiNodeTestRunner
     /// </summary>
@@ -123,9 +125,14 @@ namespace Akka.MultiNodeTestRunner
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
                 throw new ArgumentException("Invalid argument provided for -Dteamcity");
 
-            SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
-                Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) })) : // mutes ConsoleMessageSinkActor
-                Props.Create<SinkCoordinator>(), "sinkCoordinator");
+            //SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
+            //    Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) })) : // mutes ConsoleMessageSinkActor
+            //    Props.Create<SinkCoordinator>(), "sinkCoordinator");
+
+            SinkCoordinator = TestRunSystem.ActorOf(
+                Props.Create(() => new SinkCoordinator(new[] { new TrxMessageSink(suiteName) })),
+                "sinkCoordinator"
+            );
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
