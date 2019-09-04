@@ -35,3 +35,9 @@ Next, you need to plan out your test scenario for your application. Here's a sim
 2. Restart the first seed node ("Seed1") process; and
 3. Verify that the restarted "Seed1" node is able to rejoin the same cluster as "Seed2."
 
+So this sounds like a rather complicated procedure, but in actuality the MNTR makes it easy for us to test scenarios just like these.
+
+### Step 1 - Create a Test Configuration
+The first step in creating an effective multi-node test is to define the configuration class for this test - this is going to tell the MNTR how many nodes there will need to be, how each node should be configured, and what features should be enabled for this unit test.
+
+[!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=MultiNodeSpecConfig)]
