@@ -17,7 +17,7 @@ DOTNET_VERSION=2.1.500
 DOTNET_INSTALLER_URL=https://raw.githubusercontent.com/dotnet/cli/v$DOTNET_VERSION/scripts/obtain/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
-INCREMENTALIST_VERSION=0.1.4
+INCREMENTALIST_VERSION=0.1.6
 
 # Define default arguments.
 TARGET="Default"

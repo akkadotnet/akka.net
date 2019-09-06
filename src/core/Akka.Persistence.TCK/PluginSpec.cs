@@ -34,6 +34,11 @@ namespace Akka.Persistence.TCK
                 : config.WithFallback(Persistence.DefaultConfig());
         }
 
+        /// <summary>
+        /// When enabled, allows serialization specs to run.
+        /// </summary>
+        protected virtual bool SupportsSerialization { get; } = false;
+
         public PersistenceExtension Extension { get; }
         public string Pid { get; }
         public string WriterGuid { get; }

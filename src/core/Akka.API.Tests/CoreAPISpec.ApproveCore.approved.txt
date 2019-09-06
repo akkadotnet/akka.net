@@ -6,6 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
@@ -989,6 +990,8 @@ namespace Akka.Actor
         Akka.Actor.LocalActorRef Guardian { get; }
         Akka.Actor.IInternalActorRef RootGuardian { get; }
         Akka.Actor.ActorPath RootPath { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        Akka.Serialization.Information SerializationInformation { get; }
         Akka.Actor.Settings Settings { get; }
         Akka.Actor.LocalActorRef SystemGuardian { get; }
         Akka.Actor.IInternalActorRef TempContainer { get; }
@@ -1274,6 +1277,7 @@ namespace Akka.Actor
         public Akka.Event.ILoggingAdapter Log { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
+        public Akka.Serialization.Information SerializationInformation { get; }
         public Akka.Actor.Settings Settings { get; }
         public Akka.Actor.LocalActorRef SystemGuardian { get; }
         public Akka.Actor.IInternalActorRef TempContainer { get; }
@@ -4545,6 +4549,16 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class Information : System.IEquatable<Akka.Serialization.Information>
+    {
+        public Information(Akka.Actor.Address address, Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Address Address { get; }
+        public Akka.Actor.ActorSystem System { get; }
+        public bool Equals(Akka.Serialization.Information other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
     public class NewtonSoftJsonSerializer : Akka.Serialization.Serializer
     {
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
@@ -4576,7 +4590,7 @@ namespace Akka.Serialization
     public class Serialization
     {
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
-        public Akka.Actor.ActorSystem System { get; }
+        public Akka.Actor.ExtendedActorSystem System { get; }
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
         [System.ObsoleteAttribute("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
@@ -4585,8 +4599,12 @@ namespace Akka.Serialization
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
+        public static Akka.Serialization.Information GetCurrentTransportInformation() { }
+        public byte[] Serialize(object o) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
-        public static T SerializeWithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
+        [System.ObsoleteAttribute("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
+        public static T WithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
+        public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
     }
     public abstract class Serializer
     {

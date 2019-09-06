@@ -12,8 +12,9 @@
     <XunitVersion>2.3.1</XunitVersion>
     <TestSdkVersion>15.9.0</TestSdkVersion>
     <HyperionVersion>0.9.8</HyperionVersion>
-    <NBenchVersion>1.2.2</NBenchVersion>
     <NewtonsoftJsonVersion>9.0.1</NewtonsoftJsonVersion>
+    <NBenchVersion>1.2.2</NBenchVersion>
+    <ProtobufVersion>3.9.1</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
@@ -26,11 +27,11 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies.</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19351-01" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
