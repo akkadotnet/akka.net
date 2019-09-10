@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\..\src\common.props" />
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net461</TargetFramework>
+    <AssemblyTitle>Akka.Docs.Tests</AssemblyTitle>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

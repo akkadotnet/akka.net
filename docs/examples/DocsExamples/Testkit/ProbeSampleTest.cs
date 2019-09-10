@@ -41,8 +41,8 @@ namespace DocsExamples.Testkit
             var worker = CreateTestProbe("worker");
             var aggregator = CreateTestProbe("aggregator");
 
-            Assert.True(worker.Ref.Path.Name.StartsWith("worker"));
-            Assert.True(aggregator.Ref.Path.Name.StartsWith("aggregator"));
+            Assert.StartsWith("worker", worker.Ref.Path.Name);
+            Assert.StartsWith("aggregator", aggregator.Ref.Path.Name);
         }
 
         [Fact]
