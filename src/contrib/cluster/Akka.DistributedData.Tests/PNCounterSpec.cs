@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Cluster;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -162,17 +163,17 @@ namespace Akka.DistributedData.Tests
             var c2 = c1.Increment(_address1);
             var c3 = c2.Decrement(_address2);
 
-            Assert.Equal(true, c2.NeedPruningFrom(_address1));
-            Assert.Equal(false, c2.NeedPruningFrom(_address2));
-            Assert.Equal(true, c3.NeedPruningFrom(_address1));
-            Assert.Equal(true, c3.NeedPruningFrom(_address2));
+            c2.NeedPruningFrom(_address1).Should().BeTrue();
+            c2.NeedPruningFrom(_address2).Should().BeFalse();
+            c3.NeedPruningFrom(_address1).Should().BeTrue();
+            c3.NeedPruningFrom(_address2).Should().BeTrue();
 
             var c4 = c3.Prune(_address1, _address2);
-            Assert.Equal(true, c4.NeedPruningFrom(_address2));
-            Assert.Equal(false, c4.NeedPruningFrom(_address1));
+            c4.NeedPruningFrom(_address2).Should().BeTrue();
+            c4.NeedPruningFrom(_address1).Should().BeFalse();
 
             var c5 = (c4.Increment(_address1)).PruningCleanup(_address1);
-            Assert.Equal(false, c5.NeedPruningFrom(_address1));
+            c5.NeedPruningFrom(_address1).Should().BeFalse();
         }
     }
 }

@@ -5,12 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-<<<<<<< HEAD
-=======
-using System;
-using System.IO;
-using System.Runtime.Serialization;
->>>>>>> 338c5c898d0ff7de7f609180372c9fbe7a200bd7
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
@@ -28,7 +22,6 @@ namespace Akka.DistributedData.Serialization
 {
     public sealed class ReplicatedDataSerializer : SerializerWithStringManifest, IWithSerializationSupport
     {
-<<<<<<< HEAD
         public struct Marker<T> { }
 
         private static readonly Type MarkerType = typeof(Marker<>);
@@ -96,11 +89,6 @@ namespace Akka.DistributedData.Serialization
         private readonly byte[] _emptyArray = new byte[0];
 
         public ReplicatedDataSerializer(ExtendedActorSystem system, Config config) : base(system)
-=======
-        private readonly Hyperion.Serializer _serializer;
-
-        public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
->>>>>>> 338c5c898d0ff7de7f609180372c9fbe7a200bd7
         {
             _mappings = new TypeMap(config.GetConfig("mappings"));
         }
@@ -970,7 +958,6 @@ namespace Akka.DistributedData.Serialization
         private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal>.DeltaGroup o) where TVal : IReplicatedData<TVal> => ToProto(o.Operations).ToByteArray();
         private Proto.Msg.ORMapDeltaGroup ToProto<TKey, TVal>(params ORDictionary<TKey, TVal>.IDeltaOperation[] ops) where TVal : IReplicatedData<TVal>
         {
-<<<<<<< HEAD
             var proto = new Proto.Msg.ORMapDeltaGroup
             {
                 KeyTag = _mappings[typeof(TKey)],
@@ -1025,27 +1012,6 @@ namespace Akka.DistributedData.Serialization
                     default: throw new ArgumentException($"{op} should not be nested");
                 }
                 proto.Entries.Add(entry);
-=======
-            try
-            {
-                using (var ms = new MemoryStream(bytes))
-                {
-                    var res = _serializer.Deserialize(ms);
-                    return res;
-                }
-            }
-            catch (TypeLoadException e)
-            {
-                throw new SerializationException(e.Message, e);
-            }
-            catch (NotSupportedException e)
-            {
-                throw new SerializationException(e.Message, e);
-            }
-            catch (ArgumentException e)
-            {
-                throw new SerializationException(e.Message, e);
->>>>>>> 338c5c898d0ff7de7f609180372c9fbe7a200bd7
             }
 
             return proto;

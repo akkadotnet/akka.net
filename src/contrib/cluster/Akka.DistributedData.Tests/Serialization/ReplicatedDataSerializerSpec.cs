@@ -19,12 +19,49 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.Serialization
 {
+    public sealed class TestMessage : IEquatable<TestMessage>
+    {
+        public int X { get; }
+        public int Y { get; }
+
+        public TestMessage(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public bool Equals(TestMessage other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return X == other.X && Y == other.Y;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is TestMessage other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (X * 397) ^ Y;
+            }
+        }
+    }
+
     [Collection("DistributedDataSpec")]
     public class ReplicatedDataSerializerSpec : TestKit.Xunit2.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {
                 provider=cluster
+                serialization-settings {
+                    akka-replicated-data.mappings {
+                        ""Akka.DistributedData.Tests.Serialization.TestMessage, Akka.DistributedData.Tests"" = 100
+                    }
+                }
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
@@ -39,7 +76,7 @@ namespace Akka.DistributedData.Tests.Serialization
             _address3 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 3);
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_GSet()
         {
             CheckSerialization(GSet<string>.Empty);
@@ -55,7 +92,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(GSet.Create(_address1, _address2, _address3), GSet.Create(_address3, _address2, _address1));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORSet()
         {
             CheckSerialization(ORSet<string>.Empty);
@@ -78,7 +115,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(s3.Merge(s4), s4.Merge(s3));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORSet_delta()
         {
             CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Delta);
@@ -88,21 +125,21 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Clear(_address2).Delta);
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_Flag()
         {
             CheckSerialization(Flag.False);
             CheckSerialization(Flag.False.SwitchOn());
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_LWWRegister()
         {
             CheckSerialization(new LWWRegister<string>(_address1, "value1"));
             CheckSerialization(new LWWRegister<string>(_address2, "value2").WithValue(_address2, "value3"));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_GCounter()
         {
             CheckSerialization(GCounter.Empty);
@@ -117,7 +154,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 GCounter.Empty.Increment(_address3, 5).Increment(_address1, 2));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_PNCounter()
         {
             CheckSerialization(PNCounter.Empty);
@@ -137,7 +174,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 PNCounter.Empty.Increment(_address3, 5).Increment(_address1, 2).Decrement(_address1, 1));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORDictionary()
         {
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty);
@@ -145,7 +182,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")).SetItem(_address2, "b", GSet.Create("B")));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORDictionary_delta()
         {
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty
@@ -176,7 +213,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 .Delta);
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_LWWDictionary()
         {
             CheckSerialization(LWWDictionary<string, string>.Empty);
@@ -184,7 +221,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(LWWDictionary<string, object>.Empty.SetItem(_address1, "a", "value1").SetItem(_address2, "b", 17));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_PNCounterDictionary()
         {
             CheckSerialization(PNCounterDictionary<string>.Empty);
@@ -195,7 +232,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 .Increment(_address2, "b", 5));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORMultiDictionary()
         {
             CheckSerialization(ORMultiValueDictionary<string, string>.Empty);
@@ -210,13 +247,13 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(m1.Merge(m2), m2.Merge(m1));
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_DeletedData()
         {
             CheckSerialization(DeletedData.Instance);
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_VersionVector()
         {
             CheckSerialization(VersionVector.Empty);
@@ -226,6 +263,17 @@ namespace Akka.DistributedData.Tests.Serialization
             var v1 = VersionVector.Empty.Increment(_address1).Increment(_address1);
             var v2 = VersionVector.Empty.Increment(_address2);
             CheckSameContent(v1.Merge(v2), v2.Merge(v1));
+        }
+
+        [Fact]
+        public void ReplicatedDataSerializer_should_serialize_generic_data()
+        {
+            var customMessage = new TestMessage(15, 12);
+            
+            CheckSerialization(GSet<TestMessage>.Empty.Add(customMessage));
+            CheckSerialization(ORSet<TestMessage>.Empty.Add(_address1, customMessage));
+            CheckSerialization(LWWDictionary<string, TestMessage>.Empty.SetItem(_address1, "foo", customMessage));
+            CheckSerialization(ORMultiValueDictionary<string, TestMessage>.Empty.AddItem(_address2, "foo", customMessage));
         }
 
         private void CheckSerialization<T>(T expected)
