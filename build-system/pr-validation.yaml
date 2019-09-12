@@ -42,7 +42,7 @@ jobs:
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: incrementalistOutput
+          artifactName: 'incrementalistOutput-$(Build.BuildId)'
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
