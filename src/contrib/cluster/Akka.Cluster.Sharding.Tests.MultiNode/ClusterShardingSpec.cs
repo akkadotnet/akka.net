@@ -77,7 +77,7 @@ namespace Akka.Cluster.Sharding.Tests
                             number-of-entities = 1
                         }}
                         least-shard-allocation-strategy {{
-                            rebalance-threshold = 2
+                            rebalance-threshold = 1
                             max-simultaneous-rebalance = 1
                         }}
                         distributed-data.durable.lmdb {{
@@ -468,7 +468,8 @@ namespace Akka.Cluster.Sharding.Tests
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
-                    0.1).WithDeploy(Deploy.Local);
+                    0.1,
+                    -1).WithDeploy(Deploy.Local);
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,

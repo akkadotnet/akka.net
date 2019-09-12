@@ -1,5 +1,172 @@
-#### 1.3.10 August 22 2018 ####
-Placeholder for nightlies
+#### 1.4.0-beta2 July 29 2019 ####
+Placeholder for nightlies.
+
+#### 1.3.14 July 29 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+You know what? We're going to stop promising that _this_ is the last 1.3.x release, because even though we've said that twice... We now have _another_ 1.3.x release. 
+
+1.3.14 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far. These include:
+
+* Akka.Cluster.Sharding: default "persistent" mode has been stabilized and errors that users have ran into during `ShardCoordinator` recovery, such as [Exception in PersistentShardCoordinator ReceiveRecover](https://github.com/akkadotnet/akka.net/issues/3414);
+* [Akka.Remote: no longer disassociates when serialization errors are thrown](https://github.com/akkadotnet/akka.net/pull/3782) in the remoting pipeline - the connection will now stay open;
+* [Akka.Cluster.Tools: mission-critical `ClusterClient` and `ClusterClientReceptionist` fixes](https://github.com/akkadotnet/akka.net/pull/3866);
+* [SourceLink debugging support for Akka.NET](https://github.com/akkadotnet/akka.net/pull/3848); and
+* [Akka.Persistence: Allow AtLeastOnceDelivery parameters to be set from deriving classes](https://github.com/akkadotnet/akka.net/pull/3810); 
+* [Akka.Persistence.Sql: BatchingSqlJournal now preserves Sender in PersistCallback](https://github.com/akkadotnet/akka.net/pull/3779); and
+* [Akka: bugfix - coordinated shutdown timesout when exit-clr = on](https://github.com/akkadotnet/akka.net/issues/3815).
+
+To [see the full set of changes for Akka.NET v1.3.14, click here](https://github.com/akkadotnet/akka.net/pull/3869).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 2893 | 828 | Aaron Stannard |
+| 3 | 1706 | 347 | zbynek001 |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3 | 3 | Abi |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | jdsartori |
+
+#### 1.4.0-beta1 July 17 2019 ####
+**First pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4 has a ways to go before it's fully ready for market, but this is the first publicly available release on NuGet and it contains some massive changes.
+
+* Akka.Cluster.Sharding's default "persistent" mode has been stabilized and errors that users have ran into during `ShardCoordinator` recovery, such as [Exception in PersistentShardCoordinator ReceiveRecover](https://github.com/akkadotnet/akka.net/issues/3414)
+* StreamRefs have been added to Akka.Streams, which allows streams to run across process boundaries and over Akka.Remote / Akka.Cluster.
+* Akka.NET now targets .NET Standard 2.0, which means many annoying polyfills and other hacks we needed to add in order to support .NET Core 1.1 are now gone and replaced with standard APIs.
+* Lots of small bug fixes and API changes have been added to Akka core and other libraries.
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 39 | 3479 | 1731 | Aaron Stannard |
+| 6 | 5255 | 531 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 3 | 3 | Abi |
+| 1 | 2 | 3 | Onur Gumus |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | jdsartori |
+| 1 | 1 | 1 | Wessel Kranenborg |
+
+#### 1.3.13 April 30 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+Well, we thought 1.3.12 would be the final release for Akka.NET v1.3.* - but then we found some nasty bugs prior to merging any of the v1.4 features into our development branch. But finally, for real this time - this is really the last v1.3.13 release.
+
+This patch contains some critical bug fixes and improvements to Akka.NET:
+* [Akka.Persistence: OnPersistRejected now logs an error with the complete stacktrace](https://github.com/akkadotnet/akka.net/pull/3763)
+* [Akka.Persistence.Sql: Ensure that BatchingSqlJournal will propagate sql connection opening failure](https://github.com/akkadotnet/akka.net/pull/3754)
+* [Akka: Add UnboundedStablePriorityMailbox](https://github.com/akkadotnet/akka.net/issues/2652)
+* [Akka.Remote and Akka.Cluster: Port exhaustion problem with Akka.Cluster](https://github.com/akkadotnet/akka.net/issues/2575)
+
+To [see the full set of changes for Akka.NET v1.3.13, click here](https://github.com/akkadotnet/akka.net/milestone/31).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 5 | 6 | Ismael Hamed |
+| 2 | 45 | 7 | Shukhrat Nekbaev |
+| 2 | 23 | 30 | Aaron Stannard |
+| 1 | 87 | 7 | Bartosz Sypytkowski |
+| 1 | 492 | 9 | AndreSteenbergen |
+| 1 | 2 | 2 | ThomasWetzel |
+| 1 | 12 | 12 | Sean Gilliam |
+
+#### 1.3.12 March 13 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+This will be the final bugfix release for Akka.NET v1.3.* - going forward we will be working on releasing Akka.NET v1.4.
+
+This patch contains many important bug fixes and improvements:
+* [Akka.Cluster.Sharding: Automatic passivation for sharding](https://github.com/akkadotnet/akka.net/pull/3718)
+* [Akka.Persistence: Optimize AtLeastOnceDelivery by not scheduling ticks when not needed](https://github.com/akkadotnet/akka.net/pull/3704)
+* [Akka.Persistence.Sql.Common: Bugfix CurrentEventsByTag does not return more than a 100 events](https://github.com/akkadotnet/akka.net/issues/3697)
+* [Akka.Persistence.Sql.Common: DeleteMessages when journal is empty causes duplicate key SQL exception](https://github.com/akkadotnet/akka.net/issues/3721)
+* [Akka.Cluster: SplitBrainResolver: don't down oldest if alone in cluster](https://github.com/akkadotnet/akka.net/pull/3690)
+* [Akka: Include manifest or class in missing serializer failure if possible](https://github.com/akkadotnet/akka.net/pull/3701)
+* [Akka: Memory leak when disposing actor system with non default ActorRefProvider](https://github.com/akkadotnet/akka.net/issues/2640)
+
+To [see the full set of changes for Akka.NET v1.3.12, click here](https://github.com/akkadotnet/akka.net/milestone/30).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 1487 | 357 | Ismael Hamed |
+| 7 | 126 | 120 | jdsartori |
+| 3 | 198 | 4 | JSartori |
+| 3 | 155 | 22 | Aaron Stannard |
+| 2 | 11 | 2 | Peter Lin |
+| 1 | 8 | 4 | Raimund Hirz |
+| 1 | 7 | 0 | Warren Falk |
+| 1 | 45 | 6 | Peter Huang |
+| 1 | 14 | 13 | Bartosz Sypytkowski |
+| 1 | 11 | 1 | Greg Shackles |
+| 1 | 10 | 10 | Jill D. Headen |
+| 1 | 1 | 1 | Isaac Z |
+
+#### 1.3.11 December 17 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.11 is a bugfix patch primarily aimed at solving the following issue: [DotNetty Remote Transport Issues with .NET Core 2.1](https://github.com/akkadotnet/akka.net/issues/3506).
+
+.NET Core 2.1 exposed some issues with the DotNetty connection methods in DotNetty v0.4.8 that have since been fixed in subsequent releases. In Akka.NET v1.3.11 we've resolved this issue by upgrading to DotNetty v0.6.0.
+
+In addition to the above, we've introduced some additional fixes and changes in Akka.NET v1.3.11:
+
+* [Akka.FSharp: Akka.Fsharp spawning an actor results in Exception](https://github.com/akkadotnet/akka.net/issues/3402)
+* [Akka.Remote: tcp-reuse-addr = off-for-windows prevents actorsystem from starting](https://github.com/akkadotnet/akka.net/issues/3293)
+* [Akka.Remote: tcp socket address reuse - default configuration](https://github.com/akkadotnet/akka.net/issues/2477)
+* [Akka.Cluster.Tools: 
+Actor still receiving messages from mediator after termination](https://github.com/akkadotnet/akka.net/issues/3658)
+* [Akka.Persistence: Provide minSequenceNr for snapshot deletion](https://github.com/akkadotnet/akka.net/pull/3641)
+
+To [see the full set of changes for Akka.NET 1.3.11, click here](https://github.com/akkadotnet/akka.net/milestone/29)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 123 | 71 | Aaron Stannard |
+| 3 | 96 | 10 | Ismael Hamed |
+| 2 | 4 | 3 | Oleksandr Kobylianskyi |
+| 1 | 5 | 1 | Ruben Mamo |
+| 1 | 23 | 6 | Chris Hoare |
+
+#### 1.3.10 November 1 2018 ####
+**Maintenance Release for Akka.NET 1.3**
+
+Akka.NET v1.3.10 consists mostly of bug fixes and patches to various parts of Akka.NET:
+
+* [Akka.Remote: add support for using installed certificates with thumbprints](https://github.com/akkadotnet/akka.net/issues/3632)
+* [Akka.IO: fix TCP sockets leak](https://github.com/akkadotnet/akka.net/issues/3630)
+* [Akka.DI.Core: Check if Dependency Resolver is configured to avoid a `NullReferenceException`](https://github.com/akkadotnet/akka.net/pull/3619)
+* [Akka.Streams: Interop between Akka.Streams and IObservable](https://github.com/akkadotnet/akka.net/pull/3112)
+* [HOCON: Parse size in bytes format. Parse microseconds and nanoseconds.](https://github.com/akkadotnet/akka.net/pull/3600)
+* [Akka.Cluster: Don't automatically down quarantined nodes](https://github.com/akkadotnet/akka.net/pull/3605)
+
+To [see the full set of changes for Akka.NET 1.3.10, click here](https://github.com/akkadotnet/akka.net/milestone/28).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 887 | 220 | Bartosz Sypytkowski |
+| 5 | 67 | 174 | Aaron Stannard |
+| 4 | 15 | 7 | Caio Proiete |
+| 3 | 7 | 4 | Maciek Misztal |
+| 2 | 60 | 8 | Marcus Weaver |
+| 2 | 57 | 12 | moerwald |
+| 2 | 278 | 16 | Peter Shrosbree |
+| 2 | 2 | 2 | Fábio Beirão |
+| 1 | 71 | 71 | Sean Gilliam |
+| 1 | 6 | 0 | basbossinkdivverence |
+| 1 | 24 | 5 | Ismael Hamed |
+| 1 | 193 | 8 | to11mtm |
+| 1 | 17 | 33 | zbynek001 |
+| 1 | 12 | 3 | Oleksandr Bogomaz |
+| 1 | 1 | 1 | MelnikovIG |
+| 1 | 1 | 1 | Alex Villarreal |
+| 1 | 1 | 0 | Yongjie Ma |
 
 #### 1.3.9 August 22 2018 ####
 **Maintenance Release for Akka.NET 1.3**
@@ -189,7 +356,7 @@ You can see [the full set of changes for Akka.NET v1.3.6 here](hhttps://github.c
 | 1 | 64 | 6 | Robert |
 | 1 | 23 | 29 | nathvi |
 | 1 | 2 | 1 | Sebastien Bacquet |
-| 1 | 1 | 2 | OndÅej PiÃ¡lek |
+| 1 | 1 | 2 | OndÅ?ej PiÃ¡lek |
 | 1 | 1 | 1 | Steffen Skov |
 | 1 | 1 | 1 | Sean Gilliam |
 | 1 | 1 | 1 | Matthew Herman |
@@ -336,7 +503,7 @@ You can [see the full changeset for Akka.NET 1.3.3 here](https://github.com/akka
 | 1 | 4 | 5 | derrickcrowne |
 | 1 | 3 | 2 | Mikhail Moussikhine |
 | 1 | 20 | 0 | Arturo Sevilla |
-| 1 | 2 | 0 | Paweł Bańka |
+| 1 | 2 | 0 | Pawel Banka |
 | 1 | 17 | 11 | planerist |
 | 1 | 1 | 4 | lesscode |
 
@@ -410,7 +577,7 @@ Akka.Remote's throughput has been significantly increased.
 | 4 | 1644 | 2210 | Arkatufus |
 | 3 | 32 | 6 | Lukas Rieger |
 | 3 | 153 | 17 | Quartus Dev |
-| 2 | 8 | 11 | Paweł Bańka |
+| 2 | 8 | 11 | Pawel Banka |
 | 2 | 4866 | 12678 | olegz |
 | 2 | 1148 | 176 | Ismael Hamed |
 | 1 | 62 | 5 | Mikhail Kantarovskiy |
@@ -924,7 +1091,7 @@ A special thanks to all of our contributors for making this happen!
 | 1 | 2 | 2 | easuter |
 | 1 | 2 | 1 | Danthar |
 | 1 | 182 | 0 | derwasp |
-| 1 | 179 | 0 | Onat Yiğit Mercan |
+| 1 | 179 | 0 | Onat Yigit Mercan |
 
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**

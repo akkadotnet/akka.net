@@ -42,7 +42,9 @@ namespace Akka.TestKit
               #  }
               #}
             }
-          }");
+          }
+          # use random ports to avoid race conditions with binding contention
+          akka.remote.dot-netty.tcp.port = 0");
 
         private static int _systemNumber = 0;
 
@@ -131,9 +133,9 @@ namespace Akka.TestKit
         }
 
 
-        protected void Intercept<T>(Action actionThatThrows) where T : Exception
+        protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            Assert.Throws<T>(() => actionThatThrows());
+            return Assert.Throws<T>(() => actionThatThrows());
         }
 
         protected void Intercept(Action actionThatThrows)

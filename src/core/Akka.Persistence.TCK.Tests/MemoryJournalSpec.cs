@@ -20,5 +20,7 @@ namespace Akka.Persistence.TCK.Tests
         }
 
         protected override bool SupportsRejectingNonSerializableObjects { get { return false; } }
+
+        protected override bool SupportsSerialization => true;
     }
 }

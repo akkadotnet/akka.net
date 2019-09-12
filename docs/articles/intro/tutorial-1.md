@@ -215,6 +215,7 @@ After running the snippet, we see the following output on the console:
 supervised actor started
 supervised actor fails now
 supervised actor stopped
+supervised actor started
 [ERROR][05.06.2017 13:34:50][Thread 0003][akka://testSystem/user/supervising-actor/supervised-actor] I failed!
 Cause: System.Exception: I failed!
    at Tutorials.Tutorial1.SupervisedActor.OnReceive(Object message)

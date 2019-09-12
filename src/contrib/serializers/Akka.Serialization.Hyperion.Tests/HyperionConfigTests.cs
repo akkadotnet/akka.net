@@ -30,8 +30,8 @@ namespace Akka.Serialization.Hyperion.Tests
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.Equal(true, serializer.Settings.VersionTolerance);
-                Assert.Equal(true, serializer.Settings.PreserveObjectReferences);
+                Assert.True(serializer.Settings.VersionTolerance);
+                Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
             }
         }
@@ -54,8 +54,8 @@ namespace Akka.Serialization.Hyperion.Tests
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.Equal(false, serializer.Settings.VersionTolerance);
-                Assert.Equal(false, serializer.Settings.PreserveObjectReferences);
+                Assert.False(serializer.Settings.VersionTolerance);
+                Assert.False(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
             }
         }
@@ -77,8 +77,8 @@ namespace Akka.Serialization.Hyperion.Tests
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.Equal(true, serializer.Settings.VersionTolerance);
-                Assert.Equal(true, serializer.Settings.PreserveObjectReferences);
+                Assert.True(serializer.Settings.VersionTolerance);
+                Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal(typeof(DummyTypesProviderWithDefaultCtor), serializer.Settings.KnownTypesProvider);
             }
         }
@@ -100,8 +100,8 @@ namespace Akka.Serialization.Hyperion.Tests
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
-                Assert.Equal(true, serializer.Settings.VersionTolerance);
-                Assert.Equal(true, serializer.Settings.PreserveObjectReferences);
+                Assert.True(serializer.Settings.VersionTolerance);
+                Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal(typeof(DummyTypesProvider), serializer.Settings.KnownTypesProvider);
             }
         }

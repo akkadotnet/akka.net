@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Serialization;
 
@@ -73,7 +74,7 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             if (_fromBinaryMap.TryGetValue(manifest, out var mapper))
                 return mapper(bytes);
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }
 
         /// <summary>

@@ -29,7 +29,7 @@ module Serialization =
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinarySerializer()
-        override __.Identifier = 9
+        override __.Identifier = 99
         override __.IncludeManifest = true        
         override __.ToBinary(o) = serializeToBinary fsp o        
         override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
@@ -374,14 +374,15 @@ module Linq =
 
     let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
             match f with
-            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
+            | Lambda(_, (Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
             | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
                 Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
             | _ -> failwith "Doesn't match"
  
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
-        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
+        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = 
+            toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
         
 [<RequireQualifiedAccess>]
 module Configuration = 

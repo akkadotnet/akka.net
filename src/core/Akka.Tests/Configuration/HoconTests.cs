@@ -120,7 +120,7 @@ a {
             var config = ConfigurationFactory.ParseString(hocon);
             var subConfig = config.GetConfig("a");
             Assert.Equal(1, subConfig.GetInt("b.c"));
-            Assert.Equal(true, subConfig.GetBoolean("b.d"));
+            Assert.True(subConfig.GetBoolean("b.d"));
         }
 
 
@@ -153,9 +153,9 @@ root {
             var config = ConfigurationFactory.ParseString(hocon);
             Assert.Equal("1", config.GetString("root.int"));
             Assert.Equal("1.23", config.GetString("root.double"));
-            Assert.Equal(true, config.GetBoolean("root.bool"));
-            Assert.Equal(true, config.GetBoolean("root.object.hasContent"));
-            Assert.Equal(null, config.GetString("root.null"));
+            Assert.True(config.GetBoolean("root.bool"));
+            Assert.True(config.GetBoolean("root.object.hasContent"));
+            Assert.Null(config.GetString("root.null"));
             Assert.Equal("foo", config.GetString("root.quoted-string"));
             Assert.Equal("bar", config.GetString("root.unquoted-string"));
             Assert.Equal("foo bar", config.GetString("root.concat-string"));
@@ -188,9 +188,9 @@ root {
             var config = ConfigurationFactory.ParseString(hocon);
             Assert.Equal("1", config.GetString("root.int"));
             Assert.Equal("1.23", config.GetString("root.double"));
-            Assert.Equal(true, config.GetBoolean("root.bool"));
-            Assert.Equal(true, config.GetBoolean("root.object.hasContent"));
-            Assert.Equal(null, config.GetString("root.null"));
+            Assert.True(config.GetBoolean("root.bool"));
+            Assert.True(config.GetBoolean("root.object.hasContent"));
+            Assert.Null(config.GetString("root.null"));
             Assert.Equal("foo", config.GetString("root.string"));
             Assert.True(new[] {1, 2, 3}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
         }
@@ -222,7 +222,7 @@ a = null
 a.c = 3
 ";
             var config = ConfigurationFactory.ParseString(hocon);
-            Assert.Equal(null, config.GetString("a.b"));
+            Assert.Null(config.GetString("a.b"));
             Assert.Equal("3", config.GetString("a.c"));
         }
 
@@ -359,14 +359,14 @@ a.b.e.f=3
         public void Can_assign_boolean_to_field()
         {
             var hocon = @"a=true";
-            Assert.Equal(true, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+            Assert.True(ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
             hocon = @"a=false";
-            Assert.Equal(false, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+            Assert.False(ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
 
             hocon = @"a=on";
-            Assert.Equal(true, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+            Assert.True(ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
             hocon = @"a=off";
-            Assert.Equal(false, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+            Assert.False(ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
         }
 
         [Fact]
@@ -746,7 +746,7 @@ test.value = 456
         public void Can_assign_null_string_to_field()
         {
             var hocon = @"a=null";
-            Assert.Equal(null, ConfigurationFactory.ParseString(hocon).GetString("a"));
+            Assert.Null(ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
 
         [Fact(Skip = "we currently do not make any distinction between quoted and unquoted strings once parsed")]
