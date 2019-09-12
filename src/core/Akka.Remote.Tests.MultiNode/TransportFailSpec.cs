@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests.MultiNode
 
         public TransportFailSpec() : this(new TransportFailSpecConfig()) { }
 
-        public TransportFailSpec(TransportFailSpecConfig config) : base(config, typeof(TransportFailSpecConfig))
+        private TransportFailSpec(TransportFailSpecConfig config) : base(config, typeof(TransportFailSpecConfig))
         {
             _config = config;
         }
