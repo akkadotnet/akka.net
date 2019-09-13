@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Util;
 
@@ -38,6 +39,11 @@ namespace Akka.Remote.Tests.MultiNode
         /// </summary>
         public class TestFailureDetector : FailureDetector
         {
+            public TestFailureDetector(Config config, EventStream eventStream)
+            {
+
+            }
+
             private volatile bool _active = false;
 
             public override bool IsAvailable => _active ? FdAvailable.Value : true;
