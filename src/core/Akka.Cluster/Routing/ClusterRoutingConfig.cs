@@ -688,6 +688,7 @@ namespace Akka.Cluster.Routing
                 typeof(ClusterEvent.IMemberEvent),
                 typeof(ClusterEvent.IReachabilityEvent)
             });
+            AddRoutees();
         }
 
         /// <summary>
