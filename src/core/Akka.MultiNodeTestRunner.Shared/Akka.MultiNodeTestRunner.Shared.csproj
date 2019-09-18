@@ -4,7 +4,6 @@
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared</AssemblyTitle>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
 

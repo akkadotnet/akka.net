@@ -5,8 +5,6 @@
     <Description>Remote actor support for Akka.NET</Description>
     <PackageTags>$(AkkaPackageTags);network</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>

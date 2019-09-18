@@ -6,7 +6,6 @@
     <Description>Distributed publish/subscribe, client and singleton support for Akka.NET cluster</Description>
     <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
 

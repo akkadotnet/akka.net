@@ -6,7 +6,6 @@
     <Description>F# API for persistence actors in Akka.NET</Description>
     <PackageTags>akka;actors;actor model;Akka;concurrency;F#;Fsharp;persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
 

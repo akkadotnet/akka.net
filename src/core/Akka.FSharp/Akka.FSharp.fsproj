@@ -7,7 +7,6 @@
     <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn></NoWarn>
-    <TargetFramework>netstandard2.0</TargetFramework>    
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>    
   </PropertyGroup>
 

@@ -6,7 +6,6 @@
     <Description>Testkit for Reactive stream support for Akka.NET</Description>
     <PackageTags>$(AkkaPackageTags);reactive;stream;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
   </PropertyGroup>
 
