@@ -164,4 +164,93 @@ Notice that the first `RunOn` call takes an argument of `_config.Seed2`, whereas
 Given that each node runs inside its own process, it's likely that both of these blocks of code will be executing simultaneously.
 
 #### Synchronizing Test Progression on Different Nodes
-In order to make multi-node tests effective, we must have some means of synchronizing all of the nodes in each test - such that they
+In order to make multi-node tests effective, we must have some means of synchronizing all of the nodes in each test - such that they all reach the same assertions at the same time. This is precisely what the `EnterBarrier` method helps us do, as you can see in the code sample above.
+
+`EnterBarrier` creates a synchronization barrier between processes - no processes can advance past it until all processes have reached it. If one process fails to reach the barrier within 30 seconds (this is configurable via the [Akka.Remote.TestKit reference configuration](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote.TestKit/Internals/Reference.conf)), the test will throw an assertion error and fail.
+
+#### Terminating, Aborting, and Disconnecting Nodes
+One of the most useful features of the multi-node testkit is its ability to simulate real-world networking issues, and this can be accomplished using some of the APIs found in the Akka.Remote.TestKit.
+
+**Creating Network Partitions**
+In order to create a network partition between two or more nodes, the `TestTransport` must be enabled inside the `MultiNodeConfig` class constructor. This allows access to the `TestConductor`, which can be used to render two or more nodes unreachable:
+
+```csharp
+RunOn(() =>
+{
+    TestConductor.Blackhole(_config.First, _config.Second, 
+    	ThrottleTransportAdapter.Direction.Both).Wait();
+}, _config.First);
+EnterBarrier("blackhole-2");
+```
+
+In this example, the `TestConductor.Blackhole` method is used to create 100% packet loss between the `RoleName` "First" and "Second". Those two nodes will still be running as part of the test, but they won't be able to communicate with each other over Akka.Remote.
+
+The `Task` returned by `TestConductor.Blackhole` will complete once the Akka.Remote transport has enabled "blackhole" mode for that connection, which usually doesn't take longer than a few milliseconds.
+
+To stop blackholding these nodes, we'd need to call the `TestConductor.PassThrough` method on these same two `RoleName` instances:
+
+```csharp
+RunOn(() =>
+{
+    TestConductor.PassThrough(_config.First, _config.Second, 
+    	ThrottleTransportAdapter.Direction.Both).Wait();
+}, _config.First);
+EnterBarrier("repair-2");
+```
+
+This will allow Akka.Remote to resume normal execution over the network.
+
+
+**Killing Nodes**
+There are two ways to kill a node in a running multi-node test.
+
+The first is to call the `Shutdown` method on the `ActorSystem` of the node you wish to have exit the test. This will cause the `ActorSystem` to terminate gracefully - this simulates the planned shutdown of a node.
+
+```csharp
+// shutdown seed1System
+RunOn(() =>
+{
+    Shutdown(seed1System.Value, RemainingOrDefault);
+}, _config.Seed1);
+EnterBarrier("seed1-shutdown");
+```
+
+The other way to shutdown a node is to use the `TestConductor.Exit` command - this is intended to simulate the _unplanned_ shutdown of a node, i.e. a process crash.
+
+```csharp
+RunOn(() => {
+    TestConductor.Exit(_config.Third, 0).Wait();
+}, _config.First);
+```
+
+Once a node has exited the test, it will no longer be able to wait on `EnterBarrier` calls and the multi-node test runner will not try to collect any data from that node from that point onward.
+
+## Running Multi-Node Tests
+Once you've coded your multi-node tests and compiled them, it's now time to run them. Akka.NET ships a custom XUnit2 runner that it uses to create the simulated networks and clusters and you will need to install that via NuGet in order to run your tests:
+
+```
+PS> nuget.exe Install-Package Akka.MultiNodeTestRunner -NoVersion
+```
+
+This will install the [Akka.MultiNodeTestRunner NuGet package](https://www.nuget.org/packages/Akka.MultiNodeTestRunner) with the following directory and file structure:
+
+```
+root/akka.multinodetestrunner
+root/akka.multinodetestrunner/lib/net452/Akka.MultiNodeTestRunner.exe
+root/akka.multinodetestrunner/lib/netcoreapp1.1/Akka.MultiNodeTestRunner.dll
+```
+
+Depending on what framework you're building your application against, you'll want to pick the appropriate tool (.NET Framework or .NET Core.)
+
+Next, we have to pass in our commandline arguments to the MNTR:
+
+```
+Akka.MultiNodeTestRunner.exe [path to assembly] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]
+```
+
+We strongly recommend setting the `-Dmultinode.output-directory={dir path}` directory to some local folder you can access, as the multi-node test runner will emit:
+
+1. An output file for the entire test run of the DLL and
+2. For each individual spec, a subfolder that contains logs pertaining to the original node.
+
+If you're lost and need more examples, please explore the Akka.NET source code and take a look at some of the MNTR output produced by our CI system on any open pull request.
