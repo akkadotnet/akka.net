@@ -82,3 +82,86 @@ We're going to show you a full code sample first and walk through how it works i
 
 [!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=MultiNodeSpec)]
 
+First, take note of the default public constructor:
+
+```csharp
+public RestartNode2Spec() : this(new RestartNode2SpecConfig()) { }
+```
+
+This is an XUnit restriction - there can only be one public constructor per class, and you need to pass in your `MultiNodeConfig` to the base class constructor, which is exactly what we do in the `protected` constructor.
+
+```csharp
+protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(RestartNode2Spec))
+{
+    _config = config;
+    seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, 
+    	Sys.Settings.Config));
+    restartedSeed1System = new Lazy<ActorSystem>(
+        () => ActorSystem.Create(Sys.Name, ConfigurationFactory
+            .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
+            .WithFallback(Sys.Settings.Config)));
+}
+```
+
+We're going to hang onto a copy of our `RestartNode2SpecConfig` class in a field called `_config`, which will be helpful when we need to look up `RoleName`s later.
+
+Finally, we need to create our test method and decorate it with the `MultiNodeFact` attribute:
+
+```csharp
+[MultiNodeFact]
+public void RestartNode2Specs()
+{
+    Cluster_seed_nodes_must_be_able_to_restart_first_seed_node_and_join_other_seed_nodes();
+}
+```
+
+This method is what will be executed by the multi-node test runner.
+
+#### Addressing Nodes
+All nodes in the multi-node test runner are going to be given randomized addresses and ports - thus we can never predict those addresses at the time we design our tests. Therefore, the way we always refer to nodes is by their `RoleName`s.
+
+If we want to resolve the Akka.NET `Address` of a specific node, we can do this via the `GetAddress` method:
+
+```csharp
+private ImmutableList<Address> SeedNodes
+{
+    get
+    {
+        return ImmutableList.Create(seedNode1Address, GetAddress(_config.Seed2));
+    }
+}
+```
+
+The `GetAddress` method accepts a `RoleName` and returns the `Address` that was assigned to the node by the multi-node test runner.
+
+#### Running Code on Specific Nodes
+The most important tool in the `Akka.Remote.TestKit`, the base library where all multi-node testing tools are defined, is the `RunOn` method:
+
+```csharp
+RunOn(() =>
+{
+    // seed1System is a separate ActorSystem, to be able to simulate restart
+    // we must transfer its address to seed2
+    Sys.ActorOf(Props.Create<Watcher>().WithDeploy(Deploy.Local), "address-receiver");
+    EnterBarrier("seed1-address-receiver-ready");
+}, _config.Seed2);
+
+
+RunOn(() =>
+{
+    EnterBarrier("seed1-address-receiver-ready");
+    seedNode1Address = Cluster.Get(seed1System.Value).SelfAddress;
+    foreach (var r in ImmutableList.Create(_config.Seed2))
+    {
+        Sys.ActorSelection(new RootActorPath(GetAddress(r)) / "user" / "address-receiver").Tell(seedNode1Address);
+        ExpectMsg("ok", TimeSpan.FromSeconds(5));
+    }
+}, _config.Seed1);
+```
+
+Notice that the first `RunOn` call takes an argument of `_config.Seed2`, whereas the second `RunOn` call takes an argument of `_config.Seed1`. The code in the first `RunOn` block will only execute on the node with `RoleName` "Seed2" and the code in the second block will only run on `RoleName` "Seed1."
+
+Given that each node runs inside its own process, it's likely that both of these blocks of code will be executing simultaneously.
+
+#### Synchronizing Test Progression on Different Nodes
+In order to make multi-node tests effective, we must have some means of synchronizing all of the nodes in each test - such that they
