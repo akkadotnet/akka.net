@@ -49,7 +49,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(20000, remoteSettings.SysMsgBufferSize);
             Assert.Equal(TimeSpan.FromMinutes(3), remoteSettings.InitialSysMsgDeliveryTimeout);
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineDuration);
-            Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
+            Assert.Equal(TimeSpan.FromDays(2), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Single(remoteSettings.Transports);
             Assert.Equal(typeof(TcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
