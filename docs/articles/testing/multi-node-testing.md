@@ -41,3 +41,44 @@ So this sounds like a rather complicated procedure, but in actuality the MNTR ma
 The first step in creating an effective multi-node test is to define the configuration class for this test - this is going to tell the MNTR how many nodes there will need to be, how each node should be configured, and what features should be enabled for this unit test.
 
 [!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=MultiNodeSpecConfig)]
+
+The declaration of the `RoleName` properties is what the MNTR uses to determine how many nodes will be participating in this test. In this example, the test will create exactly two test processes.
+
+The `CommonConfig` element of the [`MultiNodeConfig` implementation class](../../api/Akka.Remote.TestKit.MultiNodeConfig.html) is the common config that will be used throughout all of the nodes inside the multi-node test. So, for instance, if you want all of the nodes in your test to run [Akka.Cluster.Sharding](../clustering/cluster-sharding.md) you'd want to include those configuration elements inside the `CommonConfig` property.
+
+#### Configuring Individual Nodes Differently
+In addition to passing a `CommonConfig` object throughout all nodes in your multi-node test, you can also provide configurations for individual nodes during each test.
+
+For example: if you're taking advantage of the `akka.cluster.roles` property to have some nodes execute different workloads than others, this might be something you'd want to specify for nodes individually. 
+
+The `NodeConfig` method allows you to do just that:
+
+```csharp
+NodeConfig(new List<RoleName> { First }, 
+	new List<Config> { 	ConfigurationFactory.ParseString(
+		@"akka.cluster.roles =[""a"", ""c""]") });
+NodeConfig(new List<RoleName> { Second, Third }, 
+	new List<Config> { ConfigurationFactory.ParseString(
+		@"akka.cluster.roles =[""b"", ""c""]") });
+```
+
+Right after setting `CommonConfig` inside the constructor of your `MultiNodeConfig` class you can call `NodeConfig` for the specified `RoleName`s and each of them will have their `Config`s added to their `ActorSystem` configurations at startup.
+
+> **N.B.** `NodeConfig` takes precendent over `CommonConfig`
+
+#### Enabling `TestTransport` to Simulate Network Errors
+One final but important thing you might want to during the design of a multi-node test is to enable the `TestTransport`, which exposes a capability inside your tests that allows for you to create network partitions, disconnects, and latency on the fly.
+
+[!code-csharp[SurviveNetworkInstabilitySpec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/SurviveNetworkInstabilitySpec.cs?name=MultiNodeSpecConfig)]
+
+To enable the `TestTransport`, all you have to do is set `TestTransport = true` inside the `MultiNodeConfig` constructor.
+
+Once that's done, you'll be able to use the `TestConductor` inside your multi-node tests to enable all kinds of simulated network partitions.
+
+### Step 2 - Create Your `MultiNodeClusterSpec` or `MultiNodeSpec`
+Once you've created your `MultiNodeConfig`, you'll want to create a `MultiNodeClusterSpec` if you're using Akka.Cluster or a `MultiNodeSpec` if you just want to use Akka.Remote.
+
+We're going to show you a full code sample first and walk through how it works in detail below.
+
+[!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=MultiNodeSpec)]
+

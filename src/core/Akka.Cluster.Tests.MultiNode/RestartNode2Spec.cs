@@ -44,6 +44,7 @@ namespace Akka.Cluster.Tests.MultiNode
     }
     #endregion
 
+    #region MultiNodeSpec
     public class RestartNode2Spec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
@@ -162,4 +163,5 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
     }
+    #endregion
 }
