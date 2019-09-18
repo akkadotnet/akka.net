@@ -368,7 +368,10 @@ namespace Akka.Streams
         /// </summary>
         public readonly int SyncProcessingLimit;
 
-        public readonly StreamRefSettings StreamRefSettings;
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal readonly StreamRefSettings StreamRefSettings;
 
         /// <summary>
         /// TBD
