@@ -64,15 +64,15 @@ namespace Akka.Tests.Configuration
         }
 
 #if NET461
-//        [Fact]
-//        public void Deserializes_hocon_configuration_from_net_config_file()
-//        {
-//            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
-//            Assert.NotNull(section);
-//            Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
-//            var akkaConfig = section.AkkaConfig;
-//            Assert.NotNull(akkaConfig);
-//        }
+        [Fact]
+        public void Deserializes_hocon_configuration_from_net_config_file()
+        {
+            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
+            Assert.NotNull(section);
+            Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
+            var akkaConfig = section.AkkaConfig;
+            Assert.NotNull(akkaConfig);
+        }
 #endif
 
         [Fact]
