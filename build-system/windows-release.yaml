@@ -27,7 +27,10 @@ steps:
   inputs:
     filename: build.cmd
     arguments: 'nuget nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(nugetKey)'
+<<<<<<< HEAD
 
+=======
+>>>>>>> 14a26ef8ca1c9bdbcebae895904c565bb0ffef9b
 
 - task: GitHubRelease@0
   displayName: 'GitHub release (create)'
