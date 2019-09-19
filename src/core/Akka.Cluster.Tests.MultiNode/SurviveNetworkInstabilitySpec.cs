@@ -21,6 +21,11 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
+     /*
+     * N.B. - Regions are used for targeting by DocFx to include
+     * code inside relevant documentation.
+     */
+    #region MultiNodeSpecConfig
     public class SurviveNetworkInstabilitySpecConfig : MultiNodeConfig
     {
         public RoleName First { get; }
@@ -52,6 +57,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             TestTransport = true;
         }
+        #endregion
 
         public class Echo : ReceiveActor
         {
