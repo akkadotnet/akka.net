@@ -16,6 +16,11 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
+    /*
+     * N.B. - Regions are used for targeting by DocFx to include
+     * code inside relevant documentation.
+     */
+    #region MultiNodeSpecConfig
     public class RestartNode2SpecConfig : MultiNodeConfig
     {
         public RoleName Seed1 { get; }
@@ -37,7 +42,9 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
+    #endregion
 
+    #region MultiNodeSpec
     public class RestartNode2Spec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
@@ -156,4 +163,5 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
     }
+    #endregion
 }
