@@ -352,7 +352,7 @@ namespace Akka.Remote
     /// <summary>
     /// This exception is thrown when the system is unable to fulfill a resend request since negatively acknowledged payload is no longer in buffer.
     /// </summary>
-    class ResendUnfulfillableException : AkkaException
+    internal class ResendUnfulfillableException : AkkaException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendUnfulfillableException"/> class.
@@ -369,7 +369,7 @@ namespace Akka.Remote
     /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedReceiveBuffer{T}"/> on the receiving end.
     /// </summary>
     /// <typeparam name="T">The type of message being stored - has to implement <see cref="IHasSequenceNumber"/></typeparam>
-    sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
+    internal sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -418,7 +418,14 @@ namespace Akka.Remote
         /// <returns>An updated buffer containing the remaining unacknowledged messages</returns>
         public AckedSendBuffer<T> Acknowledge(Ack ack)
         {
-            var newNacked = new List<T>(Nacked.Concat(NonAcked)).Where(x => ack.Nacks.Contains(x.Seq)).ToList();
+            if (ack.CumulativeAck > MaxSeq)
+            {
+                throw new ArgumentException(nameof(ack), $"Highest SEQ so far was {MaxSeq} but cumulative ACK is {ack.CumulativeAck}");
+            }
+
+            var newNacked = ack.Nacks.Count == 0
+                ? new List<T>()
+                : Nacked.Concat(NonAcked).Where(x => ack.Nacks.Contains(x.Seq)).ToList();
             if (newNacked.Count < ack.Nacks.Count) throw new ResendUnfulfillableException();
             else return Copy(nonAcked: NonAcked.Where(x => x.Seq > ack.CumulativeAck).ToList(), nacked: newNacked);
         }
