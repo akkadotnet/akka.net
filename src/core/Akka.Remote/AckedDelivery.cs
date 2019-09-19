@@ -372,16 +372,15 @@ namespace Akka.Remote
     /// <typeparam name="T">The type of message being stored - has to implement <see cref="IHasSequenceNumber"/></typeparam>
     internal sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="capacity">TBD</param>
-        /// <param name="maxSeq">TBD</param>
-        public AckedSendBuffer(int capacity, SeqNo maxSeq)
+        public AckedSendBuffer(int capacity, SeqNo maxSeq) : this(capacity, maxSeq, ImmutableList<T>.Empty, ImmutableList<T>.Empty)
+        {
+        }
+
+        public AckedSendBuffer(int capacity, SeqNo maxSeq, IImmutableList<T> nacked, IImmutableList<T> nonAcked)
         {
             MaxSeq = maxSeq ?? new SeqNo(-1);
-            Nacked = new List<T>();
-            NonAcked = new List<T>();
+            Nacked = nacked;
+            NonAcked = nonAcked;
             Capacity = capacity;
         }
 
@@ -394,17 +393,17 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public int Capacity { get; private set; }
+        public int Capacity { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public List<T> NonAcked { get; private set; }
+        public IImmutableList<T> NonAcked { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public List<T> Nacked { get; private set; }
+        public IImmutableList<T> Nacked { get; }
 
         /// <summary>
         /// TBD
@@ -425,10 +424,10 @@ namespace Akka.Remote
             }
 
             var newNacked = ack.Nacks.Count == 0
-                ? new List<T>()
-                : Nacked.Concat(NonAcked).Where(x => ack.Nacks.Contains(x.Seq)).ToList();
+                ? ImmutableList<T>.Empty
+                : Nacked.AddRange(NonAcked).Where(x => ack.Nacks.Contains(x.Seq)).ToImmutableList();
             if (newNacked.Count < ack.Nacks.Count) throw new ResendUnfulfillableException();
-            else return Copy(nonAcked: NonAcked.Where(x => x.Seq > ack.CumulativeAck).ToList(), nacked: newNacked);
+            else return Copy(nonAcked: NonAcked.Where(x => x.Seq > ack.CumulativeAck).ToImmutableList(), nacked: newNacked);
         }
 
         /// <summary>
@@ -444,7 +443,7 @@ namespace Akka.Remote
 
             if (NonAcked.Count == Capacity) throw new ResendBufferCapacityReachedException(Capacity);
 
-            return Copy(nonAcked: new List<T>(NonAcked) { msg }, maxSeq: msg.Seq);
+            return Copy(nonAcked: NonAcked.Add(msg), maxSeq: msg.Seq);
         }
 
         /// <summary>
@@ -461,16 +460,9 @@ namespace Akka.Remote
 
 #region Copy methods
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="nonAcked">TBD</param>
-        /// <param name="nacked">TBD</param>
-        /// <param name="maxSeq">TBD</param>
-        /// <returns>TBD</returns>
-        public AckedSendBuffer<T> Copy(List<T> nonAcked = null, List<T> nacked = null, SeqNo maxSeq = null)
+        public AckedSendBuffer<T> Copy(IImmutableList<T> nonAcked = null, IImmutableList<T> nacked = null, SeqNo maxSeq = null)
         {
-            return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq) { Nacked = nacked ?? Nacked.ToArray().ToList(), NonAcked = nonAcked ?? NonAcked.ToArray().ToList() };
+            return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq, nacked ?? Nacked, nonAcked ?? NonAcked);
         }
 
 #endregion
