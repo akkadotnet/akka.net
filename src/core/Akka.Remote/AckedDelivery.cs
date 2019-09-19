@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -476,46 +477,11 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    sealed class AckReceiveDeliverable<T> where T:IHasSequenceNumber
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="deliverables">TBD</param>
-        /// <param name="ack">TBD</param>
-        public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, List<T> deliverables, Ack ack)
-        {
-            Ack = ack;
-            Deliverables = deliverables;
-            Buffer = buffer;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public AckedReceiveBuffer<T> Buffer { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public List<T> Deliverables { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Ack Ack { get; private set; }
-    }
-
-    /// <summary>
     /// Implements an immutable receive buffer that buffers incoming messages until they can be safely delivered. This
     /// buffer works together with an <see cref="AckedSendBuffer{T}"/> on the sender() side.
     /// </summary>
     /// <typeparam name="T">The type of messages being buffered; must implement <see cref="IHasSequenceNumber"/>.</typeparam>
-    sealed class AckedReceiveBuffer<T> where T : IHasSequenceNumber
+    internal sealed class AckedReceiveBuffer<T> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -528,7 +494,7 @@ namespace Akka.Remote
         /// <param name="lastDelivered">Sequence number of the last message that has been delivered.</param>
         /// <param name="cumulativeAck">The highest sequence number received so far</param>
         /// <param name="buffer">Buffer of messages that are waiting for delivery.</param>
-        public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, SortedSet<T> buffer)
+        public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, ImmutableSortedSet<T> buffer)
         {
             LastDelivered = lastDelivered ?? new SeqNo(-1);
             CumulativeAck = cumulativeAck ?? new SeqNo(-1);
@@ -539,23 +505,23 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public AckedReceiveBuffer()
-            : this(new SeqNo(-1), new SeqNo(-1), new SortedSet<T>(Comparer))
+            : this(new SeqNo(-1), new SeqNo(-1), ImmutableSortedSet<T>.Empty.WithComparer(Comparer))
         { }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo LastDelivered { get; private set; }
+        public SeqNo LastDelivered { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo CumulativeAck { get; private set; }
+        public SeqNo CumulativeAck { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SortedSet<T> Buf { get; private set; }
+        public ImmutableSortedSet<T> Buf { get; }
 
         /// <summary>
         /// Puts a sequenced message in the receive buffer returning a new buffer.
@@ -564,12 +530,8 @@ namespace Akka.Remote
         /// <returns>The updated buffer containing the message</returns>
         public AckedReceiveBuffer<T> Receive(T arrivedMsg)
         {
-            if (arrivedMsg.Seq > LastDelivered && !Buf.Contains(arrivedMsg))
-            {
-                Buf.Add(arrivedMsg);
-            }
             return Copy(cumulativeAck: SeqNo.Max(arrivedMsg.Seq, CumulativeAck),
-                buffer: Buf);
+                buffer: (arrivedMsg.Seq > LastDelivered && !Buf.Contains(arrivedMsg)) ? Buf.Add(arrivedMsg) : Buf);
         }
 
         /// <summary>
@@ -577,10 +539,8 @@ namespace Akka.Remote
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
         /// <returns>Triplet of the updated buffer, messages that can be delivered, and the updated acknowledgement.</returns>
-        public AckReceiveDeliverable<T> ExtractDeliverable
+        public (AckedReceiveBuffer<T> buf, IReadOnlyList<T> deliver, Ack ack) ExtractDeliverable()
         {
-            get
-            {
                 var deliver = new List<T>();
                 var ack = new Ack(CumulativeAck);
                 var updatedLastDelivered = LastDelivered;
@@ -612,9 +572,9 @@ namespace Akka.Remote
                     prev = bufferedMessage.Seq;
                 }
 
-                Buf.ExceptWith(deliver);
-                return new AckReceiveDeliverable<T>(Copy(lastDelivered: updatedLastDelivered, buffer: Buf), deliver, ack);
-            }
+                var newBuf = !deliver.Any() ? Buf : Buf.Except(deliver);
+                return (Copy(lastDelivered: updatedLastDelivered, buffer: newBuf), deliver, ack);
+            
             
         }
 
@@ -627,12 +587,8 @@ namespace Akka.Remote
         public AckedReceiveBuffer<T> MergeFrom(AckedReceiveBuffer<T> other)
         {
             var mergedLastDelivered = SeqNo.Max(this.LastDelivered, other.LastDelivered);
-            Buf.UnionWith(other.Buf);
-            Buf.RemoveWhere(x => x.Seq < mergedLastDelivered);
-            return Copy(mergedLastDelivered, SeqNo.Max(this.CumulativeAck, other.CumulativeAck), Buf);
+            return Copy(mergedLastDelivered, SeqNo.Max(this.CumulativeAck, other.CumulativeAck), Buf.Union(other.Buf).Where(x => x.Seq > mergedLastDelivered).ToImmutableSortedSet(Comparer));
         }
-
-#region Copy methods
 
         /// <summary>
         /// TBD
@@ -641,12 +597,10 @@ namespace Akka.Remote
         /// <param name="cumulativeAck">TBD</param>
         /// <param name="buffer">TBD</param>
         /// <returns>TBD</returns>
-        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, SortedSet<T> buffer = null)
+        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
         {
-            return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? new SortedSet<T>(Buf, Comparer));
+            return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? Buf);
         }
-
-#endregion
     }
 }
 
