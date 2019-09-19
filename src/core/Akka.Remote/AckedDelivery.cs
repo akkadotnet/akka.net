@@ -278,9 +278,9 @@ namespace Akka.Remote
 
 
     /// <summary>
-    /// TBD
+    /// Class representing an acknowledgement with selective negative acknowledgements.
     /// </summary>
-    sealed class Ack
+    internal sealed class Ack
     {
         /// <summary>
         /// Class representing an acknowledgement with select negative acknowledgements.
@@ -318,14 +318,14 @@ namespace Akka.Remote
         public override string ToString()
         {
             var nacks = string.Join(",", Nacks.Select(x => x.ToString()));
-            return $"ACK[{CumulativeAck}, {nacks}]";
+            return $"ACK[{CumulativeAck}, [{nacks}]]";
         }
     }
 
     /// <summary>
     /// This exception is thrown when the Resent buffer is filled beyond its capacity.
     /// </summary>
-    class ResendBufferCapacityReachedException : AkkaException
+    internal class ResendBufferCapacityReachedException : AkkaException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
@@ -447,8 +447,8 @@ namespace Akka.Remote
         /// </returns>
         public override string ToString()
         {
-            var nonAcked = string.Join(",", NonAcked.Select(x => x.ToString()));
-            return $"[{nonAcked}]";
+            var nonAcked = string.Join(",", NonAcked.Select(x => x.Seq.ToString()));
+            return $"[{MaxSeq} [{nonAcked}]]";
         }
 
 #region Copy methods
