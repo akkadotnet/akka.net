@@ -469,6 +469,41 @@ namespace Akka.Remote
     }
 
     /// <summary>
+    /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    sealed class AckReceiveDeliverable<T> where T : IHasSequenceNumber
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <param name="deliverables">TBD</param>
+        /// <param name="ack">TBD</param>
+        public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, IReadOnlyList<T> deliverables, Ack ack)
+        {
+            Ack = ack;
+            Deliverables = deliverables;
+            Buffer = buffer;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public AckedReceiveBuffer<T> Buffer { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IReadOnlyList<T> Deliverables { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Ack Ack { get; private set; }
+    }
+
+    /// <summary>
     /// Implements an immutable receive buffer that buffers incoming messages until they can be safely delivered. This
     /// buffer works together with an <see cref="AckedSendBuffer{T}"/> on the sender() side.
     /// </summary>
@@ -531,7 +566,7 @@ namespace Akka.Remote
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
         /// <returns>Triplet of the updated buffer, messages that can be delivered, and the updated acknowledgement.</returns>
-        public (AckedReceiveBuffer<T> Buffer, IReadOnlyList<T> Deliverables, Ack Ack) ExtractDeliverable()
+        public AckReceiveDeliverable<T> ExtractDeliverable()
         {
                 var deliver = new List<T>();
                 var ack = new Ack(CumulativeAck);
@@ -565,9 +600,7 @@ namespace Akka.Remote
                 }
 
                 var newBuf = !deliver.Any() ? Buf : Buf.Except(deliver);
-                return (Copy(lastDelivered: updatedLastDelivered, buffer: newBuf), deliver, ack);
-            
-            
+                return new AckReceiveDeliverable<T>(Copy(lastDelivered: updatedLastDelivered, buffer: newBuf), deliver, ack);
         }
 
         /// <summary>
