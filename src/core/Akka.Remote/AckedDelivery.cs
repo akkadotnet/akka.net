@@ -458,14 +458,11 @@ namespace Akka.Remote
             return $"[{MaxSeq} [{nonAcked}]]";
         }
 
-#region Copy methods
-
         public AckedSendBuffer<T> Copy(IImmutableList<T> nonAcked = null, IImmutableList<T> nacked = null, SeqNo maxSeq = null)
         {
             return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq, nacked ?? Nacked, nonAcked ?? NonAcked);
         }
 
-#endregion
     }
 
     /// <summary>
@@ -508,7 +505,7 @@ namespace Akka.Remote
     /// buffer works together with an <see cref="AckedSendBuffer{T}"/> on the sender() side.
     /// </summary>
     /// <typeparam name="T">The type of messages being buffered; must implement <see cref="IHasSequenceNumber"/>.</typeparam>
-    internal sealed class AckedReceiveBuffer<T> where T : IHasSequenceNumber
+    internal sealed class AckedReceiveBuffer<T> : IEquatable<AckedReceiveBuffer<T>> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -625,6 +622,29 @@ namespace Akka.Remote
         public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
         {
             return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? Buf);
+        }
+
+        public bool Equals(AckedReceiveBuffer<T> other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return LastDelivered.Equals(other.LastDelivered)
+                   && CumulativeAck.Equals(other.CumulativeAck);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is AckedReceiveBuffer<T> other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = LastDelivered.GetHashCode();
+                hashCode = (hashCode * 397) ^ CumulativeAck.GetHashCode();
+                return hashCode;
+            }
         }
     }
 }
