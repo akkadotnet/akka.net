@@ -371,7 +371,7 @@ namespace Akka.Streams
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal readonly StreamRefSettings StreamRefSettings;
+        public readonly StreamRefSettings StreamRefSettings;
 
         /// <summary>
         /// TBD
