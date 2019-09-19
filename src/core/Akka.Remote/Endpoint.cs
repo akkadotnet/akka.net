@@ -506,8 +506,6 @@ namespace Akka.Remote
                 _currentHandle = null;
                 Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
                 return Directive.Stop;
-
-                return Directive.Escalate;
             });
         }
 

@@ -18,13 +18,14 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
+            CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
               akka.loglevel = INFO
               akka.remote{
                  transport-failure-detector {
-                  implementation-class = """+ typeof(TestFailureDetector).AssemblyQualifiedName +@"""
+                  implementation-class = """+ typeof(TestFailureDetector).AssemblyQualifiedName + @"""
                   heartbeat-interval = 1 s
                 }
+                retry-gate-closed-for = 3 s
                 # Don't trigger watch Terminated
                 watch-failure-detector.acceptable-heartbeat-pause = 60 s
                 #use-passive-connections = off
