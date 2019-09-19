@@ -121,9 +121,15 @@ namespace Akka.Remote.Tests.MultiNode
                 IActorRef subject2 = null;
                 AwaitAssert(() =>
                 {
-                    Within(TimeSpan.FromSeconds(1), () =>
+                    // TODO: harden
+                    Within(TimeSpan.FromSeconds(3), () =>
                     {
-                        subject2 = Identify(_config.Second, "subject2");
+                        AwaitCondition(() =>
+                        {
+                            subject2 = Identify(_config.Second, "subject2");
+                            return subject2 != null;
+                        }, RemainingOrDefault, TimeSpan.FromSeconds(1));
+                        
                     });
                 }, TimeSpan.FromSeconds(5));
                 Watch(subject2);
