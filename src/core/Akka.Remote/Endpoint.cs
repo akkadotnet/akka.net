@@ -2038,11 +2038,11 @@ namespace Akka.Remote
         private void DeliverAndAck()
         {
             var deliverable = _ackedReceiveBuffer.ExtractDeliverable();
-            _ackedReceiveBuffer = deliverable.buf;
+            _ackedReceiveBuffer = deliverable.Buffer;
 
             // Notify writer that some messages can be acked
-            Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.ack));
-            deliverable.deliver.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+            Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
+            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)

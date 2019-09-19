@@ -539,7 +539,7 @@ namespace Akka.Remote
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
         /// <returns>Triplet of the updated buffer, messages that can be delivered, and the updated acknowledgement.</returns>
-        public (AckedReceiveBuffer<T> buf, IReadOnlyList<T> deliver, Ack ack) ExtractDeliverable()
+        public (AckedReceiveBuffer<T> Buffer, IReadOnlyList<T> Deliverables, Ack Ack) ExtractDeliverable()
         {
                 var deliver = new List<T>();
                 var ack = new Ack(CumulativeAck);
