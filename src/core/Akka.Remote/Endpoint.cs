@@ -1874,8 +1874,11 @@ namespace Akka.Remote
         {
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
-                _ackedReceiveBuffer = resendState.Buffer;
-                DeliverAndAck();
+                if(resendState.Uid == _uid)
+                {
+                    _ackedReceiveBuffer = resendState.Buffer;
+                    DeliverAndAck();
+                }
             }
         }
 
@@ -1992,30 +1995,16 @@ namespace Akka.Remote
 
         private void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
         {
-            while (true)
+            if (expectedState == null)
             {
-                if (expectedState == null)
+                if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
                 {
-                    if (_receiveBuffers.ContainsKey(key))
-                    {
-                        var updatedValue = new EndpointManager.ResendState(_uid, _ackedReceiveBuffer);
-                        _receiveBuffers.AddOrUpdate(key, updatedValue, (link, state) => updatedValue);
-                        expectedState = updatedValue;
-                        continue;
-                    }
+                    UpdateSavedState(key, _receiveBuffers[key]);
                 }
-                else
-                {
-                    if (_receiveBuffers.TryGetValue(key, out var resendState) && resendState.Equals(expectedState))
-                        _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState);
-                    else
-                    {
-                        _receiveBuffers.TryGetValue(key, out var previousValue);
-                        expectedState = previousValue;
-                        continue;
-                    }
-                }
-                break;
+            } else if (!_receiveBuffers.TryUpdate(key, expectedState,
+                Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState)))
+            {
+                UpdateSavedState(key, _receiveBuffers[key]);
             }
         }
 
