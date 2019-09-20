@@ -208,10 +208,8 @@ namespace Akka.Event
         /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
-            var logSource = context.Self.ToString();
-            var logClass = context.Props.Type;
-
-            return new BusLogging(context.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
+            var logSource = LogSource.Create(context, context.System);
+            return new BusLogging(context.System.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -223,7 +221,8 @@ namespace Akka.Event
         /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
-            return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
+            var logSource = LogSource.Create(logSourceObj, system);
+            return new BusLogging(system.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -235,23 +234,8 @@ namespace Akka.Event
         /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
-            //TODO: refine this
-            string logSource;
-            Type logClass;
-            if(logSourceObj is string sourceObj)
-            {
-                logSource = sourceObj;
-                logClass = typeof(DummyClassForStringSources);
-            }
-            else
-            {
-                logSource = logSourceObj.ToString();
-                if(logSourceObj is Type obj)
-                    logClass = obj;
-                else
-                    logClass = logSourceObj.GetType();
-            }
-            return new BusLogging(loggingBus, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
+            var logSource = LogSource.Create(logSourceObj);
+            return new BusLogging(loggingBus, logSource.Source, logSource.Type, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
