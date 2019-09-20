@@ -75,7 +75,7 @@ namespace Akka.Remote.Tests
 
         private void AssertActors(ImmutableHashSet<IActorRef> expected, ImmutableHashSet<IActorRef> actual)
         {
-            Assert.True(expected.SetEquals(actual));
+            expected.Should().BeEquivalentTo(actual);
         }
 
         [Fact]
