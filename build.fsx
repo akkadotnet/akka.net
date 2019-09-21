@@ -315,7 +315,7 @@ Target "CreateNuget" (fun _ ->
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
                     VersionSuffix = versionSuffix
-                    OutputPath = outputNuGet })
+                    OutputPath = "\"" + outputNuGet + "\"" })
 
     projects |> Seq.iter (runSingleProject)
 )
@@ -372,7 +372,7 @@ Target "CreateMntrNuget" (fun _ ->
                     Configuration = configuration
                     AdditionalArgs = ["--include-symbols"]
                     VersionSuffix = versionSuffix
-                    OutputPath = outputNuGet } )
+                    OutputPath = "\"" + outputNuGet + "\"" } )
     )
 
     DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
