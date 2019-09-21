@@ -49,7 +49,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(20000, remoteSettings.SysMsgBufferSize);
             Assert.Equal(TimeSpan.FromMinutes(3), remoteSettings.InitialSysMsgDeliveryTimeout);
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineDuration);
-            Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
+            Assert.Equal(TimeSpan.FromDays(2), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Single(remoteSettings.Transports);
             Assert.Equal(typeof(TcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
@@ -83,7 +83,7 @@ namespace Akka.Remote.Tests
             
             Assert.Equal(typeof(DeadlineFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(4), settings.TransportHeartBeatInterval);
-            Assert.Equal(TimeSpan.FromSeconds(20), settings.TransportFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromSeconds(120), settings.TransportFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
         }
 
         [Fact]

@@ -164,7 +164,7 @@ namespace Akka.Remote.Tests
             var b8 = b7.Acknowledge(new Ack(new SeqNo(2)));
             Assert.True(b8.NonAcked.SequenceEqual(new[] { msg3, msg4 }));
 
-            var b9 = b8.Acknowledge(new Ack(new SeqNo(5)));
+            var b9 = b8.Acknowledge(new Ack(new SeqNo(4)));
             Assert.True(b9.NonAcked.Count == 0);
         }
 
@@ -199,7 +199,7 @@ namespace Akka.Remote.Tests
             Assert.True(b6.NonAcked.Count == 0);
             Assert.True(b6.Nacked.SequenceEqual(new[] { msg2, msg3 }));
 
-            var b7 = b6.Acknowledge(new Ack(new SeqNo(5)));
+            var b7 = b6.Acknowledge(new Ack(new SeqNo(4)));
             Assert.True(b7.NonAcked.Count == 0);
             Assert.True(b7.Nacked.Count == 0);
         }
@@ -226,36 +226,36 @@ namespace Akka.Remote.Tests
             var msg4 = Msg(4);
             var msg5 = Msg(5);
 
-            var d1 = b0.Receive(msg1).ExtractDeliverable;
+            var d1 = b0.Receive(msg1).ExtractDeliverable();
             Assert.True(d1.Deliverables.Count == 0);
             Assert.Equal(new SeqNo(1), d1.Ack.CumulativeAck);
             Assert.True(d1.Ack.Nacks.SequenceEqual(new[]{ new SeqNo(0) }));
             var b1 = d1.Buffer;
 
-            var d2 = b1.Receive(msg0).ExtractDeliverable;
+            var d2 = b1.Receive(msg0).ExtractDeliverable();
             Assert.True(d2.Deliverables.SequenceEqual(new[] { msg0, msg1 }));
             Assert.Equal(new SeqNo(1), d2.Ack.CumulativeAck);
             var b3 = d2.Buffer;
 
-            var d3 = b3.Receive(msg4).ExtractDeliverable;
+            var d3 = b3.Receive(msg4).ExtractDeliverable();
             Assert.True(d3.Deliverables.Count == 0);
             Assert.Equal(new SeqNo(4), d3.Ack.CumulativeAck);
             Assert.True(d3.Ack.Nacks.SequenceEqual(new[] { new SeqNo(2), new SeqNo(3) }));
             var b4 = d3.Buffer;
 
-            var d4 = b4.Receive(msg2).ExtractDeliverable;
+            var d4 = b4.Receive(msg2).ExtractDeliverable();
             Assert.True(d4.Deliverables.SequenceEqual(new[] { msg2 }));
             Assert.Equal(new SeqNo(4), d4.Ack.CumulativeAck);
             Assert.True(d4.Ack.Nacks.SequenceEqual(new[] { new SeqNo(3) }));
             var b5 = d4.Buffer;
 
-            var d5 = b5.Receive(msg5).ExtractDeliverable;
+            var d5 = b5.Receive(msg5).ExtractDeliverable();
             Assert.True(d5.Deliverables.Count == 0);
             Assert.Equal(new SeqNo(5), d5.Ack.CumulativeAck);
             Assert.True(d5.Ack.Nacks.SequenceEqual(new[] { new SeqNo(3) }));
             var b6 = d5.Buffer;
 
-            var d6 = b6.Receive(msg3).ExtractDeliverable;
+            var d6 = b6.Receive(msg3).ExtractDeliverable();
             Assert.True(d6.Deliverables.SequenceEqual(new[] { msg3, msg4, msg5 }));
             Assert.Equal(new SeqNo(5), d6.Ack.CumulativeAck);
         }
@@ -268,11 +268,11 @@ namespace Akka.Remote.Tests
             var msg1 = Msg(1);
             var msg2 = Msg(2);
 
-            var buf2 = buf.Receive(msg0).Receive(msg1).Receive(msg2).ExtractDeliverable.Buffer;
+            var buf2 = buf.Receive(msg0).Receive(msg1).Receive(msg2).ExtractDeliverable().Buffer;
 
             var buf3 = buf2.Receive(msg0).Receive(msg1).Receive(msg2);
 
-            var d = buf3.ExtractDeliverable;
+            var d = buf3.ExtractDeliverable();
             Assert.True(d.Deliverables.Count == 0);
             Assert.Equal(new SeqNo(2), d.Ack.CumulativeAck);
         }
@@ -290,8 +290,8 @@ namespace Akka.Remote.Tests
 
             var buf = buf1.Receive(msg1a).Receive(msg2).MergeFrom(buf2.Receive(msg1b).Receive(msg3));
 
-            var d = buf.Receive(msg0).ExtractDeliverable;
-            Assert.True(d.Deliverables.SequenceEqual(new []{ msg0, msg1b, msg2, msg3 }));
+            var d = buf.Receive(msg0).ExtractDeliverable();
+            Assert.True(d.Deliverables.SequenceEqual(new []{ msg0, msg1a, msg2, msg3 }));
             Assert.Equal(new SeqNo(3), d.Ack.CumulativeAck);
         }
 
@@ -341,7 +341,7 @@ namespace Akka.Remote.Tests
                     if (sends.Contains(msg)) sndBuf = sndBuf.Buffer(msg);
                     if (Happened(p))
                     {
-                        var del = rcvBuf.Receive(msg).ExtractDeliverable;
+                        var del = rcvBuf.Receive(msg).ExtractDeliverable();
                         rcvBuf = del.Buffer;
                         dbLog(string.Format("{0} -- {1} --> {2}", sndBuf, msg, rcvBuf));
                         lastAck = del.Ack;

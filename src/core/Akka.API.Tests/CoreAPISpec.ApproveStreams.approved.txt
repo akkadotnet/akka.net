@@ -1927,6 +1927,7 @@ namespace Akka.Streams.Dsl
         [Akka.Annotations.ApiMayChangeAttribute()]
         public static Akka.Streams.Dsl.Sink<T, System.Threading.Tasks.Task<Akka.Streams.ISourceRef<T>>> SourceRef<T>() { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class StreamRefSettings
     {
         public StreamRefSettings(int bufferCapacity, System.TimeSpan demandRedeliveryInterval, System.TimeSpan subscriptionTimeout, System.TimeSpan finalTerminationSignalDeadline) { }

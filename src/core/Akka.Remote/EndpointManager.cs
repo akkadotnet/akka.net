@@ -379,18 +379,25 @@ namespace Akka.Remote
             {
                 unchecked
                 {
-                    var hash = 17;
-                    hash = hash * 23 + (LocalAddress == null ? 0 : LocalAddress.GetHashCode());
-                    hash = hash * 23 + (RemoteAddress == null ? 0 : RemoteAddress.GetHashCode());
-                    return hash;
+                    return (LocalAddress.GetHashCode() * 397) ^ RemoteAddress.GetHashCode();
                 }
+            }
+
+            private bool Equals(Link other)
+            {
+                return LocalAddress.Equals(other.LocalAddress) && RemoteAddress.Equals(other.RemoteAddress);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is Link other && Equals(other);
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public sealed class ResendState
+        public sealed class ResendState : IEquatable<ResendState>
         {
             /// <summary>
             /// TBD
@@ -412,6 +419,26 @@ namespace Akka.Remote
             /// TBD
             /// </summary>
             public AckedReceiveBuffer<Message> Buffer { get; private set; }
+
+            public bool Equals(ResendState other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Uid == other.Uid && Buffer.Equals(other.Buffer);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is ResendState other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (Uid * 397) ^ Buffer.GetHashCode();
+                }
+            }
         }
 
         #endregion

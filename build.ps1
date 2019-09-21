@@ -38,7 +38,7 @@ $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe
 $ProtobufVersion = "3.4.0"
 $DocfxVersion = "2.43.2"
 
-$IncrementalistVersion = "0.1.6";
+$IncrementalistVersion = "0.1.7";
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
