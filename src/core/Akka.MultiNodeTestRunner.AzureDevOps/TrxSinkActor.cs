@@ -146,7 +146,11 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 result.Duration = time - result.StartTime;
                 result.Output = new Output
                 {
-                    StdOut = message.Message
+                    StdOut = message.Message,
+                    TextMessages =
+                    {
+                        message.Message
+                    }
                 };
             }
 
@@ -158,7 +162,11 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 result.Duration = time - result.StartTime;
                 result.Output = new Output
                 {
-                    StdErr = message.Message
+                    StdErr = message.Message,
+                    ErrorInfo = new ErrorInfo
+                    {
+                        Message = message.Message
+                    }
                 };
             }
 
@@ -176,13 +184,17 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 
             foreach (var (_, message) in session.Messages)
             {
+                var textMessage = $"[{message.When:G}] {message.Message}";
+
+                Output output;
                 if (nodeResults.TryGetValue(message.NodeIndex, out var result))
                 {
                     if (result.Output == null)
                     {
                         result.Output = new Output();
                     }
-                    result.Output.TextMessages.Add($"[{message.When:G}] {message.Message}");
+
+                    output = result.Output;
                 }
                 else
                 {
@@ -191,8 +203,11 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                         specResult.Output = new Output();
                     }
 
-                    specResult.Output.TextMessages.Add($"[{message.When:G}] {message.Message}");
+                    output = specResult.Output;
                 }
+
+                output.TextMessages.Add(textMessage);
+                output.StdOut += Environment.NewLine + textMessage;
             }
         }
     }
