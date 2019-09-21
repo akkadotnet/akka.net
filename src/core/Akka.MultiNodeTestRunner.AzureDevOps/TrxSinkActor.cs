@@ -143,7 +143,7 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 var result = nodeResults[message.NodeIndex];
                 result.Outcome = TestOutcome.Passed;
                 result.EndTime = time;
-                result.Duration = result.StartTime - time;
+                result.Duration = time - result.StartTime;
                 result.Output = new Output
                 {
                     StdOut = message.Message
