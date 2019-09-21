@@ -91,8 +91,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     dot-netty.tcp
                         {
                             hostname = ""127.0.0.1""
-                      port = 0
-                    }
+                            port = 0
+                        }
                  }
               }";
         }

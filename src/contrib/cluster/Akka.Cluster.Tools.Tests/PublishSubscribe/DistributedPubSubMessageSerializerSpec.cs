@@ -17,6 +17,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
+    [Collection(nameof(DistributedPubSubMessageSerializerSpec))]
     public class DistributedPubSubMessageSerializerSpec : AkkaSpec
     {
         public DistributedPubSubMessageSerializerSpec()

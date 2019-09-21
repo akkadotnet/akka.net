@@ -68,6 +68,7 @@ namespace Akka.Cluster.Tests
             var config = ConfigurationFactory.ParseString(@"
                 akka {
                     actor.provider = cluster
+                    remote.dot-netty.tcp.port = 0
                     cluster {
                         down-removal-margin = 10s
                         downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
@@ -98,6 +99,7 @@ namespace Akka.Cluster.Tests
             var config = ConfigurationFactory.ParseString(@"
                 akka {
                     actor.provider = cluster
+                    remote.dot-netty.tcp.port = 0
                     cluster {
                         downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
                         split-brain-resolver {

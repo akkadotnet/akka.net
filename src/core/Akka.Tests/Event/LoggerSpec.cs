@@ -16,11 +16,97 @@ using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Tests.Event
 {
     public class LoggerSpec : AkkaSpec
     {
+        public static readonly Config Config = @"akka.loglevel = DEBUG";
+
+        public LoggerSpec(ITestOutputHelper helper) : base(Config, helper) { }
+
+        [Theory]
+        [InlineData(LogLevel.ErrorLevel, false, "foo", new object[] { })]
+        [InlineData(LogLevel.ErrorLevel, true, "foo", new object[] { })]
+        [InlineData(LogLevel.ErrorLevel, false, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.ErrorLevel, true, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.WarningLevel, false, "foo", new object[] { })]
+        [InlineData(LogLevel.WarningLevel, true, "foo", new object[] { })]
+        [InlineData(LogLevel.WarningLevel, false, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.WarningLevel, true, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.InfoLevel, false, "foo", new object[] { })]
+        [InlineData(LogLevel.InfoLevel, true, "foo", new object[] { })]
+        [InlineData(LogLevel.InfoLevel, false, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.InfoLevel, true, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.DebugLevel, false, "foo", new object[]{})]
+        [InlineData(LogLevel.DebugLevel, true, "foo", new object[] { })]
+        [InlineData(LogLevel.DebugLevel, false, "foo {0}", new object[] { 1 })]
+        [InlineData(LogLevel.DebugLevel, true, "foo {0}", new object[] { 1 })]
+        public void LoggingAdapter_should_log_all_information(LogLevel logLevel, bool includeException, string formatStr, object [] args)
+        {
+            Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
+            var msg = args != null ? string.Format(formatStr, args) : formatStr;
+            var ex = new Exception("errrrrrr");
+            switch (logLevel)
+            {
+                case LogLevel.DebugLevel when includeException:
+                    Log.Debug(ex, formatStr, args);
+                    break;
+                case LogLevel.DebugLevel:
+                    Log.Debug(formatStr, args);
+                    break;
+                case LogLevel.InfoLevel when includeException:
+                    Log.Info(ex, formatStr, args);
+                    break;
+                case LogLevel.InfoLevel:
+                    Log.Info(formatStr, args);
+                    break;
+                case LogLevel.WarningLevel when includeException:
+                    Log.Warning(ex, formatStr, args);
+                    break;
+                case LogLevel.WarningLevel:
+                    Log.Warning(formatStr, args);
+                    break;
+                case LogLevel.ErrorLevel when includeException:
+                    Log.Error(ex, formatStr, args);
+                    break;
+                case LogLevel.ErrorLevel:
+                    Log.Error(formatStr, args);
+                    break;
+            }
+
+            // log a second log message using the generic method
+            if (includeException)
+            {
+                Log.Log(logLevel, ex, formatStr, args);
+               
+            }
+            else
+            {
+                Log.Log(logLevel, formatStr, args);
+            }
+
+            void ProcessLog(LogEvent logEvent)
+            {
+                logEvent.Message.ToString().Should().Be(msg);
+                logEvent.LogLevel().Should().Be(logLevel);
+                if (includeException)
+                {
+                    logEvent.Cause.Should().Be(ex);
+                    logEvent.ToString().Should().Contain(ex.Message);
+                }
+                else
+                    logEvent.Cause.Should().BeNull();
+            }
+
+            var log = ExpectMsg<LogEvent>();
+            ProcessLog(log);
+
+            var log2 = ExpectMsg<LogEvent>();
+            ProcessLog(log2);
+        }
+
         [Fact]
         public async Task LoggingBus_should_stop_all_loggers_on_termination()
         {
@@ -46,3 +132,4 @@ namespace Akka.Tests.Event
         }
     }
 }
+

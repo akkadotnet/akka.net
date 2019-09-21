@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -93,12 +94,14 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ExtractShardId _extractShard = message =>
             message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;
 
-        public SupervisionSpec() : base(GetConfig())
+        public SupervisionSpec(ITestOutputHelper output) : base(GetConfig(), output: output)
         { }
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString("akka.actor.provider = cluster \r\n akka.loglevel = INFO")
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.loglevel = INFO
+                                                      akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig());
         }
 
