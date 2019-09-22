@@ -15,9 +15,9 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 
     public class Output : ITestEntity
     {
-        public List<string> StdOut { get; set; }
-        public List<string> StdErr { get; set; }
-        public List<string> DebugTrace { get; set; }
+        public List<string> StdOut { get; } = new List<string>();
+        public List<string> StdErr { get; } = new List<string>();
+        public List<string> DebugTrace { get; } = new List<string>();
         public ErrorInfo ErrorInfo { get; set; }
         public List<string> TextMessages { get; } = new List<string>();
 
