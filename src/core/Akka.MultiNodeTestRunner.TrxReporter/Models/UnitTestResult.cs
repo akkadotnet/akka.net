@@ -10,6 +10,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
     using System;
     using System.Collections.Generic;
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class UnitTestResult : ITestEntity
     {
@@ -54,20 +55,20 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 
         public XElement Serialize()
         {
-            return XmlHelper.Elem("UnitTestResult",
-                XmlHelper.Attr("executionId", ExecutionId),
-                XmlHelper.Attr("testId", TestId),
-                XmlHelper.Attr("testName", TestName),
-                XmlHelper.Attr("computerName", ComputerName),
-                XmlHelper.Attr("duration", Duration.ToString("c")),
-                XmlHelper.Attr("startTime", StartTime.ToString("O")),
-                XmlHelper.Attr("endTime", EndTime.ToString("O")),
-                XmlHelper.Attr("testType", TestType),
-                XmlHelper.Attr("outcome", Enum.GetName(typeof(TestOutcome), Outcome)),
-                XmlHelper.Attr("testListId", TestListId),
-                XmlHelper.Attr("relativeResultsDirectory", RelativeResultsDirectory),
+            return Elem("UnitTestResult",
+                Attr("executionId", ExecutionId),
+                Attr("testId", TestId),
+                Attr("testName", TestName),
+                Attr("computerName", ComputerName),
+                Attr("duration", Duration.ToString("c")),
+                Attr("startTime", StartTime.ToString("O")),
+                Attr("endTime", EndTime.ToString("O")),
+                Attr("testType", TestType),
+                Attr("outcome", Enum.GetName(typeof(TestOutcome), Outcome)),
+                Attr("testListId", TestListId),
+                Attr("relativeResultsDirectory", RelativeResultsDirectory),
                 Output,
-                XmlHelper.ElemList("InnerResults", InnerResults)
+                ElemList("InnerResults", InnerResults)
             );
         }
     }

@@ -8,6 +8,7 @@
 namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 {
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class ErrorInfo : ITestEntity
     {
@@ -16,9 +17,9 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 
         public XElement Serialize()
         {
-            return XmlHelper.Elem("ErrorInfo",
-                XmlHelper.Elem("Message", XmlHelper.Text(Message ?? "")),
-                XmlHelper.Elem("StackTrace", XmlHelper.Text(StackTrace ?? ""))
+            return Elem("ErrorInfo",
+                Elem("Message", Text(Message ?? "")),
+                Elem("StackTrace", Text(StackTrace ?? ""))
             );
         }
     }

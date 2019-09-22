@@ -10,7 +10,6 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
     using System.Collections.Generic;
     using System.Linq;
     using System.Xml.Linq;
-    using Xunit.Abstractions;
 
     internal static class XmlHelper
     {
@@ -18,7 +17,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 
         private static XElement CreateElement(string name, IEnumerable<object> content)
         {
-            List<object> items = new List<object>();
+            var items = new List<object>();
             foreach (var item in content ?? Enumerable.Empty<object>())
             {
                 if (item == null)

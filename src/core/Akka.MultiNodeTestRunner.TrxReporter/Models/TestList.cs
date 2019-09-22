@@ -8,6 +8,7 @@
 namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 {
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class TestList : ITestEntity
     {
@@ -19,9 +20,9 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
         public Identifier Id { get; } = Identifier.Create();
         public string Name { get; }
 
-        public XElement Serialize() => XmlHelper.Elem("TestList",
-            XmlHelper.Attr("id", Id),
-            XmlHelper.Attr("name", Name)
+        public XElement Serialize() => Elem("TestList",
+            Attr("id", Id),
+            Attr("name", Name)
         );
     }
 }

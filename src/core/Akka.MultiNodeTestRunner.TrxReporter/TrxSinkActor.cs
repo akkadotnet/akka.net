@@ -13,7 +13,6 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
     using System.Linq;
     using System.Xml.Linq;
     using MultiNodeTestRunner.AzureDevOps.Models;
-    using Newtonsoft.Json;
     using Reporting;
     using Sinks;
 
@@ -40,12 +39,10 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 
         protected override void HandleTestRunTree(TestRunTree tree)
         {
-            _testRun.Log("HandleTestRunTree : " + JsonConvert.SerializeObject(tree));
         }
 
         protected override void ReceiveFactData(FactData data)
         {
-            _testRun.Log("ReceiveFactData : " + JsonConvert.SerializeObject(data));
         }
 
         protected override void HandleEndSpec(EndSpec endSpec)
@@ -94,11 +91,6 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
             _testRun.Log($"{node.When:G} [{node.Level}] {node.LogSource} : {node.Message}");
         }
 
-        protected override void HandleSinkTerminate(BeginSinkTerminate terminate)
-        {
-            base.HandleSinkTerminate(terminate);
-        }
-
         protected override void HandleTestRunEnd(EndTestRun endTestRun)
         {
             base.HandleTestRunEnd(endTestRun);
@@ -119,6 +111,50 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
             var specResult = test.AddResult(begin.MethodName, computerName);
 
             var nodeResults = new Dictionary<int, UnitTestResult>();
+
+            ReportNodes(begin, specResult, beginTime, nodeResults);
+            ReportSuccess(session, nodeResults);
+            ReportFailure(session, nodeResults);
+
+            specResult.Outcome = GetCombinedTestOutcome(nodeResults.Values);
+            specResult.StartTime = beginTime;
+            specResult.EndTime = session.End.Time;
+
+            ReportTestMessages(session, nodeResults, specResult);
+        }
+
+        private static void ReportFailure(SpecSession session, Dictionary<int, UnitTestResult> nodeResults)
+        {
+            foreach (var (time, message) in session.Fails)
+            {
+                var result = nodeResults[message.NodeIndex];
+                result.Outcome = TestOutcome.Failed;
+                result.EndTime = time;
+                result.Output = new Output();
+
+                result.Output.StdErr.Add(message.Message);
+                result.Output.DebugTrace.Add(message.Message);
+                result.Output.ErrorInfo.Message = message.Message;
+            }
+        }
+
+        private static void ReportSuccess(SpecSession session, Dictionary<int, UnitTestResult> nodeResults)
+        {
+            foreach (var (time, message) in session.Successes)
+            {
+                var result = nodeResults[message.NodeIndex];
+                result.Outcome = TestOutcome.Passed;
+                result.EndTime = time;
+                result.Output = new Output();
+
+                result.Output.StdOut.Add(message.Message);
+                result.Output.DebugTrace.Add(message.Message);
+            }
+        }
+
+        private static void ReportNodes(BeginNewSpec begin, UnitTestResult specResult, DateTime beginTime,
+            Dictionary<int, UnitTestResult> nodeResults)
+        {
             foreach (var node in begin.Nodes)
             {
                 var result = specResult.AddChildResult(node.Role);
@@ -136,41 +172,10 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 
                 nodeResults.Add(node.Node, result);
             }
+        }
 
-            foreach (var (time, message) in session.Successes)
-            {
-                var result = nodeResults[message.NodeIndex];
-                result.Outcome = TestOutcome.Passed;
-                result.EndTime = time;
-                result.Output = new Output();
-
-                result.Output.StdOut.Add(message.Message);
-                result.Output.DebugTrace.Add(message.Message);
-            }
-
-            foreach (var (time, message) in session.Fails)
-            {
-                var result = nodeResults[message.NodeIndex];
-                result.Outcome = TestOutcome.Failed;
-                result.EndTime = time;
-                result.Output = new Output();
-                
-                result.Output.StdErr.Add(message.Message);
-                result.Output.DebugTrace.Add(message.Message);
-                result.Output.ErrorInfo.Message = message.Message;
-            }
-
-            var outcomes = nodeResults.Values.Select(x => x.Outcome).Distinct().ToArray();
-
-            specResult.Outcome = outcomes.Length == 1
-                ? outcomes[0]
-                : outcomes.Any(x => x == TestOutcome.Failed)
-                    ? TestOutcome.Failed
-                    : TestOutcome.Inconclusive;
-
-            specResult.StartTime = beginTime;
-            specResult.EndTime = session.End.Time;
-
+        private static void ReportTestMessages(SpecSession session, Dictionary<int, UnitTestResult> nodeResults, UnitTestResult specResult)
+        {
             foreach (var (_, message) in session.Messages)
             {
                 var textMessage = $"[{message.When:G}] {message.Message}";
@@ -198,6 +203,17 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 output.StdOut.Add(textMessage);
                 output.DebugTrace.Add(textMessage);
             }
+        }
+
+        private static TestOutcome GetCombinedTestOutcome(IEnumerable<UnitTestResult> results)
+        {
+            var outcomes = results.Select(x => x.Outcome).Distinct().ToArray();
+
+            return outcomes.Length == 1
+                ? outcomes[0]
+                : outcomes.Any(x => x == TestOutcome.Failed)
+                    ? TestOutcome.Failed
+                    : TestOutcome.Inconclusive;
         }
     }
 }

@@ -11,6 +11,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
     using System.Collections.Generic;
     using System.Linq;
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class ResultSummary : ITestEntity
     {
@@ -74,25 +75,25 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 
         public Output Output { get; }
 
-        public XElement Serialize() => XmlHelper.Elem("ResultSummary",
-            XmlHelper.Attr("outcome", Enum.GetName(typeof(TestOutcome), Outcome)),
-            XmlHelper.Elem("Counters",
-                XmlHelper.Attr("total", Total),
-                XmlHelper.Attr("executed", Executed),
-                XmlHelper.Attr("passed", Passed),
-                XmlHelper.Attr("failed", Failed),
-                XmlHelper.Attr("error", Error),
-                XmlHelper.Attr("timeout", Timeout),
-                XmlHelper.Attr("aborted", Aborted),
-                XmlHelper.Attr("inconclusive", Inconclusive),
-                XmlHelper.Attr("passedButRunAborted", PassedButRunAborted),
-                XmlHelper.Attr("notRunnable", NotRunnable),
-                XmlHelper.Attr("notExecuted", NotExecuted),
-                XmlHelper.Attr("disconnected", Disconnected),
-                XmlHelper.Attr("warning", Warning),
-                XmlHelper.Attr("completed", Completed),
-                XmlHelper.Attr("inProgress", InProgress),
-                XmlHelper.Attr("pending", Pending)
+        public XElement Serialize() => Elem("ResultSummary",
+            Attr("outcome", Enum.GetName(typeof(TestOutcome), Outcome)),
+            Elem("Counters",
+                Attr("total", Total),
+                Attr("executed", Executed),
+                Attr("passed", Passed),
+                Attr("failed", Failed),
+                Attr("error", Error),
+                Attr("timeout", Timeout),
+                Attr("aborted", Aborted),
+                Attr("inconclusive", Inconclusive),
+                Attr("passedButRunAborted", PassedButRunAborted),
+                Attr("notRunnable", NotRunnable),
+                Attr("notExecuted", NotExecuted),
+                Attr("disconnected", Disconnected),
+                Attr("warning", Warning),
+                Attr("completed", Completed),
+                Attr("inProgress", InProgress),
+                Attr("pending", Pending)
             ),
             Output
         );

@@ -9,6 +9,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 {
     using System;
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class Times : ITestEntity
     {
@@ -27,11 +28,11 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
         public DateTime Start { get; set; }
         public DateTime Finish { get; set; }
 
-        public XElement Serialize() => XmlHelper.Elem("Times",
-            XmlHelper.Attr("creation", Creation.ToString("O")),
-            XmlHelper.Attr("queuing", Queuing.ToString("O")),
-            XmlHelper.Attr("start", Start.ToString("O")),
-            XmlHelper.Attr("finish", Finish.ToString("O"))
+        public XElement Serialize() => Elem("Times",
+            Attr("creation", Creation.ToString("O")),
+            Attr("queuing", Queuing.ToString("O")),
+            Attr("start", Start.ToString("O")),
+            Attr("finish", Finish.ToString("O"))
         );
     }
 }

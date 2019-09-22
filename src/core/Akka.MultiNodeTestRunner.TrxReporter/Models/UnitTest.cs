@@ -9,6 +9,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 {
     using System.Collections.Generic;
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class UnitTest : ITestEntity
     {
@@ -38,18 +39,18 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
             return result;
         }
 
-        public XElement Serialize() => XmlHelper.Elem("UnitTest",
-            XmlHelper.Attr("id", Id),
-            XmlHelper.Attr("name", Name),
-            XmlHelper.Attr("storage", Storage),
-            XmlHelper.Elem("Execution",
-                XmlHelper.Attr("id", ExecutionId)
+        public XElement Serialize() => Elem("UnitTest",
+            Attr("id", Id),
+            Attr("name", Name),
+            Attr("storage", Storage),
+            Elem("Execution",
+                Attr("id", ExecutionId)
             ),
-            XmlHelper.Elem("TestMethod",
-                XmlHelper.Attr("codeBase", Storage),
-                XmlHelper.Attr("adapterTypeName", AdapterTypeName),
-                XmlHelper.Attr("className", ClassName),
-                XmlHelper.Attr("name", Name)
+            Elem("TestMethod",
+                Attr("codeBase", Storage),
+                Attr("adapterTypeName", AdapterTypeName),
+                Attr("className", ClassName),
+                Attr("name", Name)
             )
         );
     }
