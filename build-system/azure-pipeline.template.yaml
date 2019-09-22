@@ -15,8 +15,6 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
-    variables:
-      DEVOPS_ACCESS_TOKEN: $(System.AccessToken)
     steps:
       - task: Bash@3 
         displayName: Linux / OSX Build

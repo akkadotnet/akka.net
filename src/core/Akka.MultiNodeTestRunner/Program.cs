@@ -125,20 +125,30 @@ namespace Akka.MultiNodeTestRunner
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
                 throw new ArgumentException("Invalid argument provided for -Dteamcity");
 
-            //SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
-            //    Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) })) : // mutes ConsoleMessageSinkActor
-            //    Props.Create<SinkCoordinator>(), "sinkCoordinator");
-
-            SinkCoordinator = TestRunSystem.ActorOf(
-                Props.Create(() => new SinkCoordinator(new[] { new TrxMessageSink(suiteName) })),
-                "sinkCoordinator"
-            );
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
+            var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "trx");
+
+            Props coordinatorProps;
+            switch (reporter.ToLowerInvariant())
+            {
+                case "trx":
+                    coordinatorProps = Props.Create(() => new SinkCoordinator(new[] { new TrxMessageSink(suiteName) }));
+                    break;
+
+                case "teamcity":
+                    coordinatorProps = Props.Create(() =>  new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) }));
+                    break;
+
+                default:
+                    throw new ArgumentException($"Given reporter name '{reporter}' is not understood, valid reporters are: trx and teamcity");
+            }
+
+            SinkCoordinator = TestRunSystem.ActorOf(coordinatorProps, "sinkCoordinator");
 
 #if CORECLR
             if (!_validNetCorePlatform.Contains(platform))
