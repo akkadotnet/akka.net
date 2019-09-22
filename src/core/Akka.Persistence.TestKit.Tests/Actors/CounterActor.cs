@@ -72,7 +72,6 @@ namespace Akka.Persistence.TestKit.Tests
             await WithJournalWrite(write => write.Fail(), () =>
             {
                 var actor = ActorOf(() => new CounterActor("test"), "counter");
-
                 actor.Tell("inc", TestActor);
                 actor.Tell("read", TestActor);
 

@@ -115,7 +115,7 @@ So now we are ready to write some tests.
 
 The current implementation has one fundamental flaw - actor persist changes in fire-n-forget style, that is no reliable as
 underlying persistence can fail due to hundreds of reasons. We can verify that by writing a test which simulates network
-failure of underlying persistence store.
+failure of the underlying persistence store.
 
 ``` csharp
 public class CounterActorTests : PersistenceTestKit
@@ -126,7 +126,6 @@ public class CounterActorTests : PersistenceTestKit
         await WithJournalWrite(write => write.Fail(), () =>
         {
             var actor = ActorOf(() => new CounterActor("test"), "counter");
-
             actor.Tell("inc", TestActor);
             actor.Tell("read", TestActor);
 
@@ -136,6 +135,11 @@ public class CounterActorTests : PersistenceTestKit
     }
 }
 ```
+
+When we will launch this test it will fail, because the persistence journal failed when we tried to tell `inc` command to the actor. The actor failed with the journal and `read` was never delivered anb we had not received any answer.
+
+
+### How to make things better
 
 
 ## Reference
