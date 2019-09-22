@@ -107,7 +107,7 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 _testRun.Serialize()
             );
 
-            doc.Save(Path.Combine(Directory.GetCurrentDirectory(), $@"mntr-{DateTime.UtcNow.ToString("O").Replace(":", "_")}.trx"));
+            doc.Save(Path.Combine(Directory.GetCurrentDirectory(), $@"mntr-{DateTime.UtcNow:yyyy'-'MM'-'dd'T'HH'-'mm'-'ss'-'fffffffK}.trx"));
         }
 
         private static void ReportSpec(SpecSession session, TestRun testRun, string computerName)
