@@ -5,15 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#endregion
-
 using Akka.Actor;
 using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
-    #region extension
-
     internal sealed class StreamRefsMaster : IExtension
     {
         public static StreamRefsMaster Get(ActorSystem system) =>
@@ -36,6 +32,4 @@ namespace Akka.Streams.Implementation.StreamRef
         public override StreamRefsMaster CreateExtension(ExtendedActorSystem system) =>
             new StreamRefsMaster(system);
     }
-
-    #endregion
 }

@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#endregion
-
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Streams.Dsl;

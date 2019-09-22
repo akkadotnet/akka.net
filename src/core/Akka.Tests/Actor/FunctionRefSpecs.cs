@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#endregion
-
 using System;
 using Akka.Actor;
 using Akka.Configuration;
