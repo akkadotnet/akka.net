@@ -127,7 +127,6 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                     result.Outcome = TestOutcome.NotExecuted;
                     result.StartTime = beginTime;
                     result.EndTime = beginTime;
-                    result.Duration = TimeSpan.Zero;
                 }
                 else
                 {
@@ -143,15 +142,10 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 var result = nodeResults[message.NodeIndex];
                 result.Outcome = TestOutcome.Passed;
                 result.EndTime = time;
-                result.Duration = time - result.StartTime;
-                result.Output = new Output
-                {
-                    StdOut = message.Message,
-                    TextMessages =
-                    {
-                        message.Message
-                    }
-                };
+                result.Output = new Output();
+
+                result.Output.StdOut.Add(message.Message);
+                result.Output.DebugTrace.Add(message.Message);
             }
 
             foreach (var (time, message) in session.Fails)
@@ -159,15 +153,11 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                 var result = nodeResults[message.NodeIndex];
                 result.Outcome = TestOutcome.Failed;
                 result.EndTime = time;
-                result.Duration = time - result.StartTime;
-                result.Output = new Output
-                {
-                    StdErr = message.Message,
-                    ErrorInfo = new ErrorInfo
-                    {
-                        Message = message.Message
-                    }
-                };
+                result.Output = new Output();
+                
+                result.Output.StdErr.Add(message.Message);
+                result.Output.DebugTrace.Add(message.Message);
+                result.Output.ErrorInfo.Message = message.Message;
             }
 
             var outcomes = nodeResults.Values.Select(x => x.Outcome).Distinct().ToArray();
@@ -180,7 +170,6 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 
             specResult.StartTime = beginTime;
             specResult.EndTime = session.End.Time;
-            specResult.Duration = specResult.EndTime - specResult.StartTime;
 
             foreach (var (_, message) in session.Messages)
             {
@@ -206,8 +195,8 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
                     output = specResult.Output;
                 }
 
-                output.TextMessages.Add(textMessage);
-                output.StdOut += Environment.NewLine + textMessage;
+                output.StdOut.Add(textMessage);
+                output.DebugTrace.Add(textMessage);
             }
         }
     }

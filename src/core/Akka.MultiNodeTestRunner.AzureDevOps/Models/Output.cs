@@ -7,28 +7,35 @@
 
 namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Xml.Linq;
+    using static XmlHelper;
 
     public class Output : ITestEntity
     {
-        public string StdOut { get; set; }
-        public string StdErr { get; set; }
-        public string DebugTrace { get; set; }
+        public List<string> StdOut { get; set; }
+        public List<string> StdErr { get; set; }
+        public List<string> DebugTrace { get; set; }
         public ErrorInfo ErrorInfo { get; set; }
         public List<string> TextMessages { get; } = new List<string>();
 
         public XElement Serialize()
         {
-            return XmlHelper.Elem("Output",
-                XmlHelper.Elem("StdOut", XmlHelper.Text(StdOut)),
-                XmlHelper.Elem("StdErr", XmlHelper.Text(StdErr)),
-                XmlHelper.Elem("DebugTrace", XmlHelper.Text(DebugTrace)),
+            XElement TextElem(string element, List<string> lines) =>
+                lines.Count > 0
+                    ? Elem(element, Text(string.Join(Environment.NewLine, lines)))
+                    : null;
+
+            return Elem("Output",
+                TextElem("StdOut", StdOut),
+                TextElem("StdErr", StdErr),
+                TextElem("DebugTrace", DebugTrace),
                 ErrorInfo,
-                XmlHelper.ElemList(
+                ElemList(
                     "TextMessages",
-                    TextMessages.Select(x => XmlHelper.Elem("Message", XmlHelper.Text(x)))
+                    TextMessages.Select(x => Elem("Message", Text(x)))
                 )
             );
         }

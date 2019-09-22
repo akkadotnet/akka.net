@@ -27,7 +27,8 @@
                 Output = new Output();
             }
 
-            Output.TextMessages.Add(item);
+            Output.DebugTrace.Add(item);
+            Output.StdOut.Add(item);
         }
 
         public UnitTest AddUnitTest(string className, string name, string storage)

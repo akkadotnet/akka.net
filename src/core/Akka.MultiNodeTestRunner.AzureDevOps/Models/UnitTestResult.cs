@@ -23,7 +23,6 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
             TestListId = testListId;
 
             var now = DateTime.UtcNow;
-            Duration = TimeSpan.Zero;
             StartTime = now;
             EndTime = now;
         }
@@ -35,7 +34,7 @@ namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
         public string TestName { get; }
 
         public string ComputerName { get; }
-        public TimeSpan Duration { get; set; }
+        public TimeSpan Duration => EndTime - StartTime;
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public Identifier TestType => TEST_TYPE;
