@@ -203,9 +203,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit.Xunit2", "core\Akka.Persistence.TestKit.Xunit2\Akka.Persistence.TestKit.Xunit2.csproj", "{6F8FECD6-6E39-473E-9B9A-9EE22CBF479F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.AzureDevOps", "core\Akka.MultiNodeTestRunner.AzureDevOps\Akka.MultiNodeTestRunner.AzureDevOps.csproj", "{5A5EED03-BBC8-4664-986B-AE17EC3789A9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.TrxReporter", "core\Akka.MultiNodeTestRunner.TrxReporter\Akka.MultiNodeTestRunner.TrxReporter.csproj", "{5A5EED03-BBC8-4664-986B-AE17EC3789A9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.AzureDevOps.Tests", "core\Akka.MultiNodeTestRunner.AzureDevOps.Tests\Akka.MultiNodeTestRunner.AzureDevOps.Tests.csproj", "{30744E10-73EC-46B9-ADE7-9D9D0EFF8010}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.TrxReporter.Tests", "core\Akka.MultiNodeTestRunner.TrxReporter.Tests\Akka.MultiNodeTestRunner.TrxReporter.Tests.csproj", "{30744E10-73EC-46B9-ADE7-9D9D0EFF8010}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

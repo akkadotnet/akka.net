@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.MultiNodeTestRunner.AzureDevOps\Akka.MultiNodeTestRunner.AzureDevOps.csproj" />
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner.TrxReporter\Akka.MultiNodeTestRunner.TrxReporter.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj" />
     <ProjectReference Include="..\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj" />

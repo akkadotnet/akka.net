@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
-    <ProjectReference Include="..\Akka.MultiNodeTestRunner.AzureDevOps\Akka.MultiNodeTestRunner.AzureDevOps.csproj" />
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner.TrxReporter\Akka.MultiNodeTestRunner.TrxReporter.csproj" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
