@@ -166,6 +166,10 @@
     href: clustering/distributed-data.md
   - name: Split Brain Resolver
     href: clustering/split-brain-resolver.md
+- name: Testing
+  items:
+  - name: Multi-Node Testing Distributed Akka.NET Applications
+    href: testing/multi-node-testing.md
 - name: Utilities
   items:
   - name: Event Bus

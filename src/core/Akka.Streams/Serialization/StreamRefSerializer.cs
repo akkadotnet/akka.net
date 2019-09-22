@@ -16,11 +16,12 @@ using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Util;
 using Google.Protobuf;
 using Akka.Streams.Dsl;
-using CumulativeDemand = Akka.Streams.Dsl.CumulativeDemand;
-using OnSubscribeHandshake = Akka.Streams.Dsl.OnSubscribeHandshake;
-using RemoteStreamCompleted = Akka.Streams.Dsl.RemoteStreamCompleted;
-using RemoteStreamFailure = Akka.Streams.Dsl.RemoteStreamFailure;
-using SequencedOnNext = Akka.Streams.Dsl.SequencedOnNext;
+using Akka.Streams.Implementation.StreamRef;
+using CumulativeDemand = Akka.Streams.Implementation.StreamRef.CumulativeDemand;
+using OnSubscribeHandshake = Akka.Streams.Implementation.StreamRef.OnSubscribeHandshake;
+using RemoteStreamCompleted = Akka.Streams.Implementation.StreamRef.RemoteStreamCompleted;
+using RemoteStreamFailure = Akka.Streams.Implementation.StreamRef.RemoteStreamFailure;
+using SequencedOnNext = Akka.Streams.Implementation.StreamRef.SequencedOnNext;
 
 namespace Akka.Streams.Serialization
 {
