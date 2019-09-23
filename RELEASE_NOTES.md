@@ -1,3 +1,35 @@
+#### 1.4.0-beta2 September 23 2019 ####
+**Second pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4.0 is still moving along and this release contains some new and important changes.
+
+* We've added a new package, the Akka.Persistence.TestKit - this is designed to allow users to test their `PersistentActor` implementations under real-world conditions such as database connection failures, serialization errors, and so forth. It works alongside the standard Akka.NET TestKit distributions and offers a simple, in-place API to do so.
+* Akka.Streams now supports [Stream Context propagation](https://github.com/akkadotnet/akka.net/pull/3741), designed to make it really easy to work with tools such as Kafka, Amazon SQS, and more - where you might want to have one piece of context (such as the partition offset in Kafka) and propagate it from the very front of an Akka.Stream all the way to the end, and then finally process it once the rest of the stream has completed processing. In the case of Kakfa, this might be updating the local consumer's partition offset only once we've been able to fully guarantee the processing of the message.
+* Fixed [a major issue with Akka.Remote, which caused unnecessary `Quarantine` events](https://github.com/akkadotnet/akka.net/issues/3905).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 97 | 6527 | 3729 | Aaron Stannard |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3020 | 2 | Valdis Zobēla |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Arjen Smits |
+| 1 | 1 | 1 | Andre |
+
 #### 1.3.14 July 29 2019 ####
 **Maintenance Release for Akka.NET 1.3**
 You know what? We're going to stop promising that _this_ is the last 1.3.x release, because even though we've said that twice... We now have _another_ 1.3.x release. 
@@ -26,6 +58,32 @@ To [see the full set of changes for Akka.NET v1.3.14, click here](https://github
 | 1 | 1 | 1 | Wessel Kranenborg |
 | 1 | 1 | 1 | Kaiwei Li |
 | 1 | 1 | 1 | jdsartori |
+
+#### 1.4.0-beta1 July 17 2019 ####
+**First pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4 has a ways to go before it's fully ready for market, but this is the first publicly available release on NuGet and it contains some massive changes.
+
+* Akka.Cluster.Sharding's default "persistent" mode has been stabilized and errors that users have ran into during `ShardCoordinator` recovery, such as [Exception in PersistentShardCoordinator ReceiveRecover](https://github.com/akkadotnet/akka.net/issues/3414)
+* StreamRefs have been added to Akka.Streams, which allows streams to run across process boundaries and over Akka.Remote / Akka.Cluster.
+* Akka.NET now targets .NET Standard 2.0, which means many annoying polyfills and other hacks we needed to add in order to support .NET Core 1.1 are now gone and replaced with standard APIs.
+* Lots of small bug fixes and API changes have been added to Akka core and other libraries.
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 39 | 3479 | 1731 | Aaron Stannard |
+| 6 | 5255 | 531 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 3 | 3 | Abi |
+| 1 | 2 | 3 | Onur Gumus |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | jdsartori |
+| 1 | 1 | 1 | Wessel Kranenborg |
 
 #### 1.3.13 April 30 2019 ####
 **Maintenance Release for Akka.NET 1.3**
@@ -327,7 +385,7 @@ You can see [the full set of changes for Akka.NET v1.3.6 here](hhttps://github.c
 | 1 | 64 | 6 | Robert |
 | 1 | 23 | 29 | nathvi |
 | 1 | 2 | 1 | Sebastien Bacquet |
-| 1 | 1 | 2 | OndÅej PiÃ¡lek |
+| 1 | 1 | 2 | OndÅ?ej PiÃ¡lek |
 | 1 | 1 | 1 | Steffen Skov |
 | 1 | 1 | 1 | Sean Gilliam |
 | 1 | 1 | 1 | Matthew Herman |
@@ -474,7 +532,7 @@ You can [see the full changeset for Akka.NET 1.3.3 here](https://github.com/akka
 | 1 | 4 | 5 | derrickcrowne |
 | 1 | 3 | 2 | Mikhail Moussikhine |
 | 1 | 20 | 0 | Arturo Sevilla |
-| 1 | 2 | 0 | Paweł Bańka |
+| 1 | 2 | 0 | Pawel Banka |
 | 1 | 17 | 11 | planerist |
 | 1 | 1 | 4 | lesscode |
 
@@ -548,7 +606,7 @@ Akka.Remote's throughput has been significantly increased.
 | 4 | 1644 | 2210 | Arkatufus |
 | 3 | 32 | 6 | Lukas Rieger |
 | 3 | 153 | 17 | Quartus Dev |
-| 2 | 8 | 11 | Paweł Bańka |
+| 2 | 8 | 11 | Pawel Banka |
 | 2 | 4866 | 12678 | olegz |
 | 2 | 1148 | 176 | Ismael Hamed |
 | 1 | 62 | 5 | Mikhail Kantarovskiy |
@@ -1062,7 +1120,7 @@ A special thanks to all of our contributors for making this happen!
 | 1 | 2 | 2 | easuter |
 | 1 | 2 | 1 | Danthar |
 | 1 | 182 | 0 | derwasp |
-| 1 | 179 | 0 | Onat Yiğit Mercan |
+| 1 | 179 | 0 | Onat Yigit Mercan |
 
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**
