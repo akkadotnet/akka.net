@@ -57,8 +57,7 @@ namespace Akka.DI.Core
         {
             var actor = actorFactory();
 
-            // set additional properties here
-            // independent of DI provider
+            // set additional properties here independent of DI provider
             if (_diProperties != null)
             {
                 foreach (var propertyEntry in _diProperties.Properties)

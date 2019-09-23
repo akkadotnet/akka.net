@@ -402,7 +402,7 @@ namespace Akka.DI.TestKit
             });
             var diActorProps2 = Sys.DI().Props<DiPerRequestActor>(x =>
             {
-                x.Set(a => a.TestProperty, "TestValue2");
+                x.Set(nameof(DiPerRequestActor.TestProperty), "TestValue2");
             });
 
             var diActor1 = Sys.ActorOf(diActorProps1);
