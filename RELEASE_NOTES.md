@@ -1,5 +1,34 @@
-#### 1.4.0-beta2 July 29 2019 ####
-Placeholder for nightlies.
+#### 1.4.0-beta2 September 23 2019 ####
+**Second pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4.0 is still moving along and this release contains some new and important changes.
+
+* We've added a new package, the Akka.Persistence.TestKit - this is designed to allow users to test their `PersistentActor` implementations under real-world conditions such as database connection failures, serialization errors, and so forth. It works alongside the standard Akka.NET TestKit distributions and offers a simple, in-place API to do so.
+* Akka.Streams now supports [Stream Context propagation](https://github.com/akkadotnet/akka.net/pull/3741), designed to make it really easy to work with tools such as Kafka, Amazon SQS, and more - where you might want to have one piece of context (such as the partition offset in Kafka) and propagate it from the very front of an Akka.Stream all the way to the end, and then finally process it once the rest of the stream has completed processing. In the case of Kakfa, this might be updating the local consumer's partition offset only once we've been able to fully guarantee the processing of the message.
+* Fixed [a major issue with Akka.Remote, which caused unnecessary `Quarantine` events](https://github.com/akkadotnet/akka.net/issues/3905).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 97 | 6527 | 3729 | Aaron Stannard |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3020 | 2 | Valdis Zobēla |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Arjen Smits |
+| 1 | 1 | 1 | Andre |
 
 #### 1.3.14 July 29 2019 ####
 **Maintenance Release for Akka.NET 1.3**
