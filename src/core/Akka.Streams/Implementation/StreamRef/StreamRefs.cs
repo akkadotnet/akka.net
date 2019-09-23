@@ -1,19 +1,15 @@
-﻿#region copyright
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#endregion
 
 using Akka.Actor;
 using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
-    #region extension
-
     internal sealed class StreamRefsMaster : IExtension
     {
         public static StreamRefsMaster Get(ActorSystem system) =>
@@ -36,6 +32,4 @@ namespace Akka.Streams.Implementation.StreamRef
         public override StreamRefsMaster CreateExtension(ExtendedActorSystem system) =>
             new StreamRefsMaster(system);
     }
-
-    #endregion
 }
