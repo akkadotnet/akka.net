@@ -1,10 +1,25 @@
+#### 1.3.15 September 23 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+
+1.3.15 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far.
+
+This really only includes one major fix: [a major issue with Akka.Remote, which caused unnecessary `Quarantine` events](https://github.com/akkadotnet/akka.net/issues/3905).
+
+We highly recommend upgrading to this build if you're using Akka.Remote or Akka.Cluster.
+
+To [see the full set of changes in Akka.NET v1.3.15, click here](https://github.com/akkadotnet/akka.net/pull/3931).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 443 | 196 | Aaron Stannard |
+
 #### 1.4.0-beta2 September 23 2019 ####
 **Second pre-release candidate for Akka.NET 1.4**
 Akka.NET v1.4.0 is still moving along and this release contains some new and important changes.
 
 * We've added a new package, the Akka.Persistence.TestKit - this is designed to allow users to test their `PersistentActor` implementations under real-world conditions such as database connection failures, serialization errors, and so forth. It works alongside the standard Akka.NET TestKit distributions and offers a simple, in-place API to do so.
 * Akka.Streams now supports [Stream Context propagation](https://github.com/akkadotnet/akka.net/pull/3741), designed to make it really easy to work with tools such as Kafka, Amazon SQS, and more - where you might want to have one piece of context (such as the partition offset in Kafka) and propagate it from the very front of an Akka.Stream all the way to the end, and then finally process it once the rest of the stream has completed processing. In the case of Kakfa, this might be updating the local consumer's partition offset only once we've been able to fully guarantee the processing of the message.
-* Fixed [a major issue with Akka.Remote, which caused unnecessary `Quarantine` events](https://github.com/akkadotnet/akka.net/issues/3905).
+* Fixed 
 
 To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
 
