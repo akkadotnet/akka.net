@@ -35,10 +35,11 @@ namespace Akka.DI.Core
         /// Creates a <see cref="Akka.Actor.Props"/> configuration object for a given actor type.
         /// </summary>
         /// <param name="actorType">The actor type for which to create the <see cref="Akka.Actor.Props"/> configuration.</param>
+        /// <param name="diProperties"></param>
         /// <returns>A <see cref="Akka.Actor.Props"/> configuration object for the given actor type.</returns>
-        public Props Props(Type actorType)
+        public Props Props(Type actorType, DIActorSystemAdapter.IDIProperties diProperties)
         {
-            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType });
+            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType, diProperties });
         }
     }
 }

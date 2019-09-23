@@ -46,7 +46,7 @@ namespace Akka.DI.Core
         [Obsolete("Use Props methods for actor creation. This method will be removed in future versions")]
         public IActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
-            return context.ActorOf(producer.Props(typeof(TActor)), name);
+            return context.ActorOf(producer.Props(typeof(TActor), null), name);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Akka.DI.Core
         /// <returns>A <see cref="Akka.Actor.Props"/> configuration object for the given actor type.</returns>
         public Props Props(Type actorType) 
         {
-            return producer.Props(actorType);
+            return producer.Props(actorType, null);
         }
 
         /// <summary>

@@ -27,6 +27,8 @@ namespace Akka.DI.TestKit
 
         class GetCallCount { }
 
+        class GetTestValue { }
+
         class DiPerRequestActor : ReceiveActor
         {
             private readonly IDiTest _di;
@@ -36,8 +38,11 @@ namespace Akka.DI.TestKit
                 _di = di;
 
                 Receive<GetCallCount>(count => Sender.Tell(_di.CallCount));
+                Receive<GetTestValue>(x => Sender.Tell(TestProperty));
                 ReceiveAny(o => _di.Call());
             }
+
+            public string TestProperty { get; set; }
         }
 
         class DiSingletonActor : ReceiveActor
@@ -386,6 +391,27 @@ namespace Akka.DI.TestKit
             var currentDisposeCounter = _disposeCounter.Current;
             disposableActor.Tell(new DisposableActor.Restart());
             AwaitAssert(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
+        }
+
+        [Fact]
+        public void DependencyResolver_should_inject_property_values_into_DiPerRequestActor()
+        {
+            var diActorProps1 = Sys.DI().Props<DiPerRequestActor>(x =>
+            {
+                x.Set(a => a.TestProperty, "TestValue1");
+            });
+            var diActorProps2 = Sys.DI().Props<DiPerRequestActor>(x =>
+            {
+                x.Set(a => a.TestProperty, "TestValue2");
+            });
+
+            var diActor1 = Sys.ActorOf(diActorProps1);
+            var diActor2 = Sys.ActorOf(diActorProps2);
+
+            diActor1.Tell(new GetTestValue());
+            Assert.Equal("TestValue1", ExpectMsg<string>());
+            diActor2.Tell(new GetTestValue());
+            Assert.Equal("TestValue2", ExpectMsg<string>());
         }
 
         #endregion

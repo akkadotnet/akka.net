@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using Akka.Actor;
 
 namespace Akka.DI.Core
@@ -17,6 +18,7 @@ namespace Akka.DI.Core
     {
         private IDependencyResolver dependencyResolver;
         private Type actorType;
+        private readonly DIActorSystemAdapter.IDIProperties _diProperties;
 
         readonly Func<ActorBase> actorFactory;
 
@@ -28,13 +30,14 @@ namespace Akka.DI.Core
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when either the specified <paramref name="dependencyResolver"/> or the specified <paramref name="actorType"/> is undefined.
         /// </exception>
-        public DIActorProducer(IDependencyResolver dependencyResolver, Type actorType)
+        public DIActorProducer(IDependencyResolver dependencyResolver, Type actorType, DIActorSystemAdapter.IDIProperties diProperties)
         {
             if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"DIActorProducer requires {nameof(dependencyResolver)} to be provided");
             if (actorType == null) throw new ArgumentNullException(nameof(actorType), $"DIActorProducer requires {nameof(actorType)} to be provided");
 
             this.dependencyResolver = dependencyResolver;
             this.actorType = actorType;
+            this._diProperties = diProperties;
             this.actorFactory = dependencyResolver.CreateActorFactory(actorType);
         }
 
@@ -52,7 +55,27 @@ namespace Akka.DI.Core
         /// <returns>An actor created by the container.</returns>
         public ActorBase Produce()
         {
-            return actorFactory();
+            var actor = actorFactory();
+
+            // set additional properties here
+            // independent of DI provider
+            if (_diProperties != null)
+            {
+                foreach (var propertyEntry in _diProperties.Properties)
+                {
+                    var name = propertyEntry.Key;
+                    var value = propertyEntry.Value;
+
+                    var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+                    var propertyInfo = actorType.GetProperty(name, flags);
+                    if (propertyInfo == null)
+                        continue; // ignore or throw exception?
+
+                    propertyInfo.SetValue(actor, value);
+                }
+            }
+
+            return actor;
         }
 
         /// <summary>

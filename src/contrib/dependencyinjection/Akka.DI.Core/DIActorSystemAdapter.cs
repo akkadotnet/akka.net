@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using Akka.Actor;
 
 namespace Akka.DI.Core
@@ -42,9 +44,9 @@ namespace Akka.DI.Core
         /// </summary>
         /// <param name="actorType">The actor type for which to create the <see cref="Akka.Actor.Props"/> configuration.</param>
         /// <returns>A <see cref="Akka.Actor.Props"/> configuration object for the given actor type.</returns>
-        public Props Props(Type actorType) 
+        public Props Props(Type actorType, IDIProperties diProperties = null)
         {
-            return producer.Props(actorType);
+            return producer.Props(actorType, diProperties);
         }
 
         /// <summary>
@@ -52,9 +54,49 @@ namespace Akka.DI.Core
         /// </summary>
         /// <typeparam name="TActor">The actor type for which to create the <see cref="Akka.Actor.Props"/> configuration.</typeparam>
         /// <returns>A <see cref="Akka.Actor.Props"/> configuration object for the given actor type.</returns>
-        public Props Props<TActor>() where TActor : ActorBase
+        public Props Props<TActor>(Action<IDIProperties<TActor>> propertyInjector = null) where TActor : ActorBase
         {
-            return Props(typeof(TActor));
+            IDIProperties diProperties = null;
+            if (propertyInjector != null)
+            {
+                var properties = new DIProperties<TActor>();
+                propertyInjector(properties);
+                diProperties = properties;
+            }
+
+            return Props(typeof(TActor), diProperties);
+        }
+
+        public interface IDIProperties
+        {
+            Dictionary<string, object> Properties { get; }
+
+            void Set(string propertyName, object value);
+        }
+
+        public interface IDIProperties<TActor> : IDIProperties
+        {
+            void Set<TValue>(Expression<Func<TActor, TValue>> actor, TValue value);
+        }
+
+        [Serializable]
+        public class DIProperties : IDIProperties
+        {
+            public Dictionary<string, object> Properties { get; } = new Dictionary<string, object>();
+
+            public void Set(string propertyName, object value)
+            {
+                Properties.Add(propertyName, value);
+            }
+        }
+
+        public class DIProperties<TActor> : DIProperties, IDIProperties<TActor>
+        {
+            public void Set<TValue>(Expression<Func<TActor, TValue>> actor, TValue value)
+            {
+                var name = actor.PropertyInfo().Name;
+                Set(name, value);
+            }
         }
     }
 }
