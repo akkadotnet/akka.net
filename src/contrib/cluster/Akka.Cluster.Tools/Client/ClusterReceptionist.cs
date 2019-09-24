@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionist.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -277,6 +277,18 @@ namespace Akka.Cluster.Tools.Client
             public static CheckDeadlines Instance { get; } = new CheckDeadlines();
             private CheckDeadlines() { }
         }
+
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Used to signal that a <see cref="ClusterClientReceptionist"/> we've connected to
+        /// has terminated.
+        /// </summary>
+        internal sealed class ReceptionistShutdown : IClusterClientMessage
+        {
+            public static readonly ReceptionistShutdown Instance = new ReceptionistShutdown();
+            private ReceptionistShutdown() { }
+        }
         #endregion
 
         /// <summary>
@@ -295,7 +307,7 @@ namespace Akka.Cluster.Tools.Client
 
         #region RingOrdering
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal class RingOrdering : IComparer<Address>
         {
@@ -306,13 +318,13 @@ namespace Akka.Cluster.Tools.Client
             private RingOrdering() { }
 
             /// <summary>
-            /// TBD
+            /// Generates a hash for the node address.
             /// </summary>
-            /// <param name="node">TBD</param>
+            /// <param name="node">The node being added to the hash ring.</param>
             /// <exception cref="IllegalStateException">
             /// This exception is thrown when the specified <paramref name="node"/> has a host/port that is undefined.
             /// </exception>
-            /// <returns>TBD</returns>
+            /// <returns>A stable hashcode for the address.</returns>
             public static int HashFor(Address node)
             {
                 // cluster node identifier is the host and port of the address; protocol and system is assumed to be the same
@@ -328,13 +340,13 @@ namespace Akka.Cluster.Tools.Client
                 var ha = HashFor(x);
                 var hb = HashFor(y);
 
-                if (ha == hb) return 0;
-                return ha < hb || Member.AddressOrdering.Compare(x, y) < 0 ? -1 : 1;
+                if (ha == hb) return Member.AddressOrdering.Compare(x, y);
+                return ha.CompareTo(hb);
             }
         }
         #endregion
 
-        private ILoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRef _pubSubMediator;
         private readonly ClusterReceptionistSettings _settings;
         private readonly Cluster _cluster;
@@ -380,10 +392,6 @@ namespace Akka.Cluster.Tools.Client
                 Self);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PreStart()
         {
             base.PreStart();
@@ -394,14 +402,15 @@ namespace Akka.Cluster.Tools.Client
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             _cluster.Unsubscribe(Self);
             _checkDeadlinesTask.Cancel();
+            foreach (var c in _clientInteractions.Keys)
+            {
+                c.Tell(ClusterReceptionist.ReceptionistShutdown.Instance);
+            }
         }
 
         private bool IsMatchingRole(Member member)
@@ -472,13 +481,10 @@ namespace Akka.Cluster.Tools.Client
                         _log.Debug("Client [{0}] gets ContactPoints [{1}]", Sender.Path, string.Join(", ", contacts.ContactPoints));
 
                     Sender.Tell(contacts);
-                    UpdateClientInteractions(Sender);
                 }
             }
-            else if (message is ClusterEvent.CurrentClusterState)
+            else if (message is ClusterEvent.CurrentClusterState state)
             {
-                var state = (ClusterEvent.CurrentClusterState)message;
-
                 _nodes = ImmutableSortedSet<Address>.Empty.WithComparer(RingOrdering.Instance)
                     .Union(state.Members
                         .Where(m => m.Status != MemberStatus.Joining && IsMatchingRole(m))
@@ -486,19 +492,16 @@ namespace Akka.Cluster.Tools.Client
 
                 _consistentHash = ConsistentHash.Create(_nodes, _virtualNodesFactor);
             }
-            else if (message is ClusterEvent.MemberUp)
+            else if (message is ClusterEvent.MemberUp up)
             {
-                var up = (ClusterEvent.MemberUp)message;
                 if (IsMatchingRole(up.Member))
                 {
                     _nodes = _nodes.Add(up.Member.Address);
                     _consistentHash = ConsistentHash.Create(_nodes, _virtualNodesFactor);
                 }
             }
-            else if (message is ClusterEvent.MemberRemoved)
+            else if (message is ClusterEvent.MemberRemoved removed)
             {
-                var removed = (ClusterEvent.MemberRemoved)message;
-
                 if (removed.Member.Address.Equals(_cluster.SelfAddress))
                 {
                     Context.Stop(Self);
@@ -525,9 +528,8 @@ namespace Akka.Cluster.Tools.Client
                 var subscriber = Sender;
                 _subscribers = _subscribers.Where(c => !c.Equals(subscriber)).ToImmutableList();
             }
-            else if (message is Terminated)
+            else if (message is Terminated terminated)
             {
-                var terminated = (Terminated)message;
                 Self.Tell(UnsubscribeClusterClients.Instance, terminated.ActorRef);
             }
             else if (message is GetClusterClients)

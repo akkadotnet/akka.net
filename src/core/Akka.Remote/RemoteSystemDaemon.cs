@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteSystemDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -304,44 +304,25 @@ namespace Akka.Remote
         /// <returns>ActorRef.</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            var elements = name.ToArray();
-            var path = elements.Join("/");
+            var path = name.Join("/");
             var n = 0;
             while (true)
             {
                 var nameAndUid = ActorCell.SplitNameAndUid(path);
-                var child = GetChild(nameAndUid.Name);
-                if (child == null)
+                if (TryGetChild(nameAndUid.Name, out var child))
                 {
-                    var last = path.LastIndexOf("/", StringComparison.Ordinal);
-                    if (last == -1)
+                    if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
                         return Nobody.Instance;
-                    path = path.Substring(0, last);
-                    n++;
-                    continue;
+                    return n == 0 ? child : child.GetChild(name.TakeRight(n));
                 }
-                if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
+
+                var last = path.LastIndexOf("/", StringComparison.Ordinal);
+                if (last == -1)
                     return Nobody.Instance;
-
-                return n == 0 ? child : child.GetChild(elements.TakeRight(n));
+                path = path.Substring(0, last);
+                n++;
             }
         }
-
-
-        private IInternalActorRef GetChild(string name)
-        {
-            var nameAndUid = ActorCell.SplitNameAndUid(name);
-            IInternalActorRef child;
-            if (TryGetChild(nameAndUid.Name, out child))
-            {
-                if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
-                {
-                    return ActorRefs.Nobody;
-                }
-            }
-            return child;
-        }
-
 
         private bool AddChildParentNeedsWatch(IActorRef parent, IActorRef child)
         {

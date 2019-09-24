@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ namespace Akka.Cluster.Sharding.Tests
                             number-of-entities = 1
                         }}
                         least-shard-allocation-strategy {{
-                            rebalance-threshold = 2
+                            rebalance-threshold = 1
                             max-simultaneous-rebalance = 1
                         }}
                         distributed-data.durable.lmdb {{
@@ -468,7 +468,7 @@ namespace Akka.Cluster.Sharding.Tests
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
-                    0.1, 
+                    0.1,
                     -1).WithDeploy(Deploy.Local);
 
                 Sys.ActorOf(ClusterSingletonManager.Props(

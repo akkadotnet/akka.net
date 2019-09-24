@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -298,26 +298,30 @@ namespace Akka.Actor
             }
             finally
             {
-                try{ Dispatcher.Detach(this); }
+                try { Dispatcher.Detach(this); }
                 finally
                 {
                     try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
                     finally
                     {
-                        try { TellWatchersWeDied(); }
+                        try { StopFunctionRefs(); }
                         finally
                         {
-                            try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
+                            try { TellWatchersWeDied(); }
                             finally
                             {
-                                if (System.Settings.DebugLifecycle)
-                                    Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
+                                try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
+                                finally
+                                {
+                                    if (System.Settings.DebugLifecycle)
+                                        Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
-                                ClearActor(a);
-                                ClearActorCell();
+                                    ClearActor(a);
+                                    ClearActorCell();
 
-                                _actor = null;
+                                    _actor = null;
 
+                                }
                             }
                         }
                     }

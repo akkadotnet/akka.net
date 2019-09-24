@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,8 +24,8 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public abstract class SqlJournal : AsyncWriteJournal, IWithUnboundedStash
     {
-        private readonly Dictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
-        private readonly Dictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
+        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _persistenceIdSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
+        private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
         private readonly HashSet<IActorRef> _allPersistenceIdSubscribers = new HashSet<IActorRef>();
         private readonly ReaderWriterLockSlim _allPersistenceIdsLock = new ReaderWriterLockSlim();
         private HashSet<string> _allPersistenceIds = new HashSet<string>();
@@ -327,13 +327,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="subscriber">TBD</param>
         public void RemoveSubscriber(IActorRef subscriber)
         {
-            var pidSubscriptions = _persistenceIdSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in pidSubscriptions)
-                subscription.Remove(subscriber);
+            _persistenceIdSubscribers = _persistenceIdSubscribers.SetItems(_persistenceIdSubscribers
+                .Where(kv => kv.Value.Contains(subscriber))
+                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
 
-            var tagSubscriptions = _tagSubscribers.Values.Where(x => x.Contains(subscriber));
-            foreach (var subscription in tagSubscriptions)
-                subscription.Remove(subscriber);
+            _tagSubscribers = _tagSubscribers.SetItems(_tagSubscribers
+                .Where(kv => kv.Value.Contains(subscriber))
+                .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
 
             _allPersistenceIdSubscribers.Remove(subscriber);
         }
@@ -347,11 +347,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
             {
-                subscriptions = new HashSet<IActorRef>();
-                _tagSubscribers.Add(tag, subscriptions);
+                _tagSubscribers = _tagSubscribers.Add(tag, ImmutableHashSet.Create(subscriber));
             }
-
-            subscriptions.Add(subscriber);
+            else
+            {
+                _tagSubscribers = _tagSubscribers.SetItem(tag, subscriptions.Add(subscriber));
+            }
         }
 
         /// <summary>
@@ -373,11 +374,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
             {
-                subscriptions = new HashSet<IActorRef>();
-                _persistenceIdSubscribers.Add(persistenceId, subscriptions);
+                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, ImmutableHashSet.Create(subscriber));
             }
-
-            subscriptions.Add(subscriber);
+            else
+            {
+                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, subscriptions.Add(subscriber));
+            }
         }
 
         private async Task<long> NextTagSequenceNr(string tag)

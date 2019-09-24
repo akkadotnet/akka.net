@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -167,8 +167,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var routees = new List<Routee>();
                 ValueHolder valueHolder;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) && 
-                    bucket.Content.TryGetValue(send.Path, out valueHolder) && 
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) &&
+                    bucket.Content.TryGetValue(send.Path, out valueHolder) &&
                     send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;
@@ -275,7 +275,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         child.Forward(unsubscribe);
                     else
                     {
-                        // no such topic here  
+                        // no such topic here
                     }
                 });
             });
@@ -357,6 +357,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     _registry.Remove(left.Member.Address);
                 }
             });
+            Receive<ClusterEvent.MemberDowned>(downed =>
+            {
+                if (IsMatchingRole(downed.Member))
+                {
+                    _nodes.Remove(downed.Member.Address);
+                    _registry.Remove(downed.Member.Address);
+                }
+            });
             Receive<ClusterEvent.MemberRemoved>(removed =>
             {
                 var member = removed.Member;
@@ -380,7 +388,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<CountSubscribers>(msg =>
             {
-                var encTopic = Internal.Utils.EncodeName(msg.Topic); 
+                var encTopic = Internal.Utils.EncodeName(msg.Topic);
                 _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path / encTopic), msg, Sender, () =>
                 {
                     var child = Context.Child(encTopic);

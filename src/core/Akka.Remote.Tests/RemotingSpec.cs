@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,16 +14,18 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
+using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Google.Protobuf;
 using Xunit;
 using Xunit.Abstractions;
 using Nito.AsyncEx;
+using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 
 namespace Akka.Remote.Tests
 {
-
     public class RemotingSpec : AkkaSpec
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
@@ -35,11 +37,14 @@ namespace Akka.Remote.Tests
             var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             _remoteSystem = ActorSystem.Create("remote-sys", conf);
+            InitializeLogger(_remoteSystem);
             Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
             Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
 
             _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
             _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -51,7 +56,7 @@ namespace Akka.Remote.Tests
             }
 
             akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+              actor.provider = remote
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
@@ -97,7 +102,7 @@ namespace Akka.Remote.Tests
             }
 
             akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+              actor.provider = remote
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
@@ -229,7 +234,7 @@ namespace Akka.Remote.Tests
             ExpectMsg(76);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void Remoting_must_lookup_actors_across_node_boundaries()
         {
             Action<IActorDsl> act = dsl =>
@@ -427,7 +432,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
@@ -455,6 +460,171 @@ namespace Akka.Remote.Tests
             var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(reporter, msg.Item2);
+        }
+
+        [Fact]
+        public void Stash_inbound_connections_until_UID_is_known_for_pending_outbound()
+        {
+            var localAddress = new Address("akka.test", "system1", "localhost", 1);
+            var rawLocalAddress = new Address("test", "system1", "localhost", 1);
+            var remoteAddress = new Address("akka.test", "system2", "localhost", 2);
+            var rawRemoteAddress = new Address("test", "system2", "localhost", 2);
+
+            var config = ConfigurationFactory.ParseString(@"
+                  akka.remote.enabled-transports = [""akka.remote.test""]
+                  akka.remote.retry-gate-closed-for = 5s     
+                  akka.remote.log-remote-lifecycle-events = on
+                  akka.loglevel = DEBUG
+     
+            akka.remote.test {
+                registry-key = TRKAzR
+                local-address = """ + $"test://{localAddress.System}@{localAddress.Host}:{localAddress.Port}" + @"""
+            }").WithFallback(_remoteSystem.Settings.Config);
+
+            var thisSystem = ActorSystem.Create("this-system", config);
+            MuteSystem(thisSystem);
+
+            try
+            {
+                // Set up a mock remote system using the test transport
+                var registry = AssociationRegistry.Get("TRKAzR");
+                var remoteTransport = new TestTransport(rawRemoteAddress, registry);
+                var remoteTransportProbe = CreateTestProbe();
+
+                registry.RegisterTransport(remoteTransport, Task.FromResult<IAssociationEventListener>
+                    (new ActorAssociationEventListener(remoteTransportProbe)));
+
+                // Hijack associations through the test transport
+                AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                testTransport.WriteBehavior.PushConstant(true);
+
+                // Force an outbound associate on the real system (which we will hijack)
+                // we send no handshake packet, so this remains a pending connection
+                var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
+                dummySelection.Tell("ping", Sys.DeadLetters);
+
+                var remoteHandle = remoteTransportProbe.ExpectMsg<InboundAssociation>(TimeSpan.FromMinutes(4));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult((IHandleEventListener)(new ActionHandleEventListener(ev => { })));
+
+                // Now we initiate an emulated inbound connection to the real system
+                var inboundHandleProbe = CreateTestProbe();
+                var inboundHandleTask = remoteTransport.Associate(rawLocalAddress);
+                inboundHandleTask.Wait(TimeSpan.FromSeconds(3));
+                var inboundHandle = inboundHandleTask.Result;
+                inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
+
+                AwaitAssert(() =>
+                {
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
+                });
+
+                var pduCodec = new AkkaPduProtobuffCodec(Sys);
+
+                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(rawRemoteAddress, 0));
+                var brokenPacket = pduCodec.ConstructPayload(ByteString.CopyFrom(0, 1, 2, 3, 4, 5, 6));
+
+                // Finish the inbound handshake so now it is handed up to Remoting
+                inboundHandle.Write(handshakePacket);
+                // Now bork the connection with a malformed packet that can only signal an error if the Endpoint is already registered
+                // but not while it is stashed
+                inboundHandle.Write(brokenPacket);
+
+                // No disassociation now - the connection is still stashed
+                inboundHandleProbe.ExpectNoMsg(1000);
+
+                // Finish the handshake for the outbound connection - this will unstash the inbound pending connection.
+                remoteHandle.Association.Write(handshakePacket);
+
+                inboundHandleProbe.ExpectMsg<Disassociated>(TimeSpan.FromMinutes(5));
+            }
+            finally
+            {
+                Shutdown(thisSystem);
+            }
+        }
+
+        [Fact]
+        public void Properly_quarantine_stashed_inbound_connections()
+        {
+            var localAddress = new Address("akka.test", "system1", "localhost", 1);
+            var rawLocalAddress = new Address("test", "system1", "localhost", 1);
+            var remoteAddress = new Address("akka.test", "system2", "localhost", 2);
+            var rawRemoteAddress = new Address("test", "system2", "localhost", 2);
+            var remoteUID = 16;
+
+            var config = ConfigurationFactory.ParseString(@"
+                  akka.remote.enabled-transports = [""akka.remote.test""]
+                  akka.remote.retry-gate-closed-for = 5s     
+                  akka.remote.log-remote-lifecycle-events = on  
+     
+            akka.remote.test {
+                registry-key = JMeMndLLsw
+                local-address = """ + $"test://{localAddress.System}@{localAddress.Host}:{localAddress.Port}" + @"""
+            }").WithFallback(_remoteSystem.Settings.Config);
+
+            var thisSystem = ActorSystem.Create("this-system", config);
+            MuteSystem(thisSystem);
+
+            try
+            {
+                // Set up a mock remote system using the test transport
+                var registry = AssociationRegistry.Get("JMeMndLLsw");
+                var remoteTransport = new TestTransport(rawRemoteAddress, registry);
+                var remoteTransportProbe = CreateTestProbe();
+
+                registry.RegisterTransport(remoteTransport, Task.FromResult<IAssociationEventListener>
+                    (new ActorAssociationEventListener(remoteTransportProbe)));
+
+                // Hijack associations through the test transport
+                AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                testTransport.WriteBehavior.PushConstant(true);
+
+                // Force an outbound associate on the real system (which we will hijack)
+                // we send no handshake packet, so this remains a pending connection
+                var dummySelection = thisSystem.ActorSelection(ActorPath.Parse(remoteAddress + "/user/noonethere"));
+                dummySelection.Tell("ping", Sys.DeadLetters);
+
+                var remoteHandle = remoteTransportProbe.ExpectMsg<InboundAssociation>(TimeSpan.FromMinutes(4));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult((IHandleEventListener)(new ActionHandleEventListener(ev => {})));
+
+                // Now we initiate an emulated inbound connection to the real system
+                var inboundHandleProbe = CreateTestProbe();
+                var inboundHandleTask = remoteTransport.Associate(rawLocalAddress);
+                inboundHandleTask.Wait(TimeSpan.FromSeconds(3));
+                var inboundHandle = inboundHandleTask.Result;
+                inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
+
+                AwaitAssert(() =>
+                {
+                    registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
+                });
+
+                var pduCodec = new AkkaPduProtobuffCodec(Sys);
+
+                var handshakePacket = pduCodec.ConstructAssociate(new HandshakeInfo(rawRemoteAddress, remoteUID));
+
+                // Finish the inbound handshake so now it is handed up to Remoting
+                inboundHandle.Write(handshakePacket);
+
+                // No disassociation now, the connection is still stashed
+                inboundHandleProbe.ExpectNoMsg(1000);
+
+                // Quarantine unrelated connection
+                RARP.For(thisSystem).Provider.Quarantine(remoteAddress, -1);
+                inboundHandleProbe.ExpectNoMsg(1000);
+
+                // Quarantine the connection
+                RARP.For(thisSystem).Provider.Quarantine(remoteAddress, remoteUID);
+
+                // Even though the connection is stashed it will be disassociated
+                inboundHandleProbe.ExpectMsg<Disassociated>();
+            }
+            finally
+            {
+                Shutdown(thisSystem);
+            }
         }
 
         [Fact]
@@ -559,13 +729,25 @@ namespace Akka.Remote.Tests
                 bigBounceOther.Tell(PoisonPill.Instance);
             }
         }
-
-        private void AtStartup()
+        
+        /// <summary>
+        /// Have to hide other method otherwise we get an NRE due to base class
+        /// constructor being called first.
+        /// </summary>
+        protected new void AtStartup()
         {
-            //TODO need to implement test filters first
+            MuteSystem(Sys);
+            _remoteSystem.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
+            // OversizedPayloadException inherits from EndpointException, so have to mute it for now
+            //_remoteSystem.EventStream.Publish(EventFilter.Exception<EndpointException>().Mute());
         }
 
-
+        private void MuteSystem(ActorSystem system)
+        {
+            system.EventStream.Publish(EventFilter.Error(start: "AssociationError").Mute());
+            system.EventStream.Publish(EventFilter.Warning(start: "AssociationError").Mute());
+            system.EventStream.Publish(EventFilter.Warning(contains: "dead letter").Mute());
+        }
 
         private Address Addr(ActorSystem system, string proto)
         {
@@ -719,6 +901,23 @@ namespace Akka.Remote.Tests
             public T Resolve<T>(object[] args)
             {
                 return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
+            }
+        }
+
+        class ActionHandleEventListener : IHandleEventListener
+        {
+            private readonly Action<IHandleEvent> _handler;
+
+            public ActionHandleEventListener() : this(ev => { }) { }
+
+            public ActionHandleEventListener(Action<IHandleEvent> handler)
+            {
+                _handler = handler;
+            }
+
+            public void Notify(IHandleEvent ev)
+            {
+                _handler(ev);
             }
         }
 

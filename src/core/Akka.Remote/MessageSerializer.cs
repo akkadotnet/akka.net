@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,17 +15,19 @@ using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 namespace Akka.Remote
 {
     /// <summary>
-    /// Class MessageSerializer.
+    /// INTERNAL API.
+    ///
+    /// MessageSerializer is a helper for serializing and deserialize messages.
     /// </summary>
     internal static class MessageSerializer
     {
         /// <summary>
-        /// Deserializes the specified message.
+        /// Uses Akka Serialization for the specified ActorSystem to transform the given MessageProtocol to a message.
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="messageProtocol">The message protocol.</param>
         /// <returns>System.Object.</returns>
-        public static object Deserialize(ActorSystem system, SerializedMessage messageProtocol)
+        public static object Deserialize(ExtendedActorSystem system, SerializedMessage messageProtocol)
         {
             return system.Serialization.Deserialize(
                 messageProtocol.Message.ToByteArray(),
@@ -40,32 +42,43 @@ namespace Akka.Remote
         /// <param name="address">TBD</param>
         /// <param name="message">The message.</param>
         /// <returns>SerializedMessage.</returns>
-        public static SerializedMessage Serialize(ActorSystem system, Address address, object message)
+        public static SerializedMessage Serialize(ExtendedActorSystem system, Address address, object message)
         {
-            var objectType = message.GetType();
-            Serializer serializer = system.Serialization.FindSerializerForType(objectType);
+            var serializer = system.Serialization.FindSerializerFor(message);
 
-            var serializedMsg = new SerializedMessage
+            var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
+            try
             {
-                Message = ByteString.CopyFrom(serializer.ToBinaryWithAddress(address, message)),
-                SerializerId = serializer.Identifier
-            };
+                if (oldInfo == null)
+                    Akka.Serialization.Serialization.CurrentTransportInformation =
+                        system.Provider.SerializationInformation;
 
-            if (serializer is SerializerWithStringManifest serializer2)
-            {
-                var manifest = serializer2.Manifest(message);
-                if (!string.IsNullOrEmpty(manifest))
+                var serializedMsg = new SerializedMessage
                 {
-                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
-                }
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
-                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(objectType.TypeQualifiedName());
-            }
+                    Message = ByteString.CopyFrom(serializer.ToBinary(message)),
+                    SerializerId = serializer.Identifier
+                };
 
-            return serializedMsg;
+                if (serializer is SerializerWithStringManifest serializer2)
+                {
+                    var manifest = serializer2.Manifest(message);
+                    if (!string.IsNullOrEmpty(manifest))
+                    {
+                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
+                    }
+                }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(message.GetType().TypeQualifiedName());
+                }
+
+                return serializedMsg;
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
+            }
         }
     }
 }
