@@ -230,8 +230,8 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -255,8 +255,8 @@ Target "RunTestsNetCore" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetCoreVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetCoreVersion outputTests)
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -394,7 +394,7 @@ Target "CreateNuget" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = ["--include-symbols --no-build"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet })
+                        OutputPath = "\"" + outputNuGet + "\"" })
 
         projects |> Seq.iter (runSingleProject)
 )
@@ -453,7 +453,7 @@ Target "CreateMntrNuget" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet } )
+                        OutputPath = "\"" + outputNuGet + "\"" } )
         )
 
         DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
