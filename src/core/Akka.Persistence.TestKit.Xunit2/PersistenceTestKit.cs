@@ -25,6 +25,7 @@ namespace Akka.Persistence.TestKit
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="output">TBD</param>
         protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
             : base(GetConfig(), actorSystemName, output)
         {

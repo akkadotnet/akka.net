@@ -13,7 +13,8 @@ namespace Akka.Pattern
 {
     /// <summary>
     /// Back-off supervisor that stops and starts a child actor when the child actor restarts. 
-    /// This back-off supervisor is created by using <see cref="BackoffSupervisor.Props"/> with <see cref="Backoff.OnFailure"/>
+    /// This back-off supervisor is created by using <see cref="BackoffSupervisor.Props(Props, string, TimeSpan, TimeSpan, double)">BackoffSupervisor.Props</see>
+    /// with <see cref="Backoff.OnFailure(Props, string, TimeSpan, TimeSpan, double)">Backoff.OnFailure</see>
     /// </summary>
     internal sealed class BackoffOnRestartSupervisor : BackoffSupervisorBase
     {

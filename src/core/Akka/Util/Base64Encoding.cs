@@ -30,6 +30,7 @@ namespace Akka.Util
         /// TBD
         /// </summary>
         /// <param name="value">TBD</param>
+        /// <param name="sb">TBD</param>
         /// <returns>TBD</returns>
         public static StringBuilder Base64Encode(this long value, StringBuilder sb)
         {

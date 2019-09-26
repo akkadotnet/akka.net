@@ -810,7 +810,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of <see cref="PersistentShardCoordinator.AllocateShard"/> is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.AllocateShard(IActorRef, ShardId, IImmutableDictionary{IActorRef, IImmutableList{ShardId}})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class AllocateShardResult
@@ -846,7 +846,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of `rebalance` is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.Rebalance(IImmutableDictionary{IActorRef, IImmutableList{ShardId}}, IImmutableSet{ShardId})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class RebalanceResult
