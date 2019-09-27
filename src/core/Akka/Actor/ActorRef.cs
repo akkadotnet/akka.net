@@ -183,7 +183,7 @@ namespace Akka.Actor
     /// If you receive a reference to an actor, that actor is guaranteed to have existed at some point
     /// in the past. However, an actor can always be terminated in the future.
     /// 
-    /// If you want to be notified about an actor terminating, call <see cref="IActorContext.Watch"/>
+    /// If you want to be notified about an actor terminating, call <see cref="ICanWatch.Watch(IActorRef)">IActorContext.Watch</see>
     /// on this actor and you'll receive a <see cref="Terminated"/> message when the actor dies or if it
     /// is already dead.
     /// </summary>
@@ -850,8 +850,8 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
     /// This kind of ActorRef passes all received messages to the given function for
     /// performing a non-blocking side-effect. The intended use is to transform the
     /// message before sending to the real target actor. Such references can be created
-    /// by calling <see cref="ActorCell.AddFunctionRef()"/> and must be deregistered when no longer
-    /// needed by calling <see cref="ActorCell.RemoveFunctionRef()"/>. FunctionRefs do not count
+    /// by calling <see cref="ActorCell.AddFunctionRef(Action{IActorRef, object}, string)"/> and must be deregistered when no longer
+    /// needed by calling <see cref="ActorCell.RemoveFunctionRef(FunctionRef)"/>. FunctionRefs do not count
     /// towards the live children of an actor, they do not receive the Terminate command
     /// and do not prevent the parent from terminating. FunctionRef is properly
     /// registered for remote lookup and ActorSelection.

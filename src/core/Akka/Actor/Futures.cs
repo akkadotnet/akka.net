@@ -488,7 +488,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc cref="InternalActorRefBase.TellInternal"/>
+        /// <inheritdoc cref="ActorRefBase.TellInternal">InternalActorRefBase.TellInternal</inheritdoc>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);

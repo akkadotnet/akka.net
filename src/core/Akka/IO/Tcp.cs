@@ -357,7 +357,7 @@ namespace Akka.IO
 
         /// <summary>
         /// Each <see cref="WriteCommand" /> can optionally request a positive acknowledgment to be sent
-        /// to the commanding actor. If such notification is not desired the <see cref="WriteCommand#ack" />
+        /// to the commanding actor. If such notification is not desired the <see cref="Write.Ack" />
         /// must be set to an instance of this class. The token contained within can be used
         /// to recognize which write failed when receiving a <see cref="CommandFailed" /> message.
         /// </summary>
@@ -472,8 +472,8 @@ namespace Akka.IO
         /// <summary>
         /// Write data to the TCP connection. If no ack is needed use the special
         /// `NoAck` object. The connection actor will reply with a <see cref="CommandFailed" />
-        /// message if the write could not be enqueued. If <see cref="WriteCommand#wantsAck" />
-        /// returns true, the connection actor will reply with the supplied <see cref="WriteCommand#ack" />
+        /// message if the write could not be enqueued. If <see cref="SimpleWriteCommand.WantsAck">Write.WantsAck</see>
+        /// returns true, the connection actor will reply with the supplied <see cref="Write.Ack" />
         /// token once the write has been successfully enqueued to the O/S kernel.
         /// <b>Note that this does not in any way guarantee that the data will be
         /// or have been sent!</b> Unfortunately there is no way to determine whether
@@ -585,7 +585,7 @@ namespace Akka.IO
         */
         /// <summary>
         /// A write command which aggregates two other write commands. Using this construct
-        /// you can chain a number of <see cref="Akka.IO.Tcp.Write" /> and/or <see cref="Akka.IO.Tcp.WriteFile" /> commands together in a way
+        /// you can chain a number of <see cref="Akka.IO.Tcp.Write" /> commands together in a way
         /// that allows them to be handled as a single write which gets written out to the
         /// network as quickly as possible.
         /// If the sub commands contain `ack` requests they will be honored as soon as the
