@@ -167,7 +167,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Parallelism limits the number of how many asks can be "in flight" at the same time.
         /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
-        /// (i.e. same behaviour as <see cref="SelectAsync{TIn,TOut,TMat}"/>).
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
         /// 
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
         /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.

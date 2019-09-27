@@ -95,7 +95,7 @@ namespace Akka.Persistence
         /// then switch it switches to <see cref="Idle"/> state.
         /// 
         /// 
-        /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
+        /// If replay succeeds the <see cref="OnReplayComplete"/> callback method is called, otherwise
         /// <see cref="OnReplayError"/> is called and remaining replay events are consumed (ignored).
         /// 
         /// All incoming messages are stashed when <paramref name="shouldAwait"/> is true.
