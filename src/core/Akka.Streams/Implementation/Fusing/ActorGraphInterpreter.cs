@@ -224,6 +224,7 @@ namespace Akka.Streams.Implementation.Fusing
             return RunBatch(eventLimit);
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// TBD
         /// </summary>
@@ -321,6 +322,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             return eventLimit;
         }
+#pragma warning restore CS0162
 
         /**
          * Attempts to abort execution, by first propagating the reason given until either
@@ -1218,6 +1220,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
             /// <summary>
             /// TBD
             /// </summary>
@@ -1235,6 +1238,7 @@ namespace Akka.Streams.Implementation.Fusing
                     else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().FullName);
                 }
             }
+#pragma warning restore CS0162
 
             void IActorOutputBoundary.ExposedPublisher(IActorPublisher publisher) => ExposedPublisher((ActorPublisher<T>) publisher);
 
@@ -1350,6 +1354,7 @@ namespace Akka.Streams.Implementation.Fusing
             _shortCircuitBuffer.Enqueue(input);
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         private bool TryInit(GraphInterpreterShell shell)
         {
             try
@@ -1369,6 +1374,7 @@ namespace Akka.Streams.Implementation.Fusing
                 return false;
             }
         }
+#pragma warning restore CS0162
 
         /// <summary>
         /// TBD

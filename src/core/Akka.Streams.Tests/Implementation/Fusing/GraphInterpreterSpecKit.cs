@@ -394,6 +394,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public Outlet<T> Outlet { get; }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
                 public void OnNext(T element, int eventLimit = int.MaxValue)
                 {
                     if (GraphInterpreter.IsDebug)
@@ -417,6 +418,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Fail(Outlet, ex);
                     Interpreter.Execute(eventLimit);
                 }
+#pragma warning restore CS0162
 
                 public override string ToString() => _name;
             }
@@ -440,6 +442,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public Inlet<T> Inlet { get; }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
                 public void RequestOne(int eventLimit = int.MaxValue)
                 {
                     if (GraphInterpreter.IsDebug)
@@ -455,6 +458,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Cancel(Inlet);
                     Interpreter.Execute(eventLimit);
                 }
+#pragma warning restore CS0162
 
                 public override string ToString() => _name;
             }

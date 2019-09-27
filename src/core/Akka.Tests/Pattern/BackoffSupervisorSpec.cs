@@ -29,6 +29,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public Child(IActorRef probe)
             {
                 _probe = probe;
@@ -44,6 +45,7 @@ namespace Akka.Tests.Pattern
                     _probe.Tell(msg);
                 });
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -55,6 +57,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public ManualChild(IActorRef probe)
             {
                 _probe = probe;
@@ -71,6 +74,7 @@ namespace Akka.Tests.Pattern
                     Context.Parent.Tell(BackoffSupervisor.Reset.Instance);
                 });
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
