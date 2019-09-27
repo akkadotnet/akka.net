@@ -381,6 +381,7 @@ namespace Akka.Streams
         /// <param name="dispatcher">TBD</param>
         /// <param name="supervisionDecider">TBD</param>
         /// <param name="subscriptionTimeoutSettings">TBD</param>
+        /// <param name="streamRefSettings">TBD</param>
         /// <param name="isDebugLogging">TBD</param>
         /// <param name="outputBurstLimit">TBD</param>
         /// <param name="isFuzzingMode">TBD</param>

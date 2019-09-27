@@ -188,6 +188,7 @@ namespace Akka.Cluster.Sharding
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
+            /// <param name="handoffTimeout">TBD</param>
             /// <returns>TBD</returns>
             public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
@@ -203,6 +204,7 @@ namespace Akka.Cluster.Sharding
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
+            /// <param name="handoffTimeout">TBD</param>
             public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
