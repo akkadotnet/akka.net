@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Tests
 
-        [Fact()]
+        [Fact(Skip = "Extremely racy")]
         public void AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
             //todo mute both systems for deadletters for any type of message
