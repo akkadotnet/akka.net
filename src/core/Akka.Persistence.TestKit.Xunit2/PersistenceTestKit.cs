@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceTestKit.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -25,6 +25,7 @@ namespace Akka.Persistence.TestKit
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="output">TBD</param>
         protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
             : base(GetConfig(), actorSystemName, output)
         {
