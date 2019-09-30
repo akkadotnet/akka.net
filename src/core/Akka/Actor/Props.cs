@@ -105,11 +105,13 @@ namespace Akka.Actor
             return Deploy.Equals(other.Deploy);
         }
 
+#pragma warning disable CS0162 // Disabled because it's marked as a TODO
         private bool CompareSupervisorStrategy(Props other)
         {
             return true; //TODO: fix https://github.com/akkadotnet/akka.net/issues/599
             return Equals(SupervisorStrategy, other.SupervisorStrategy);
         }
+#pragma warning restore CS0162
 
         private bool CompareArguments(Props other)
         {
