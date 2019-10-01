@@ -114,7 +114,7 @@ The resulting `Flow` now has a type of `Flow<string, string, UniqueKillSwitch>` 
 
 ### Using the PartitionHub
 
-**This is a [may change](../utilities/may-change.md) feature**
+**This is a [may change](xref:may-change) feature**
 
 A `PartitionHub` can be used to route elements from a common producer to a dynamic set of consumers.
 The selection of consumer is done with a function. Each element can be routed to only one consumer. 
