@@ -1,3 +1,8 @@
+---
+uid: akka-remote-configuration
+title: Akka.Remote Configuration
+---
+
 ## Akka.Remote Configuration
 Below is the default HOCON configuration for the base `Akka.Remote` package.
 
