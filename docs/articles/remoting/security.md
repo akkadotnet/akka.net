@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: network-security
 title: Network Security
 ---
 

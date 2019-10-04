@@ -112,6 +112,8 @@
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
+  - name: StreamRefs - Reactive Streams over the network
+    href: streams/streamrefs.md
   - name: Pipelining and Parallelism
     href: streams/pipeliningandparallelism.md
   - name: Testing streams

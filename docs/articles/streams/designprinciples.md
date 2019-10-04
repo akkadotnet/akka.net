@@ -36,7 +36,7 @@ Compositionality entails re-usability of partial stream topologies, which led us
 The process of materialization will often create specific objects that are useful to interact with the processing engine once it is running, for example for shutting it down or for extracting metrics. This means that the materialization function produces a result termed the *materialized value of a graph*.
 
 ## Interoperation with other Reactive Streams implementations
-Akka Streams fully implement the `Reactive Streams` specification and interoperate with all other conformant implementations. We chose to completely separate the Reactive Streams interfaces from the user-level API because we regard them to be an SPI that is not targeted at endusers. In order to obtain a `Publisher` or `Subscriber` from an Akka Stream topology, a corresponding `Sink.AsPublisher` or `Source.AsSubscriber` element must be used.
+Akka Streams fully implement the `Reactive Streams` specification and interoperate with all other conformant implementations. We chose to completely separate the Reactive Streams interfaces from the user-level API because we regard them to be an SPI that is not targeted at end users. In order to obtain a `Publisher` or `Subscriber` from an Akka Stream topology, a corresponding `Sink.AsPublisher` or `Source.AsSubscriber` element must be used.
 
 All stream Processors produced by the default materialization of Akka Streams are restricted to having a single `Subscriber`, additional Subscribers will be rejected. The reason for this is that the stream topologies described using our DSL never require fan-out behavior from the Publisher sides of the elements, all fan-out is done using explicit elements like `Broadcast<T>`.
 

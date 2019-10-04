@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: terminology-and-concepts
 title: Terminology and Concepts
 ---
 
@@ -34,10 +34,10 @@ In the case of Deadlock, no participants can make progress. In the case of Starv
 Live-lock is similar to deadlock as none of the participants make progress, but instead of being frozen in a state of waiting for others to progress, the participants continuously change their state. An example scenario is when two participants have two identical resources available. They each try to get the resource, but they also check if the other needs the resource, too. If the resource is requested by the other participant, they try to get the other instance of the resource. In the worst case, the two participants "bounce" between the two resources, never acquiring it, but always yielding to the other.
 
 ## Race Condition
-A Race condition is when an assumption about the ordering of a set of events might be violated by external non-deterministic effects. Race conditions often arise when multiple threads have a shared mutable state, and the operations of threads on the state might be interleaved, causing unexpected behavior. While this is a common case, shared state is not necessary to have race conditions. One example would be a client sending unordered packets P1, P2 to a server. Because the packets might travel via different network routes, it is possible that the server receives P2 first and P1 afterwards. If the messages contain no information about their sending order, then it is impossible for the server to deterine that they were sent in a different order. Depending on the meaning of the packets, this can cause race conditions.
+A Race condition is when an assumption about the ordering of a set of events might be violated by external non-deterministic effects. Race conditions often arise when multiple threads have a shared mutable state, and the operations of threads on the state might be interleaved, causing unexpected behavior. While this is a common case, shared state is not necessary to have race conditions. One example would be a client sending unordered packets P1, P2 to a server. Because the packets might travel via different network routes, it is possible that the server receives P2 first and P1 afterwards. If the messages contain no information about their sending order, then it is impossible for the server to determine that they were sent in a different order. Depending on the meaning of the packets, this can cause race conditions.
 
 > [!NOTE]
-> The only guarantee that Akka.NET provides about messages sent between a given pair of actors is that their order is always preserved. see [Message Delivery Reliability](message-delivery-reliability.md)
+> The only guarantee that Akka.NET provides about messages sent between a given pair of actors is that their order is always preserved. see [Message Delivery Reliability](xref:message-delivery-reliability)
 
 ## Non-blocking Guarantees (Progress Conditions)
 As discussed in the previous sections, blocking is undesirable for several reasons, including the dangers of deadlocks and reduced throughput in the system. In the following sections we discuss various non-blocking properties with different strength.

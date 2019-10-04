@@ -1,3 +1,8 @@
+---
+uid: akka-streams-configuration
+title: Akka.Streams Configuration
+---
+
 ## Akka.Streams Configuration
 Below is the default HOCON configuration for the base `Akka.Steams` package.
 

@@ -4,7 +4,7 @@ title: Accessing the Cluster `ActorSystem` Extension
 ---
 
 # Using the Cluster `ActorSystem` Extension Object
-`Akka.Cluster` is actually  an `ActorSystem` extension that you can use to access membership information and [cluster gossip](cluster-overview.md#cluster-gossip) directly.
+`Akka.Cluster` is actually  an `ActorSystem` extension that you can use to access membership information and [cluster gossip](xref:cluster-overview#cluster-gossip) directly.
 
 ## Getting a Reference to the `Cluster`
 You can get a direct reference to the `Cluster` extension like so (drawn from the [`SimpleClusterListener` example in the Akka.NET project](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)):
@@ -59,7 +59,7 @@ Gossip events fall into three categories:
 
 ### Cluster Event Categories
 #### Member events
-Member events refer to nodes joining / leaving / being removed from the cluster. These events are used by [Akka.Cluster routers](cluster-routing.md) to automatically adjust their routee lists.
+Member events refer to nodes joining / leaving / being removed from the cluster. These events are used by [Akka.Cluster routers](xref:cluster-routing) to automatically adjust their routee lists.
 
 #### Reachability events
 Reachability events refer to connectivity between nodes.

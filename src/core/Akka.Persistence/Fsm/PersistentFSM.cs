@@ -133,7 +133,7 @@ namespace Akka.Persistence.Fsm
                     {
                         base.ApplyState(nextState.Using(nextData));
                         CurrentStateTimeout = nextState.Timeout;
-                        nextState.AfterTransitionDo?.Invoke(nextState.StateData);
+                        nextState.AfterTransitionDo?.Invoke(StateData);
                         if (doSnapshot)
                         {
                             Log.Info($"Saving snapshot, sequence number [{SnapshotSequenceNr}]");
