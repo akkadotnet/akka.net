@@ -34,6 +34,7 @@ namespace Akka.Persistence.Query.Tests
             }
         }
 
+        [Fact]
         public void Offsets_of_different_types_should_throw_on_compare()
         {
             Offset seq = new Sequence(0L);
