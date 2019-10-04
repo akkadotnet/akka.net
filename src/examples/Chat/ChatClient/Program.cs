@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace ChatClient
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     actor {
-        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+        provider = remote
     }
     remote {
         dot-netty.tcp {
@@ -75,56 +75,48 @@ akka {
         }
     }
 
-    class ChatClientActor : TypedActor,
-        IHandle<ConnectRequest>,
-        IHandle<ConnectResponse>,
-        IHandle<NickRequest>,
-        IHandle<NickResponse>,
-        IHandle<SayRequest>,
-        IHandle<SayResponse>, ILogReceive
+    class ChatClientActor : ReceiveActor, ILogReceive
     {
         private string _nick = "Roggan";
         private readonly ActorSelection _server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
 
-        public void Handle(ConnectResponse message)
+        public ChatClientActor()
         {
-            Console.WriteLine("Connected!");
-            Console.WriteLine(message.Message);
-        }
+            Receive<ConnectRequest>(cr =>
+            {
+                Console.WriteLine("Connecting....");
+                _server.Tell(cr);
+            });
 
-        public void Handle(NickRequest message)
-        {
-            message.OldUsername = this._nick;
-            Console.WriteLine("Changing nick to {0}", message.NewUsername);
-            this._nick = message.NewUsername;
-            _server.Tell(message);
-        }
+            Receive<ConnectResponse>(rsp =>
+            {
+                Console.WriteLine("Connected!");
+                Console.WriteLine(rsp.Message);
+            });
 
-        public void Handle(NickResponse message)
-        {
-            Console.WriteLine("{0} is now known as {1}", message.OldUsername, message.NewUsername);
-        }
+            Receive<NickRequest>(nr =>
+            {
+                nr.OldUsername = _nick;
+                Console.WriteLine("Changing nick to {0}", nr.NewUsername);
+                _nick = nr.NewUsername;
+                _server.Tell(nr);
+            });
 
-        public void Handle(SayResponse message)
-        {
-            Console.WriteLine("{0}: {1}", message.Username, message.Text);
-        }
+            Receive<NickResponse>(nrsp =>
+            {
+                Console.WriteLine("{0} is now known as {1}", nrsp.OldUsername, nrsp.NewUsername);
+            });
 
-        public void Handle(ConnectRequest message)
-        {
-            Console.WriteLine("Connecting....");
-            _server.Tell(message);
-        }
+            Receive<SayRequest>(sr =>
+            {
+                sr.Username = _nick;
+                _server.Tell(sr);
+            });
 
-        public void Handle(SayRequest message)
-        {
-            message.Username = this._nick;
-            _server.Tell(message);
-        }
-
-        public void Handle(Terminated message)
-        {
-            Console.Write("Server died");
+            Receive<SayResponse>(srsp =>
+            {
+                Console.WriteLine("{0}: {1}", srsp.Username, srsp.Text);
+            });
         }
     }
 }

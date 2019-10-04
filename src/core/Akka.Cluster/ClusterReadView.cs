@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReadView.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -182,8 +182,7 @@ namespace Akka.Cluster
             get
             {
                 return _state.Members.SingleOrDefault(member => member.UniqueAddress == _cluster.SelfUniqueAddress)
-                        .GetOrElse(
-                            Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed));
+                        ?? Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed);
             }
         }
 

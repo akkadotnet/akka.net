@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);netstandard2.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <NoWarn></NoWarn> 
   </PropertyGroup>
@@ -25,11 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.2.3" />
+    <PackageReference Include="FSharp.Core" Version="4.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

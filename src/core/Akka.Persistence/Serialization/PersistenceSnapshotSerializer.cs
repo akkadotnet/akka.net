@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceSnapshotSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,34 +24,50 @@ namespace Akka.Persistence.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Snapshot) return GetPersistentPayload(obj as Snapshot).ToByteArray();
+            if (obj is Snapshot snapshot) return GetPersistentPayload(snapshot).ToByteArray();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
 
         private PersistentPayload GetPersistentPayload(Snapshot snapshot)
         {
-            Serializer serializer = system.Serialization.FindSerializerFor(snapshot.Data);
-            PersistentPayload payload = new PersistentPayload();
+            PersistentPayload Serialize()
+            {
+                var serializer = system.Serialization.FindSerializerFor(snapshot.Data);
+                var payload = new PersistentPayload();
 
-            if (serializer is SerializerWithStringManifest)
-            {
-                string manifest = ((SerializerWithStringManifest)serializer).Manifest(snapshot.Data);
-                payload.PayloadManifest = ByteString.CopyFromUtf8(manifest);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                if (serializer is SerializerWithStringManifest stringManifest)
                 {
-                    var payloadType = snapshot.Data.GetType();
-                    payload.PayloadManifest = ByteString.CopyFromUtf8(payloadType.AssemblyQualifiedName);
+                    var manifest = stringManifest.Manifest(snapshot.Data);
+                    payload.PayloadManifest = ByteString.CopyFromUtf8(manifest);
                 }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                    {
+                        var payloadType = snapshot.Data.GetType();
+                        payload.PayloadManifest = ByteString.CopyFromUtf8(payloadType.AssemblyQualifiedName);
+                    }
+                }
+
+                payload.Payload = ByteString.CopyFrom(serializer.ToBinary(snapshot.Data));
+                payload.SerializerId = serializer.Identifier;
+
+                return payload;
             }
 
-            payload.Payload = ByteString.CopyFrom(serializer.ToBinary(snapshot.Data));
-            payload.SerializerId = serializer.Identifier;
-
-            return payload;
+            var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Akka.Serialization.Serialization.CurrentTransportInformation =
+                        system.Provider.SerializationInformation;
+                return Serialize();
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
+            }
         }
 
         public override object FromBinary(byte[] bytes, Type type)

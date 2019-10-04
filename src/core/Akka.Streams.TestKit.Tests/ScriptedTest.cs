@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScriptedTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -200,17 +200,17 @@ namespace Akka.Streams.TestKit.Tests
 
             public bool ShakeIt()
             {
-                var oneMilli = TimeSpan.FromMilliseconds(1);
+                var oneMilli = TimeSpan.FromMilliseconds(10);
                 var marker = new object();
                 var u = Upstream.ReceiveWhile(oneMilli, filter: msg =>
                 {
-                    if (msg is TestPublisher.RequestMore)
+                    if (msg is TestPublisher.RequestMore more)
                     {
-                        var more = (TestPublisher.RequestMore)msg;
                         DebugLog($"Operation requests {more.NrOfElements}");
                         _pendingRequests += more.NrOfElements;
                         return marker;
                     }
+                    DebugLog($"Operation received {msg}");
                     return null;
                 });
                 var d = Downstream.ReceiveWhile(oneMilli, filter: msg => msg.Match()
@@ -223,6 +223,7 @@ namespace Akka.Streams.TestKit.Tests
                     })
                     .With<TestSubscriber.OnComplete>(complete =>
                     {
+                        DebugLog("Operation complete.");
                         _currentScript = _currentScript.Complete();
                     })
                     .With<TestSubscriber.OnError>(error =>
@@ -246,6 +247,7 @@ namespace Akka.Streams.TestKit.Tests
                     var idleRounds = 0;
                     while (true)
                     {
+   
                         if (idleRounds > 250) throw new Exception("Too many idle rounds");
                         if (_currentScript.Completed)
                             break;
@@ -274,6 +276,7 @@ namespace Akka.Streams.TestKit.Tests
                                 DebugLog("Test environment completes");
                                 UpstreamSubscription.SendComplete();
                                 _completed = true;
+                                return; // don't execute again if completed
                             }
                         }
                     }

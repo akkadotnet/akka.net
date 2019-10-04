@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DiscoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         public void Deeply_inherited_are_ok()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role, "DeeplyInheritedChildRole");
+            Assert.Equal("DeeplyInheritedChildRole", discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role);
         }
 
         [Fact(DisplayName = "Child test class with default constructors are ok")]
@@ -48,9 +48,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         public void Discovered_count_equals_number_of_roles_mult_specs()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec1))].Count, 5);
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec2))].Count, 5);
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count, 5);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec1))].Count);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec2))].Count);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count);
         }
 
         [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames")]

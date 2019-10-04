@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConfigurationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ namespace Akka.Tests.Configuration
             var config = ConfigurationFactory.FromObject(source);
 
             Assert.Equal("aaa", config.GetString("StringProperty"));
-            Assert.Equal(true, config.GetBoolean("BoolProperty"));
+            Assert.True(config.GetBoolean("BoolProperty"));
 
             Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntegerArray").ToArray());
         }

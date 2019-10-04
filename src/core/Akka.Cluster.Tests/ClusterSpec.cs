@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -116,7 +116,6 @@ namespace Akka.Cluster.Tests
             ExpectMsg<ClusterEvent.CurrentClusterState>();
         }
 
-        // this should be the last test step, since the cluster is shutdown
         [Fact]
         public void A_cluster_must_publish_member_removed_when_shutdown()
         {
@@ -199,11 +198,6 @@ namespace Akka.Cluster.Tests
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
-        //#if CORECLR
-        //        [Fact(Skip = "Fails on .NET Core")]
-        //#else
-        //        [Fact(Skip = "Fails flakily on .NET 4.5")]
-        //#endif
         [Fact]
         public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
@@ -340,29 +334,6 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_be_able_to_prematurelly_cancel_JoinAsync()
-        {
-            var timeout = TimeSpan.FromSeconds(10);
-
-            try
-            {
-                var cancel = new CancellationTokenSource();
-                cancel.Cancel(true);
-                var task = _cluster.JoinAsync(_selfAddress, cancel.Token);
-
-                Assert.Throws<AggregateException>(() => task.Wait(timeout))
-                    .Flatten()
-                    .InnerException.Should().BeOfType<TaskCanceledException>();
-
-                task.IsCanceled.Should().BeTrue();
-            }
-            finally
-            {
-                _cluster.Shutdown();
-            }
-        }
-
-        [Fact]
         public void A_cluster_JoinAsync_must_fail_if_could_not_connect_to_cluster()
         {
             var timeout = TimeSpan.FromSeconds(10);
@@ -435,28 +406,6 @@ namespace Akka.Cluster.Tests
                     ExpectMsg<ClusterEvent.MemberRemoved>();
                 }).Wait(timeout);
 
-            }
-            finally
-            {
-                _cluster.Shutdown();
-            }
-        }
-
-        [Fact]
-        public void A_cluster_must_be_able_to_prematurelly_cancel_join_async_seed_nodes()
-        {
-            var timeout = TimeSpan.FromSeconds(10);
-
-            try
-            {
-                var cancel = new CancellationToken(true);
-                var task = _cluster.JoinSeedNodesAsync(new[] { _selfAddress }, cancel);
-
-                Assert.Throws<AggregateException>(() => task.Wait(timeout))
-                    .Flatten()
-                    .InnerException.Should().BeOfType<TaskCanceledException>();
-
-                task.IsCanceled.Should().BeTrue();
             }
             finally
             {
@@ -593,6 +542,7 @@ namespace Akka.Cluster.Tests
 
                 Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
 
+                probe.ExpectMsg<ClusterEvent.MemberDowned>();
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();

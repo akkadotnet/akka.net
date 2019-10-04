@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ApiTests.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -121,6 +121,22 @@ let ``actor that accepts _ will receive string message`` () =
         let response = aref <? "SomeRandomInput" |> Async.RunSynchronously
         response
         |> equals "SomethingToReturn"
+
+
+
+type TestActor() =
+    inherit UntypedActor()
+
+    override x.OnReceive msg = ()
+
+[<Fact>]
+let ``can spawn actor from expression`` () =
+    
+    let system = Configuration.load() |> System.create "test"
+    let actor = spawnObj system "test-actor" <@ fun () -> TestActor() @>
+
+    ()
+
 
 //[<Fact>]
 // FAILS

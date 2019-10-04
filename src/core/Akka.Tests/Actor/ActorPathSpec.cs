@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPathSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace Akka.Tests.Actor
             elements.Count.ShouldBe(2,"number of elements in path");
             Assert.True("pAth1".Equals(elements[0], StringComparison.Ordinal), "first path element");
             Assert.True("pAth2".Equals(elements[1], StringComparison.Ordinal), "second path element");
-            Assert.Equal(actorPath.ToString(),"akka://sYstEm/pAth1/pAth2");
+            Assert.Equal("akka://sYstEm/pAth1/pAth2", actorPath.ToString());
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor
             elements.Count.ShouldBe(2, "number of elements in path");
             Assert.True("pAth1".Equals(elements[0], StringComparison.Ordinal), "first path element");
             Assert.True("pAth2".Equals(elements[1], StringComparison.Ordinal), "second path element");
-            Assert.Equal(actorPath.ToString(), "akka://sYstEm@host:4711/pAth1/pAth2");
+            Assert.Equal("akka://sYstEm@host:4711/pAth1/pAth2", actorPath.ToString());
         }
 
         [Fact]

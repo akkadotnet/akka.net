@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreakerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = LongCallTimeoutCb( );
 
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
+            Assert.Equal(0, breaker.Instance.CurrentFailureCount);
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithSyncCircuitBreaker( ThrowException ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
             Assert.Equal( 1, breaker.Instance.CurrentFailureCount );
@@ -44,9 +44,9 @@ namespace Akka.Tests.Pattern
         {
             var breaker = MultiFailureCb( );
 
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
+            Assert.Equal(0, breaker.Instance.CurrentFailureCount);
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithSyncCircuitBreaker( ThrowException ) ) );
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 1 );
+            Assert.Equal(1, breaker.Instance.CurrentFailureCount);
 
             breaker.Instance.WithSyncCircuitBreaker( ( ) => "Test" );
 
@@ -132,7 +132,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = LongCallTimeoutCb( );
 
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
+            Assert.Equal(0, breaker.Instance.CurrentFailureCount);
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Run( ( ) => ThrowException( ) ) ).Wait( AwaitTimeout ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
             Assert.Equal( 1, breaker.Instance.CurrentFailureCount );
@@ -143,7 +143,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = MultiFailureCb( );
 
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
+            Assert.Equal(0, breaker.Instance.CurrentFailureCount);
 
             var whenall = Task.WhenAll(
                 breaker.Instance.WithCircuitBreaker(() => Task.Factory.StartNew(ThrowException))
@@ -153,7 +153,7 @@ namespace Akka.Tests.Pattern
 
             Assert.True( InterceptExceptionType<TestException>( ( ) => whenall.Wait( AwaitTimeout ) ) );
 
-            Assert.Equal( breaker.Instance.CurrentFailureCount, 4 );
+            Assert.Equal(4, breaker.Instance.CurrentFailureCount);
 
             var result = breaker.Instance.WithCircuitBreaker(() => Task.Run( ( ) => SayTest( ) ) ).Result;
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDomainEventSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -155,6 +155,24 @@ namespace Akka.Cluster.Tests
             ClusterEvent.DiffReachable(g1, g2, bUp.UniqueAddress)
                 .Should()
                 .BeEquivalentTo(ImmutableList.Create<ClusterEvent.ReachableMember>());
+        }
+
+        [Fact]
+        public void DomainEvents_must_be_produced_for_downed_members()
+        {
+            var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, eUp)));
+            var t2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, eDown)));
+
+            var g1 = t1.Item1;
+            var g2 = t2.Item1;
+
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberDowned(eDown)));
+
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -278,13 +278,13 @@ namespace Akka.Streams.Dsl
         /// <param name="bidi">TBD</param>
         /// <param name="combine">TBD</param>
         /// <returns>TBD</returns>
-        public BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> AtopMat<TOut12, TIn21, TMat2, TMat3>(BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, Func<TMat, TMat2, TMat3> combine)
+        public BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat3> AtopMat<TOut12, TIn21, TMat2, TMat3>(BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, Func<TMat, TMat2, TMat3> combine)
         {
             var copy = bidi.Module.CarbonCopy();
             var ins = copy.Shape.Inlets.ToArray();
             var outs = copy.Shape.Outlets.ToArray();
 
-            return new BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat>(Module
+            return new BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat3>(Module
                 .Compose(copy, combine)
                 .Wire(Shape.Outlet1, ins[0])
                 .Wire(outs[1], Shape.Inlet2)

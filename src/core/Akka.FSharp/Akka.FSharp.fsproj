@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp</AssemblyTitle>
     <Description>F# API support for Akka.NET</Description>
-    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);F#;fsharp</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn></NoWarn>    
@@ -20,9 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Quotations.Evaluator" Version="1.1.2" />
+    <PackageReference Include="FSharp.Quotations.Evaluator" Version="1.1.3" />
     <PackageReference Include="FsPickler" Version="5.2.0" />
-    <PackageReference Include="FSharp.Core" Version="4.2.3" />
+    <PackageReference Include="FSharp.Core" Version="4.5.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

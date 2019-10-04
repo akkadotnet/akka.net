@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottleTransportAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -773,7 +773,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Applies a throttle to the underlying conneciton
     /// </summary>
-    internal sealed class SetThrottle
+    public sealed class SetThrottle
     {
         readonly Address _address;
         /// <summary>
@@ -856,7 +856,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// ACKs a throttle command
     /// </summary>
-    internal sealed class SetThrottleAck
+    public sealed class SetThrottleAck
     {
         private SetThrottleAck() { }
         // ReSharper disable once InconsistentNaming

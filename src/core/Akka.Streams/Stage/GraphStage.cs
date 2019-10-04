@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ namespace Akka.Streams.Stage
                 new Lazy<IModule>(
                     () =>
                         new GraphStageModule(Shape, InitialAttributes,
-                            (IGraphStageWithMaterializedValue<Shape, object>) this));
+                            (IGraphStageWithMaterializedValue<Shape, object>)this));
         }
 
         /// <summary>
@@ -449,7 +449,7 @@ namespace Akka.Streams.Stage
                 var element = _logic.Grab(_inlet);
                 _n--;
 
-                if(_n > 0)
+                if (_n > 0)
                     _logic.Pull(_inlet);
                 else
                     _logic.SetHandler(_inlet, Previous);
@@ -498,7 +498,7 @@ namespace Akka.Streams.Stage
                     // If (while executing andThen() callback) handler was changed to new emitting,
                     // we should add it to the end of emission queue
                     var currentHandler = Logic.GetHandler(Out);
-                    if(currentHandler is Emitting e)
+                    if (currentHandler is Emitting e)
                         AddFollowUp(e);
 
                     var next = Dequeue();
@@ -859,18 +859,18 @@ namespace Akka.Streams.Stage
         /// </summary>
         public virtual bool KeepGoingAfterAllPortsClosed => false;
 
-        private StageActorRef _stageActorRef;
+        private StageActor _stageActor;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public StageActorRef StageActorRef
+        public StageActor StageActor
         {
             get
             {
-                if (_stageActorRef == null)
+                if (_stageActor == null)
                     throw StageActorRefNotInitializedException.Instance;
-                return _stageActorRef;
+                return _stageActor;
             }
         }
 
@@ -1147,7 +1147,7 @@ namespace Akka.Streams.Stage
                 // fast path
                 return !ReferenceEquals(connection.Slot, Empty.Instance);
             }
-            
+
             // slow path on failure
             if ((connection.PortState & (InReady | InFailed)) == (InReady | InFailed))
             {
@@ -1229,7 +1229,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enabled">TBD</param>
         protected void SetKeepGoing(bool enabled) => Interpreter.SetKeepGoing(this, enabled);
-        
+
         /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
         /// </summary>
@@ -1300,7 +1300,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
-        protected internal bool IsAvailable<T>(Outlet<T> outlet) 
+        protected internal bool IsAvailable<T>(Outlet<T> outlet)
             => (GetConnection(outlet).PortState & (OutReady | OutClosed)) == OutReady;
 
         /// <summary>
@@ -1308,7 +1308,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
-        protected bool IsClosed<T>(Outlet<T> outlet) 
+        protected bool IsClosed<T>(Outlet<T> outlet)
             => (GetConnection(outlet).PortState & OutClosed) != 0;
 
         /// <summary>
@@ -1586,7 +1586,7 @@ namespace Akka.Streams.Stage
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
-            => @event => Interpreter.OnAsyncInput(this, @event, x => handler((T) x));
+            => @event => Interpreter.OnAsyncInput(this, @event, x => handler((T)x));
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
@@ -1619,20 +1619,34 @@ namespace Akka.Streams.Stage
         /// <param name="receive">Callback that will be called upon receiving of a message by this special Actor</param>
         /// <returns>Minimal actor with watch method</returns>
         [ApiMayChange]
-        protected StageActorRef GetStageActorRef(StageActorRef.Receive receive)
+        protected StageActor GetStageActor(StageActorRef.Receive receive)
         {
-            if (_stageActorRef == null)
+            if (_stageActor == null)
             {
                 var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
-                var provider = ((IInternalActorRef)actorMaterializer.Supervisor).Provider;
-                var path = actorMaterializer.Supervisor.Path / StageActorRef.Name.Next();
-                _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);
+                _stageActor = new StageActor(
+                    actorMaterializer,
+                    r => GetAsyncCallback<Tuple<IActorRef, object>>(message => r(message)),
+                    receive,
+                    StageActorName);
             }
             else
-                _stageActorRef.Become(receive);
+                _stageActor.Become(receive);
 
-            return _stageActorRef;
+            return _stageActor;
         }
+
+        /// <summary>
+        /// Override and return a name to be given to the StageActor of this stage.
+        /// 
+        /// This method will be only invoked and used once, during the first <see cref="GetStageActor"/>
+        /// invocation whichc reates the actor, since subsequent `getStageActors` calls function
+        /// like `become`, rather than creating new actors.
+        /// 
+        /// Returns an empty string by default, which means that the name will a unique generated String (e.g. "$$a").
+        /// </summary>
+        [ApiMayChange]
+        protected virtual string StageActorName => "";
 
         /// <summary>
         /// TBD
@@ -1644,10 +1658,10 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected internal virtual void AfterPostStop()
         {
-            if (_stageActorRef != null)
+            if (_stageActor != null)
             {
-                _stageActorRef.Stop();
-                _stageActorRef = null;
+                _stageActor.Stop();
+                _stageActor = null;
             }
         }
 
@@ -2065,7 +2079,7 @@ namespace Akka.Streams.Stage
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
         public virtual void OnUpstreamFinish() => CompleteStage();
-        
+
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
@@ -2141,7 +2155,7 @@ namespace Akka.Streams.Stage
         /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
         /// </summary>
         public abstract void OnPush();
-        
+
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
@@ -2349,222 +2363,94 @@ namespace Akka.Streams.Stage
         }
     }
 
+    public static class StageActorRef
+    {
+        public delegate void Receive(Tuple<IActorRef, object> args);
+    }
+
     /// <summary>
     /// Minimal actor to work with other actors and watch them in a synchronous ways.
     /// </summary>
-    public sealed class StageActorRef : MinimalActorRef
+    public sealed class StageActor
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="args">TBD</param>
-        public delegate void Receive(Tuple<IActorRef, object> args);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IImmutableSet<IActorRef> StageTerminatedTombstone = null;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly EnumerableActorName Name = new EnumerableActorNameImpl("StageActorRef", new AtomicCounterLong(0L));
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ILoggingAdapter Log;
         private readonly Action<Tuple<IActorRef, object>> _callback;
-        private readonly AtomicReference<IImmutableSet<IActorRef>> _watchedBy = new AtomicReference<IImmutableSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
+        private readonly ActorCell _cell;
+        private readonly FunctionRef _functionRef;
+        private StageActorRef.Receive _behavior;
 
-        private volatile Receive _behavior;
-        private IImmutableSet<IActorRef> _watching = ImmutableHashSet<IActorRef>.Empty;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <param name="getAsyncCallback">TBD</param>
-        /// <param name="initialReceive">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
-        public StageActorRef(IActorRefProvider provider, ILoggingAdapter log, Func<Receive, Action<Tuple<IActorRef, object>>> getAsyncCallback, Receive initialReceive, ActorPath path)
+        public StageActor(
+            ActorMaterializer materializer,
+            Func<StageActorRef.Receive, Action<Tuple<IActorRef, object>>> getAsyncCallback,
+            StageActorRef.Receive initialReceive,
+            string name = null)
         {
-            Log = log;
-            Provider = provider;
+            _callback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
-            Path = path;
 
-            _callback = getAsyncCallback(args => _behavior(args));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override ActorPath Path { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IActorRefProvider Provider { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override bool IsTerminated => _watchedBy.Value == StageTerminatedTombstone;
-
-        private void LogIgnored(object message) => Log.Warning($"{message} message sent to StageActorRef({Path}) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-            switch (message)
+            switch (materializer.Supervisor)
             {
-                case PoisonPill _:
-                case Kill _:
-                    LogIgnored(message);
-                    return;
-                case Terminated t:
-                    if (_watching.Contains(t.ActorRef))
-                    {
-                        _watching.Remove(t.ActorRef);
-                        _callback(Tuple.Create(sender, message));
+                case LocalActorRef r: _cell = r.Cell; break;
+                case RepointableActorRef r: _cell = (ActorCell)r.Underlying; break;
+                default: throw new IllegalStateException($"Stream supervisor must be a local actor, was [{materializer.Supervisor.GetType()}]");
+            }
+
+            _functionRef = _cell.AddFunctionRef((sender, message) =>
+            {
+                switch (message)
+                {
+                    case PoisonPill _:
+                    case Kill _:
+                        materializer.Logger.Warning("{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor. " +
+                                                    "Use a custom message type to communicate with it instead.", message, _functionRef.Path);
                         break;
-                    }
-                    else return;
-                default:
-                    _callback(Tuple.Create(sender, message));
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public override void SendSystemMessage(ISystemMessage message)
-        {
-            if (message is DeathWatchNotification death)
-                Tell(new Terminated(death.Actor, true, false), ActorRefs.NoSender);
-            else if (message is Watch w)
-                AddWatcher(w.Watchee, w.Watcher);
-            else if (message is Unwatch u)
-                RemoveWatcher(u.Watchee, u.Watcher);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="behavior">TBD</param>
-        public void Become(Receive behavior) => _behavior = behavior;
-
-        private void SendTerminated()
-        {
-            var watchedBy = _watchedBy.GetAndSet(StageTerminatedTombstone);
-            if (watchedBy != StageTerminatedTombstone)
-            {
-                foreach (var actorRef in watchedBy.Cast<IInternalActorRef>())
-                    SendTerminated(actorRef);
-
-                foreach (var actorRef in _watching.Cast<IInternalActorRef>())
-                    UnwatchWatched(actorRef);
-
-                _watching = ImmutableHashSet<IActorRef>.Empty;
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorRef">TBD</param>
-        public void Watch(IActorRef actorRef)
-        {
-            var iw = (IInternalActorRef) actorRef;
-            _watching = _watching.Add(actorRef);
-            iw.SendSystemMessage(new Watch(iw, this));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorRef">TBD</param>
-        public void Unwatch(IActorRef actorRef)
-        {
-            var iw = (IInternalActorRef)actorRef;
-            _watching = _watching.Remove(actorRef);
-            iw.SendSystemMessage(new Unwatch(iw, this));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void Stop() => SendTerminated();
-
-        private void SendTerminated(IInternalActorRef actorRef)
-            => actorRef.SendSystemMessage(new DeathWatchNotification(this, true, false));
-
-        private void UnwatchWatched(IInternalActorRef actorRef) => actorRef.SendSystemMessage(new Unwatch(actorRef, this));
-
-        private void AddWatcher(IInternalActorRef watchee, IInternalActorRef watcher)
-        {
-            while (true)
-            {
-                var watchedBy = _watchedBy.Value;
-                if (watchedBy == StageTerminatedTombstone)
-                    SendTerminated(watcher);
-                else
-                {
-                    var isWatcheeSelf = Equals(watchee, this);
-                    var isWatcherSelf = Equals(watcher, this);
-
-                    if (isWatcheeSelf && !isWatcherSelf)
-                    {
-                        if (!watchedBy.Contains(watcher))
-                            if (!_watchedBy.CompareAndSet(watchedBy, watchedBy.Add(watcher)))
-                                continue; // try again
-                    }
-                    else if (!isWatcheeSelf && isWatcherSelf)
-                        Log.Warning("externally triggered watch from {0} to {1} is illegal on StageActorRef",
-                            watcher, watchee);
-                    else
-                        Log.Error("BUG: illegal Watch({0}, {1}) for {2}", watchee, watcher, this);
+                    default: _callback(Tuple.Create(sender, message)); break;
                 }
-
-                break;
-            }
+            });
         }
 
-        private void RemoveWatcher(IInternalActorRef watchee, IInternalActorRef watcher)
+        /// <summary>
+        /// The <see cref="IActorRef"/> by which this <see cref="StageActor"/> can be contacted from the outside.
+        /// This is a full-fledged <see cref="IActorRef"/> that supports watching and being watched
+        /// as well as location transparent (remote) communication.
+        /// </summary>
+        public IActorRef Ref => _functionRef;
+
+        /// <summary>
+        /// Special `Become` allowing to swap the behaviour of this <see cref="StageActor"/>.
+        /// Unbecome is not available.
+        /// </summary>
+        public void Become(StageActorRef.Receive receive) => Volatile.Write(ref _behavior, receive);
+
+        /// <summary>
+        /// Stops current <see cref="StageActor"/>.
+        /// </summary>
+        public void Stop() => _cell.RemoveFunctionRef(_functionRef);
+
+        /// <summary>
+        /// Makes current <see cref="StageActor"/> watch over given <paramref name="actorRef"/>.
+        /// It will be notified when an underlying actor is <see cref="Terminated"/>.
+        /// </summary>
+        /// <param name="actorRef"></param>
+        public void Watch(IActorRef actorRef) => _functionRef.Watch(actorRef);
+
+        /// <summary>
+        /// Makes current <see cref="StageActor"/> stop watching previously <see cref="Watch"/>ed <paramref name="actorRef"/>.
+        /// If <paramref name="actorRef"/> was not watched over, this method has no result.
+        /// </summary>
+        /// <param name="actorRef"></param>
+        public void Unwatch(IActorRef actorRef) => _functionRef.Unwatch(actorRef);
+
+        internal void InternalReceive(Tuple<IActorRef, object> pack)
         {
-            while (true)
+            if (pack.Item2 is Terminated terminated)
             {
-                var watchedBy = _watchedBy.Value;
-                if (watchedBy == null)
-                    SendTerminated(watcher);
-                else
+                if (_functionRef.IsWatching(terminated.ActorRef))
                 {
-                    var isWatcheeSelf = Equals(watchee, this);
-                    var isWatcherSelf = Equals(watcher, this);
-
-                    if (isWatcheeSelf && !isWatcherSelf)
-                    {
-                        if (!watchedBy.Contains(watcher))
-                            if (!_watchedBy.CompareAndSet(watchedBy, watchedBy.Remove(watcher)))
-                                continue; // try again
-                    }
-                    else if (!isWatcheeSelf && isWatcherSelf)
-                        Log.Warning("externally triggered unwatch from {0} to {1} is illegal on StageActorRef",
-                            watcher, watchee);
-                    else
-                        Log.Error("BUG: illegal Watch({0}, {1}) for {2}", watchee, watcher, this);
+                    _functionRef.Unwatch(terminated.ActorRef);
+                    _behavior(pack);
                 }
-
-                break;
             }
+            else _behavior(pack);
         }
     }
 
@@ -2661,14 +2547,9 @@ namespace Akka.Streams.Stage
 
         private void Locked(Action body)
         {
-            Monitor.Enter(this);
-            try
+            lock (this)
             {
                 body();
-            }
-            finally
-            {
-                Monitor.Exit(this);
             }
         }
     }

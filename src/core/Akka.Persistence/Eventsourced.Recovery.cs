@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,10 +88,14 @@ namespace Akka.Persistence
                         timeoutCancelable.Cancel();
                         if (res.Snapshot != null)
                         {
-                            var snapshot = res.Snapshot;
-                            LastSequenceNr = snapshot.Metadata.SequenceNr;
-                            // Since we are recovering we can ignore the receive behavior from the stack
-                            base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                            var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
+                            var seqNr = LastSequenceNr;
+                            LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
+                            if (!base.AroundReceive(recoveryBehavior, offer))
+                            {
+                                LastSequenceNr = seqNr;
+                                Unhandled(offer);
+                            }
                         }
 
                         ChangeState(Recovering(recoveryBehavior, timeout));

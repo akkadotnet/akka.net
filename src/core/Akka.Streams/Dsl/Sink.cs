@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -598,5 +598,14 @@ namespace Akka.Streams.Dsl
 
             return new Sink<TIn, IPublisher<TIn>>(publisherSink);
         }
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="IObservable{T}"/>. It supports multiple subscribers.
+        /// Since observables have no notion of backpressure, it will push incoming elements as fast as possible, potentially risking
+        /// process overrun.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static Sink<T, IObservable<T>> AsObservable<T>() => FromGraph(new ObservableSinkStage<T>());
     }
 }

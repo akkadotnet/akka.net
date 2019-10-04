@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 
@@ -136,10 +137,10 @@ namespace Tutorials.Tutorial4
 
                 groupActor.Tell(new RequestAllTemperatures(0), probe.Ref);
                 probe.ExpectMsg<RespondAllTemperatures>(msg =>
-                {
-                    // TODO: compare temperatures dictionary
-                    return msg.RequestId == 0;
-                });
+                  msg.Temperatures["device1"].AsInstanceOf<Temperature>().Value == 1.0 &&
+                  msg.Temperatures["device2"].AsInstanceOf<Temperature>().Value == 2.0 &&
+                  msg.Temperatures["device3"] is TemperatureNotAvailable &&
+                  msg.RequestId == 0);
             }
             #endregion
         }

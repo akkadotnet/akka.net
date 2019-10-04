@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OldestChangedBuffer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -153,10 +153,15 @@ namespace Akka.Cluster.Tools.Singleton
         private void HandleInitial(ClusterEvent.CurrentClusterState state)
         {
             _membersByAge = state.Members
-                .Where(m => (m.Status == MemberStatus.Up || m.Status == MemberStatus.Leaving) && MatchingRole(m))
+                .Where(m => (m.Status == MemberStatus.Up) && MatchingRole(m))
                 .ToImmutableSortedSet(MemberAgeOrdering.Descending);
+            // If there is some removal in progress of an older node it's not safe to immediately become oldest,
+            // removal of younger nodes doesn't matter. Note that it can also be started via restart after
+            // ClusterSingletonManagerIsStuck.
 
-            var safeToBeOldest = !state.Members.Any(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting);
+            int selfUpNumber = state.Members.Where(m => m.UniqueAddress == _cluster.SelfUniqueAddress).Select(m => (int?)m.UpNumber).FirstOrDefault() ?? int.MaxValue;
+
+            var safeToBeOldest = !state.Members.Any(m => (m.UpNumber < selfUpNumber && MatchingRole(m)) && (m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting || m.Status == MemberStatus.Leaving));
             var initial = new InitialOldestState(_membersByAge.FirstOrDefault()?.UniqueAddress, safeToBeOldest);
             _changes = _changes.Enqueue(initial);
         }

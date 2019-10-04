@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,8 +42,10 @@ namespace Akka.Cluster.Sharding
         public Shard.ShardState State { get; set; } = Shard.ShardState.Empty;
         public ImmutableDictionary<string, IActorRef> RefById { get; set; } = ImmutableDictionary<string, IActorRef>.Empty;
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
+        public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
 
@@ -73,9 +75,20 @@ namespace Akka.Cluster.Sharding
                     Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
                     Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
                 : EntityRecoveryStrategy.AllStrategy;
+
+            var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
+            PassivateIdleTask = Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities
+                ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
+                : null;
         }
 
         public override string PersistenceId { get; }
+
+        protected override void PostStop()
+        {
+            PassivateIdleTask?.Cancel();
+            base.PostStop();
+        }
 
         protected override bool ReceiveCommand(object message)
         {
@@ -83,37 +96,25 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("PersistentShard snapshot saved successfully");
-                    /*
-                    * delete old events but keep the latest around because
-                    *
-                    * it's not safe to delete all events immediate because snapshots are typically stored with a weaker consistency
-                    * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
-                    * i.e. it will use an older snapshot and then not replay the full sequence of events
-                    *
-                    * for debugging if something goes wrong in production it's very useful to be able to inspect the events
-                    */
-                    var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
-                    if (deleteToSequenceNr > 0)
-                    {
-                        DeleteMessages(deleteToSequenceNr);
-                    }
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
                     break;
                 case SaveSnapshotFailure m:
-                    Log.Warning("PersistentShard snapshot failure: {0}", m.Cause.Message);
+                    Log.Warning("PersistentShard snapshot failure: [{0}]", m.Cause.Message);
                     break;
                 case DeleteMessagesSuccess m:
-                    Log.Debug("PersistentShard messages to {0} deleted successfully", m.ToSequenceNr);
-                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    var deleteTo = m.ToSequenceNr - 1;
+                    var deleteFrom = Math.Max(0, deleteTo - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter);
+                    Log.Debug("PersistentShard messages to [{0}] deleted successfully. Deleting snapshots from [{1}] to [{2}]", m.ToSequenceNr, deleteFrom, deleteTo);
+                    DeleteSnapshots(new SnapshotSelectionCriteria(deleteTo, DateTime.MaxValue, deleteFrom));
                     break;
-
                 case DeleteMessagesFailure m:
-                    Log.Warning("PersistentShard messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    Log.Warning("PersistentShard messages to [{0}] deletion failure: [{1}]", m.ToSequenceNr, m.Cause.Message);
                     break;
                 case DeleteSnapshotsSuccess m:
-                    Log.Debug("PersistentShard snapshots matching {0} deleted successfully", m.Criteria);
+                    Log.Debug("PersistentShard snapshots matching [{0}] deleted successfully", m.Criteria);
                     break;
                 case DeleteSnapshotsFailure m:
-                    Log.Warning("PersistentShard snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
+                    Log.Warning("PersistentShard snapshots matching [{0}] deletion failure: [{1}]", m.Criteria, m.Cause.Message);
                     break;
                 default:
                     return this.HandleCommand(message);
@@ -165,31 +166,34 @@ namespace Akka.Cluster.Sharding
 
         public void EntityTerminated(IActorRef tref)
         {
-            if (IdByRef.TryGetValue(tref, out var id))
-            {
-                IdByRef = IdByRef.Remove(tref);
-                RefById = RefById.Remove(id);
+            if (!IdByRef.TryGetValue(tref, out var id)) return;
+            IdByRef = IdByRef.Remove(tref);
+            RefById = RefById.Remove(id);
 
-                if (MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
+            if (PassivateIdleTask != null)
+            {
+                LastMessageTimestamp = LastMessageTimestamp.Remove(id);
+            }
+
+            if (MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
+            {
+                //Note; because we're not persisting the EntityStopped, we don't need
+                // to persist the EntityStarted either.
+                Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
+                this.SendMessageBuffer(new Shard.EntityStarted(id));
+            }
+            else
+            {
+                if (!Passivating.Contains(tref))
                 {
-                    //Note; because we're not persisting the EntityStopped, we don't need
-                    // to persist the EntityStarted either.
-                    Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
-                    this.SendMessageBuffer(new Shard.EntityStarted(id));
+                    Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
+                    Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
                 }
                 else
-                {
-                    if (!Passivating.Contains(tref))
-                    {
-                        Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
-                        Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
-                    }
-                    else
-                        ProcessChange(new Shard.EntityStopped(id), this.PassivateCompleted);
-                }
-
-                Passivating = Passivating.Remove(tref);
+                    ProcessChange(new Shard.EntityStopped(id), this.PassivateCompleted);
             }
+
+            Passivating = Passivating.Remove(tref);
         }
 
         public void DeliverTo(string id, object message, object payload, IActorRef sender)
@@ -204,7 +208,7 @@ namespace Akka.Cluster.Sharding
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
-                    this.GetEntity(id).Tell(payload, sender);
+                    this.GetOrCreateEntity(id).Tell(payload, sender);
                 }
                 else
                 {
@@ -214,7 +218,10 @@ namespace Akka.Cluster.Sharding
                 }
             }
             else
+            {
+                this.TouchLastMessageTimestamp(id);
                 child.Tell(payload, sender);
+            }
         }
     }
 }

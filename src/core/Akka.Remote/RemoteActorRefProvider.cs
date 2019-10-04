@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -187,6 +188,24 @@ namespace Akka.Remote
 
         /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+
+        private Information _serializationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
+
+                if (Transport == null || Transport.DefaultAddress == null)
+                    return _local.SerializationInformation; // address not know yet, access before complete init and binding
+
+                var info = new Information(Transport.DefaultAddress, Transport.System);
+                _serializationInformationCache = info;
+                return info;
+            }
+        }
 
         /// <inheritdoc/>
         public Settings Settings { get { return _local.Settings; } }
@@ -499,7 +518,7 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            // using thread local LRU cache, which will call InternalRresolveActorRef
+            // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {

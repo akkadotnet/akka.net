@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AccrualFailureDetectorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,8 +76,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_return_phi_value_of_zero_on_startup_for_each_address_when_no_heartbeats()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
-            Assert.Equal(fd.CurrentPhi, 0.0);
-            Assert.Equal(fd.CurrentPhi, 0.0);
+            Assert.Equal(0.0, fd.CurrentPhi);
+            Assert.Equal(0.0, fd.CurrentPhi);
         }
 
         [Fact]

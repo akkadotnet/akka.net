@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -195,6 +195,16 @@ namespace Akka.Cluster.Tests
 
             var strategy = new KeepOldest(downIfAlone: true);
             strategy.Apply(new NetworkPartitionContext(unreachable, remaining)).Should().Equal(remaining);
+        }
+
+        [Fact]
+        public void KeepOldest_when_downIfAlone_must_keep_oldest_up_if_is_reachable_and_only_node_in_cluster()
+        {
+            var unreachable = Members();
+            var remaining = Members(Member(a, upNumber: 1));
+
+            var strategy = new KeepOldest(downIfAlone: true);
+            strategy.Apply(new NetworkPartitionContext(unreachable, remaining)).Should().Equal(unreachable);
         }
 
         [Fact]

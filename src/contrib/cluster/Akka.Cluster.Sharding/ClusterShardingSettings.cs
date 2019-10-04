@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -157,7 +157,6 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
     {
-
         /// <summary>
         /// Specifies that this entity type requires cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
@@ -184,10 +183,18 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly string SnapshotPluginId;
 
+        /// <summary>
+        /// Passivate entities that have not received any message in this interval.
+        /// Note that only messages sent through sharding are counted, so direct messages
+        /// to the <see cref="IActorRef"/> of the actor or messages that it sends to itself are not counted as activity.
+        /// Use 0 to disable automatic passivation. It is always disabled if `RememberEntities` is enabled.
+        /// </summary>
+        public readonly TimeSpan PassivateIdleEntityAfter;
+        
         public readonly StateStoreMode StateStoreMode;
 
         /// <summary>
-        /// TBD
+        /// Additional tuning parameters, see descriptions in reference.conf
         /// </summary>
         public readonly TunningParameters TunningParameters;
 
@@ -240,11 +247,16 @@ namespace Akka.Cluster.Sharding
             var role = config.GetString("role");
             if (role == string.Empty) role = null;
 
+            var passivateIdleAfter = config.GetString("passivate-idle-entity-after").ToLower() == "off" 
+                ? TimeSpan.Zero 
+                : config.GetTimeSpan("passivate-idle-entity-after");
+
             return new ClusterShardingSettings(
                 role: role,
                 rememberEntities: config.GetBoolean("remember-entities"),
                 journalPluginId: config.GetString("journal-plugin-id"),
                 snapshotPluginId: config.GetString("snapshot-plugin-id"),
+                passivateIdleEntityAfter: passivateIdleAfter,
                 stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
                 tunningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings);
@@ -257,6 +269,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="rememberEntities">TBD</param>
         /// <param name="journalPluginId">TBD</param>
         /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="passivateIdleEntityAfter">TBD</param>
         /// <param name="stateStoreMode">TBD</param>
         /// <param name="tunningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
@@ -265,6 +278,7 @@ namespace Akka.Cluster.Sharding
             bool rememberEntities,
             string journalPluginId,
             string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
             TunningParameters tunningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings)
@@ -273,6 +287,7 @@ namespace Akka.Cluster.Sharding
             RememberEntities = rememberEntities;
             JournalPluginId = journalPluginId;
             SnapshotPluginId = snapshotPluginId;
+            PassivateIdleEntityAfter = passivateIdleEntityAfter;
             StateStoreMode = stateStoreMode;
             TunningParameters = tunningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
@@ -300,6 +315,7 @@ namespace Akka.Cluster.Sharding
                 rememberEntities: RememberEntities,
                 journalPluginId: JournalPluginId,
                 snapshotPluginId: SnapshotPluginId,
+                passivateIdleEntityAfter: PassivateIdleEntityAfter,
                 stateStoreMode: StateStoreMode,
                 tunningParameters: TunningParameters,
                 coordinatorSingletonSettings: CoordinatorSingletonSettings);
@@ -356,6 +372,11 @@ namespace Akka.Cluster.Sharding
             return Copy(tunningParameters: tunningParameters);
         }
 
+        public ClusterShardingSettings WithPassivateIdleAfter(TimeSpan duration)
+        {
+            return Copy(passivateIdleAfter: duration);
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -377,6 +398,7 @@ namespace Akka.Cluster.Sharding
             bool? rememberEntities = null,
             string journalPluginId = null,
             string snapshotPluginId = null,
+            TimeSpan? passivateIdleAfter = null,
             StateStoreMode? stateStoreMode = null,
             TunningParameters tunningParameters = null,
             ClusterSingletonManagerSettings coordinatorSingletonSettings = null)
@@ -386,6 +408,7 @@ namespace Akka.Cluster.Sharding
                 rememberEntities: rememberEntities ?? RememberEntities,
                 journalPluginId: journalPluginId ?? JournalPluginId,
                 snapshotPluginId: snapshotPluginId ?? SnapshotPluginId,
+                passivateIdleEntityAfter: passivateIdleAfter ?? PassivateIdleEntityAfter,
                 stateStoreMode: stateStoreMode ?? StateStoreMode,
                 tunningParameters: tunningParameters ?? TunningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings ?? CoordinatorSingletonSettings);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -632,7 +632,6 @@ namespace Akka.Actor
                             {
                                 Environment.Exit(0);
                             }
-                            return Done.Instance;
                         });
                     }
 
@@ -671,16 +670,12 @@ namespace Akka.Actor
             var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
             if (runByClrShutdownHook)
             {
-#if APPDOMAIN
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
                 {
                     // have to block, because if this method exits the process exits.
                     coord.RunClrHooks().Wait(coord.TotalTimeout);
                 };
-#else
-                // TODO: what to do for NetCore?
-#endif
 
                 coord.AddClrShutdownHook(() =>
                 {

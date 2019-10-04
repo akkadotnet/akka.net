@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdownShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -105,12 +105,15 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         private void PingEntities()
         {
-            _region2.Tell(1, _probe2.Ref);
-            _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(1);
-            _region2.Tell(2, _probe2.Ref);
-            _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(2);
-            _region2.Tell(3, _probe2.Ref);
-            _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(3);
+            AwaitAssert(() =>
+            {
+                _region2.Tell(1, _probe2.Ref);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(1);
+                _region2.Tell(2, _probe2.Ref);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
+                _region2.Tell(3, _probe2.Ref);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(3);
+            }, TimeSpan.FromSeconds(10));
         }
 
         [Fact]
