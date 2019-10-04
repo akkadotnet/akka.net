@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1099,8 +1099,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 foreach (var envelope in req.Messages)
                 {
-                    var write = envelope as AtomicWrite;
-                    if (write != null)
+                    if (envelope is AtomicWrite write)
                     {
                         var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
                         foreach (var unadapted in writes)
@@ -1111,9 +1110,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 tagBuilder.Clear();
 
                                 var persistent = AdaptToJournal(unadapted);
-                                if (persistent.Payload is Tagged)
+                                if (persistent.Payload is Tagged tagged)
                                 {
-                                    var tagged = (Tagged)persistent.Payload;
                                     if (tagged.Tags.Count != 0)
                                     {
                                         tagBuilder.Append(';');
@@ -1205,29 +1203,35 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payloadType = persistent.Payload.GetType();
             var serializer = _serialization.FindSerializerForType(payloadType, Setup.DefaultSerializer);
 
-            string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+            Akka.Serialization.Serialization.WithTransport(_serialization.System, () =>
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(persistent.Payload);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                string manifest = "";
+                if (serializer is SerializerWithStringManifest stringManifest)
                 {
-                    manifest = persistent.Payload.GetType().TypeQualifiedName();
+                    manifest = stringManifest.Manifest(persistent.Payload);
                 }
-            }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                    {
+                        manifest = persistent.Payload.GetType().TypeQualifiedName();
+                    }
+                }
 
-            var binary = serializer.ToBinary(persistent.Payload);
+                var binary = serializer.ToBinary(persistent.Payload);
 
-            AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
-            AddParameter(command, "@SequenceNr", DbType.Int64, persistent.SequenceNr);
-            AddParameter(command, "@Timestamp", DbType.Int64, 0L);
-            AddParameter(command, "@IsDeleted", DbType.Boolean, false);
-            AddParameter(command, "@Manifest", DbType.String, manifest);
-            AddParameter(command, "@Payload", DbType.Binary, binary);
-            AddParameter(command, "@Tag", DbType.String, tags);
-            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+                AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
+                AddParameter(command, "@SequenceNr", DbType.Int64, persistent.SequenceNr);
+                AddParameter(command, "@Timestamp", DbType.Int64, 0L);
+                AddParameter(command, "@IsDeleted", DbType.Boolean, false);
+                AddParameter(command, "@Manifest", DbType.String, manifest);
+                AddParameter(command, "@Payload", DbType.Binary, binary);
+                AddParameter(command, "@Tag", DbType.String, tags);
+                AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+
+                return manifest;
+            });
         }
 
         /// <summary>

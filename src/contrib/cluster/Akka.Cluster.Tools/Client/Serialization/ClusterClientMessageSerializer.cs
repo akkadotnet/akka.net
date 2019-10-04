@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,10 @@ using Google.Protobuf;
 namespace Akka.Cluster.Tools.Client.Serialization
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    ///
+    /// Serializer used to translate all of the <see cref="ClusterClient"/> and <see cref="ClusterClientReceptionist"/>
+    /// messages that can be passed back-and-forth between client and receptionist.
     /// </summary>
     public class ClusterClientMessageSerializer : SerializerWithStringManifest
     {
@@ -24,6 +27,7 @@ namespace Akka.Cluster.Tools.Client.Serialization
         private const string GetContactsManifest = "B";
         private const string HeartbeatManifest = "C";
         private const string HeartbeatRspManifest = "D";
+        private const string ReceptionistShutdownManifest = "E";
 
         private static readonly byte[] EmptyBytes = {};
         private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
@@ -39,7 +43,8 @@ namespace Akka.Cluster.Tools.Client.Serialization
                 {ContactsManifest, ContactsFromBinary},
                 {GetContactsManifest, _ => ClusterReceptionist.GetContacts.Instance},
                 {HeartbeatManifest, _ => ClusterReceptionist.Heartbeat.Instance},
-                {HeartbeatRspManifest, _ => ClusterReceptionist.HeartbeatRsp.Instance}
+                {HeartbeatRspManifest, _ => ClusterReceptionist.HeartbeatRsp.Instance},
+                {ReceptionistShutdownManifest, _ => ClusterReceptionist.ReceptionistShutdown.Instance }
             };
         }
 
@@ -55,10 +60,11 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            if (obj is ClusterReceptionist.Contacts) return ContactsToProto(obj as ClusterReceptionist.Contacts);
+            if (obj is ClusterReceptionist.Contacts message) return ContactsToProto(message);
             if (obj is ClusterReceptionist.GetContacts) return EmptyBytes;
             if (obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
             if (obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
+            if (obj is ClusterReceptionist.ReceptionistShutdown) return EmptyBytes;
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
         }
@@ -97,11 +103,12 @@ namespace Akka.Cluster.Tools.Client.Serialization
             if (o is ClusterReceptionist.GetContacts) return GetContactsManifest;
             if (o is ClusterReceptionist.Heartbeat) return HeartbeatManifest;
             if (o is ClusterReceptionist.HeartbeatRsp) return HeartbeatRspManifest;
+            if (o is ClusterReceptionist.ReceptionistShutdown) return ReceptionistShutdownManifest;
 
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
         }
 
-        private byte[] ContactsToProto(ClusterReceptionist.Contacts message)
+        private static byte[] ContactsToProto(ClusterReceptionist.Contacts message)
         {
             var protoMessage = new Proto.Msg.Contacts();
             foreach (var contactPoint in message.ContactPoints)
@@ -111,7 +118,7 @@ namespace Akka.Cluster.Tools.Client.Serialization
             return protoMessage.ToByteArray();
         }
 
-        private ClusterReceptionist.Contacts ContactsFromBinary(byte[] binary)
+        private static ClusterReceptionist.Contacts ContactsFromBinary(byte[] binary)
         {
             var proto = Proto.Msg.Contacts.Parser.ParseFrom(binary);
             return new ClusterReceptionist.Contacts(proto.ContactPoints.ToImmutableList());

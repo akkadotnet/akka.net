@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -136,7 +136,8 @@ namespace Akka.Persistence.Tests
 
             public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
 
-            public ChaosSender(IActorRef destination, IActorRef probe)
+            public ChaosSender(IActorRef destination, IActorRef probe) 
+                : base(x => x.WithRedeliverInterval(TimeSpan.FromMilliseconds(500)))
             {
                 _destination = destination;
                 Probe = probe;
@@ -146,8 +147,6 @@ namespace Akka.Persistence.Tests
                 _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
                 _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
             }
-
-            public override TimeSpan RedeliverInterval { get { return TimeSpan.FromMilliseconds(500); } }
 
             public override string PersistenceId { get { return "chaosSender"; } }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -690,20 +690,26 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payloadType = e.Payload.GetType();
             var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
 
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
             string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () =>
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(e.Payload);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                
+                if (serializer is SerializerWithStringManifest stringManifest)
                 {
-                    manifest = e.Payload.GetType().TypeQualifiedName();
+                    manifest = stringManifest.Manifest(e.Payload);
                 }
-            }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                    {
+                        manifest = e.Payload.GetType().TypeQualifiedName();
+                    }
+                }
 
-            var binary = serializer.ToBinary(e.Payload);
+                return serializer.ToBinary(e.Payload);
+            });
+           
 
             AddParameter(command, "@PersistenceId", DbType.String, e.PersistenceId);
             AddParameter(command, "@SequenceNr", DbType.Int64, e.SequenceNr);
@@ -746,11 +752,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
                 var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                deserialized = deserializer.FromBinary((byte[])payload, type);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+                deserialized = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => deserializer.FromBinary((byte[])payload, type) );
             }
             else
             {
                 var serializerId = reader.GetInt32(SerializerIdIndex);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 deserialized = Serialization.Deserialize((byte[])payload, serializerId, manifest);
             }
 

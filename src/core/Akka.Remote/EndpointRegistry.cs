@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Remote
         /// an <see cref="EndpointManager.EndpointPolicy"/> of <see cref="EndpointManager.Pass"/>
         /// in the registry.
         /// </exception>
-        /// <returns>The <see cref="endpoint"/> actor reference.</returns>
+        /// <returns>The <paramref name="endpoint"/> actor reference.</returns>
         public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid)
         {
             if (_addressToWritable.TryGetValue(address, out var existing))
@@ -88,7 +88,7 @@ namespace Akka.Remote
         /// <param name="address">The remote address.</param>>
         /// <param name="endpoint">The local endpoint actor who owns this connection.</param>
         /// <param name="uid">The UID of the remote actor system. Can be <c>null</c>.</param>
-        /// <returns>The <see cref="endpoint"/> actor reference.</returns>
+        /// <returns>The <paramref name="endpoint"/> actor reference.</returns>
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
             _addressToReadonly[address] = Tuple.Create(endpoint, uid);
@@ -126,7 +126,7 @@ namespace Akka.Remote
         /// Get the endpoint address for the selected endpoint writer actor.
         /// </summary>
         /// <param name="writer">The endpoint writer actor reference.</param>
-        /// <returns>The remote system address owned by <see cref="writer"/>.</returns>
+        /// <returns>The remote system address owned by <paramref name="writer"/>.</returns>
         public Address AddressForWriter(IActorRef writer)
         {
             // Needs to return null if the key is not in the dictionary, instead of throwing.
@@ -169,7 +169,7 @@ namespace Akka.Remote
         /// Checks to see if the specified address is already quarantined or not.
         /// </summary>
         /// <param name="address">The address to check.</param>
-        /// <param name="uid">The current UID of <see cref="address"/>.</param>
+        /// <param name="uid">The current UID of <paramref name="address"/>.</param>
         /// <returns><c>true</c> if this system is under quarantine with its current UID, <c>false</c> otherwise.</returns>
         public bool IsQuarantined(Address address, int uid)
         {

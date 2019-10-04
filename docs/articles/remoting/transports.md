@@ -1,10 +1,10 @@
 ---
-uid: remote_transports
+uid: remote-transports
 title: Transports
 ---
 
 # Akka.Remote Transports
-In the [Akka.Remote overview](index.md) we introduced the concept of "transports" for Akka.Remote.
+In the [Akka.Remote overview](xref:remote-overview) we introduced the concept of "transports" for Akka.Remote.
 
 A "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
 
@@ -14,11 +14,11 @@ In this section we'll expand a bit more on what transports are and how Akka.Remo
 Transports in Akka.Remote are abstractions on top of actual network transports, such as TCP and UDP sockets, and in truth transports have pretty simple requirements.
 
 > [!NOTE]
-> most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
+> Most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
 
 Transports **do not need to care** about:
 * **Serialization** - that's handled by Akka.NET itself;
-* **Connection-oriented behavior** - the association process inside Akka.Remote ensures this, even over connectionless transports like UDP;
+* **Connection-oriented behavior** - the association process inside Akka.Remote ensures this, even over connection-less transports like UDP;
 * **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor`](xref:at-least-once-delivery) class, part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
@@ -112,7 +112,7 @@ akka{
 Both TCP and HTTP are enabled in this scenario. But how do I know which transport is being used when I send a message to a `RemoteActorRef`? That's indicated by the protocol scheme used in the `Address` of the remote actor:
 
     akka.tcp://MySystem@localhost:8081/user/actor #dot-netty.tcp
-    akka.udp://MySystem@localhost:8082/user/actor #magic.http
+    akka.http://MySystem@localhost:8082/user/actor #magic.http
 
 So if you want to send a message to a remote actor over HTTP, you'd write something like this:
 

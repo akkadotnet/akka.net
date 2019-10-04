@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: users-and-use-cases
 title: Akka.NET Users and Use Cases
 ---
 

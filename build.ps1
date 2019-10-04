@@ -36,9 +36,9 @@ $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVers
 $NugetVersion = "4.3.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 $ProtobufVersion = "3.4.0"
-$DocfxVersion = "2.40.5"
+$DocfxVersion = "2.43.2"
 
-$IncrementalistVersion = "0.1.4";
+$IncrementalistVersion = "0.1.7";
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -172,6 +172,6 @@ $Arguments = @{
 
 # Start Fake
 Write-Host "Running build script..."
-Invoke-Expression "$FakeExePath `"build.fsx`" $ScriptArgs $Arguments"
-
+Invoke-Expression "& `"$FakeExePath`" `"build.fsx`" $ScriptArgs $Arguments"
+ 
 exit $LASTEXITCODE

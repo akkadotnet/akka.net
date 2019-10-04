@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterSingletonRestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="ClusterSingletonLeavingSpeedSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -115,8 +115,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private void ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
         {
-            List<(TimeSpan stoppedDuration, TimeSpan startedDuration)> durations = new List<(TimeSpan, TimeSpan)>();
-
+            List<Tuple<TimeSpan, TimeSpan>> durations = new List<Tuple<TimeSpan, TimeSpan>>();
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = 0; i < _systems.Length; i++)
@@ -149,13 +148,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 });
 
                 Log.Info($"Singleton {i} stopped in {(int)stoppedDuration.TotalMilliseconds} ms, started in {(int)startedDuration.Milliseconds} ms, diff ${(int)(startedDuration - stoppedDuration).TotalMilliseconds} ms");
-                durations.Add((stoppedDuration, startedDuration));
+                durations.Add(Tuple.Create(stoppedDuration, startedDuration));
             }
             sw.Stop();
 
             for (int i = 0; i < durations.Count; i++)
             {
-                Log.Info($"Singleton {i} stopped in {(int)durations[i].stoppedDuration.TotalMilliseconds} ms, started in {(int)durations[i].startedDuration.Milliseconds} ms, diff ${(int)(durations[i].startedDuration - durations[i].stoppedDuration).TotalMilliseconds} ms");
+                Log.Info($"Singleton {i} stopped in {(int)durations[i].Item1.TotalMilliseconds} ms, started in {(int)durations[i].Item2.Milliseconds} ms, diff ${(int)(durations[i].Item2 - durations[i].Item1).TotalMilliseconds} ms");
             }
         }
 
