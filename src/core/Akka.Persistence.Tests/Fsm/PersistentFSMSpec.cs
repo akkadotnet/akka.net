@@ -10,6 +10,7 @@ using Akka.Persistence.Fsm;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Configuration;
 using Xunit;
 using static Akka.Actor.FSMBase;
@@ -444,6 +445,17 @@ namespace Akka.Persistence.Tests.Fsm
             {
                 Shutdown(sys2);
             }
+        }
+        
+        [Fact]
+        public async Task PersistentFSM_must_pass_latest_statedata_to_AndThen()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new AndThenTestActor()));
+
+            var response1 = await actor.Ask<AndThenTestActor.Data>(new AndThenTestActor.Command("Message 1")).ConfigureAwait(true);
+            var response2 = await actor.Ask<AndThenTestActor.Data>(new AndThenTestActor.Command("Message 2")).ConfigureAwait(true);
+            Assert.Equal("Message 1", response1.Value);
+            Assert.Equal("Message 2", response2.Value);
         }
 
         internal class WebStoreCustomerFSM : PersistentFSM<IUserState, IShoppingCart, IDomainEvent>
@@ -1016,4 +1028,92 @@ namespace Akka.Persistence.Tests.Fsm
             return Actor.Props.Create(() => new SnapshotFSM(probe));
         }
     }
+    #region AndThen receiving latest data
+    
+    public class AndThenTestActor : PersistentFSM<AndThenTestActor.IState, AndThenTestActor.Data, AndThenTestActor.IEvent>
+    {
+        public override string PersistenceId => "PersistentFSMSpec.AndThenTestActor";
+
+        public AndThenTestActor()
+        {
+            StartWith(Init.Instance, new Data());
+            When(Init.Instance, (evt, state) =>
+            {
+                switch (evt.FsmEvent)
+                {
+                    case Command cmd:
+                        return Stay()
+                            .Applying(new CommandReceived(cmd.Value))
+                            .AndThen(data =>
+                            {
+                                // NOTE At this point, I'd expect data to be the value returned by Apply
+                                Sender.Tell(data, Self);
+                            });
+                    default:
+                        return Stay();
+                }
+            });
+        }
+
+        protected override Data ApplyEvent(IEvent domainEvent, Data currentData)
+        {
+            switch (domainEvent)
+            {
+                case CommandReceived cmd:
+                    return new Data(cmd.Value);
+                default:
+                    return currentData;
+            }
+        }
+    
+
+        public interface IState : PersistentFSM.IFsmState
+        {
+        }
+
+        public class Init : IState
+        {
+            public static readonly Init Instance = new Init();
+            public string Identifier => "Init";
+        }
+
+        public class Data
+        {
+            public Data()
+            {
+            }
+
+            public Data(string value)
+            {
+                Value = value;
+            }
+
+            public string Value { get; }
+        }
+
+        public interface IEvent
+        {
+        }
+
+        public class CommandReceived : IEvent
+        {
+            public CommandReceived(string value)
+            {
+                Value = value;
+            }
+
+            public string Value { get; }
+        }
+
+        public class Command
+        {
+            public Command(string value)
+            {
+                Value = value;
+            }
+
+            public string Value { get; }
+        }
+    }
+    #endregion
 }
