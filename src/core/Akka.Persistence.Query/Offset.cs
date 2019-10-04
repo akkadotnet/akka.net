@@ -9,7 +9,13 @@ using System;
 
 namespace Akka.Persistence.Query
 {
-    public abstract class Offset
+    /// <summary>
+    /// Used in <see cref="IEventsByTagQuery"/> implementations to signal to Akka.Persistence.Query
+    /// where to begin and end event by tag queries.
+    ///
+    /// For concrete implementations, see <see cref="Sequence"/> and <see cref="NoOffset"/>.
+    /// </summary>
+    public abstract class Offset : IComparable<Offset>
     {
         /// <summary>
         /// Used when retrieving all events.
@@ -25,6 +31,12 @@ namespace Akka.Persistence.Query
         /// as the `offset` parameter in a subsequent query.
         /// </summary>
         public static Offset Sequence(long value) => new Sequence(value);
+
+        /// <summary>
+        /// Used to compare to other <see cref="Offset"/> implementations.
+        /// </summary>
+        /// <param name="other">The other offset to compare.</param>
+        public abstract int CompareTo(Offset other);
     }
 
     /// <summary>
@@ -59,6 +71,16 @@ namespace Akka.Persistence.Query
         }
 
         public override int GetHashCode() => Value.GetHashCode();
+
+        public override int CompareTo(Offset other)
+        {
+            if (other is Sequence seq)
+            {
+                return CompareTo(seq);
+            }
+
+            throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+        }
     }
 
     /// <summary>
@@ -71,5 +93,15 @@ namespace Akka.Persistence.Query
         /// </summary>
         public static NoOffset Instance { get; } = new NoOffset();
         private NoOffset() { }
+
+        public override int CompareTo(Offset other)
+        {
+            if (other is NoOffset no)
+            {
+                return 0;
+            }
+
+            throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+        }
     }
 }
