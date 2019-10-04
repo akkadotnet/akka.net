@@ -5,9 +5,6 @@ pool:
   vmImage: vs2017-win2016
   demands: Cmd
 
-trigger: none
-pr: none
-
 schedules:
 - cron: "0 0 * * *"
   displayName: Daily midnight build
