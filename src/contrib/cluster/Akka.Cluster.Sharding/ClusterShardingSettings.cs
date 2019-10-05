@@ -304,6 +304,11 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
+        /// If true, idle entities should be passivated if they have not received any message by this interval, otherwise it is not enabled.
+        /// </summary>
+        internal bool ShouldPassivateIdleEntities => PassivateIdleEntityAfter > TimeSpan.Zero && !RememberEntities;
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="role">TBD</param>
