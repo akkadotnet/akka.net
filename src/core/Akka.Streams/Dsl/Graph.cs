@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Graph.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -836,7 +836,7 @@ namespace Akka.Streams.Dsl
 
             private void Dispatch(T left, T right)
             {
-                if (_stage._compare(left, right) == -1)
+                if (_stage._compare(left, right) < 0)
                 {
                     _other = right;
                     Emit(_stage.Out, left, _readLeft);

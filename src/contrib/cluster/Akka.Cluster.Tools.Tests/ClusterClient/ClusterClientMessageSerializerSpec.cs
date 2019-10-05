@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Cluster.Tools.Client;
+using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
@@ -18,7 +19,9 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
     public class ClusterClientMessageSerializerSpec : AkkaSpec
     {
         public ClusterClientMessageSerializerSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster").WithFallback(ClusterClientReceptionist.DefaultConfig()))
+            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.remote.dot-netty.tcp.port = 0")
+            .WithFallback(ClusterClientReceptionist.DefaultConfig()))
         {
         }
 
@@ -57,9 +60,16 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             AssertEqual(message);
         }
 
+        [Fact]
+        public void Can_serialize_ReceptionistShutdown()
+        {
+            var message = ClusterReceptionist.ReceptionistShutdown.Instance;
+            AssertEqual(message);
+        }
+
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+            var serializer = (ClusterClientMessageSerializer)Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }

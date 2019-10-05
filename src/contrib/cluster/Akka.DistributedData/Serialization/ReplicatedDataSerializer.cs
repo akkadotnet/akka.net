@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatedDataSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.IO;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util;
 using Hyperion;
@@ -17,7 +18,7 @@ namespace Akka.DistributedData.Serialization
     public sealed class ReplicatedDataSerializer : Serializer
     {
         private readonly Hyperion.Serializer _serializer;
-        
+
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
             var akkaSurrogate =
@@ -63,10 +64,25 @@ namespace Akka.DistributedData.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var ms = new MemoryStream(bytes))
+            try
             {
-                var res = _serializer.Deserialize<object>(ms);
-                return res;
+                using (var ms = new MemoryStream(bytes))
+                {
+                    var res = _serializer.Deserialize(ms);
+                    return res;
+                }
+            }
+            catch (TypeLoadException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (NotSupportedException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw new SerializationException(e.Message, e);
             }
         }
     }

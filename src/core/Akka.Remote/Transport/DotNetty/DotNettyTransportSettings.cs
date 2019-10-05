@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,6 +27,27 @@ namespace Akka.Remote.Transport.DotNetty
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
             return Create(system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+        }
+
+        /// <summary>
+        /// Adds support for the "off-for-windows" option per https://github.com/akkadotnet/akka.net/issues/3293
+        /// </summary>
+        /// <param name="hoconTcpReuseAddr">The HOCON string for the akka.remote.dot-netty.tcp.reuse-addr option</param>
+        /// <returns><c>true</c> if we should enable REUSE_ADDR for tcp. <c>false</c> otherwise.</returns>
+        internal static bool ResolveTcpReuseAddrOption(string hoconTcpReuseAddr)
+        {
+            switch (hoconTcpReuseAddr.ToLowerInvariant())
+            {
+                case "off-for-windows" when RuntimeDetector.IsWindows:
+                    return false;
+                case "off-for-windows":
+                    return true;
+                case "on":
+                    return true;
+                case "off":
+                default:
+                    return false;
+            }
         }
 
         public static DotNettyTransportSettings Create(Config config)
@@ -61,7 +82,7 @@ namespace Akka.Remote.Transport.DotNetty
                 maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size")) ?? 128000,
                 ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
-                tcpReuseAddr: config.GetBoolean("tcp-reuse-addr", true),
+                tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 tcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
                 tcpNoDelay: config.GetBoolean("tcp-nodelay", true),
                 backlog: config.GetInt("backlog", 4096),
@@ -256,14 +277,38 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
-            var flagsRaw = config.GetStringList("certificate.flags");
-            var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
+            
 
-            return new SslSettings(
-                certificatePath: config.GetString("certificate.path"),
-                certificatePassword: config.GetString("certificate.password"),
-                flags: flags,
-                suppressValidation: config.GetBoolean("suppress-validation", false));
+            if (config.GetBoolean("certificate.use-thumprint-over-file", false))
+            {
+                return new SslSettings(config.GetString("certificate.thumbprint"),
+                    config.GetString("certificate.store-name"),
+                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                        config.GetBoolean("suppress-validation", false));
+
+            }
+            else
+            {
+                var flagsRaw = config.GetStringList("certificate.flags");
+                var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
+
+                return new SslSettings(
+                    certificatePath: config.GetString("certificate.path"),
+                    certificatePassword: config.GetString("certificate.password"),
+                    flags: flags,
+                    suppressValidation: config.GetBoolean("suppress-validation", false));
+            }
+
+        }
+
+        private static StoreLocation ParseStoreLocationName(string str)
+        {
+            switch (str)
+            {
+                case "local-machine": return StoreLocation.LocalMachine;
+                case "current-user": return StoreLocation.CurrentUser;
+                default: throw new ArgumentException($"Unrecognized flag in X509 certificate config [{str}]. Available flags: local-machine | current-user");
+            }
         }
 
         private static X509KeyStorageFlags ParseKeyStorageFlag(string str)
@@ -296,6 +341,36 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = false;
         }
 
+        public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
+        {
+
+            var store = new X509Store(storeName, storeLocation);
+            try
+            {
+                store.Open(OpenFlags.ReadOnly);
+
+                
+                var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
+                if (find.Count == 0)
+                {
+                    throw new ArgumentException(
+                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
+                }
+
+                Certificate = find[0];
+                SuppressValidation = suppressValidation;
+            }
+            finally
+            {
+#if  NET45 //netstandard1.6 doesn't have close on store.
+                store.Close();
+#else
+#endif
+
+            }
+
+        }
+            
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))

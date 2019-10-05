@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -180,6 +181,27 @@ namespace Akka.Tests.Actor
 
             timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
             cancellationToken.Cancel();
+            Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void An_actor_with_receive_timeout_must_get_timeout_while_receiving_only_NotInfluenceReceiveTimeout_messages()
+        {
+            var timeoutLatch = new TestLatch(2);
+
+            Action<IActorDsl> actor = d =>
+            {
+                d.OnPreStart = c => c.SetReceiveTimeout(TimeSpan.FromSeconds(1));
+                d.Receive<ReceiveTimeout>((o, c) =>
+                {
+                    c.Self.Tell(new TransparentTick());
+                    timeoutLatch.CountDown();
+                });
+                d.Receive<TransparentTick>((_, __) => { });
+            };
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
 

@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Util;
@@ -78,7 +79,7 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
-            return Serialization.SerializeWithTransport(system, address, () => ToBinary(obj));
+            return Serialization.WithTransport(system, address, () => ToBinary(obj));
         }
 
         /// <summary>
@@ -117,6 +118,15 @@ namespace Akka.Serialization
 
         /// <summary>
         /// Deserializes a byte array into an object of type <paramref name="type" />.
+        ///
+        /// It's recommended to throw <see cref="SerializationException"/> in <see cref="FromBinary(byte[], Type)"/>
+        /// if the manifest is unknown.This makes it possible to introduce new message
+        /// types and send them to nodes that don't know about them. This is typically
+        /// needed when performing rolling upgrades, i.e.running a cluster with mixed
+        /// versions for while. <see cref="SerializationException"/> is treated as a transient
+        /// problem in the TCP based remoting layer.The problem will be logged
+        /// and message is dropped.Other exceptions will tear down the TCP connection
+        /// because it can be an indication of corrupt bytes from the underlying transport.
         /// </summary>
         /// <param name="bytes">The array containing the serialized object</param>
         /// <param name="type">The type of object contained in the array</param>
@@ -129,6 +139,15 @@ namespace Akka.Serialization
 
         /// <summary>
         /// Deserializes a byte array into an object using an optional <paramref name="manifest"/> (type hint).
+        ///
+        /// It's recommended to throw <see cref="SerializationException"/> in <see cref="FromBinary(byte[], string)"/>
+        /// if the manifest is unknown.This makes it possible to introduce new message
+        /// types and send them to nodes that don't know about them. This is typically
+        /// needed when performing rolling upgrades, i.e.running a cluster with mixed
+        /// versions for while. <see cref="SerializationException"/> is treated as a transient
+        /// problem in the TCP based remoting layer.The problem will be logged
+        /// and message is dropped.Other exceptions will tear down the TCP connection
+        /// because it can be an indication of corrupt bytes from the underlying transport.
         /// </summary>
         /// <param name="bytes">The array containing the serialized object</param>
         /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
@@ -137,7 +156,7 @@ namespace Akka.Serialization
 
         /// <summary>
         /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[],System.Type)"/> method.
-        /// 
+        ///
         /// <note>
         /// This method returns <see cref="String.Empty"/> if a manifest is not needed.
         /// </note>

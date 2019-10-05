@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,6 +33,8 @@ namespace Akka.Persistence.Snapshot
         private readonly DirectoryInfo _dir;
         private readonly ISet<SnapshotMetadata> _saving;
 
+        private static readonly Type WrapperType = typeof(Serialization.Snapshot);
+        private readonly Akka.Serialization.Serializer _wrapperSerializer;
         private readonly Akka.Serialization.Serialization _serialization;
 
         private readonly string _defaultSerializer;
@@ -51,6 +53,7 @@ namespace Akka.Persistence.Snapshot
             _defaultSerializer = config.GetString("serializer");
 
             _serialization = Context.System.Serialization;
+            _wrapperSerializer = _serialization.FindSerializerForType(WrapperType);
             _saving = new SortedSet<SnapshotMetadata>(SnapshotMetadata.Comparer); // saving in progress
             _log = Context.GetLogger();
         }
@@ -198,9 +201,8 @@ namespace Akka.Persistence.Snapshot
         {
             var buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
-            var snapshotType = typeof(Serialization.Snapshot);
-            var serializer = _serialization.FindSerializerForType(snapshotType, _defaultSerializer);
-            var snapshot = (Serialization.Snapshot)serializer.FromBinary(buffer, snapshotType);
+
+            var snapshot = _wrapperSerializer.FromBinary<Serialization.Snapshot>(buffer);
             return snapshot;
         }
 
@@ -211,8 +213,7 @@ namespace Akka.Persistence.Snapshot
         /// <param name="snapshot">TBD</param>
         protected void Serialize(Stream stream, Serialization.Snapshot snapshot)
         {
-            var serializer = _serialization.FindSerializerFor(snapshot, _defaultSerializer);
-            var bytes = serializer.ToBinary(snapshot);
+            var bytes = _wrapperSerializer.ToBinary(snapshot);
             stream.Write(bytes, 0, bytes.Length);
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegion.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -175,6 +175,12 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal class HandOffStopper : ReceiveActor
         {
+            private ILoggingAdapter _log;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -182,23 +188,33 @@ namespace Akka.Cluster.Sharding
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
+            /// <param name="handoffTimeout">TBD</param>
             /// <returns>TBD</returns>
-            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
+            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
-                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage)).WithDeploy(Deploy.Local);
+                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
             }
 
             /// <summary>
-            /// TBD
+            ///Sends stopMessage (e.g. `PoisonPill`) to the entities and when all of
+            /// them have terminated it replies with `ShardStopped`.
+            /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
             /// </summary>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
-            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
+            /// <param name="handoffTimeout">TBD</param>
+            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
 
+                Receive<ReceiveTimeout>(t =>
+                {
+                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard, stopping the remaining entities.", stopMessage.GetType(), shard);
+                    foreach (var r in remaining)
+                        Context.Stop(r);
+                });
                 Receive<Terminated>(t =>
                 {
                     remaining.Remove(t.ActorRef);
@@ -208,6 +224,8 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
+
+                Context.SetReceiveTimeout(handoffTimeout);
 
                 foreach (var aref in remaining)
                 {
@@ -379,8 +397,15 @@ namespace Akka.Cluster.Sharding
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
             {
-                self.Tell(GracefulShutdown.Instance);
-                return _gracefulShutdownProgress.Task;
+                if (Cluster.IsTerminated || Cluster.SelfMember.Status == MemberStatus.Down)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    self.Tell(GracefulShutdown.Instance);
+                    return _gracefulShutdownProgress.Task;
+                }
             });
         }
 
@@ -423,10 +448,15 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+
         /// <inheritdoc cref="ActorBase.PreStart"/>
+        /// <summary>
+        /// Subscribe to MemberEvent, re-subscribe when restart
+        /// </summary>
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+            LogPassivateIdleEntities();
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
@@ -436,6 +466,15 @@ namespace Akka.Cluster.Sharding
             Cluster.Unsubscribe(Self);
             _gracefulShutdownProgress.TrySetResult(Done.Instance);
             _retryTask.Cancel();
+        }
+
+        private void LogPassivateIdleEntities()
+        {
+            if (Settings.ShouldPassivateIdleEntities)
+                Log.Info($"{TypeName}: Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
+
+            if (Settings.RememberEntities)
+                Log.Debug("Idle entities will not be passivated because 'rememberEntities' is enabled.");
         }
 
         /// <summary>
@@ -660,22 +699,27 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
+                    SendGracefulShutdownToCoordinator();
+
                     if (ShardBuffers.Count != 0) _retryCount++;
 
                     if (_coordinator == null) Register();
                     else
                     {
-                        SendGracefulShutdownToCoordinator();
                         RequestShardBufferHomes();
-                        TryCompleteGracefulShutdown();
                     }
+
+                    TryCompleteGracefulShutdown();
+
                     break;
+
                 case GracefulShutdown _:
                     Log.Debug("Starting graceful shutdown of region and all its shards");
                     GracefulShutdownInProgress = true;
                     SendGracefulShutdownToCoordinator();
                     TryCompleteGracefulShutdown();
                     break;
+
                 default:
                     Unhandled(command);
                     break;
@@ -968,6 +1012,14 @@ namespace Akka.Cluster.Sharding
                         else if (MatchingRole(m))
                             ChangeMembers(MembersByAge.Remove(m));
                     }
+                    break;
+
+                case ClusterEvent.MemberDowned md:
+                    if (md.Member.UniqueAddress == Cluster.SelfUniqueAddress)
+                    {
+                        Context.Stop(Self);
+                    }
+                    Log.Info("Self downed, stopping ShardRegion [{0}]", Self.Path);
                     break;
                 case ClusterEvent.IMemberEvent _:
                     // these are expected, no need to warn about them

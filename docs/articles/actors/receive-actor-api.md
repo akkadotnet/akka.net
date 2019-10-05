@@ -831,7 +831,7 @@ Use `Kill` like this:
 
 ```csharp
 // kill the 'victim' actor
-victim.Tell(Akka.Actor.Kill.Instance, ActorRef.NoSender);
+victim.Tell(Akka.Actor.Kill.Instance, ActorRefs.NoSender);
 ```
 
 ## Actors and exceptions

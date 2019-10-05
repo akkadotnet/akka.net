@@ -22,7 +22,7 @@ The Akka.NET library provides an implementation of a circuit breaker called `Akk
 	* When the failure counter reaches a `MaxFailures` count, the breaker is
 	  tripped into `Open` state
 * While in `Open` state:
-	* All calls fail-fast with a `CircuitBreakerOpenException`
+	* All calls fail-fast with a `OpenCircuitException`
 	* After the configured `ResetTimeout`, the circuit breaker enters a
 	  `Half-Open` state
 * In `Half-Open` state:

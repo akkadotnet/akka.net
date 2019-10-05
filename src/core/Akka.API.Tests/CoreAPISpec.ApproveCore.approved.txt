@@ -6,6 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
@@ -16,7 +17,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -113,6 +114,7 @@ namespace Akka.Actor
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
         public void Stop(Akka.Actor.IActorRef child) { }
         public void Stop() { }
+        protected void StopFunctionRefs() { }
         public void Suspend() { }
         protected void TellWatchersWeDied() { }
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject) { }
@@ -262,6 +264,7 @@ namespace Akka.Actor
     }
     public class static ActorRefExtensions
     {
+        public static Akka.Actor.IActorRef GetOrElse(this Akka.Actor.IActorRef actorRef, System.Func<Akka.Actor.IActorRef> elseValue) { }
         public static bool IsNobody(this Akka.Actor.IActorRef actorRef) { }
     }
     public class static ActorRefFactoryExtensions
@@ -503,12 +506,35 @@ namespace Akka.Actor
         public const string PhaseServiceRequestsDone = "service-requests-done";
         public const string PhaseServiceStop = "service-stop";
         public const string PhaseServiceUnbind = "service-unbind";
+        public Akka.Actor.CoordinatedShutdown.Reason ShutdownReason { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        [System.ObsoleteAttribute("Use the method with \'reason\' parameter instead")]
         public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
+        public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class Reason
+        {
+            protected Reason() { }
+        }
+        public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
     {
@@ -960,6 +986,8 @@ namespace Akka.Actor
         Akka.Actor.LocalActorRef Guardian { get; }
         Akka.Actor.IInternalActorRef RootGuardian { get; }
         Akka.Actor.ActorPath RootPath { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        Akka.Serialization.Information SerializationInformation { get; }
         Akka.Actor.Settings Settings { get; }
         Akka.Actor.LocalActorRef SystemGuardian { get; }
         Akka.Actor.IInternalActorRef TempContainer { get; }
@@ -1245,6 +1273,7 @@ namespace Akka.Actor
         public Akka.Event.ILoggingAdapter Log { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
+        public Akka.Serialization.Information SerializationInformation { get; }
         public Akka.Actor.Settings Settings { get; }
         public Akka.Actor.LocalActorRef SystemGuardian { get; }
         public Akka.Actor.IInternalActorRef TempContainer { get; }
@@ -1342,6 +1371,7 @@ namespace Akka.Actor
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
         public class OneForOneStrategySurrogate : Akka.Util.ISurrogate
         {
             public OneForOneStrategySurrogate() { }
@@ -1702,12 +1732,15 @@ namespace Akka.Actor
         protected override void PreRestart(System.Exception reason, object message) { }
         protected override bool Receive(object message) { }
     }
-    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
+    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Actor.Terminated>
     {
         public Terminated(Akka.Actor.IActorRef actorRef, bool existenceConfirmed, bool addressTerminated) { }
         public Akka.Actor.IActorRef ActorRef { get; }
         public bool AddressTerminated { get; }
         public bool ExistenceConfirmed { get; }
+        public bool Equals(Akka.Actor.Terminated other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class TerminatedProps : Akka.Actor.Props
@@ -2587,6 +2620,14 @@ namespace Akka.Dispatch
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
     }
+    public abstract class UnboundedStablePriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedStablePriorityMessageQueue>
+    {
+        public const int DefaultCapacity = 11;
+        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public int InitialCapacity { get; }
+        public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
+        protected abstract int PriorityGenerator(object message);
+    }
 }
 namespace Akka.Dispatch.MessageQueues
 {
@@ -2657,6 +2698,14 @@ namespace Akka.Dispatch.MessageQueues
             "lCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
+        protected override int LockedCount { get; }
+        public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
+        protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
+        protected override bool LockedTryDequeue(out Akka.Actor.Envelope envelope) { }
+    }
+    public class UnboundedStablePriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue, Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics
+    {
+        public UnboundedStablePriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
         public void EnqueueFirst(Akka.Actor.Envelope envelope) { }
         protected override void LockedEnqueue(Akka.Actor.Envelope envelope) { }
@@ -2811,10 +2860,13 @@ namespace Akka.Event
         public override bool IsInfoEnabled { get; }
         public override bool IsWarningEnabled { get; }
         protected override void NotifyDebug(object message) { }
+        protected override void NotifyDebug(System.Exception cause, object message) { }
         protected override void NotifyError(object message) { }
         protected override void NotifyError(System.Exception cause, object message) { }
         protected override void NotifyInfo(object message) { }
+        protected override void NotifyInfo(System.Exception cause, object message) { }
         protected override void NotifyWarning(object message) { }
+        protected override void NotifyWarning(System.Exception cause, object message) { }
     }
     public sealed class DeadLetter : Akka.Event.AllDeadLetters
     {
@@ -2831,6 +2883,7 @@ namespace Akka.Event
     public class Debug : Akka.Event.LogEvent
     {
         public Debug(string logSource, System.Type logClass, object message) { }
+        public Debug(System.Exception cause, string logSource, System.Type logClass, object message) { }
         public override Akka.Event.LogLevel LogLevel() { }
     }
     public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
@@ -2851,9 +2904,7 @@ namespace Akka.Event
     public class Error : Akka.Event.LogEvent
     {
         public Error(System.Exception cause, string logSource, System.Type logClass, object message) { }
-        public System.Exception Cause { get; }
         public override Akka.Event.LogLevel LogLevel() { }
-        public override string ToString() { }
     }
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
@@ -2892,12 +2943,16 @@ namespace Akka.Event
         bool IsInfoEnabled { get; }
         bool IsWarningEnabled { get; }
         void Debug(string format, params object[] args);
+        void Debug(System.Exception cause, string format, params object[] args);
         void Error(string format, params object[] args);
         void Error(System.Exception cause, string format, params object[] args);
         void Info(string format, params object[] args);
+        void Info(System.Exception cause, string format, params object[] args);
         bool IsEnabled(Akka.Event.LogLevel logLevel);
         void Log(Akka.Event.LogLevel logLevel, string format, params object[] args);
+        void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args);
         void Warning(string format, params object[] args);
+        void Warning(System.Exception cause, string format, params object[] args);
     }
     public interface ILogMessageFormatter
     {
@@ -2906,6 +2961,7 @@ namespace Akka.Event
     public class Info : Akka.Event.LogEvent
     {
         public Info(string logSource, System.Type logClass, object message) { }
+        public Info(System.Exception cause, string logSource, System.Type logClass, object message) { }
         public override Akka.Event.LogLevel LogLevel() { }
     }
     public class InitializeLogger : Akka.Actor.INoSerializationVerificationNeeded
@@ -2916,6 +2972,7 @@ namespace Akka.Event
     public abstract class LogEvent : Akka.Actor.INoSerializationVerificationNeeded
     {
         protected LogEvent() { }
+        public System.Exception Cause { get; set; }
         public System.Type LogClass { get; set; }
         public string LogSource { get; set; }
         public object Message { get; set; }
@@ -2952,19 +3009,27 @@ namespace Akka.Event
         public abstract bool IsInfoEnabled { get; }
         public abstract bool IsWarningEnabled { get; }
         public virtual void Debug(string format, params object[] args) { }
+        public virtual void Debug(System.Exception cause, string format, params object[] args) { }
         public virtual void Error(System.Exception cause, string format, params object[] args) { }
         public virtual void Error(string format, params object[] args) { }
+        public virtual void Info(System.Exception cause, string format, params object[] args) { }
         public virtual void Info(string format, params object[] args) { }
         public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
         public virtual void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
+        public virtual void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args) { }
         protected abstract void NotifyDebug(object message);
+        protected abstract void NotifyDebug(System.Exception cause, object message);
         protected abstract void NotifyError(object message);
         protected abstract void NotifyError(System.Exception cause, object message);
         protected abstract void NotifyInfo(object message);
+        protected abstract void NotifyInfo(System.Exception cause, object message);
         protected void NotifyLog(Akka.Event.LogLevel logLevel, object message) { }
+        protected void NotifyLog(Akka.Event.LogLevel logLevel, System.Exception cause, object message) { }
         protected abstract void NotifyWarning(object message);
+        protected abstract void NotifyWarning(System.Exception cause, object message);
         public virtual void Warn(string format, params object[] args) { }
         public virtual void Warning(string format, params object[] args) { }
+        public virtual void Warning(System.Exception cause, string format, params object[] args) { }
     }
     public class LoggingBus : Akka.Event.ActorEventBus<object, System.Type>
     {
@@ -2999,13 +3064,17 @@ namespace Akka.Event
         public bool IsInfoEnabled { get; }
         public bool IsWarningEnabled { get; }
         public void Debug(string format, params object[] args) { }
+        public void Debug(System.Exception cause, string format, params object[] args) { }
         public void Error(string format, params object[] args) { }
         public void Error(System.Exception cause, string format, params object[] args) { }
         public void Info(string format, params object[] args) { }
+        public void Info(System.Exception cause, string format, params object[] args) { }
         public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
         public void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
+        public void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format, params object[] args) { }
         public void Warn(string format, params object[] args) { }
         public void Warning(string format, params object[] args) { }
+        public void Warning(System.Exception cause, string format, params object[] args) { }
     }
     public class StandardOutLogger : Akka.Actor.MinimalActorRef
     {
@@ -3046,6 +3115,7 @@ namespace Akka.Event
     public class Warning : Akka.Event.LogEvent
     {
         public Warning(string logSource, System.Type logClass, object message) { }
+        public Warning(System.Exception cause, string logSource, System.Type logClass, object message) { }
         public override Akka.Event.LogLevel LogLevel() { }
     }
 }
@@ -3502,13 +3572,14 @@ namespace Akka.IO
     }
     public class TcpSettings
     {
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries) { }
+        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4) { }
         public int BatchAcceptLimit { get; }
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
         public int FinishConnectRetries { get; }
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
+        public bool OutgoingSocketForceIpv4 { get; }
         public int ReceivedMessageSizeLimit { get; }
         public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
         public bool TraceLogging { get; }
@@ -3730,22 +3801,30 @@ namespace Akka.Pattern
 {
     public class static Backoff
     {
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts maxNrOfRetries instead.")]
         public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
     }
     public abstract class BackoffOptions
     {
         protected BackoffOptions() { }
         public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
         public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
+        public abstract Akka.Pattern.BackoffOptions WithFinalStopMessage(System.Func<object, bool> isFinalStopMessage);
         public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithMaxNrOfRetries(int maxNrOfRetries);
+        public abstract Akka.Pattern.BackoffOptions WithReplyWhileStopped(object replyWhileStopped);
         public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
     }
     public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
-        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy, object replyWhileStopped = null, System.Func<object, bool> finalStopMessage = null) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxNrOfRetries) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
         public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
         protected override bool Receive(object message) { }
@@ -3787,6 +3866,9 @@ namespace Akka.Pattern
         protected Akka.Actor.IActorRef Child { get; set; }
         protected string ChildName { get; }
         protected Akka.Actor.Props ChildProps { get; }
+        protected System.Func<object, bool> FinalStopMessage { get; }
+        protected bool FinalStopMessageReceived { get; set; }
+        protected object ReplyWhileStopped { get; }
         protected Akka.Pattern.IBackoffReset Reset { get; }
         protected int RestartCountN { get; set; }
         protected bool HandleBackoff(object message) { }
@@ -4463,6 +4545,16 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class Information : System.IEquatable<Akka.Serialization.Information>
+    {
+        public Information(Akka.Actor.Address address, Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Address Address { get; }
+        public Akka.Actor.ActorSystem System { get; }
+        public bool Equals(Akka.Serialization.Information other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
     public class NewtonSoftJsonSerializer : Akka.Serialization.Serializer
     {
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
@@ -4494,7 +4586,7 @@ namespace Akka.Serialization
     public class Serialization
     {
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
-        public Akka.Actor.ActorSystem System { get; }
+        public Akka.Actor.ExtendedActorSystem System { get; }
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
         [System.ObsoleteAttribute("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
@@ -4503,8 +4595,12 @@ namespace Akka.Serialization
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
+        public static Akka.Serialization.Information GetCurrentTransportInformation() { }
+        public byte[] Serialize(object o) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
-        public static T SerializeWithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
+        [System.ObsoleteAttribute("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
+        public static T WithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
+        public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
     }
     public abstract class Serializer
     {
@@ -4554,6 +4650,7 @@ namespace Akka.Util
     {
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         public static string Base64Encode(this long value) { }
+        public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
         public static string Base64Encode(this string s) { }
     }
     public class static BitArrayHelpers
@@ -4735,6 +4832,17 @@ namespace Akka.Util
     public class static RuntimeDetector
     {
         public static readonly bool IsMono;
+        public static readonly bool IsWindows;
+    }
+    public sealed class StableListPriorityQueue
+    {
+        public StableListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
+        public int Count() { }
+        public Akka.Actor.Envelope Dequeue() { }
+        public void Enqueue(Akka.Actor.Envelope item) { }
+        public bool IsConsistent() { }
+        public Akka.Actor.Envelope Peek() { }
+        public override string ToString() { }
     }
     public class static StandardOutWriter
     {
@@ -4857,7 +4965,6 @@ namespace Akka.Util.Internal
         public static System.Collections.Generic.IEnumerable<T> Drop<T>(this System.Collections.Generic.IEnumerable<T> self, int count) { }
         public static void ForEach<T>(this System.Collections.Generic.IEnumerable<T> source, System.Action<T> action) { }
         public static TValue GetOrElse<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue elseValue) { }
-        public static T GetOrElse<T>(this T obj, T elseValue) { }
         public static T Head<T>(this System.Collections.Generic.IEnumerable<T> self) { }
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }

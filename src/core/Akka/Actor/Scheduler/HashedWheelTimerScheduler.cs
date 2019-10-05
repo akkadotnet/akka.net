@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -387,7 +387,28 @@ namespace Akka.Actor
                 return;
             }
 
-            // todo: log unprocessed scheduler registrations?
+            // Execute all outstanding work items
+            foreach (var task in stopped.Result)
+            {
+                try
+                {
+                    task.Action.Run();
+                }
+                catch (SchedulerException)
+                {
+                    // ignore, this is from terminated actors
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Exception while executing timer task.");
+                }
+                finally
+                {
+                    // free the object from bucket
+                    task.Reset();
+                }
+            }
+            
             _unprocessedRegistrations.Clear();
         }
 

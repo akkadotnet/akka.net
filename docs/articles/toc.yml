@@ -2,8 +2,8 @@
   items:
   - name: What is Akka.NET?
     href: intro/what-is-akka.md
-  - name: What are actors?
-    href: intro/what-are-actors.md
+  - name: What problems does the actor model solve?
+    href: intro/what-problems-does-actor-model-solve.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
   - name: Part 1. Top-level Architecture
@@ -56,6 +56,8 @@
     href: actors/fault-tolerance.md
   - name: Dependency Injection
     href: actors/dependency-injection.md
+  - name: Dependency Injection Core
+    href: actors/di-core.md
   - name: Testing Actor Systems
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
@@ -110,6 +112,8 @@
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
+  - name: StreamRefs - Reactive Streams over the network
+    href: streams/streamrefs.md
   - name: Pipelining and Parallelism
     href: streams/pipeliningandparallelism.md
   - name: Testing streams
@@ -119,7 +123,7 @@
   - name: Streams Cookbook
     href: streams/cookbook.md
   - name: Configuration
-    href: streams/configuration.md
+    href: configuration/akka.streams.md
 - name: Networking
   items:
   - name: I/O
@@ -164,6 +168,10 @@
     href: clustering/distributed-data.md
   - name: Split Brain Resolver
     href: clustering/split-brain-resolver.md
+- name: Testing
+  items:
+  - name: Multi-Node Testing Distributed Akka.NET Applications
+    href: testing/multi-node-testing.md
 - name: Utilities
   items:
   - name: Event Bus

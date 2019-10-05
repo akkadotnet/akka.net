@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AckedDelivery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -278,9 +279,9 @@ namespace Akka.Remote
 
 
     /// <summary>
-    /// TBD
+    /// Class representing an acknowledgement with selective negative acknowledgements.
     /// </summary>
-    sealed class Ack
+    internal sealed class Ack
     {
         /// <summary>
         /// Class representing an acknowledgement with select negative acknowledgements.
@@ -318,14 +319,14 @@ namespace Akka.Remote
         public override string ToString()
         {
             var nacks = string.Join(",", Nacks.Select(x => x.ToString()));
-            return $"ACK[{CumulativeAck}, {nacks}]";
+            return $"ACK[{CumulativeAck}, [{nacks}]]";
         }
     }
 
     /// <summary>
     /// This exception is thrown when the Resent buffer is filled beyond its capacity.
     /// </summary>
-    class ResendBufferCapacityReachedException : AkkaException
+    internal class ResendBufferCapacityReachedException : AkkaException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
@@ -352,7 +353,7 @@ namespace Akka.Remote
     /// <summary>
     /// This exception is thrown when the system is unable to fulfill a resend request since negatively acknowledged payload is no longer in buffer.
     /// </summary>
-    class ResendUnfulfillableException : AkkaException
+    internal class ResendUnfulfillableException : AkkaException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendUnfulfillableException"/> class.
@@ -369,18 +370,17 @@ namespace Akka.Remote
     /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedReceiveBuffer{T}"/> on the receiving end.
     /// </summary>
     /// <typeparam name="T">The type of message being stored - has to implement <see cref="IHasSequenceNumber"/></typeparam>
-    sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
+    internal sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="capacity">TBD</param>
-        /// <param name="maxSeq">TBD</param>
-        public AckedSendBuffer(int capacity, SeqNo maxSeq)
+        public AckedSendBuffer(int capacity, SeqNo maxSeq) : this(capacity, maxSeq, ImmutableList<T>.Empty, ImmutableList<T>.Empty)
+        {
+        }
+
+        public AckedSendBuffer(int capacity, SeqNo maxSeq, IImmutableList<T> nacked, IImmutableList<T> nonAcked)
         {
             MaxSeq = maxSeq ?? new SeqNo(-1);
-            Nacked = new List<T>();
-            NonAcked = new List<T>();
+            Nacked = nacked;
+            NonAcked = nonAcked;
             Capacity = capacity;
         }
 
@@ -393,17 +393,17 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public int Capacity { get; private set; }
+        public int Capacity { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public List<T> NonAcked { get; private set; }
+        public IImmutableList<T> NonAcked { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public List<T> Nacked { get; private set; }
+        public IImmutableList<T> Nacked { get; }
 
         /// <summary>
         /// TBD
@@ -418,9 +418,16 @@ namespace Akka.Remote
         /// <returns>An updated buffer containing the remaining unacknowledged messages</returns>
         public AckedSendBuffer<T> Acknowledge(Ack ack)
         {
-            var newNacked = new List<T>(Nacked.Concat(NonAcked)).Where(x => ack.Nacks.Contains(x.Seq)).ToList();
+            if (ack.CumulativeAck > MaxSeq)
+            {
+                throw new ArgumentException(nameof(ack), $"Highest SEQ so far was {MaxSeq} but cumulative ACK is {ack.CumulativeAck}");
+            }
+
+            var newNacked = ack.Nacks.Count == 0
+                ? ImmutableList<T>.Empty
+                : Nacked.AddRange(NonAcked).Where(x => ack.Nacks.Contains(x.Seq)).ToImmutableList();
             if (newNacked.Count < ack.Nacks.Count) throw new ResendUnfulfillableException();
-            else return Copy(nonAcked: NonAcked.Where(x => x.Seq > ack.CumulativeAck).ToList(), nacked: newNacked);
+            else return Copy(nonAcked: NonAcked.Where(x => x.Seq > ack.CumulativeAck).ToImmutableList(), nacked: newNacked);
         }
 
         /// <summary>
@@ -436,7 +443,7 @@ namespace Akka.Remote
 
             if (NonAcked.Count == Capacity) throw new ResendBufferCapacityReachedException(Capacity);
 
-            return Copy(nonAcked: new List<T>(NonAcked) { msg }, maxSeq: msg.Seq);
+            return Copy(nonAcked: NonAcked.Add(msg), maxSeq: msg.Seq);
         }
 
         /// <summary>
@@ -447,32 +454,22 @@ namespace Akka.Remote
         /// </returns>
         public override string ToString()
         {
-            var nonAcked = string.Join(",", NonAcked.Select(x => x.ToString()));
-            return $"[{nonAcked}]";
+            var nonAcked = string.Join(",", NonAcked.Select(x => x.Seq.ToString()));
+            return $"[{MaxSeq} [{nonAcked}]]";
         }
 
-#region Copy methods
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="nonAcked">TBD</param>
-        /// <param name="nacked">TBD</param>
-        /// <param name="maxSeq">TBD</param>
-        /// <returns>TBD</returns>
-        public AckedSendBuffer<T> Copy(List<T> nonAcked = null, List<T> nacked = null, SeqNo maxSeq = null)
+        public AckedSendBuffer<T> Copy(IImmutableList<T> nonAcked = null, IImmutableList<T> nacked = null, SeqNo maxSeq = null)
         {
-            return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq) { Nacked = nacked ?? Nacked.ToArray().ToList(), NonAcked = nonAcked ?? NonAcked.ToArray().ToList() };
+            return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq, nacked ?? Nacked, nonAcked ?? NonAcked);
         }
 
-#endregion
     }
 
     /// <summary>
     /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    sealed class AckReceiveDeliverable<T> where T:IHasSequenceNumber
+    sealed class AckReceiveDeliverable<T> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -480,7 +477,7 @@ namespace Akka.Remote
         /// <param name="buffer">TBD</param>
         /// <param name="deliverables">TBD</param>
         /// <param name="ack">TBD</param>
-        public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, List<T> deliverables, Ack ack)
+        public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, IReadOnlyList<T> deliverables, Ack ack)
         {
             Ack = ack;
             Deliverables = deliverables;
@@ -495,7 +492,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public List<T> Deliverables { get; private set; }
+        public IReadOnlyList<T> Deliverables { get; private set; }
 
         /// <summary>
         /// TBD
@@ -508,7 +505,7 @@ namespace Akka.Remote
     /// buffer works together with an <see cref="AckedSendBuffer{T}"/> on the sender() side.
     /// </summary>
     /// <typeparam name="T">The type of messages being buffered; must implement <see cref="IHasSequenceNumber"/>.</typeparam>
-    sealed class AckedReceiveBuffer<T> where T : IHasSequenceNumber
+    internal sealed class AckedReceiveBuffer<T> : IEquatable<AckedReceiveBuffer<T>> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -521,7 +518,7 @@ namespace Akka.Remote
         /// <param name="lastDelivered">Sequence number of the last message that has been delivered.</param>
         /// <param name="cumulativeAck">The highest sequence number received so far</param>
         /// <param name="buffer">Buffer of messages that are waiting for delivery.</param>
-        public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, SortedSet<T> buffer)
+        public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, ImmutableSortedSet<T> buffer)
         {
             LastDelivered = lastDelivered ?? new SeqNo(-1);
             CumulativeAck = cumulativeAck ?? new SeqNo(-1);
@@ -532,23 +529,23 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public AckedReceiveBuffer()
-            : this(new SeqNo(-1), new SeqNo(-1), new SortedSet<T>(Comparer))
+            : this(new SeqNo(-1), new SeqNo(-1), ImmutableSortedSet<T>.Empty.WithComparer(Comparer))
         { }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo LastDelivered { get; private set; }
+        public SeqNo LastDelivered { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SeqNo CumulativeAck { get; private set; }
+        public SeqNo CumulativeAck { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public SortedSet<T> Buf { get; private set; }
+        public ImmutableSortedSet<T> Buf { get; }
 
         /// <summary>
         /// Puts a sequenced message in the receive buffer returning a new buffer.
@@ -557,12 +554,8 @@ namespace Akka.Remote
         /// <returns>The updated buffer containing the message</returns>
         public AckedReceiveBuffer<T> Receive(T arrivedMsg)
         {
-            if (arrivedMsg.Seq > LastDelivered && !Buf.Contains(arrivedMsg))
-            {
-                Buf.Add(arrivedMsg);
-            }
             return Copy(cumulativeAck: SeqNo.Max(arrivedMsg.Seq, CumulativeAck),
-                buffer: Buf);
+                buffer: (arrivedMsg.Seq > LastDelivered && !Buf.Contains(arrivedMsg)) ? Buf.Add(arrivedMsg) : Buf);
         }
 
         /// <summary>
@@ -570,10 +563,8 @@ namespace Akka.Remote
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
         /// <returns>Triplet of the updated buffer, messages that can be delivered, and the updated acknowledgement.</returns>
-        public AckReceiveDeliverable<T> ExtractDeliverable
+        public AckReceiveDeliverable<T> ExtractDeliverable()
         {
-            get
-            {
                 var deliver = new List<T>();
                 var ack = new Ack(CumulativeAck);
                 var updatedLastDelivered = LastDelivered;
@@ -605,10 +596,8 @@ namespace Akka.Remote
                     prev = bufferedMessage.Seq;
                 }
 
-                Buf.ExceptWith(deliver);
-                return new AckReceiveDeliverable<T>(Copy(lastDelivered: updatedLastDelivered, buffer: Buf), deliver, ack);
-            }
-            
+                var newBuf = !deliver.Any() ? Buf : Buf.Except(deliver);
+                return new AckReceiveDeliverable<T>(Copy(lastDelivered: updatedLastDelivered, buffer: newBuf), deliver, ack);
         }
 
         /// <summary>
@@ -620,12 +609,8 @@ namespace Akka.Remote
         public AckedReceiveBuffer<T> MergeFrom(AckedReceiveBuffer<T> other)
         {
             var mergedLastDelivered = SeqNo.Max(this.LastDelivered, other.LastDelivered);
-            Buf.UnionWith(other.Buf);
-            Buf.RemoveWhere(x => x.Seq < mergedLastDelivered);
-            return Copy(mergedLastDelivered, SeqNo.Max(this.CumulativeAck, other.CumulativeAck), Buf);
+            return Copy(mergedLastDelivered, SeqNo.Max(this.CumulativeAck, other.CumulativeAck), Buf.Union(other.Buf).Where(x => x.Seq > mergedLastDelivered).ToImmutableSortedSet(Comparer));
         }
-
-#region Copy methods
 
         /// <summary>
         /// TBD
@@ -634,12 +619,33 @@ namespace Akka.Remote
         /// <param name="cumulativeAck">TBD</param>
         /// <param name="buffer">TBD</param>
         /// <returns>TBD</returns>
-        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, SortedSet<T> buffer = null)
+        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
         {
-            return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? new SortedSet<T>(Buf, Comparer));
+            return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? Buf);
         }
 
-#endregion
+        public bool Equals(AckedReceiveBuffer<T> other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return LastDelivered.Equals(other.LastDelivered)
+                   && CumulativeAck.Equals(other.CumulativeAck);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is AckedReceiveBuffer<T> other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = LastDelivered.GetHashCode();
+                hashCode = (hashCode * 397) ^ CumulativeAck.GetHashCode();
+                return hashCode;
+            }
+        }
     }
 }
 

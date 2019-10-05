@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Serialization;
@@ -122,12 +123,14 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_GetShardStats()
         {
             CheckSerialization(Shard.GetShardStats.Instance);
+            CheckSerialization(GetShardRegionStats.Instance);
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardStats()
         {
             CheckSerialization(new Shard.ShardStats("a", 23));
+            CheckSerialization(new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)));
         }
 
         [Fact]
@@ -135,6 +138,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             CheckSerialization(new ShardRegion.StartEntity("42"));
             CheckSerialization(new ShardRegion.StartEntityAck("13", "37"));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_serialize_ClusterShardingStats()
+        {
+            CheckSerialization(new GetClusterShardingStats(TimeSpan.FromMilliseconds(500)));
+            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty.Add(new Address("akka.tcp", "foo", "localhost", 9110), 
+                new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)))));
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.ReceiveTimeout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Marker interface to indicate that a message should not reset the receive timeout.
     /// </summary>
     public interface INotInfluenceReceiveTimeout
     {
@@ -25,7 +25,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="timeout">TBD</param>
-        public void SetReceiveTimeout(TimeSpan? timeout=null)
+        public void SetReceiveTimeout(TimeSpan? timeout = null)
         {
             _receiveTimeoutDuration = timeout;
         }
@@ -47,7 +47,7 @@ namespace Akka.Actor
         public void CheckReceiveTimeout()
         {
             CancelReceiveTimeout();
-            if (_receiveTimeoutDuration != null && !Mailbox.HasMessages)
+            if (_receiveTimeoutDuration != null)
             {
                 _pendingReceiveTimeout = System.Scheduler.ScheduleTellOnceCancelable(_receiveTimeoutDuration.Value, Self, Akka.Actor.ReceiveTimeout.Instance, Self);
             }

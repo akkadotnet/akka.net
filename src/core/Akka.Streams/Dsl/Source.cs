@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -159,6 +160,49 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <returns>TBD</returns>
         public Source<TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
+        /// <summary>
+        /// Use the `ask` pattern to send a request-reply message to the target <paramref name="actorRef"/>.
+        /// If any of the asks times out it will fail the stream with a <see cref="AskTimeoutException"/>.
+        /// 
+        /// Parallelism limits the number of how many asks can be "in flight" at the same time.
+        /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
+        /// 
+        /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
+        /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.
+        /// 
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// 
+        /// '''Emits when''' the futures (in submission order) created by the ask pattern internally are completed. 
+        /// '''Backpressures when''' the number of futures reaches the configured parallelism and the downstream backpressures. 
+        /// '''Completes when''' upstream completes and all futures have been completed and all elements have been emitted. 
+        /// '''Fails when''' the passed in actor terminates, or a timeout is exceeded in any of the asks performed. 
+        /// '''Cancels when''' downstream cancels.
+        /// </summary>
+        public Source<TOut2, TMat> Ask<TOut2>(IActorRef actorRef, TimeSpan timeout, int parallelism = 2)
+        {
+            // I know this is not a place for it, but since Ask<T> generic param must be supplied, it's better
+            // if it remain alone in generic params list (no need to provide types that will be infered)
+            var askFlow = Flow.Create<TOut>()
+                .Watch(actorRef)
+                .SelectAsync(parallelism, async e => {
+                    var reply = await actorRef.Ask(e, timeout: timeout);
+                    switch (reply)
+                    {
+                        case TOut2 a: return a;
+                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Failure f:
+                            ExceptionDispatchInfo.Capture(f.Cause).Throw();
+                            return default(TOut2);
+                        default:
+                            throw new InvalidOperationException($"Expected to receive response of type {nameof(TOut2)}, but got: {reply}");
+                    }
+                })
+                .Named("ask");
+
+            return ViaMaterialized(askFlow, Keep.Left);
+        }
 
         /// <summary>
         /// Transform this <see cref="IFlow{T,TMat}"/> by appending the given processing steps.
@@ -893,7 +937,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="TDelegate">Delegate type used to attach current source.</typeparam>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
@@ -910,11 +956,14 @@ namespace Akka.Streams.Dsl
             int maxBufferCapacity = 128,
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
-            return FromGraph(new EventSourceStage<TDelegate, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<TDelegate, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
         /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
@@ -929,7 +978,26 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
-            return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<EventHandler<T>, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to an existing <see cref="IObservable{T}"/>. In case when upstream (an <paramref name="observable"/>)
+        /// is producing events in a faster pace, than downstream is able to consume them, a buffering will occur. It can be configured via optional 
+        /// <paramref name="maxBufferCapacity"/> and <paramref name="overflowStrategy"/> parameters.
+        /// </summary>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="observable">An <see cref="IObservable{T}"/> to which current source will be subscribed.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromObservable<T>(
+            IObservable<T> observable,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
         }
     }
 }

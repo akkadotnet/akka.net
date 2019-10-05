@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentView.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ namespace Akka.Persistence
         /// then switch it switches to <see cref="Idle"/> state.
         /// 
         /// 
-        /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
+        /// If replay succeeds the <see cref="OnReplayComplete"/> callback method is called, otherwise
         /// <see cref="OnReplayError"/> is called and remaining replay events are consumed (ignored).
         /// 
         /// All incoming messages are stashed when <paramref name="shouldAwait"/> is true.

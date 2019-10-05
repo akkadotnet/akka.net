@@ -1,6 +1,6 @@
 ﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Persistence.Query
 {
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
@@ -47,10 +47,12 @@ namespace Akka.Persistence.Query
     public sealed class NoOffset : Akka.Persistence.Query.Offset
     {
         public static Akka.Persistence.Query.NoOffset Instance { get; }
+        public override int CompareTo(Akka.Persistence.Query.Offset other) { }
     }
-    public abstract class Offset
+    public abstract class Offset : System.IComparable<Akka.Persistence.Query.Offset>
     {
         protected Offset() { }
+        public abstract int CompareTo(Akka.Persistence.Query.Offset other);
         public static Akka.Persistence.Query.Offset NoOffset() { }
         public static Akka.Persistence.Query.Offset Sequence(long value) { }
     }
@@ -78,6 +80,7 @@ namespace Akka.Persistence.Query
         public Sequence(long value) { }
         public long Value { get; }
         public int CompareTo(Akka.Persistence.Query.Sequence other) { }
+        public override int CompareTo(Akka.Persistence.Query.Offset other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }

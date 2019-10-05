@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -1135,5 +1137,98 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "LazySink";
+    }
+
+    internal sealed class ObservableSinkStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, IObservable<T>>
+    {
+        #region internal classes
+
+        private sealed class ObserverDisposable : IDisposable
+        {
+            private readonly ObservableLogic _logic;
+            private readonly IObserver<T> _observer;
+            private readonly AtomicBoolean _disposed = new AtomicBoolean(false);
+
+            public ObserverDisposable(ObservableLogic logic, IObserver<T> observer)
+            {
+                _logic = logic;
+                _observer = observer;
+            }
+
+            public void Dispose() => Dispose(unregister: true);
+
+            public void Dispose(bool unregister)
+            {
+                if (_disposed.CompareAndSet(false, true))
+                {
+                    if (unregister) _logic.Remove(_observer);
+
+                    _observer.OnCompleted();
+                }
+                else
+                {
+                    throw new ObjectDisposedException("ObservableSink subscription has been already disposed.");
+                }
+            }
+        }
+        
+        private sealed class ObservableLogic : GraphStageLogic, IObservable<T>
+        {
+            private readonly ObservableSinkStage<T> _stage;
+            private ImmutableDictionary<IObserver<T>, ObserverDisposable> _observers = ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty;
+
+            public ObservableLogic(ObservableSinkStage<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandler(stage.Inlet,
+                    onPush: () =>
+                    {
+                        var element = Grab(stage.Inlet);
+                        foreach (var observer in _observers.Keys) observer.OnNext(element);
+
+                        Pull(stage.Inlet);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        var old = Interlocked.Exchange(ref _observers, ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty);
+                        foreach (var disposer in old.Values) disposer.Dispose(unregister: false);
+                    },
+                    onUpstreamFailure: e =>
+                    {
+                        foreach (var observer in _observers.Keys) observer.OnError(e);
+                        _observers = ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty;
+                    });
+            }
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                Pull(_stage.Inlet);
+            }
+
+            public void Remove(IObserver<T> observer)
+            {
+                ImmutableInterlocked.TryRemove(ref _observers, observer, out var _);
+            }
+
+            public IDisposable Subscribe(IObserver<T> observer) => 
+                ImmutableInterlocked.GetOrAdd(ref _observers, observer, new ObserverDisposable(this, observer));
+        }
+
+        #endregion
+        
+
+        public ObservableSinkStage()
+        {
+            Shape = new SinkShape<T>(Inlet);
+        }
+
+        public Inlet<T> Inlet { get; } = new Inlet<T>("observable.in");
+        public override SinkShape<T> Shape { get; }
+        public override ILogicAndMaterializedValue<IObservable<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var observable = new ObservableLogic(this);
+            return new LogicAndMaterializedValue<IObservable<T>>(observable, observable);
+        }
     }
 }

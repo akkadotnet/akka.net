@@ -260,7 +260,7 @@ It is possible to build reusable, encapsulated components of arbitrary input and
 As an example, we will build a graph junction that represents a pool of workers, where a worker is expressed
 as a ``Flow<I,O,_>``, i.e. a simple transformation of jobs of type ``I`` to results of type ``O`` (as you have seen
 already, this flow can actually contain a complex graph inside). Our reusable worker pool junction will
-not preserve the order of the incoming jobs (they are assumed to have a proper ID field) and it will use a ``Balance`` junction to schedule jobs to available workers. On top of this, our junction will feature a "fastlane", a dedicated port where jobs of higher priority can be sent.
+not preserve the order of the incoming jobs (they are assumed to have a proper ID field) and it will use a ``Balance`` junction to schedule jobs to available workers. On top of this, our junction will feature a "fast lane", a dedicated port where jobs of higher priority can be sent.
 
 Altogether, our junction will have two input ports of type ``I`` (for the normal and priority jobs) and an output port of type ``O``. To represent this interface, we need to define a custom `Shape`. The following lines show how to do that.
 
@@ -839,14 +839,13 @@ element into the cycle that is independent from ``source``. We do this by using 
 arc that injects a single element using ``Source.Single``.
 
 > [!WARNING]
-> This approach isn't working in the current version of Akka.NET (1.3.0), the graph is still not printing any elements.
-
+> We have to add an Async call after creating the instance of Concat. Otherwise Concat will wait upstream to be empty and that will never happen in this case.
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b =>
 {
     var zip = b.Add(ZipWith.Apply<int, int, int>(Keep.Right));
     var broadcast = b.Add(new Broadcast<int>(2));
-    var concat = b.Add(new Concat<int, int>());
+    var concat = b.Add(new Concat<int, int>().Async());
     var start = Source.Single(0);
     var print = Flow.Create<int>().Select(s =>
     {
