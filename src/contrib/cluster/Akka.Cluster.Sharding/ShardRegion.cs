@@ -456,10 +456,7 @@ namespace Akka.Cluster.Sharding
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
-            if (Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities)
-            {
-                Log.Info($"Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
-            }
+            LogPassivateIdleEntities();
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
@@ -469,6 +466,15 @@ namespace Akka.Cluster.Sharding
             Cluster.Unsubscribe(Self);
             _gracefulShutdownProgress.TrySetResult(Done.Instance);
             _retryTask.Cancel();
+        }
+
+        private void LogPassivateIdleEntities()
+        {
+            if (Settings.ShouldPassivateIdleEntities)
+                Log.Info($"{TypeName}: Idle entities will be passivated after [{Settings.PassivateIdleEntityAfter}]");
+
+            if (Settings.RememberEntities)
+                Log.Debug("Idle entities will not be passivated because 'rememberEntities' is enabled.");
         }
 
         /// <summary>
