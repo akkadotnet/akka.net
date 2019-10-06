@@ -131,7 +131,7 @@ namespace Akka.MultiNodeTestRunner
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
-            var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "trx");
+            var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
 
             Props coordinatorProps;
             switch (reporter.ToLowerInvariant())
@@ -142,6 +142,10 @@ namespace Akka.MultiNodeTestRunner
 
                 case "teamcity":
                     coordinatorProps = Props.Create(() =>  new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) }));
+                    break;
+
+                case "console":
+                    coordinatorProps = Props.Create(() =>  new SinkCoordinator(new[] { new ConsoleMessageSink() }));
                     break;
 
                 default:
