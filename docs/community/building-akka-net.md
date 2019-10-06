@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: building-and-distributing
 title: Building and Distributing Akka.NET
 ---
 Akka.Net has an official [NuGet package](http://www.nuget.org/packages/Akka).

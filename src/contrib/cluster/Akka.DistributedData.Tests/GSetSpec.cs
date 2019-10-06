@@ -32,10 +32,10 @@ namespace Akka.DistributedData.Tests
             var c4 = c3.Add(user3);
             var c5 = c4.Add(user4);
 
-            Assert.Equal(true, c5.Contains(user1));
-            Assert.Equal(true, c5.Contains(user2));
-            Assert.Equal(true, c5.Contains(user3));
-            Assert.Equal(true, c5.Contains(user4));
+            Assert.True(c5.Contains(user1));
+            Assert.True(c5.Contains(user2));
+            Assert.True(c5.Contains(user3));
+            Assert.True(c5.Contains(user4));
         }
 
         [Fact]

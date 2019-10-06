@@ -43,6 +43,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public TestActor(IActorRef probe)
             {
                 _probe = probe;
@@ -70,6 +71,7 @@ namespace Akka.Tests.Pattern
 
                 ReceiveAny(other => _probe.Tell(other));
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -99,6 +101,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly TestLatch _latch;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public SlowlyFailingActor(TestLatch latch)
             {
                 _latch = latch;
@@ -115,6 +118,7 @@ namespace Akka.Tests.Pattern
                     Sender.Tell("PONG");
                 });
             }
+#pragma warning restore CS0162
 
             protected override void PostStop()
             {

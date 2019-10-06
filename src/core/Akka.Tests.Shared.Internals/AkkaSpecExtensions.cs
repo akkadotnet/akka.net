@@ -87,7 +87,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldBeSame<T>(this T self, T expected, string message = null)
         {
-            Assert.Same(expected, self);
+            Assert.Equal(expected, self);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldNotBeSame<T>(this T self, T expected, string message = null)
         {
-            Assert.NotSame(expected, self);
+            Assert.NotEqual(expected, self);
         }
 
         /// <summary>

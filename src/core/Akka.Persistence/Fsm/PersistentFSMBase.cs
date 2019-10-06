@@ -128,7 +128,7 @@ namespace Akka.Persistence.Fsm
         /// <returns>TBD</returns>
         public State<TState, TData, TEvent> Stop(FSMBase.Reason reason, TData stateData)
         {
-            return Stay().Using(stateData).WithStopReason(reason);
+            return Stay().Copy(stateData: stateData, stopReason: reason);
         }
 
         /// <summary>
