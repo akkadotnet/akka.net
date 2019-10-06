@@ -4,13 +4,12 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
+namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Xml.Linq;
-
     internal static class XmlHelper
     {
         public static readonly XNamespace NS = @"http://microsoft.com/schemas/VisualStudio/TeamTest/2010";

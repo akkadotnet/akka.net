@@ -2,7 +2,7 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.MultiNodeTestRunner.AzureDevOps.Tests</AssemblyTitle>
+    <AssemblyTitle>Akka.MultiNodeTestRunner.TrxReporter.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 

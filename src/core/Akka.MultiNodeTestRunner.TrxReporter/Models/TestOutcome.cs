@@ -5,7 +5,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
+namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
     public enum TestOutcome
     {

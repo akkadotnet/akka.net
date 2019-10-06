@@ -4,15 +4,14 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+using static Akka.MultiNodeTestRunner.TrxReporter.Models.XmlHelper;
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
+namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Xml.Linq;
-    using static XmlHelper;
-
     public class ResultSummary : ITestEntity
     {
         public ResultSummary(IEnumerable<UnitTest> unitTests, Output output)

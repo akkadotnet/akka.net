@@ -4,11 +4,10 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 
 namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 {
-    using System;
-
     public class SpecEvent<T>
     {
         public SpecEvent(DateTime time, T value)

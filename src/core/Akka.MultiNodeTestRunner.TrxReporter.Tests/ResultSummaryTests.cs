@@ -4,14 +4,13 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using Akka.MultiNodeTestRunner.TrxReporter.Models;
+using FluentAssertions;
+using Xunit;
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Tests
+namespace Akka.MultiNodeTestRunner.TrxReporter.Tests
 {
-    using System.Collections.Generic;
-    using FluentAssertions;
-    using Models;
-    using Xunit;
-
     public class ResultSummaryTests
     {
         public static IEnumerable<object[]> ResultsSummaryOutcomeData

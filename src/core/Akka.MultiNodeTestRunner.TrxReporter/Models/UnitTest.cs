@@ -4,13 +4,12 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using System.Xml.Linq;
+using static Akka.MultiNodeTestRunner.TrxReporter.Models.XmlHelper;
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
+namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
-    using System.Collections.Generic;
-    using System.Xml.Linq;
-    using static XmlHelper;
-
     public class UnitTest : ITestEntity
     {
         public UnitTest(string className, string name, Identifier testListId, string storage)

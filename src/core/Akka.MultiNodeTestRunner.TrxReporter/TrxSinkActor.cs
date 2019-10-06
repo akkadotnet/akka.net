@@ -4,18 +4,17 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
+using Akka.MultiNodeTestRunner.Shared.Sinks;
+using Akka.MultiNodeTestRunner.TrxReporter.Models;
 
 namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Xml.Linq;
-    using MultiNodeTestRunner.AzureDevOps.Models;
-    using Reporting;
-    using Sinks;
-
     public class TrxSinkActor : TestCoordinatorEnabledMessageSink
     {
         public TrxSinkActor(string suiteName, string userName, string computerName, bool useTestCoordinator)

@@ -4,11 +4,10 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 
-namespace Akka.MultiNodeTestRunner.AzureDevOps.Models
+namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
-    using System;
-
     public struct Identifier
     {
         public Identifier(Guid value)

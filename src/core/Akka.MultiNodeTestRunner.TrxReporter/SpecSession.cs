@@ -4,13 +4,12 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using Akka.MultiNodeTestRunner.Shared.Sinks;
 
 namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 {
-    using System;
-    using System.Collections.Generic;
-    using Sinks;
-
     public class SpecSession
     {
         private readonly List<SpecEvent<NodeCompletedSpecWithSuccess>> _successes = new List<SpecEvent<NodeCompletedSpecWithSuccess>>();

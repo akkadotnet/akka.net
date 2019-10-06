@@ -4,14 +4,12 @@
 //      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using Akka.Actor;
+using Akka.MultiNodeTestRunner.Shared.Sinks;
 
 namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 {
-    using System;
-    using Actor;
-    using Reporting;
-    using Sinks;
-    
     public class TrxMessageSink : MessageSink
     {
         public TrxMessageSink(string suiteName)
