@@ -451,7 +451,7 @@ Target "CreateMntrNuget" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        AdditionalArgs = ["--include-symbols"] @ if System.IO.Path.GetExtension(project) = ".fsproj" then [] else ["--no-build"]                        
+                        AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
                         OutputPath = "\"" + outputNuGet + "\"" } )
         )
