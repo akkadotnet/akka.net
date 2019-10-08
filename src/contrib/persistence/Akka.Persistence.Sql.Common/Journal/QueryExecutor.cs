@@ -691,19 +691,22 @@ namespace Akka.Persistence.Sql.Common.Journal
             var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
 
             // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-            string manifest = "";
+            string manifest = e.Manifest;
             var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () =>
             {
-                
-                if (serializer is SerializerWithStringManifest stringManifest)
+
+                if (string.IsNullOrEmpty(manifest))
                 {
-                    manifest = stringManifest.Manifest(e.Payload);
-                }
-                else
-                {
-                    if (serializer.IncludeManifest)
+                    if (serializer is SerializerWithStringManifest stringManifest)
                     {
-                        manifest = e.Payload.GetType().TypeQualifiedName();
+                        manifest = stringManifest.Manifest(e.Payload);
+                    }
+                    else
+                    {
+                        if (serializer.IncludeManifest)
+                        {
+                            manifest = e.Payload.GetType().TypeQualifiedName();
+                        }
                     }
                 }
 

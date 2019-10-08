@@ -46,10 +46,5 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
                     }
                 }");
         }
-
-        [Fact(Skip = "Sql plugin does not support EventAdapter.Manifest")]
-        public override void Journal_should_serialize_Persistent_with_EventAdapter_manifest()
-        {
-        }
     }
 }
