@@ -289,7 +289,7 @@ Target "MultiNodeTests" (fun _ ->
 
             let args = StringBuilder()
                     |> append assembly
-                    |> append (sprintf "-Dmultinode.teamcity=%b" hasTeamCity)
+                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
@@ -328,7 +328,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 let args = StringBuilder()
                         |> append multiNodeTestPath
                         |> append assembly
-                        |> append "-Dmultinode.teamcity=true"
+                        |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                         |> append "-Dmultinode.platform=netcore"
