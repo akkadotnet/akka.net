@@ -51,7 +51,7 @@ namespace Akka.Util.Internal
         /// <param name="reference">TBD</param>
         /// <param name="updateIfTrue">TBD</param>
         /// <returns>The third value from the tuple return by <paramref name="updateIfTrue"/>.</returns>
-        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, Func<T, Tuple<bool, T, TReturn>> updateIfTrue) where T : class
+        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, Func<T, (bool, T, TReturn)> updateIfTrue) where T : class
         {
             var spinWait = new SpinWait();
             while (true)
