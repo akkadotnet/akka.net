@@ -36,14 +36,14 @@ namespace Akka.Tests
 
             private void Report(object message)
             {
-                testActor.Tell(Tuple.Create((string)message,id,CurrentGeneration));
+                testActor.Tell(((string)message,id,CurrentGeneration));
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is string && (string)message == "status")
                 {
-                    testActor.Tell(Tuple.Create("OK",id,CurrentGeneration));
+                    testActor.Tell(("OK",id,CurrentGeneration));
                 }
             }
 
@@ -84,14 +84,14 @@ namespace Akka.Tests
 
             private void Report(object message)
             {
-                testActor.Tell(Tuple.Create((string)message, id, CurrentGeneration));
+                testActor.Tell(((string)message, id, CurrentGeneration));
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is string && (string)message == "status")
                 {
-                    testActor.Tell(Tuple.Create("OK", id, CurrentGeneration));
+                    testActor.Tell(("OK", id, CurrentGeneration));
                 }
             }
 
@@ -115,9 +115,9 @@ namespace Akka.Tests
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
             var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
 
-            ExpectMsg(Tuple.Create( "preStart", id, 0));
+            ExpectMsg(("preStart", id, 0));
             restarter.Tell(Kill.Instance);
-            ExpectMsg(Tuple.Create("preRestart", id, 0));
+            ExpectMsg(("preRestart", id, 0));
             ExpectMsg(Tuple.Create("postRestart", id, 1));
             restarter.Tell("status");
             ExpectMsg(Tuple.Create("OK", id, 1));

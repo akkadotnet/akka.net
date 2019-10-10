@@ -25,7 +25,7 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<TimeSpan, ICancelable> _currentDeadline;
+        private (TimeSpan, ICancelable)? _currentDeadline;
 
         private readonly int _size;
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -187,7 +187,7 @@ namespace Akka.Actor
             {
                 if (_currentDeadline != null)
                 {
-                    _currentDeadline.Item2.Cancel();
+                    _currentDeadline.Value.Item2.Cancel();
                     _currentDeadline = null;
                 }
             }
@@ -198,7 +198,7 @@ namespace Akka.Actor
                 {
                     if (_currentDeadline != null)
                     {
-                        _currentDeadline.Item2.Cancel();
+                        _currentDeadline.Value.Item2.Cancel();
                         _currentDeadline = null;
                     }
 
@@ -207,7 +207,7 @@ namespace Akka.Actor
                     if (delay > TimeSpan.Zero)
                     {
                         var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(delay, Self, new Kick(), Self);
-                        _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                        _currentDeadline = (next.Deadline, cancelable);
                     }
                     else
                     {
