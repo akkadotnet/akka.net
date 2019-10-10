@@ -39,7 +39,7 @@ namespace Akka.Tests.Pattern
             }
         }
 
-        public new class TestActor : ReceiveActor
+        public class TestActor : ReceiveActor
         {
             private readonly IActorRef _probe;
 
