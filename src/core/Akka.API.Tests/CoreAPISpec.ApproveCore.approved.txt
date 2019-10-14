@@ -4143,6 +4143,7 @@ namespace Akka.Routing
     public sealed class GetRoutees : Akka.Routing.RouterManagementMessage
     {
         public GetRoutees() { }
+        public static Akka.Routing.GetRoutees Instance { get; }
     }
     public abstract class Group : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Group>
     {
