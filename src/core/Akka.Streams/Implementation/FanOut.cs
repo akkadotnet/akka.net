@@ -735,7 +735,7 @@ namespace Akka.Streams.Implementation
             InitialPhase(1, new TransferPhase(PrimaryInputs.NeedsInput.And(OutputBunch.AllOfMarkedOutputs), () =>
             {
                 var message = PrimaryInputs.DequeueInputElement();
-                var tuple = message as Tuple<T, T>;
+                var tuple = message as (T, T);
 
                 if (tuple == null)
                     throw new ArgumentException($"Unable to unzip elements of type {message.GetType().Name}");

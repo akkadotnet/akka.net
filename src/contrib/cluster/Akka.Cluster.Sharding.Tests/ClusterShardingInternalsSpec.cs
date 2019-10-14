@@ -23,12 +23,12 @@ namespace Akka.Cluster.Sharding.Tests
             clusterSharding = ClusterSharding.Get(Sys);
         }
 
-        private Tuple<string, object> ExtractEntityId(object message)
+        private (string, object) ExtractEntityId(object message)
         {
             switch (message)
             {
                 case int i:
-                    return new Tuple<string, object>(i.ToString(), message);
+                    return (i.ToString()(string), message(object));
             }
             throw new NotSupportedException();
         }

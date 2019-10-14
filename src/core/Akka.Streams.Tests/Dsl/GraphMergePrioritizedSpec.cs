@@ -161,10 +161,10 @@ namespace Akka.Streams.Tests.Dsl
             Math.Round(ones / twos).Should().Be(2);
         }
 
-        private IRunnableGraph<Tuple<NotUsed, NotUsed, NotUsed>> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
+        private IRunnableGraph<(NotUsed, NotUsed, NotUsed)> ThreeSourceMerge<T>(Source<T, NotUsed> source1, Source<T, NotUsed> source2,
             Source<T, NotUsed> source3, List<int> priorities, TestSubscriber.ManualProbe<T> probe)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, Tuple.Create, (builder, s1, s2, s3) =>
+            return RunnableGraph.FromGraph(GraphDsl.Create(source1, source2, source3, ValueTuple.Create, (builder, s1, s2, s3) =>
             {
                 var merge = builder.Add(new MergePrioritized<T>(priorities));
 

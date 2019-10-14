@@ -89,7 +89,7 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is Msg msg ? new Tuple<string, object>(msg.Id.ToString(), msg.Message) : null;
+            message is Msg msg ? (msg.Id.ToString()(string), msg.Message(object)) : null;
 
         private readonly ExtractShardId _extractShard = message =>
             message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;

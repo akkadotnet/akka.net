@@ -229,7 +229,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {x, y, z},
+                    return (new[] {x, y, z},
                         new[] {new[] {x, y, z}});
                 }).ToArray());
 
@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<Script<int, IEnumerable<int>>> script = () =>
             {
                 var i = random.Next();
-                var rest = Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {i}, new[] {new[] {i}});
+                var rest = (new[] {i}, new[] {new[] {i}});
 
                 return Script.Create(RandomTestRange(Sys).Select(_ =>
                 {
@@ -252,7 +252,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] { x, y, z },
+                    return (new[] { x, y, z },
                         new[] { new[] { x, y, z }});
                 }).Concat(rest).ToArray());
             };

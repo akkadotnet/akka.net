@@ -141,7 +141,7 @@ namespace RemotePingPong
             return numberOfClients * numberOfRepeats * 2;
         }
 
-        private static async Task<Tuple<bool, long, int>> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
+        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
             var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
@@ -211,7 +211,7 @@ namespace RemotePingPong
 
             Console.ForegroundColor = foregroundColor;
             Console.WriteLine("{0,10},{1,8},{2,10},{3,11}", numberOfClients, totalMessagesReceived, throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
-            return Tuple.Create(redCount <= 3, bestThroughput, redCount);
+            return (redCount <= 3, bestThroughput, redCount);
         }
 
         private class AllStartedActor : UntypedActor

@@ -1198,7 +1198,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<Tuple<IImmutableList<T>, Source<T, NotUsed>>, TMat> PrefixAndTail<T, TMat>(
+        public static IFlow<(IImmutableList<T>, Source<T, NotUsed>), TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));
@@ -1890,20 +1890,20 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
+        public static IFlow<(T1, T2), TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat> other)
         {
             return flow.Via(ZipGraph<T1, T2, TMat>(other));
         }
 
-        private static IGraph<FlowShape<T1, Tuple<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(
+        private static IGraph<FlowShape<T1, (T1, T2)>, TMat> ZipGraph<T1, T2, TMat>(
             IGraph<SourceShape<T2>, TMat> other)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
                 var zip = builder.Add(new Zip<T1, T2>());
                 builder.From(shape).To(zip.In1);
-                return new FlowShape<T1, Tuple<T1, T2>>(zip.In0, zip.Out);
+                return new FlowShape<T1, (T1, T2)>(zip.In0, zip.Out);
             });
         }
 
@@ -1958,12 +1958,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<Tuple<T1, long>, TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
+        public static IFlow<(T1, long), TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
         {
-            return flow.StatefulSelectMany<T1, Tuple<T1, long>, TMat>(() =>
+            return flow.StatefulSelectMany<T1, (T1, long), TMat>(() =>
             {
                 var index = 0L;
-                return element => new[] {Tuple.Create(element, index++)};
+                return element => new[] {(element, index++)};
             });
         }
 

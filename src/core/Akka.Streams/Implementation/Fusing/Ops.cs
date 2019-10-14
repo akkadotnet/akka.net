@@ -3141,7 +3141,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
+            private IBuffer<(long, T)> _buffer; // buffer has pairs timestamp with upstream element
             private readonly int _size;
             private readonly Action _onPushWhenBufferFull;
 
@@ -3190,7 +3190,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
 
-            public override void PreStart() => _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
+            public override void PreStart() => _buffer = Buffer.Create<(long, T)>(_size, Materializer);
 
             private void CompleteIfReady()
             {
@@ -3218,7 +3218,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void GrabAndPull()
             {
-                _buffer.Enqueue(new Tuple<long, T>(DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
+                _buffer.Enqueue((DateTime.UtcNow.Ticks(long), Grab(_stage.Inlet)(T)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
             }

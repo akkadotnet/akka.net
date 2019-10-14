@@ -133,7 +133,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         static readonly int ShardCount = 3;
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : null;
 
         internal static ExtractShardId extractShardId1 = message =>
         {

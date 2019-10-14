@@ -67,7 +67,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             // Extract the full topological information from the builder before removing assembly-internal (fused) wirings in the next step.
             var info = structInfo.ToInfo(shape,
-                materializedValue.Select(pair => Tuple.Create(pair.Key, pair.Value)).ToList());
+                materializedValue.Select(pair => (pair.Key, pair.Value)).ToList());
 
             // Perform the fusing of `structInfo.groups` into GraphModules (leaving them as they are for non - fusable modules).
             structInfo.RemoveInternalWires();
@@ -115,7 +115,7 @@ namespace Akka.Streams.Implementation.Fusing
                     structuralInfo.NewOutlets(graph.Shape.Outlets));
 
                 // Extract the full topological information from the builder
-                return structuralInfo.ToInfo(shape, materializedValue.Select(pair=> Tuple.Create(pair.Key, pair.Value)).ToList(), attributes);
+                return structuralInfo.ToInfo(shape, materializedValue.Select(pair=> (pair.Key, pair.Value)).ToList(), attributes);
             }
             catch (Exception)
             {
@@ -666,7 +666,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public StructuralInfoModule ToInfo<TShape>(TShape shape, IList<Tuple<IModule, IMaterializedValueNode>> materializedValues ,Attributes attributes = null) where TShape : Shape
+        public StructuralInfoModule ToInfo<TShape>(TShape shape, IList<(IModule, IMaterializedValueNode)> materializedValues ,Attributes attributes = null) where TShape : Shape
         {
             attributes = attributes ?? Attributes.None;
 

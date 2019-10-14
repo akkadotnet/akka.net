@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             Script<int,string> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next(0, 10000);
-                return new Tuple<ICollection<int>, ICollection<string>>(new[] {x},
+                return new (ICollection<int>, ICollection<string>)(new[] {x},
                     (x & 1) == 0 ? new[] {(x*x).ToString()} : new string[] {});
             }).ToArray());
 

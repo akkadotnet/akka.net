@@ -41,12 +41,12 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private Tuple<string, object> IdExtractor(object message)
+        private (string, object) IdExtractor(object message)
         {
             switch (message)
             {
                 case int i:
-                    return new Tuple<string, object>(i.ToString(), message);
+                    return (i.ToString()(string), message(object));
             }
             throw new NotSupportedException();
         }

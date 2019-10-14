@@ -42,7 +42,7 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();
+        public abstract Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen();
 
         /// <summary>
         /// TBD

@@ -111,7 +111,7 @@ namespace Akka.Tests.Actor
             var fsmref = Sys.ActorOf<LeakyFSM>();
 
             fsmref.Tell("switch");
-            ExpectMsg(Tuple.Create(0, 1));
+            ExpectMsg((0, 1));
             fsmref.Tell("test");
             ExpectMsg("ok");
         }
@@ -136,7 +136,7 @@ namespace Akka.Tests.Actor
 
                 OnTransition((state1, state2) =>
                 {
-                    Target.Tell(Tuple.Create(state1, state2));
+                    Target.Tell((state1, state2));
                 });
 
                 Initialize();
@@ -211,10 +211,10 @@ namespace Akka.Tests.Actor
                 OnTransition((state1, state2) =>
                 {
                     if (state1 == 0 && state2 == 1)
-                        target.Tell(Tuple.Create(StateData, NextStateData));
+                        target.Tell((StateData, NextStateData));
 
                     if (state1 == 1 && state2 == 1)
-                        target.Tell(Tuple.Create(StateData, NextStateData));
+                        target.Tell((StateData, NextStateData));
                 });
             }
 
@@ -239,7 +239,7 @@ namespace Akka.Tests.Actor
 
                 OnTransition((state1, state2) =>
                 {
-                    NextStateData.Tell(Tuple.Create(state1, state2));
+                    NextStateData.Tell((state1, state2));
                 });
 
                 When(1, @event =>

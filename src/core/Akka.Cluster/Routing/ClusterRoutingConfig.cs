@@ -913,7 +913,7 @@ namespace Akka.Cluster.Routing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public Tuple<Address, string> SelectDeploymentTarget()
+        public (Address, string) SelectDeploymentTarget()
         {
             var currentRoutees = Cell.Router.Routees.ToList();
             var currentNodes = AvailableNodes;
@@ -923,7 +923,7 @@ namespace Akka.Cluster.Routing
             var unusedNodes = currentNodes.Except(UsedRouteePaths.Keys);
             if (!unusedNodes.IsEmpty) //we found at least 1 totally unused node
             {
-                return new Tuple<Address, string>(unusedNodes.First(), Settings.RouteesPaths.First());
+                return (unusedNodes.First()(Address), Settings.RouteesPaths.First()(string));
             }
             else
             {
@@ -935,7 +935,7 @@ namespace Akka.Cluster.Routing
 
                 // pick next of unused paths
                 var minPath = Settings.RouteesPaths.FirstOrDefault(p => !minNode.Used.Contains(p));
-                return minPath == null ? null : new Tuple<Address, string>(minNode.Address, minPath);
+                return minPath == null ? null : (minNode.Address(Address), minPath(string));
             }
         }
 

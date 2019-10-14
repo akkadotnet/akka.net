@@ -61,7 +61,7 @@ namespace Akka.Cluster.Sharding.Tests
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => Tuple.Create("entity-1", (object)"msg"),
+              _ => ("entity-1", (object)"msg"),
               _ => "shard-1",
               PoisonPill.Instance
             ));

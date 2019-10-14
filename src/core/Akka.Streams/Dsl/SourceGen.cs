@@ -43,9 +43,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">flow, through which value is passed</param>
         /// <param name="timeout">timeout</param>
         [ApiMayChange]
-        public static Source<TOut, TMat> UnfoldFlow<TState, TOut, TMat>(TState seed, IGraph<FlowShape<TState, Tuple<TState, TOut>>, TMat> flow, TimeSpan timeout)
+        public static Source<TOut, TMat> UnfoldFlow<TState, TOut, TMat>(TState seed, IGraph<FlowShape<TState, (TState, TOut)>, TMat> flow, TimeSpan timeout)
         {
-            return UnfoldFlowGraph(new FanOut2UnfoldingStage<Tuple<TState, TOut>, TState, TOut>(shape => new UnfoldFlowGraphStageLogic<TState, TOut>(shape, seed, timeout)), flow);
+            return UnfoldFlowGraph(new FanOut2UnfoldingStage<(TState, TOut), TState, TOut>(shape => new UnfoldFlowGraphStageLogic<TState, TOut>(shape, seed, timeout)), flow);
         }
 
         /// <summary>
@@ -79,14 +79,14 @@ namespace Akka.Streams.Dsl
         /// <param name="unfoldWith">unfolding function</param>
         /// <param name="timeout">timeout</param>
         [ApiMayChange]
-        public static Source<TOut, TMat> UnfoldFlowWith<TOut, TState, TFlowOut, TMat>(TState seed, IGraph<FlowShape<TState, TFlowOut>, TMat> flow, Func<TFlowOut, Option<Tuple<TState, TOut>>> unfoldWith, TimeSpan timeout)
+        public static Source<TOut, TMat> UnfoldFlowWith<TOut, TState, TFlowOut, TMat>(TState seed, IGraph<FlowShape<TState, TFlowOut>, TMat> flow, Func<TFlowOut, Option<(TState, TOut)>> unfoldWith, TimeSpan timeout)
         {
             return UnfoldFlowGraph(new FanOut2UnfoldingStage<TFlowOut, TState, TOut>(shape => new UnfoldFlowWithGraphStageLogic<TFlowOut, TState, TOut>(shape, seed, unfoldWith, timeout)), flow);
         }
 
-        private class UnfoldFlowGraphStageLogic<TState, TOut> : UnfoldFlowGraphStageLogic<Tuple<TState, TOut>, TState, TOut>, IInHandler
+        private class UnfoldFlowGraphStageLogic<TState, TOut> : UnfoldFlowGraphStageLogic<(TState, TOut), TState, TOut>, IInHandler
         {
-            public UnfoldFlowGraphStageLogic(FanOutShape<Tuple<TState, TOut>, TState, TOut> shape, TState seed, TimeSpan timeout) : base(shape, seed, timeout)
+            public UnfoldFlowGraphStageLogic(FanOutShape<(TState, TOut), TState, TOut> shape, TState seed, TimeSpan timeout) : base(shape, seed, timeout)
             {
                 SetHandler(_nextElem, this);
             }
@@ -108,9 +108,9 @@ namespace Akka.Streams.Dsl
 
         private class UnfoldFlowWithGraphStageLogic<TFlowOut, TState, TOut> : UnfoldFlowGraphStageLogic<TFlowOut, TState, TOut>, IInHandler
         {
-            private readonly Func<TFlowOut, Option<Tuple<TState, TOut>>> _unfoldWith;
+            private readonly Func<TFlowOut, Option<(TState, TOut)>> _unfoldWith;
 
-            public UnfoldFlowWithGraphStageLogic(FanOutShape<TFlowOut, TState, TOut> shape, TState seed, Func<TFlowOut, Option<Tuple<TState, TOut>>> unfoldWith, TimeSpan timeout) : base(shape, seed, timeout)
+            public UnfoldFlowWithGraphStageLogic(FanOutShape<TFlowOut, TState, TOut> shape, TState seed, Func<TFlowOut, Option<(TState, TOut)>> unfoldWith, TimeSpan timeout) : base(shape, seed, timeout)
             {
                 _unfoldWith = unfoldWith;
 

@@ -266,7 +266,7 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        public override Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             var upstreamListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
             return WrappedTransport.Listen().ContinueWith(async listenerTask =>
@@ -275,8 +275,7 @@ namespace Akka.Remote.Transport
                 var listenerPromise = listenerTask.Result.Item2;
                 listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task).ConfigureAwait(false));
                 return
-                    new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
-                        SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
+                    (SchemeAugmenter.AugmentScheme(listenAddress)(Address), upstreamListenerPromise(TaskCompletionSource<IAssociationEventListener>));
             }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 

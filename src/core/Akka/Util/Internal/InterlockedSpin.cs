@@ -41,7 +41,7 @@ namespace Akka.Util.Internal
 
         /// <summary>INTERNAL!
         /// Atomically updates the int <paramref name="reference"/> by calling <paramref name="updateIfTrue"/> to get the new value.
-        /// <paramref name="updateIfTrue"/> returns a Tuple&lt;should update, the new int value, the return value&gt;
+        /// <paramref name="updateIfTrue"/> returns a ValueTuple&lt;should update, the new int value, the return value&gt;
         /// If the first item in the tuple is true, the value is updated, and the third value of the tuple is returned.
         /// Note that <paramref name="updateIfTrue"/> may be called many times so it should be idempotent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>

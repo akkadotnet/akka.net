@@ -324,12 +324,12 @@ namespace Akka.Remote
         {
             public static Akka.Remote.RemoteWatcher.Stats Empty;
             public Stats(int watching, int watchingNodes) { }
-            public Stats(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> watchingRefs, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses) { }
+            public Stats(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.(Akka.Actor.IActorRef, Akka.Actor.IActorRef)> watchingRefs, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses) { }
             public int Watching { get; }
             public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> WatchingAddresses { get; }
             public int WatchingNodes { get; }
-            public System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> WatchingRefs { get; }
-            public Akka.Remote.RemoteWatcher.Stats Copy(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> watchingRefs = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses = null) { }
+            public System.Collections.Immutable.ImmutableHashSet<System.(Akka.Actor.IActorRef, Akka.Actor.IActorRef)> WatchingRefs { get; }
+            public Akka.Remote.RemoteWatcher.Stats Copy(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.(Akka.Actor.IActorRef, Akka.Actor.IActorRef)> watchingRefs = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses = null) { }
             public static Akka.Remote.RemoteWatcher.Stats Counts(int watching, int watchingNodes) { }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
@@ -464,7 +464,7 @@ namespace Akka.Remote.Transport
         protected abstract void InterceptAssociate(Akka.Actor.Address remoteAddress, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> statusPromise);
         protected abstract System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> InterceptListen(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> listenerTask);
         public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
-        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
+        public override System.Threading.Tasks.Task<System.(Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>)> Listen() { }
         public override System.Threading.Tasks.Task<bool> Shutdown() { }
     }
     public abstract class Activity
@@ -525,24 +525,24 @@ namespace Akka.Remote.Transport
         public AssociationRegistry() { }
         public static void Clear() { }
         public void ClearLog() { }
-        public System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> DeregisterAssociation(System.Tuple<Akka.Actor.Address, Akka.Actor.Address> key) { }
+        public System.(Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener) DeregisterAssociation(System.(Akka.Actor.Address, Akka.Actor.Address) key) { }
         public bool ExistsAssociation(Akka.Actor.Address initiatorAddress, Akka.Actor.Address remoteAddress) { }
         public static Akka.Remote.Transport.AssociationRegistry Get(string key) { }
         public Akka.Remote.Transport.IHandleEventListener GetRemoteReadHandlerFor(Akka.Remote.Transport.TestAssociationHandle localHandle) { }
         public void LogActivity(Akka.Remote.Transport.Activity activity) { }
         public System.Collections.Generic.IList<Akka.Remote.Transport.Activity> LogSnapshot() { }
-        public void RegisterListenerPair(System.Tuple<Akka.Actor.Address, Akka.Actor.Address> key, System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> listeners) { }
+        public void RegisterListenerPair(System.(Akka.Actor.Address, Akka.Actor.Address) key, System.(Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener) listeners) { }
         public void RegisterTransport(Akka.Remote.Transport.TestTransport transport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> associationEventListenerTask) { }
-        public Akka.Remote.Transport.IHandleEventListener RemoteListenerRelativeTo(Akka.Remote.Transport.TestAssociationHandle handle, System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> listenerPair) { }
+        public Akka.Remote.Transport.IHandleEventListener RemoteListenerRelativeTo(Akka.Remote.Transport.TestAssociationHandle handle, System.(Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener) listenerPair) { }
         public void Reset() { }
-        public System.Tuple<Akka.Remote.Transport.TestTransport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener>> TransportFor(Akka.Actor.Address address) { }
+        public System.(Akka.Remote.Transport.TestTransport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener>) TransportFor(Akka.Actor.Address address) { }
         public bool TransportsReady(params Akka.Actor.Address[] addresses) { }
     }
     public class Blackhole : Akka.Remote.Transport.ThrottleMode
     {
         public static Akka.Remote.Transport.Blackhole Instance { get; }
         public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
-        public override System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
+        public override System.(Akka.Remote.Transport.ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
     }
     public sealed class DisassociateAttempt : Akka.Remote.Transport.Activity
     {
@@ -649,7 +649,7 @@ namespace Akka.Remote.Transport
     {
         public readonly bool Inbound;
         public TestAssociationHandle(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, Akka.Remote.Transport.TestTransport transport, bool inbound) { }
-        public System.Tuple<Akka.Actor.Address, Akka.Actor.Address> Key { get; }
+        public System.(Akka.Actor.Address, Akka.Actor.Address) Key { get; }
         public override void Disassociate() { }
         public override bool Write(Google.Protobuf.ByteString payload) { }
     }
@@ -657,18 +657,18 @@ namespace Akka.Remote.Transport
     {
         public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<Akka.Actor.Address, Akka.Remote.Transport.AssociationHandle> AssociateBehavior;
         public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<Akka.Remote.Transport.TestAssociationHandle, bool> DisassociateBehavior;
-        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> ListenBehavior;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, System.(Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>)> ListenBehavior;
         public readonly Akka.Actor.Address LocalAddress;
         public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, bool> ShutdownBehavior;
-        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<System.Tuple<Akka.Remote.Transport.TestAssociationHandle, Google.Protobuf.ByteString>, bool> WriteBehavior;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<System.(Akka.Remote.Transport.TestAssociationHandle, Google.Protobuf.ByteString), bool> WriteBehavior;
         public TestTransport(Akka.Actor.ActorSystem system, Akka.Configuration.Config conf) { }
         public TestTransport(Akka.Actor.Address localAddress, Akka.Remote.Transport.AssociationRegistry registry, long maximumPayloadBytes = 32000, string schemeIdentifier = "test") { }
         public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
         public System.Threading.Tasks.Task<bool> DefaultDisassociate(Akka.Remote.Transport.TestAssociationHandle handle) { }
-        public System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> DefaultListen() { }
+        public System.Threading.Tasks.Task<System.(Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>)> DefaultListen() { }
         public System.Threading.Tasks.Task Disassociate(Akka.Remote.Transport.TestAssociationHandle handle) { }
         public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
-        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
+        public override System.Threading.Tasks.Task<System.(Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>)> Listen() { }
         public override System.Threading.Tasks.Task<bool> Shutdown() { }
         public System.Threading.Tasks.Task<bool> Write(Akka.Remote.Transport.TestAssociationHandle handle, Google.Protobuf.ByteString payload) { }
     }
@@ -676,7 +676,7 @@ namespace Akka.Remote.Transport
     {
         protected ThrottleMode() { }
         public abstract System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens);
-        public abstract System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens);
+        public abstract System.(Akka.Remote.Transport.ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens);
     }
     public class ThrottlerProvider : Akka.Remote.Transport.ITransportAdapterProvider
     {
@@ -708,7 +708,7 @@ namespace Akka.Remote.Transport
         public Akka.Actor.ActorSystem System { get; set; }
         public abstract System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress);
         public abstract bool IsResponsibleFor(Akka.Actor.Address remote);
-        public abstract System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen();
+        public abstract System.Threading.Tasks.Task<System.(Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>)> Listen();
         public virtual System.Threading.Tasks.Task<bool> ManagementCommand(object message) { }
         public abstract System.Threading.Tasks.Task<bool> Shutdown();
     }
@@ -720,7 +720,7 @@ namespace Akka.Remote.Transport
     {
         public static Akka.Remote.Transport.Unthrottled Instance { get; }
         public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
-        public override System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
+        public override System.(Akka.Remote.Transport.ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
     }
     public sealed class WriteAttempt : Akka.Remote.Transport.Activity
     {

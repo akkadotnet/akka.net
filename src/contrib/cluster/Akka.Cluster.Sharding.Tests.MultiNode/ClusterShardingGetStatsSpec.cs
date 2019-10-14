@@ -127,7 +127,7 @@ namespace Akka.Cluster.Sharding.Tests
         readonly static int NumberOfShards = 3;
         readonly static string ShardTypeName = "Ping";
 
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? Tuple.Create(p.Id.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id.ToString(), message) : null;
 
         internal ExtractShardId extractShardId = message => message is Ping p ? (p.Id % NumberOfShards).ToString() : null;
 

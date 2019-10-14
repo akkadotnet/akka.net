@@ -18,8 +18,8 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
-        private Dictionary<Address, Tuple<int, Deadline>> _addressToRefuseUid = new Dictionary<Address, Tuple<int, Deadline>>();
-        private readonly Dictionary<Address, Tuple<IActorRef, int>> _addressToReadonly = new Dictionary<Address, Tuple<IActorRef, int>>();
+        private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new Dictionary<Address, (int, Deadline)>();
+        private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new Dictionary<Address, (IActorRef, int)>();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
             new Dictionary<Address, EndpointManager.EndpointPolicy>();
@@ -79,7 +79,7 @@ namespace Akka.Remote
         /// <param name="timeOfRelease">The timeframe for releasing quarantine.</param>
         public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid, Deadline timeOfRelease)
         {
-            _addressToRefuseUid[remoteAddress] = Tuple.Create(refuseUid, timeOfRelease);
+            _addressToRefuseUid[remoteAddress] = (refuseUid, timeOfRelease);
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace Akka.Remote
         /// <returns>The <paramref name="endpoint"/> actor reference.</returns>
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
-            _addressToReadonly[address] = Tuple.Create(endpoint, uid);
+            _addressToReadonly[address] = (endpoint, uid);
             _readonlyToAddress[endpoint] = address;
             return endpoint;
         }
@@ -139,7 +139,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">The remote address to check.</param>
         /// <returns>A tuple containing the actor reference and the remote system UID, if they exist. Otherwise <c>null</c>.</returns>
-        public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
+        public (IActorRef, int) ReadOnlyEndpointFor(Address address)
         {
             _addressToReadonly.TryGetValue(address, out var tmp);
             return tmp;
@@ -282,7 +282,7 @@ namespace Akka.Remote
         public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
         {
             _addressToWritable[address] = new EndpointManager.Quarantined(uid, timeOfRelease);
-            _addressToRefuseUid[address] = Tuple.Create(uid, timeOfRelease);
+            _addressToRefuseUid[address] = (uid, timeOfRelease);
         }
 
         /// <summary>

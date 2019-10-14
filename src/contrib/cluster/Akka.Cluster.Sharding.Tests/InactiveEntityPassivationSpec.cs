@@ -88,7 +88,7 @@ namespace Akka.Cluster.Sharding.Tests
         protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is int msg ? Tuple.Create(msg.ToString(), message) : null;
+            message is int msg ? (msg.ToString(), message) : null;
 
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
