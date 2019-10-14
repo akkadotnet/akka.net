@@ -18,8 +18,8 @@ namespace Akka.Actor
 
     public partial class ActorCell
     {
-        private TimeSpan? _receiveTimeoutDuration = null;
-        private ICancelable _pendingReceiveTimeout = null;
+        private TimeSpan? _receiveTimeoutDuration;
+        private ICancelable _pendingReceiveTimeout;
 
         /// <summary>
         /// TBD
@@ -33,24 +33,36 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan? ReceiveTimeout
-        {
-            get
-            {
-                return _receiveTimeoutDuration;
-            }
-        }
+        public TimeSpan? ReceiveTimeout => _receiveTimeoutDuration;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public void CheckReceiveTimeout()
+        public void CheckReceiveTimeout(bool reschedule = true)
         {
-            CancelReceiveTimeout();
             if (_receiveTimeoutDuration != null)
             {
-                _pendingReceiveTimeout = System.Scheduler.ScheduleTellOnceCancelable(_receiveTimeoutDuration.Value, Self, Akka.Actor.ReceiveTimeout.Instance, Self);
+                // The fact that timeout is FiniteDuration and task is emptyCancellable
+                // means that a user called `context.setReceiveTimeout(...)`
+                // while sending the ReceiveTimeout message is not scheduled yet.
+                // We have to handle the case and schedule sending the ReceiveTimeout message
+                // ignoring the reschedule parameter.
+                if (reschedule || _pendingReceiveTimeout == null)
+                {
+                    RescheduleReceiveTimeout(_receiveTimeoutDuration.Value);
+                }
             }
+            else
+            {
+                CancelReceiveTimeout();
+            }
+        }
+
+        private void RescheduleReceiveTimeout(TimeSpan timeout)
+        {
+            _pendingReceiveTimeout.CancelIfNotNull(); //Cancel any ongoing future
+            _pendingReceiveTimeout = System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, Akka.Actor.ReceiveTimeout.Instance, Self);
+            _receiveTimeoutDuration = timeout;
         }
 
         private void CancelReceiveTimeout()
