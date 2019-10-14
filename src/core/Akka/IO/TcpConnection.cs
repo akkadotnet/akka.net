@@ -93,7 +93,7 @@ namespace Akka.IO
         private bool isOutputShutdown;
 
         private PendingWrite pendingWrite = EmptyPendingWrite.Instance;
-        private (IActorRef, object) pendingAck = null;
+        private Tuple<IActorRef, object> pendingAck = null;
         private bool peerClosed;
         private IActorRef interestedInResume;
         private CloseInformation closedMessage;  // for ConnectionClosed message in postStop
@@ -374,7 +374,7 @@ namespace Akka.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private (IActorRef, object) SetPendingAcknowledgement((IActorRef, object) pending)
+        private Tuple<IActorRef, object> SetPendingAcknowledgement(Tuple<IActorRef, object> pending)
         {
             return Interlocked.Exchange(ref pendingAck, pending);
         }

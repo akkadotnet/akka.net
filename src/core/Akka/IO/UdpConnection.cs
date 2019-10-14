@@ -56,7 +56,7 @@ namespace Akka.IO
             }
         }
 
-        private (Send, IActorRef) _pendingSend = null;
+        private Tuple<Send, IActorRef> _pendingSend = null;
         private bool WritePending => _pendingSend != null;
 
         private Receive Resolving(DnsEndPoint remoteAddress) => message =>
@@ -139,7 +139,7 @@ namespace Akka.IO
                         {
                             if (!send.Payload.IsEmpty)
                             {
-                                _pendingSend = (send, Sender);
+                                _pendingSend = Tuple.Create(send, Sender);
                                 DoWrite();
                             }
                             else
