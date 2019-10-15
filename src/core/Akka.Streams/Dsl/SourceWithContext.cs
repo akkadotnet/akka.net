@@ -20,9 +20,9 @@ namespace Akka.Streams.Dsl
     /// 
     /// API MAY CHANGE
     /// </summary>
-    public sealed class SourceWithContext<TCtx, TOut, TMat> : GraphDelegate<SourceShape<(TOut, TCtx)?>, TMat>
+    public sealed class SourceWithContext<TCtx, TOut, TMat> : GraphDelegate<SourceShape<(TOut, TCtx)>, TMat>
     {
-        public SourceWithContext(Source<(TOut, TCtx)?, TMat> source)
+        public SourceWithContext(Source<(TOut, TCtx), TMat> source)
         : base(source)
         {
         }
@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
         /// context propagation here.
         ///</summary>
         public SourceWithContext<TCtx2, TOut2, TMat> Via<TCtx2, TOut2, TMat2>(
-            IGraph<FlowShape<(TOut, TCtx)?, (TOut2, TCtx2)?>, TMat2> viaFlow) =>
+            IGraph<FlowShape<(TOut, TCtx), (TOut2, TCtx2)>, TMat2> viaFlow) =>
             new SourceWithContext<TCtx2, TOut2, TMat>(Source.FromGraph(Inner).Via(viaFlow));
         
         ///<summary>
@@ -50,7 +50,7 @@ namespace Akka.Streams.Dsl
         /// flow into the materialized value of the resulting Flow.
         ///</summary>
         public SourceWithContext<TCtx2, TOut2, TMat3> ViaMaterialized<TCtx2, TOut2, TMat2, TMat3>(
-            IGraph<FlowShape<(TOut, TCtx)?, (TOut2, TCtx2)?>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
+            IGraph<FlowShape<(TOut, TCtx), (TOut2, TCtx2)>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
             new SourceWithContext<TCtx2, TOut2, TMat3>(Source.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
 
         
@@ -58,7 +58,7 @@ namespace Akka.Streams.Dsl
         ///Stops automatic context propagation from here and converts this to a regular
         ///stream of a pair of (data, context).
         ///</summary>
-        public Source<(TOut, TCtx)?, TMat> AsSource() => 
-            Inner is Source<(TOut, TCtx)?, TMat>  source ? source : Source.FromGraph(Inner);
+        public Source<(TOut, TCtx), TMat> AsSource() => 
+            Inner is Source<(TOut, TCtx), TMat>  source ? source : Source.FromGraph(Inner);
     }
 }
