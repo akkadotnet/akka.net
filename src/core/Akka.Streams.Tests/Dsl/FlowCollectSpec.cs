@@ -36,8 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             Script<int,string> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next(0, 10000);
-                return new (ICollection<int>, ICollection<string>)(new[] {x},
-                    (x & 1) == 0 ? new[] {(x*x).ToString()} : new string[] {});
+                return ((ICollection<int>)new[] {x}, (ICollection<string>)((x & 1) == 0 ? new[] {(x*x).ToString()} : new string[] {}));
             }).ToArray());
 
             RandomTestRange(Sys).ForEach(_=>RunScript(script, Materializer.Settings,flow => flow.Collect(x => x%2 == 0 ? (x*x).ToString() : null)));

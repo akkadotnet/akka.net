@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 source2.OnNext("Meaning of life");
                 lastEvents()
                     .Should()
-                    .Equal(new OnNext(sink, (42(int), "Meaning of life"(string))), new RequestOne(source1),
+                    .Equal(new OnNext(sink, (42, "Meaning of life")), new RequestOne(source1),
                         new RequestOne(source2));
             });
         }
@@ -213,11 +213,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (1(int), 1(int))), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (1, 1)), new RequestOne(source));
 
                 sink.RequestOne();
                 source.OnNext(2);
-                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (2(int), 2(int))), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, (2, 2)), new RequestOne(source));
             });
         }
 
@@ -254,8 +254,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 source2.OnNext(2);
                 lastEvents()
                     .Should()
-                    .Equal(new OnNext(sink1, (1(int), 2(int))), new RequestOne(source1),
-                        new RequestOne(source2), new OnNext(sink2, (1(int), 2(int))));
+                    .Equal(new OnNext(sink1, (1, 2)), new RequestOne(source1),
+                        new RequestOne(source2), new OnNext(sink2, (1, 2)));
             });
         }
 

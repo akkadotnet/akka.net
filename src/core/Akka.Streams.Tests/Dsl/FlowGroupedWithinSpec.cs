@@ -229,8 +229,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return (new[] {x, y, z},
-                        new[] {new[] {x, y, z}});
+                    return ((ICollection<int>)new[] {x, y, z}, (ICollection<IEnumerable<int>>)new[] {new[] {x, y, z}});
                 }).ToArray());
 
             RandomTestRange(Sys)
@@ -252,8 +251,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return (new[] { x, y, z },
-                        new[] { new[] { x, y, z }});
+                    return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z }});
                 }).Concat(rest).ToArray());
             };
 

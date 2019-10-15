@@ -109,14 +109,12 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
                     {
                         var balance = b.Add(new Balance<int>(3, true));
-                        var source =
-                            Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<(IPublisher<int>, IPublisher<int>)>(_ => null);
+                        var source = Source.From(Enumerable.Range(1, 3)).MapMaterializedValue<(IPublisher<int>, IPublisher<int>)?>(_ => null);
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0))
                             .To(
                                 Sink.FromSubscriber(s1)
-                                    .MapMaterializedValue<(IPublisher<int>, IPublisher<int>)>(_ => null));
+                                    .MapMaterializedValue<(IPublisher<int>, IPublisher<int>)?>(_ => null));
                         b.From(balance.Out(1)).To(p2Sink);
                         b.From(balance.Out(2)).To(p3Sink);
                         return ClosedShape.Instance;

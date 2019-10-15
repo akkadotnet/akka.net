@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Take_must_take()
         {
             Func<int, Script<int, int>> script =
-                d => Script.Create(RandomTestRange(Sys).Select(n => new (ICollection<int>, ICollection<int>)(new[] {n}, n > d ? new int[]{} : new[] {n})).ToArray());
+                d => Script.Create(RandomTestRange(Sys).Select(n => ((ICollection<int>)new[] {n}, (ICollection<int>)(n > d ? new int[]{} : new[] {n}))).ToArray());
             var random = new Random();
             RandomTestRange(Sys).ForEach(_ =>
             {
