@@ -3218,7 +3218,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void GrabAndPull()
             {
-                _buffer.Enqueue((DateTime.UtcNow.Ticks(long), Grab(_stage.Inlet)(T)));
+                _buffer.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
             }

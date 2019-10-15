@@ -42,8 +42,8 @@ namespace Akka.Streams.Implementation
                     Complete(_stage.Out);
                 else
                 {
-                    Push(_stage.Out, t.Item2);
-                    _state = t.Item1;
+                    Push(_stage.Out, t.Value.Item2);
+                    _state = t.Value.Item1;
                 }
             }
         }
@@ -56,7 +56,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, (TState, TElement)> UnfoldFunc;
+        public readonly Func<TState, (TState, TElement)?> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -67,7 +67,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public Unfold(TState state, Func<TState, (TState, TElement)> unfoldFunc)
+        public Unfold(TState state, Func<TState, (TState, TElement)?> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;
@@ -100,7 +100,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly UnfoldAsync<TState, TElement> _stage;
             private TState _state;
-            private Action<Result<(TState, TElement)>> _asyncHandler;
+            private Action<Result<(TState, TElement)?>> _asyncHandler;
 
             public Logic(UnfoldAsync<TState, TElement> stage) : base(stage.Shape)
             {
@@ -119,7 +119,7 @@ namespace Akka.Streams.Implementation
 
             public override void PreStart()
             {
-                var ac = GetAsyncCallback<Result<(TState, TElement)>>(result =>
+                var ac = GetAsyncCallback<Result<(TState, TElement)?>>(result =>
                 {
                     if (!result.IsSuccess)
                         Fail(_stage.Out, result.Exception);
@@ -127,8 +127,8 @@ namespace Akka.Streams.Implementation
                         Complete(_stage.Out);
                     else
                     {
-                        Push(_stage.Out, result.Value.Item2);
-                        _state = result.Value.Item1;
+                        Push(_stage.Out, result.Value.Value.Item2);
+                        _state = result.Value.Value.Item1;
                     }
                 });
                 _asyncHandler = ac;
@@ -143,7 +143,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, Task<(TState, TElement)>> UnfoldFunc;
+        public readonly Func<TState, Task<(TState, TElement)?>> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -154,7 +154,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public UnfoldAsync(TState state, Func<TState, Task<(TState, TElement)>> unfoldFunc)
+        public UnfoldAsync(TState state, Func<TState, Task<(TState, TElement)?>> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;

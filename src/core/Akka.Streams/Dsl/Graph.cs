@@ -1393,7 +1393,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
-        public Zip() : base((a, b) => (a(T1), b(T2))) { }
+        public Zip() : base((a, b) => (a, b)) { }
 
         /// <summary>
         /// TBD
