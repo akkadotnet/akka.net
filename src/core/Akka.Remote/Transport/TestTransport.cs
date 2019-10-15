@@ -142,7 +142,7 @@ namespace Akka.Remote.Transport
             var promise = _associationListenerPromise;
             _registry.RegisterTransport(this, promise.Task);
             return
-                Task.FromResult((LocalAddress(Address), promise(TaskCompletionSource<IAssociationEventListener>)));
+                Task.FromResult((LocalAddress, promise));
         }
 
         #endregion
@@ -164,8 +164,8 @@ namespace Akka.Remote.Transport
             var transport = _registry.TransportFor(remoteAddress);
             if (transport != null)
             {
-                var remoteAssociationListenerTask = transport.Item2;
-                var handlers = CreateHandlePair(transport.Item1, remoteAddress);
+                var remoteAssociationListenerTask = transport.Value.Item2;
+                var handlers = CreateHandlePair(transport.Value.Item1, remoteAddress);
                 var localHandle = handlers.Item1;
                 var remoteHandle = handlers.Item2;
                 localHandle.Writeable = false;
@@ -184,8 +184,7 @@ namespace Akka.Remote.Transport
 #pragma warning restore 4014
                 {
                     var localListener = result.Result;
-                    _registry.RegisterListenerPair(localHandle.Key,
-                        (localListener(IHandleEventListener), remoteListener(IHandleEventListener)));
+                    _registry.RegisterListenerPair(localHandle.Key, (localListener, remoteListener));
                     localHandle.Writeable = true;
                     remoteHandle.Writeable = true;
                 }, TaskContinuationOptions.ExecuteSynchronously);
@@ -202,7 +201,7 @@ namespace Akka.Remote.Transport
             var localHandle = new TestAssociationHandle(LocalAddress, remoteAddress, this, false);
             var remoteHandle = new TestAssociationHandle(remoteAddress, LocalAddress, remoteTransport, true);
 
-            return (localHandle(TestAssociationHandle), remoteHandle(TestAssociationHandle));
+            return (localHandle, remoteHandle);
         }
 
         #endregion
@@ -229,8 +228,8 @@ namespace Akka.Remote.Transport
             var handlers = _registry.DeregisterAssociation(handle.Key);
             if (handlers != null)
             {
-                handlers.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
-                handlers.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
+                handlers.Value.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
+                handlers.Value.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
             }
 
             return Task.FromResult(true);
@@ -266,7 +265,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public Task<bool> Write(TestAssociationHandle handle, ByteString payload)
         {
-            return WriteBehavior.Apply((handle(TestAssociationHandle), payload(ByteString)));
+            return WriteBehavior.Apply((handle, payload));
         }
 
         private Task<bool> DefaultWriteBehavior(TestAssociationHandle handle, ByteString payload)
@@ -658,8 +657,7 @@ namespace Akka.Remote.Transport
         public void RegisterTransport(TestTransport transport,
             Task<IAssociationEventListener> associationEventListenerTask)
         {
-            _transportTable.TryAdd(transport.LocalAddress,
-                (transport(TestTransport), associationEventListenerTask(Task<IAssociationEventListener>)));
+            _transportTable.TryAdd(transport.LocalAddress, (transport, associationEventListenerTask));
         }
 
         /// <summary>
@@ -698,10 +696,11 @@ namespace Akka.Remote.Transport
         ///     initiator.
         /// </param>
         /// <returns>The original entries, or null if the key wasn't found in the table.</returns>
-        public (IHandleEventListener, IHandleEventListener) DeregisterAssociation((Address, Address) key)
+        public (IHandleEventListener, IHandleEventListener)? DeregisterAssociation((Address, Address) key)
         {
-            (IHandleEventListener, IHandleEventListener) listeners;
-            _listenersTable.TryRemove(key, out listeners);
+            if (!_listenersTable.TryRemove(key, out var listeners))
+                return null;
+            
             return listeners;
         }
 
@@ -713,7 +712,7 @@ namespace Akka.Remote.Transport
         /// <returns>True if there is an association for the given address.</returns>
         public bool ExistsAssociation(Address initiatorAddress, Address remoteAddress)
         {
-            return _listenersTable.ContainsKey((initiatorAddress(Address), remoteAddress(Address)));
+            return _listenersTable.ContainsKey((initiatorAddress, remoteAddress));
         }
 
         /// <summary>
@@ -736,9 +735,11 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="address">The address bound to the transport.</param>
         /// <returns>The transport, if it exists.</returns>
-        public (TestTransport, Task<IAssociationEventListener>) TransportFor(Address address)
+        public (TestTransport, Task<IAssociationEventListener>)? TransportFor(Address address)
         {
-            _transportTable.TryGetValue(address, out var transport);
+            if (!_transportTable.TryGetValue(address, out var transport))
+                return null;
+            
             return transport;
         }
 
@@ -794,8 +795,8 @@ namespace Akka.Remote.Transport
             get
             {
                 return !Inbound
-                    ? (LocalAddress(Address), RemoteAddress(Address))
-                    : (RemoteAddress(Address), LocalAddress(Address));
+                    ? (LocalAddress, RemoteAddress)
+                    : (RemoteAddress, LocalAddress);
             }
         }
 

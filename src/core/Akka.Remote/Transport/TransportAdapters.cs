@@ -274,8 +274,7 @@ namespace Akka.Remote.Transport
                 var listenAddress = listenerTask.Result.Item1;
                 var listenerPromise = listenerTask.Result.Item2;
                 listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task).ConfigureAwait(false));
-                return
-                    (SchemeAugmenter.AugmentScheme(listenAddress)(Address), upstreamListenerPromise(TaskCompletionSource<IAssociationEventListener>));
+                return (SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
             }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 

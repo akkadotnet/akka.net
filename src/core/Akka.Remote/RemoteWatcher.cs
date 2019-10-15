@@ -457,7 +457,7 @@ namespace Akka.Remote
                 {
                     var list = new List<(IActorRef, IActorRef)>(pair.Value.Count);
                     var wee = pair.Key;
-                    list.AddRange(pair.Value.Select(wer => (wee, wer)));
+                    list.AddRange(pair.Value.Select(wer => ((IActorRef)wee, (IActorRef)wer)));
                     return list;
                 }).ToArray());
                 Sender.Tell(new Stats(watchSet.Count(), WatchingNodes.Count, watchSet,

@@ -401,7 +401,7 @@ namespace Akka.Remote.Transport
             {
                 var st = message as SetThrottle;
                 var naked = NakedAddress(st.Address);
-                _throttlingModes[naked] = (st.Mode(ThrottleMode), st.Direction(ThrottleTransportAdapter.Direction));
+                _throttlingModes[naked] = (st.Mode, st.Direction);
                 var ok = Task.FromResult(SetThrottleAck.Instance);
                 var modes = new List<Task<SetThrottleAck>>() { ok };
                 foreach (var handle in _handleTable)
@@ -479,7 +479,7 @@ namespace Akka.Remote.Transport
             {
                 var chkin = message as Checkin;
                 var naked = NakedAddress(chkin.Origin);
-                _handleTable.Add((naked(Address), chkin.ThrottlerHandle(ThrottlerHandle)));
+                _handleTable.Add((naked, chkin.ThrottlerHandle));
                 SetMode(naked, chkin.ThrottlerHandle);
             }
         }
