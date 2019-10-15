@@ -386,7 +386,7 @@ namespace Akka.Streams.Tests.IO
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return (r, ByteString.FromBytes(buf, 0, r));
+            return (r(int), ByteString.FromBytes(buf, 0, r)(ByteString));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)
