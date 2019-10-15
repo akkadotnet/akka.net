@@ -137,8 +137,8 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             }, _config.Slave);
 
             var minMax = IsNode(_config.Master)
-                ? (TimeSpan.Zero(TimeSpan), TimeSpan.FromMilliseconds(500)(TimeSpan))
-                : (TimeSpan.FromSeconds(0.3)(TimeSpan), TimeSpan.FromSeconds(3)(TimeSpan));
+                ? (TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
+                : (TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(3));
 
             Within(minMax.Item1, minMax.Item2, () =>
             {

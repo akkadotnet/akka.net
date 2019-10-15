@@ -188,13 +188,10 @@ namespace Akka.Remote.TestKit
         {
             readonly IChannel _channel;
             public IChannel Channel { get { return _channel; } }
-            readonly (string, IActorRef) _runningOp;
-            (string, IActorRef) RunningOp
-            {
-                get { return _runningOp; }
-                }
+            readonly (string, IActorRef)? _runningOp;
+            public (string, IActorRef)? RunningOp => _runningOp;
 
-            public Data(IChannel channel, (string, IActorRef) runningOp)
+            public Data(IChannel channel, (string, IActorRef)? runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
@@ -247,7 +244,7 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            public Data Copy((string, IActorRef) runningOp)
+            public Data Copy((string, IActorRef)? runningOp)
             {
                 return new Data(Channel, runningOp);
             }
@@ -448,24 +445,24 @@ namespace Akka.Remote.TestKit
                         else
                         {
                             object response;
-                            if (barrierResult.Name != @event.StateData.RunningOp.Item1)
+                            if (barrierResult.Name != @event.StateData.RunningOp.Value.Item1)
                             {
                                 response =
                                     new Failure(
                                         new Exception("wrong barrier " + barrierResult + " received while waiting for " +
-                                                      @event.StateData.RunningOp.Item1));
+                                                      @event.StateData.RunningOp.Value.Item1));
                             }
                             else if (!barrierResult.Success)
                             {
                                 response =
                                     new Failure(
-                                        new Exception("barrier failed:" + @event.StateData.RunningOp.Item1));
+                                        new Exception("barrier failed:" + @event.StateData.RunningOp.Value.Item1));
                             }
                             else
                             {
                                 response = barrierResult.Name;
                             }
-                            @event.StateData.RunningOp.Item2.Tell(response);
+                            @event.StateData.RunningOp.Value.Item2.Tell(response);
                         }
                         return Stay().Using(@event.StateData.Copy(runningOp: null));
                     }
@@ -478,7 +475,7 @@ namespace Akka.Remote.TestKit
                         }
                         else
                         {
-                            @event.StateData.RunningOp.Item2.Tell(addressReply.Addr);
+                            @event.StateData.RunningOp.Value.Item2.Tell(addressReply.Addr);
                         }
                         return Stay().Using(@event.StateData.Copy(runningOp: null));
                     }

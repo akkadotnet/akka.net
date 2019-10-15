@@ -197,7 +197,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
                         var stats = ExpectMsg<Remote.RemoteWatcher.Stats>();
-                        stats.WatchingRefs.Contains((subject5(IActorRef), TestActor(IActorRef))).ShouldBeTrue();
+                        stats.WatchingRefs.Contains((subject5, TestActor)).ShouldBeTrue();
                         stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeTrue();
                     });
                 }, _config.First);

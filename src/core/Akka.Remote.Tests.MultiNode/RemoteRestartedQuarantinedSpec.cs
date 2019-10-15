@@ -49,7 +49,7 @@ namespace Akka.Remote.Tests.MultiNode
             {
                 Receive<string>(_ => Context.System.Terminate(), s => "shutdown".Equals(s));
                 Receive<string>(
-                    _ => Sender.Tell((AddressUidExtension.Uid(Context.System)(int), Self(IActorRef))),
+                    _ => Sender.Tell((AddressUidExtension.Uid(Context.System), Self)),
                     s => "identify".Equals(s));
             }
         }
