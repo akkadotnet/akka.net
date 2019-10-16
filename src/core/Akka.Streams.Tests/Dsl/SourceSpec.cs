@@ -324,7 +324,7 @@ namespace Akka.Streams.Tests.Dsl
                 var b = tuple.Item2;
                 if (a > 10000000)
                     return null;
-                return ((b, a + b), a) as ((int, int), int)?;
+                return ((b, a + b), a);
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
-                    return ((b, a + b), a) as ((int, int), int)?;
+                    return ((b, a + b), a);
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
@@ -363,8 +363,8 @@ namespace Akka.Streams.Tests.Dsl
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Task.FromResult<((int, int), int)?>(null);
-                return Task.FromResult(((b, a + b), a) as ((int, int), int)?);
+                    return Task.FromResult<((int, int), int)>(null);
+                return Task.FromResult(((b, a + b), a));
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -379,7 +379,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
-                return ((b, a + b), a) as ((int, int), int)?;
+                return ((b, a + b), a);
             })
             .Take(36)
             .RunAggregate(new LinkedList<int>(), (ints, i) =>
