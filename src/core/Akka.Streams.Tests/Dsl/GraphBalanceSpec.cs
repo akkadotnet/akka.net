@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
-                    Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
+                    Sink.AsPublisher<int>(false), (left, right) => ((IPublisher<int>, IPublisher<int>)?)(left, right), (b, p2Sink, p3Sink) =>
                     {
                         var balance = b.Add(new Balance<int>(3, true));
                         var source = Source.From(Enumerable.Range(1, 3)).MapMaterializedValue<(IPublisher<int>, IPublisher<int>)?>(_ => null);
@@ -119,8 +119,8 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(balance.Out(2)).To(p3Sink);
                         return ClosedShape.Instance;
                     })).Run(Materializer);
-                var p2 = t.Item1;
-                var p3 = t.Item2;
+                var p2 = t.Value.Item1;
+                var p3 = t.Value.Item2;
 
                 var sub1 = s1.ExpectSubscription();
                 sub1.Request(1);
@@ -173,7 +173,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sink = Sink.First<IEnumerable<int>>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(sink, sink, sink, sink, sink, ValueTuple.Create,
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(sink, sink, sink, sink, sink, 
+                    (s1, s2, s3, s4, s5) => ValueTuple.Create(s1, s2, s3, s4, s5) as (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?,
                     (b, s1, s2, s3, s4, s5) =>
                     {
                         var balance = b.Add(new Balance<int>(5, true));
@@ -187,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
+                var task = Task.WhenAll(t.Value.Item1, t.Value.Item2, t.Value.Item3, t.Value.Item4, t.Value.Item5);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.SelectMany(l=>l).ShouldAllBeEquivalentTo(Enumerable.Range(0, 15));
             }, Materializer);
@@ -200,7 +201,8 @@ namespace Akka.Streams.Tests.Dsl
             {
                 const int numElementsForSink = 10000;
                 var outputs = Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(outputs, outputs, outputs, ValueTuple.Create,
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(outputs, outputs, outputs, 
+                    (o1, o2, o3) => ValueTuple.Create(o1, o2, o3) as (Task<int>, Task<int>, Task<int>)?,
                     (b, o1, o2, o3) =>
                     {
                         var balance = b.Add(new Balance<int>(3, true));
@@ -215,7 +217,7 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
+                var task = Task.WhenAll(t.Value.Item1, t.Value.Item2, t.Value.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().NotContain(0);
                 task.Result.Sum().Should().Be(numElementsForSink*3);
@@ -228,7 +230,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var probe = this.SinkProbe<int>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, ValueTuple.Create,
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe,
+                    (o1, o2, o3) => ValueTuple.Create(o1, o2, o3) as (TestSubscriber.Probe<int>, TestSubscriber.Probe<int>, TestSubscriber.Probe<int>)?,
                     (b, o1, o2, o3) =>
                     {
                         var balance = b.Add(new Balance<int>(3));
@@ -241,9 +244,9 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(balance.Out(2)).To(o3);
                         return ClosedShape.Instance;
                     })).Run(Materializer);
-                var p1 = t.Item1;
-                var p2 = t.Item2;
-                var p3 = t.Item3;
+                var p1 = t.Value.Item1;
+                var p2 = t.Value.Item2;
+                var p3 = t.Value.Item3;
 
                 p1.RequestNext(1);
                 p2.RequestNext(2);

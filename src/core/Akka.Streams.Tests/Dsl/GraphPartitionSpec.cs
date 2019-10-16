@@ -37,7 +37,9 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var s = Sink.Seq<int>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, ValueTuple.Create, (b, sink1, sink2, sink3) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, 
+                    (sink1, sink2, sink3) => ValueTuple.Create(sink1, sink2, sink3) as (Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>)?, 
+                    (b, sink1, sink2, sink3) =>
                 {
                     var partition = b.Add(new Partition<int>(3, i => i > 3 ? 0 : (i < 3 ? 1 : 2)));
                     var source =
@@ -53,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
+                var task = Task.WhenAll(t.Value.Item1, t.Value.Item2, t.Value.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result[0].ShouldAllBeEquivalentTo(new[] {4, 5});
                 task.Result[1].ShouldAllBeEquivalentTo(new[] {1, 2});

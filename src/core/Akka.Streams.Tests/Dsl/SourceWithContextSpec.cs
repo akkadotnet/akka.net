@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<(Message, long)>();
+            var sink = this.CreateSubscriberProbe<(Message, long)?>();
 
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
                 .AsSource()
-                .Select(t => t.Item1)
+                .Select(t => t.Value.Item1)
                 .RunWith(Sink.FromSubscriber(sink), Materializer);
 
             var sub = sink.ExpectSubscription();
