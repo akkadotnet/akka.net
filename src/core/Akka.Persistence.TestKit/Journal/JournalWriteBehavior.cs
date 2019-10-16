@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="JournalWriteBehavior.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -22,7 +22,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -37,7 +37,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -59,7 +59,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see>> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -87,7 +87,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -109,7 +109,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -131,7 +131,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -153,7 +153,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -178,7 +178,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -204,7 +204,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -236,7 +236,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -268,7 +268,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -301,7 +301,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -333,7 +333,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>
@@ -360,7 +360,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will **NOT** crash, but <see cref="UntypedPersistentActor.OnPersistRejected"/> will be called
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
         ///         on each rejected message.
         ///     </para>
         ///     <para>

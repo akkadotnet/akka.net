@@ -9,7 +9,7 @@ Akka Streams provides a way of handling File IO and TCP connections with Streams
 ## Streaming TCP
 
 ### Accepting connections: Echo Server
-In order to implement a simple EchoServer we bind to a given address, which returns a `Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>>`, which will emit an `IncomingConnection` element for each new connection that the Server s`hould handle:
+In order to implement a simple EchoServer we bind to a given address, which returns a `Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>>`, which will emit an `IncomingConnection` element for each new connection that the Server should handle:
 
 [!code-csharp[StreamTcpDocTests.cs](../../examples/DocsExamples/Streams/StreamTcpDocTests.cs?name=echo-server-simple-bind)]
 
@@ -47,7 +47,7 @@ A resilient REPL client would be more sophisticated than this, for example it sh
 When writing such end-to-end back-pressured systems you may sometimes end up in a situation of a loop, in which either side is waiting for the other one to start the conversation. One does not need to look far to find examples of such back-pressure loops. In the two examples shown previously, we always assumed that the side we are connecting to would start the conversation, which effectively means both sides are back-pressured and can not get the conversation started. There are multiple ways of dealing with this which are explained in depth in [Graph cycles, liveness and deadlocks](xref:streams-working-with-graphs#graph-cycles-liveness-and-deadlocks), however in client-server scenarios it is often the simplest to make either side simply send an initial message.
 
 > [!NOTE]
-> In case of back-pressured cycles (which can occur even between different systems) sometimes you have to decide which of the sides has start the conversation in order to kick it off. This can be often done by injecting an initial message from one of the sides–a conversation starter.
+> In case of back-pressured cycles (which can occur even between different systems) sometimes you have to decide which of the sides has start the conversation in order to kick it off. This can often be done by injecting an initial message from one of the sides–a conversation starter.
 
 To break this back-pressure cycle we need to inject some initial message, a “conversation starter”. First, we need to decide which side of the connection should remain passive and which active. Thankfully in most situations finding the right spot to start the conversation is rather simple, as it often is inherent to the protocol we are trying to implement using Streams. In chat-like applications, which our examples resemble, it makes sense to make the Server initiate the conversation by emitting a “hello” message:
 

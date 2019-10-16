@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingAdapterBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -219,7 +219,7 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="Warning" /> instead!
+        /// Obsolete. Use <see cref="Warning(string, object[])" /> instead!
         /// </summary>
         /// <param name="format">N/A</param>
         /// <param name="args">N/A</param>
