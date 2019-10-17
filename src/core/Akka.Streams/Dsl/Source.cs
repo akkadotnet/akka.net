@@ -613,12 +613,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TElem">TBD</typeparam>
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
         /// <returns>TBD</returns>
         public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
-        {
-            throw new NotImplementedException();
-        }
+            => FromGraph(new UnfoldInfinite<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.UnfoldInf);
 
         /// <summary>
         /// A <see cref="Source{TOut,TMat}"/> with no elements, i.e. an empty stream that is completed immediately for every connected <see cref="Sink{TIn,TMat}"/>.

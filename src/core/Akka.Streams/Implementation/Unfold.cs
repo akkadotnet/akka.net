@@ -173,4 +173,74 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TElement">TBD</typeparam>
+    [InternalApi]
+    public class UnfoldInfinite<TState, TElement> : GraphStage<SourceShape<TElement>>
+    {
+        #region internal classes
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly UnfoldInfinite<TState, TElement> _stage;
+            private TState _state;
+
+            public Logic(UnfoldInfinite<TState, TElement> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _state = _stage.State;
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                var t = _stage.UnfoldFunc(_state);
+                
+                Push(_stage.Out, t.Item2);
+                _state = t.Item1;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly TState State;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Func<TState, Tuple<TState, TElement>> UnfoldFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Outlet<TElement> Out = new Outlet<TElement>("UnfoldInfinite.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="unfoldFunc">TBD</param>
+        public UnfoldInfinite(TState state, Func<TState, Tuple<TState, TElement>> unfoldFunc)
+        {
+            State = state;
+            UnfoldFunc = unfoldFunc;
+            Shape = new SourceShape<TElement>(Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override SourceShape<TElement> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
 }
