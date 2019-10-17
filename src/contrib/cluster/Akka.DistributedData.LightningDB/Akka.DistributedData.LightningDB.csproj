@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LightningDB" Version="0.9.8" />
+    <PackageReference Include="LightningDB" Version="0.10.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
