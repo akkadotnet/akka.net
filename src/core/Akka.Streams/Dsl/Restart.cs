@@ -375,7 +375,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
         {
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
-            private (SubSourceOutlet<TIn>, SubSinkInlet<TOut>) _activeOutIn;
+            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
 
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.MinBackoff, stage.MaxBackoff, stage.RandomFactor, stage.OnlyOnFailures, stage.MaxRestarts)
@@ -392,7 +392,7 @@ namespace Akka.Streams.Dsl
                 if (IsAvailable(_stage.Out))
                     sinkIn.Pull();
 
-                _activeOutIn = (sourceOut, sinkIn);
+                _activeOutIn = Tuple.Create(sourceOut, sinkIn);
             }
 
             protected override void Backoff()

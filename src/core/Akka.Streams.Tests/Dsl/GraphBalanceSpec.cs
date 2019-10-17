@@ -111,12 +111,12 @@ namespace Akka.Streams.Tests.Dsl
                         var balance = b.Add(new Balance<int>(3, true));
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<(IPublisher<int>, IPublisher<int>)>(_ => null);
+                                  .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0))
                             .To(
                                 Sink.FromSubscriber(s1)
-                                    .MapMaterializedValue<(IPublisher<int>, IPublisher<int>)>(_ => null));
+                                    .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>))));
                         b.From(balance.Out(1)).To(p2Sink);
                         b.From(balance.Out(2)).To(p3Sink);
                         return ClosedShape.Instance;
@@ -179,7 +179,7 @@ namespace Akka.Streams.Tests.Dsl
                     (b, s1, s2, s3, s4, s5) =>
                     {
                         var balance = b.Add(new Balance<int>(5, true));
-                        var source = Source.From(Enumerable.Range(0, 15)).MapMaterializedValue<(Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?>(_=> null);
+                        var source = Source.From(Enumerable.Range(0, 15)).MapMaterializedValue(_=> default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).Via(Flow.Create<int>().Grouped(15)).To(s1);
                         b.From(balance.Out(1)).Via(Flow.Create<int>().Grouped(15)).To(s2);
@@ -209,7 +209,7 @@ namespace Akka.Streams.Tests.Dsl
                         var source =
                             Source.Repeat(1)
                                 .Take(numElementsForSink*3)
-                                .MapMaterializedValue<(Task<int>, Task<int>, Task<int>)?>(_ => null);
+                                .MapMaterializedValue(_ => default((Task<int>, Task<int>, Task<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).To(o1);
                         b.From(balance.Out(1)).To(o2);
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
                         var balance = b.Add(new Balance<int>(3));
                         var source =
                             Source.From(Enumerable.Range(1,7))
-                                .MapMaterializedValue<(TestSubscriber.Probe<int>, TestSubscriber.Probe<int>, TestSubscriber.Probe<int>)?>(_ => null);
+                                .MapMaterializedValue(_ => default((TestSubscriber.Probe<int>, TestSubscriber.Probe<int>, TestSubscriber.Probe<int>)));
                         b.From(source).To(balance.In);
                         b.From(balance.Out(0)).To(o1);
                         b.From(balance.Out(1)).To(o2);

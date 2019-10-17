@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
+using Akka.Streams.Util;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -32,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = this.SourceProbe<int>()
                 .Select(i => (i, i))
-                .Via(Retry.Create(RetryFlow<int>(), s => s < 42 ? (s + 1, s + 1) : null))
+                .Via(Retry.Create(RetryFlow<int>(), s => s < 42 ? (s + 1, s + 1) : Option<(int, int)>.None))
                 .ToMaterialized(this.SinkProbe<(Result<int>, int)>(), Keep.Both)
                 .Run(Sys.Materializer());
 

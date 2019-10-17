@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Dsl
@@ -25,7 +26,7 @@ namespace Akka.Streams.Dsl
         /// of `input` and `state`, and produces a tuple of <see cref="Result{T}"/> of `output` and `state`.
         /// If the flow emits a failed element (i.e. <see cref="Result{T}.IsSuccess"/> is false), the <paramref name="retryWith"/>
         /// function is fed with the `state` of the failed element, and may produce a new input-state tuple to pass through
-        /// the original flow. The function may also yield `null` instead of `(input, state)`, which means not to retry a failed element.
+        /// the original flow. The function may also yield `Option.None` instead of `(input, state)`, which means not to retry a failed element.
         /// </para>
         /// <para>
         /// IMPORTANT CAVEAT:
@@ -43,7 +44,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">materialized value type</typeparam>
         [ApiMayChange]
         public static IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> Create<TIn, TState, TOut, TMat>(
-            IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> flow, Func<TState, (TIn, TState)> retryWith)
+            IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> flow, Func<TState, Option<(TIn, TState)>> retryWith)
         {
             return GraphDsl.Create(flow, (b, origFlow) =>
             {
@@ -106,7 +107,7 @@ namespace Akka.Streams.Dsl
             {
                 private readonly RetryCoordinator<TIn, TState, TOut> _retry;
                 private bool _elementInCycle;
-                private (TIn, TState) _pending;
+                private (TIn, TState)? _pending;
 
                 public Logic(RetryCoordinator<TIn, TState, TOut> retry) : base(retry.Shape)
                 {
@@ -145,18 +146,18 @@ namespace Akka.Streams.Dsl
                         else
                         {
                             var r = retry._retryWith(t.Item2);
-                            if (r == null)
+                            if (!r.HasValue)
                                 PushAndCompleteIfLast(t);
                             else
                             {
                                 Pull(retry.In2);
                                 if (IsAvailable(retry.Out2))
                                 {
-                                    Push(retry.Out2, r);
+                                    Push(retry.Out2, r.Value);
                                     _elementInCycle = true;
                                 }
                                 else
-                                    _pending = r;
+                                    _pending = r.Value;
                             }
 
                         }
@@ -168,7 +169,7 @@ namespace Akka.Streams.Dsl
                         {
                             if (_pending != null)
                             {
-                                Push(retry.Out2, _pending);
+                                Push(retry.Out2, _pending.Value);
                                 _pending = null;
                                 _elementInCycle = true;
                             }
@@ -191,9 +192,9 @@ namespace Akka.Streams.Dsl
 
             #endregion
 
-            private readonly Func<TState, (TIn, TState)> _retryWith;
+            private readonly Func<TState, Option<(TIn, TState)>> _retryWith;
 
-            public RetryCoordinator(Func<TState, (TIn, TState)> retryWith)
+            public RetryCoordinator(Func<TState, Option<(TIn, TState)>> retryWith)
             {
                 _retryWith = retryWith;
 

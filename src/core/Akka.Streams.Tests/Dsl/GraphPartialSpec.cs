@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<(NotUsed, NotUsed, Task<IEnumerable<int>>)?>(_ => null);
+                                .MapMaterializedValue(_ => default((NotUsed, NotUsed, Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<(Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?>(_ => null);
+                                .MapMaterializedValue(_ => default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<((Task<int>, Task<int>), (Task<int>, Task<int>), Task<IEnumerable<int>>)?>(_ => null);
+                                .MapMaterializedValue(_ => default(((Task<int>, Task<int>), (Task<int>, Task<int>), Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);

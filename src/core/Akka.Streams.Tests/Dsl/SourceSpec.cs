@@ -339,14 +339,14 @@ namespace Akka.Streams.Tests.Dsl
         {
             EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
-                var task = Source.Unfold<((int, int), int)>(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold((0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
                     
-                    return ((b, a + b), a);
+                    return ((b, a + b), a).AsOption();
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);

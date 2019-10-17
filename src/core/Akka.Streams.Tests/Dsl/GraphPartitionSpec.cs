@@ -42,8 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                     var partition = b.Add(new Partition<int>(3, i => i > 3 ? 0 : (i < 3 ? 1 : 2)));
                     var source =
                         Source.From(Enumerable.Range(1, 5))
-                            .MapMaterializedValue<(Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>)?>(
-                                _ => null);
+                            .MapMaterializedValue(_ => default((Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>)));
 
                     b.From(source).To(partition.In);
                     b.From(partition.Out(0)).To(sink1.Inlet);

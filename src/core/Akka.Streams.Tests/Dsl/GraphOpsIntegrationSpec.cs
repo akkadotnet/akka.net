@@ -136,11 +136,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GraphDSLs_must_support_wikipedia_Topological_sorting_2()
         {
-            Func<int, Source<int, (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?>> source =
+            Func<int, Source<int, (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)>> source =
                 i =>
                     Source.From(new[] {i})
-                        .MapMaterializedValue<(Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?>(
-                            _ => null);
+                          .MapMaterializedValue(_ => default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
 
             // see https://en.wikipedia.org/wiki/Topological_sorting#mediaviewer/File:Directed_acyclic_graph.png
             var seqSink = Sink.First<IEnumerable<int>>();
@@ -237,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<int, Source<int, (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>> source =
                 i =>
                     Source.From(Enumerable.Range(i, 3))
-                        .MapMaterializedValue<(NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>(_ => null);
+                        .MapMaterializedValue(_ => default((NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)));
             var shuffler = Shuffle.Create(Flow.Create<int>().Select(x => x + 1));
 
             var task =

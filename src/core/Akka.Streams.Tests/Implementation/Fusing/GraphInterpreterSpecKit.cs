@@ -75,19 +75,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public AssemblyBuilder Connect<T>(GraphInterpreter.UpstreamBoundaryStageLogic upstream, Inlet<T> inlet)
                 {
-                    _upstreams.Add(new (GraphInterpreter.UpstreamBoundaryStageLogic, Inlet)(upstream, inlet));
+                    _upstreams.Add((upstream, (Inlet)inlet));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, GraphInterpreter.DownstreamBoundaryStageLogic downstream)
                 {
-                    _downstreams.Add(new (Outlet, GraphInterpreter.DownstreamBoundaryStageLogic)(outlet, downstream));
+                    _downstreams.Add(((Outlet)outlet, downstream));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, Inlet<T> inlet)
                 {
-                    _connections.Add(new (Outlet, Inlet)(outlet, inlet));
+                    _connections.Add(((Outlet)outlet, (Inlet)inlet));
                     return this;
                 }
 

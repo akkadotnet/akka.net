@@ -46,7 +46,7 @@ namespace Akka.Streams.Dsl
             var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
-                return ReferenceEquals(result, null) ? null : (result, x.Item2);
+                return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
             return flow.Via(Flow.FromGraph(stage));
         }
@@ -191,7 +191,7 @@ namespace Akka.Streams.Dsl
             var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
-                return ReferenceEquals(result, null) ? null : (result, x.Item2);
+                return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
             return flow.Via(Flow.FromGraph(stage));
         }

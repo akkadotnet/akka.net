@@ -218,7 +218,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, Tuple<TState, TElement>> UnfoldFunc;
+        public readonly Func<TState, (TState, TElement)> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -229,7 +229,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public UnfoldInfinite(TState state, Func<TState, Tuple<TState, TElement>> unfoldFunc)
+        public UnfoldInfinite(TState state, Func<TState, (TState, TElement)> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;

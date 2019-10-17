@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
             {
                 var x = ThreadLocalRandom.Current.Next();
-                return (new[] {x}, new[] {x.ToString()});
+                return ((ICollection<int>)new[] {x}, (ICollection<string>)new[] {x.ToString()});
             }).ToArray());
 
             var n = ThreadLocalRandom.Current.Next(10);
