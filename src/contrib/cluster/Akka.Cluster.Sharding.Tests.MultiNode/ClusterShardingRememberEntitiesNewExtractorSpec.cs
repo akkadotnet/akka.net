@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -133,7 +134,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         static readonly int ShardCount = 3;
 
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
 
         internal static ExtractShardId extractShardId1 = message =>
         {

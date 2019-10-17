@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,7 +90,7 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is Msg msg ? (msg.Id.ToString()(string), msg.Message(object)) : null;
+            message is Msg msg ? (msg.Id.ToString(), msg.Message) : Option<(string, object)>.None;
 
         private readonly ExtractShardId _extractShard = message =>
             message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;

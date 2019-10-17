@@ -475,7 +475,7 @@ namespace Akka.Cluster.Sharding
                 case Shard.PassivateIdleTick _:
                     shard.PassivateIdleEntities();
                     return true;
-                case var _ when shard.ExtractEntityId(message) != null:
+                case var _ when shard.ExtractEntityId(message).HasValue:
                     shard.DeliverMessage(message, shard.Context.Sender);
                     return true;
             }
@@ -693,8 +693,8 @@ namespace Akka.Cluster.Sharding
         private static void DeliverMessage<TShard>(this TShard shard, object message, IActorRef sender) where TShard : IShard
         {
             var t = shard.ExtractEntityId(message);
-            var id = t.Item1;
-            var payload = t.Item2;
+            var id = t.Value.Item1;
+            var payload = t.Value.Item2;
 
             if (string.IsNullOrEmpty(id))
             {

@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.IO;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -143,7 +144,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id, message) : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id, message) : Option<(string, object)>.None;
         internal ExtractShardId extractShardId = message => message is Ping p ? p.Id[0].ToString() : null;
 
         private readonly Lazy<IActorRef> _region;

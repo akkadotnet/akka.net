@@ -537,7 +537,7 @@ namespace Akka.Cluster.Sharding
                 case StartEntity _:
                     DeliverStartEntity(message, Sender);
                     return true;
-                case var _ when ExtractEntityId(message) != null:
+                case var _ when ExtractEntityId(message).HasValue:
                     DeliverMessage(message, Sender);
                     return true;
                 default:

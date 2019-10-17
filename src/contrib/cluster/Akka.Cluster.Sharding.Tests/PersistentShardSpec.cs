@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -61,7 +62,7 @@ namespace Akka.Cluster.Sharding.Tests
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => ("entity-1", (object)"msg"),
+              _ => new ValueTuple<string, object>("entity-1", "msg"),
               _ => "shard-1",
               PoisonPill.Instance
             ));

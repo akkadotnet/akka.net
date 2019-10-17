@@ -1031,7 +1031,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            (EntityId, Msg) extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
@@ -1058,7 +1058,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            (EntityId, Msg) extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
@@ -1136,7 +1136,7 @@ namespace Akka.Cluster.Sharding
     /// message to support wrapping in message envelope that is unwrapped before
     /// sending to the entity actor.
     /// </summary>
-    public delegate (EntityId, Msg) ExtractEntityId(Msg message);
+    public delegate Option<(EntityId, Msg)> ExtractEntityId(Msg message);
 
     /// <summary>
     /// Interface of functions to extract entity id,  shard id, and the message to send
@@ -1188,9 +1188,8 @@ namespace Akka.Cluster.Sharding
             {
                 if (self.EntityId(msg) != null)
                     return (self.EntityId(msg), self.EntityMessage(msg));
-                //TODO: should we really use tuples?
-
-                return null;
+                
+                return Option<(string, object)>.None;
             };
 
             return extractEntityId;

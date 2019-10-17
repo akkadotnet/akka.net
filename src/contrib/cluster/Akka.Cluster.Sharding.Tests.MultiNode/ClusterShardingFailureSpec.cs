@@ -14,6 +14,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -156,7 +157,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case Add msg:
                     return (msg.Id, message);
             }
-            return null;
+            return Option<(string, object)>.None;
         };
 
         internal ExtractShardId extractShardId = message =>

@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -127,7 +128,7 @@ namespace Akka.Cluster.Sharding.Tests
         readonly static int NumberOfShards = 3;
         readonly static string ShardTypeName = "Ping";
 
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id.ToString(), message) : Option<(string, object)>.None;
 
         internal ExtractShardId extractShardId = message => message is Ping p ? (p.Id % NumberOfShards).ToString() : null;
 

@@ -20,6 +20,7 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -201,7 +202,7 @@ namespace Akka.Cluster.Sharding.Tests
                 case Get msg:
                     return (msg.CounterId.ToString(), message);
             }
-            return null;
+            return Option<(string, object)>.None;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>

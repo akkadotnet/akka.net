@@ -19,6 +19,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Extensions;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
