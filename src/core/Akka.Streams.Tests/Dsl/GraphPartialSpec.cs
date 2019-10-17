@@ -43,8 +43,7 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var task =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), 
-                    (d1, d2, sink) => ValueTuple.Create(d1, d2, sink) as (NotUsed, NotUsed, Task<IEnumerable<int>>)?,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
@@ -56,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(d2.Outlet).Via(Flow.Create<int>().Grouped(100)).To(sink.Inlet);
 
                         return ClosedShape.Instance;
-                    })).Run(Materializer).Value.Item3;
+                    })).Run(Materializer).Item3;
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(new[] {4, 8, 12});
@@ -78,8 +77,7 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var t =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), 
-                    (d1, d2, sink) => ValueTuple.Create(d1, d2, sink) as (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
@@ -93,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Value.Item1, t.Value.Item2, t.Value.Item3);
+            var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result[0].ShouldAllBeEquivalentTo(new[] {1, 2, 3});
             task.Result[1].ShouldAllBeEquivalentTo(new[] {2, 4, 6});
@@ -122,8 +120,7 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var t =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), 
-                    (d1, d2, sink) => ValueTuple.Create(d1, d2, sink) as ((Task<int>, Task<int>), (Task<int>, Task<int>), Task<IEnumerable<int>>)?,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
@@ -137,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Value.Item1.Item1, t.Value.Item1.Item2, t.Value.Item2.Item1, t.Value.Item2.Item2);
+            var task = Task.WhenAll(t.Item1.Item1, t.Item1.Item2, t.Item2.Item1, t.Item2.Item2);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(new[] {6, 12, 12, 24});
             t.Item3.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

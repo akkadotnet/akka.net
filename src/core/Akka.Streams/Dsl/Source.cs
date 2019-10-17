@@ -549,7 +549,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Repeat<T>(T element)
         {
-            ValueTuple<T, T>? next = (element, element);
+            var next = (element(T), element(T));
             return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
         }
 
@@ -571,7 +571,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, (TState, TElem)?> unfold)
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, (TState, TElem)> unfold)
             => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
@@ -594,7 +594,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfoldAsync">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<(TState, TElem)?>> unfoldAsync)
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<(TState, TElem)>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>

@@ -2153,7 +2153,7 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(
             this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
-            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => ((TOut, TCtx)?)(x, fn(x))));
+            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => (x, fn(x))));
       
         /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.

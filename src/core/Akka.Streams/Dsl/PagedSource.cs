@@ -59,7 +59,7 @@ namespace Akka.Streams.Dsl
                         if (page.Items != null && page.Items.Any())
                             return (page.NextKey, page);
                         else
-                            return (ValueTuple<Option<TKey>, Page<T, TKey>>?)null;
+                            return null;
                     }
                 );
 

@@ -43,7 +43,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">materialized value type</typeparam>
         [ApiMayChange]
         public static IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> Create<TIn, TState, TOut, TMat>(
-            IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> flow, Func<TState, (TIn, TState)?> retryWith)
+            IGraph<FlowShape<(TIn, TState), (Result<TOut>, TState)>, TMat> flow, Func<TState, (TIn, TState)> retryWith)
         {
             return GraphDsl.Create(flow, (b, origFlow) =>
             {
@@ -106,7 +106,7 @@ namespace Akka.Streams.Dsl
             {
                 private readonly RetryCoordinator<TIn, TState, TOut> _retry;
                 private bool _elementInCycle;
-                private (TIn, TState)? _pending;
+                private (TIn, TState) _pending;
 
                 public Logic(RetryCoordinator<TIn, TState, TOut> retry) : base(retry.Shape)
                 {
@@ -152,7 +152,7 @@ namespace Akka.Streams.Dsl
                                 Pull(retry.In2);
                                 if (IsAvailable(retry.Out2))
                                 {
-                                    Push(retry.Out2, r.Value);
+                                    Push(retry.Out2, r);
                                     _elementInCycle = true;
                                 }
                                 else
@@ -168,7 +168,7 @@ namespace Akka.Streams.Dsl
                         {
                             if (_pending != null)
                             {
-                                Push(retry.Out2, _pending.Value);
+                                Push(retry.Out2, _pending);
                                 _pending = null;
                                 _elementInCycle = true;
                             }
@@ -191,9 +191,9 @@ namespace Akka.Streams.Dsl
 
             #endregion
 
-            private readonly Func<TState, (TIn, TState)?> _retryWith;
+            private readonly Func<TState, (TIn, TState)> _retryWith;
 
-            public RetryCoordinator(Func<TState, (TIn, TState)?> retryWith)
+            public RetryCoordinator(Func<TState, (TIn, TState)> retryWith)
             {
                 _retryWith = retryWith;
 

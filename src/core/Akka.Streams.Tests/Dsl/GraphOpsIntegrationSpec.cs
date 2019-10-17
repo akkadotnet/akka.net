@@ -144,9 +144,7 @@ namespace Akka.Streams.Tests.Dsl
 
             // see https://en.wikipedia.org/wiki/Topological_sorting#mediaviewer/File:Directed_acyclic_graph.png
             var seqSink = Sink.First<IEnumerable<int>>();
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(seqSink, seqSink, seqSink, 
-                (sink2,sink9,sink10) => ValueTuple.Create(sink2,sink9,sink10) as (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)?, 
-                (b, sink2,sink9,sink10) =>
+            var t = RunnableGraph.FromGraph(GraphDsl.Create(seqSink, seqSink, seqSink, ValueTuple.Create, (b, sink2,sink9,sink10) =>
             {
                 var b3 = b.Add(new Broadcast<int>(2));
                 var b7 = b.Add(new Broadcast<int>(2));
@@ -186,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Value.Item1, t.Value.Item2, t.Value.Item3);
+            var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
             task.Result[0].ShouldAllBeEquivalentTo(new[] {5, 7});
@@ -236,15 +234,15 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GraphDSLs_must_be_possible_to_use_as_lego_bricks()
         {
-            Func<int, Source<int, (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)?>> source =
+            Func<int, Source<int, (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>> source =
                 i =>
                     Source.From(Enumerable.Range(i, 3))
-                        .MapMaterializedValue<(NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)?>(_ => null);
+                        .MapMaterializedValue<(NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>(_ => null);
             var shuffler = Shuffle.Create(Flow.Create<int>().Select(x => x + 1));
 
             var task =
                 RunnableGraph.FromGraph(GraphDsl.Create(shuffler, shuffler, shuffler, Sink.First<IEnumerable<int>>(),
-                    (s1, s2, s3, sink) => ValueTuple.Create(s1, s2, s3, sink) as (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)?,
+                    ValueTuple.Create,
                     (b, s1, s2, s3, sink) =>
                     {
                         var merge = b.Add(new Merge<int>(2));
@@ -264,7 +262,7 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(merge.Out).Via(Flow.Create<int>().Grouped(1000)).To(sink);
 
                         return ClosedShape.Instance;
-                    })).Run(Materializer).Value.Item4;
+                    })).Run(Materializer).Item4;
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(new[] {4, 5, 6, 13, 14, 15});
