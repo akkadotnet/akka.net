@@ -1760,8 +1760,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.SourceShape<T> Shape<T>(string name) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Single<T>(T element) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.ICancelable> Tick<T>(System.TimeSpan initialDelay, System.TimeSpan interval, T tick) { }
-        public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> Unfold<TState, TElem>(TState state, System.Func<TState, System.Tuple<TState, TElem>> unfold) { }
-        public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldAsync<TState, TElem>(TState state, System.Func<TState, System.Threading.Tasks.Task<System.Tuple<TState, TElem>>> unfoldAsync) { }
+        public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> Unfold<TState, TElem>(TState state, System.Func<TState, Akka.Streams.Util.Option<System.Tuple<TState, TElem>>> unfold) { }
+        public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldAsync<TState, TElem>(TState state, System.Func<TState, System.Threading.Tasks.Task<Akka.Streams.Util.Option<System.Tuple<TState, TElem>>>> unfoldAsync) { }
         public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldInfinite<TState, TElem>(TState state, System.Func<TState, System.Tuple<TState, TElem>> unfold) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResource<T, TSource>(System.Func<TSource> create, System.Func<TSource, Akka.Streams.Util.Option<T>> read, System.Action<TSource> close) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceAsync<T, TSource>(System.Func<System.Threading.Tasks.Task<TSource>> create, System.Func<TSource, System.Threading.Tasks.Task<Akka.Streams.Util.Option<T>>> read, System.Func<TSource, System.Threading.Tasks.Task> close) { }
@@ -3455,8 +3455,8 @@ namespace Akka.Streams.Implementation
     {
         public readonly Akka.Streams.Outlet<TElement> Out;
         public readonly TState State;
-        public readonly System.Func<TState, System.Tuple<TState, TElement>> UnfoldFunc;
-        public Unfold(TState state, System.Func<TState, System.Tuple<TState, TElement>> unfoldFunc) { }
+        public readonly System.Func<TState, Akka.Streams.Util.Option<System.Tuple<TState, TElement>>> UnfoldFunc;
+        public Unfold(TState state, System.Func<TState, Akka.Streams.Util.Option<System.Tuple<TState, TElement>>> unfoldFunc) { }
         public override Akka.Streams.SourceShape<TElement> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
@@ -3465,8 +3465,18 @@ namespace Akka.Streams.Implementation
     {
         public readonly Akka.Streams.Outlet<TElement> Out;
         public readonly TState State;
-        public readonly System.Func<TState, System.Threading.Tasks.Task<System.Tuple<TState, TElement>>> UnfoldFunc;
-        public UnfoldAsync(TState state, System.Func<TState, System.Threading.Tasks.Task<System.Tuple<TState, TElement>>> unfoldFunc) { }
+        public readonly System.Func<TState, System.Threading.Tasks.Task<Akka.Streams.Util.Option<System.Tuple<TState, TElement>>>> UnfoldFunc;
+        public UnfoldAsync(TState state, System.Func<TState, System.Threading.Tasks.Task<Akka.Streams.Util.Option<System.Tuple<TState, TElement>>>> unfoldFunc) { }
+        public override Akka.Streams.SourceShape<TElement> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class UnfoldInfinite<TState, TElement> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TElement>>
+    {
+        public readonly Akka.Streams.Outlet<TElement> Out;
+        public readonly TState State;
+        public readonly System.Func<TState, System.Tuple<TState, TElement>> UnfoldFunc;
+        public UnfoldInfinite(TState state, System.Func<TState, System.Tuple<TState, TElement>> unfoldFunc) { }
         public override Akka.Streams.SourceShape<TElement> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
@@ -4761,6 +4771,7 @@ namespace Akka.Streams.Util
     public class static Int32Extensions { }
     public class static ObjectExtensions
     {
+        public static Akka.Streams.Util.Option<T> AsOption<T>(this T obj) { }
         public static bool IsDefaultForType<T>(this T obj) { }
     }
     public struct Option<T>

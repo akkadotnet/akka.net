@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Util;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -323,7 +324,8 @@ namespace Akka.Streams.Tests.Dsl
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return null;
+                    return Option<Tuple<Tuple<int, int>, int>>.None;
+                
                 return Tuple.Create(Tuple.Create(b, a + b), a);
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
@@ -337,12 +339,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
-                var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold<Tuple<int, int>, int>(Tuple.Create(0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
+                    
                     return Tuple.Create(Tuple.Create(b, a + b), a);
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
@@ -363,8 +366,9 @@ namespace Akka.Streams.Tests.Dsl
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
-                return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
+                    return Task.FromResult(Option<Tuple<Tuple<int, int>, int>>.None);
+                
+                return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a).AsOption());
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -379,7 +383,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                return Tuple.Create(Tuple.Create(b, a + b), a).AsOption();
             })
             .Take(36)
             .RunAggregate(new LinkedList<int>(), (ints, i) =>
