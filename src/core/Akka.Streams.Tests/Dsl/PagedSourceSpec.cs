@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 

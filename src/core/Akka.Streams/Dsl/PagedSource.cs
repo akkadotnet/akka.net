@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {

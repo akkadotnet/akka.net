@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 
-namespace Akka.Streams.Util
+namespace Akka.Util
 {
     /// <summary>
     /// Allows tracking of whether a value has be initialized (even with the default value) for both

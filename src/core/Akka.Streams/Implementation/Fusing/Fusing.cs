@@ -13,6 +13,7 @@ using System.Reflection;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
+using Akka.Util;
 using Akka.Util.Internal;
 using Atomic = Akka.Streams.Implementation.StreamLayout.Atomic;
 using Combine = Akka.Streams.Implementation.StreamLayout.Combine;
