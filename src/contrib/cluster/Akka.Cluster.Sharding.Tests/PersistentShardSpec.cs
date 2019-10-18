@@ -57,12 +57,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
 
+            ExtractEntityId extractEntityId = _ => ("entity-1", "msg");
+
             var props = Props.Create(() => new PersistentShard(
               "cats",
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => new ValueTuple<string, object>("entity-1", "msg"),
+              extractEntityId,
               _ => "shard-1",
               PoisonPill.Instance
             ));
