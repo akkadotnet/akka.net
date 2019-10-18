@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.Remote.Transport
@@ -162,7 +163,7 @@ namespace Akka.Remote.Transport
         private async Task<AssociationHandle> DefaultAssociate(Address remoteAddress)
         {
             var transport = _registry.TransportFor(remoteAddress);
-            if (transport != null)
+            if (transport.HasValue)
             {
                 var remoteAssociationListenerTask = transport.Value.Item2;
                 var handlers = CreateHandlePair(transport.Value.Item1, remoteAddress);
@@ -226,7 +227,7 @@ namespace Akka.Remote.Transport
         public Task<bool> DefaultDisassociate(TestAssociationHandle handle)
         {
             var handlers = _registry.DeregisterAssociation(handle.Key);
-            if (handlers != null)
+            if (handlers.HasValue)
             {
                 handlers.Value.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
                 handlers.Value.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
@@ -695,11 +696,11 @@ namespace Akka.Remote.Transport
         ///     Ordered pair of addresses representing an association. First element must be the address of the
         ///     initiator.
         /// </param>
-        /// <returns>The original entries, or null if the key wasn't found in the table.</returns>
-        public (IHandleEventListener, IHandleEventListener)? DeregisterAssociation((Address, Address) key)
+        /// <returns>The original entries, or Option.None if the key wasn't found in the table.</returns>
+        public Option<(IHandleEventListener, IHandleEventListener)> DeregisterAssociation((Address, Address) key)
         {
             if (!_listenersTable.TryRemove(key, out var listeners))
-                return null;
+                return Option<(IHandleEventListener, IHandleEventListener)>.None;
             
             return listeners;
         }
@@ -735,10 +736,10 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="address">The address bound to the transport.</param>
         /// <returns>The transport, if it exists.</returns>
-        public (TestTransport, Task<IAssociationEventListener>)? TransportFor(Address address)
+        public Option<(TestTransport, Task<IAssociationEventListener>)> TransportFor(Address address)
         {
             if (!_transportTable.TryGetValue(address, out var transport))
-                return null;
+                return Option<(TestTransport, Task<IAssociationEventListener>)>.None;
             
             return transport;
         }
