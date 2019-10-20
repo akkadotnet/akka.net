@@ -77,7 +77,6 @@ namespace Akka.Persistence.TestKit.Tests
                 actor.Tell("inc", TestActor);
                 ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
 
-                actor = ActorOf(() => new CounterActor("test"), "counter");
                 actor.Tell("read", TestActor);
 
                 var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
