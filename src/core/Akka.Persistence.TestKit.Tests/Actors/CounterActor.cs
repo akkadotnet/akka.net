@@ -15,11 +15,12 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActor : UntypedPersistentActor
     {
-        public CounterActor(string id) {
+        public CounterActor(string id)
+        {
             this.PersistenceId = id;
         }
 
-        private int value = 0;
+        private int _value = 0;
 
         public override string PersistenceId { get; }
 
@@ -28,17 +29,17 @@ namespace Akka.Persistence.TestKit.Tests
             switch (message as string)
             {
                 case "inc":
-                    value++;
+                    _value++;
                     Persist(message, _ => { });
                     break;
 
                 case "dec":
-                    value++;
+                    _value++;
                     Persist(message, _ => { });
                     break;
 
                 case "read":
-                    Sender.Tell(value, Self);
+                    Sender.Tell(_value, Self);
                     break;
 
                 default:
@@ -51,11 +52,11 @@ namespace Akka.Persistence.TestKit.Tests
             switch (message as string)
             {
                 case "inc":
-                    value++;
+                    _value++;
                     break;
 
                 case "dec":
-                    value++;
+                    _value++;
                     break;
         
                 default:
@@ -69,14 +70,17 @@ namespace Akka.Persistence.TestKit.Tests
         [Fact]
         public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
-            await WithJournalWrite(write => write.Fail(), () =>
+            await WithJournalWrite(write => write.Fail(), async () =>
             {
-                var actor = ActorOf(() => new CounterActor("test"), "counter");
+                var counterProps = Props.Create(() => new CounterActor("test"));
+                var actor = ActorOf(counterProps, "counter");
+                
                 Watch(actor);
-
                 actor.Tell("inc", TestActor);
                 ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
 
+                // need to restart actor
+                actor = ActorOf(counterProps, "counter");
                 actor.Tell("read", TestActor);
 
                 var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
