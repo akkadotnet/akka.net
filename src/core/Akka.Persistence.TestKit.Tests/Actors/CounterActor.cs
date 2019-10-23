@@ -80,7 +80,7 @@ namespace Akka.Persistence.TestKit.Tests
                 ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
 
                 // need to restart actor
-                actor = ActorOf(counterProps, "counter");
+                actor = ActorOf(counterProps, "counter1");
                 actor.Tell("read", TestActor);
 
                 var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
