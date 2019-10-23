@@ -21,5 +21,10 @@ namespace Akka.Streams.Util
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
         public static bool IsDefaultForType<T>(this T obj) => EqualityComparer<T>.Default.Equals(obj, default(T));
+        
+        /// <summary>
+        /// Wraps object to the <see cref="Option{T}"/> monade
+        /// </summary>
+        public static Option<T> AsOption<T>(this T obj) => new Option<T>(obj);
     }
 }

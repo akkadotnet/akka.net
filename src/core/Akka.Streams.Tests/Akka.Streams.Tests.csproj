@@ -32,7 +32,7 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
