@@ -176,7 +176,7 @@ akka.actor {
         [Fact]
         public void CanSerializeImmutableMessagesWithPrivateCtor()
         {
-            var message = new ImmutableMessageWithPrivateCtor(("aaa", "bbb"));
+            var message = new ImmutableMessageWithPrivateCtor(Tuple.Create("aaa", "bbb"));
             AssertEqual(message);
         }
 
