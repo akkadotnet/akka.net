@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <!-- Mono includes System.ValueTuple out of the box, so this is required to avoid conflicts -->
-  <ItemGroup Condition=" '$(TargetIsMono)' != 'true)' ">
+  <ItemGroup Condition=" '$(TargetIsMono)' != 'true' ">
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
 
