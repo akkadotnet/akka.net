@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
@@ -18,7 +18,7 @@
     <PackageReference Include="System.Collections.Immutable" Version="1.6.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' and '$(OS)' != 'Unix' ">
     <Reference Include="System.Configuration" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
