@@ -294,7 +294,7 @@ namespace Akka.Persistence.TCK.Journal
                 Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
                 Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
                 Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
-                Assertions.AssertEqual(ActorRefs.NoSender, o.Persistent.Sender);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
                 Assertions.AssertEqual(@event, o.Persistent.Payload);
             });
 
@@ -305,7 +305,7 @@ namespace Akka.Persistence.TCK.Journal
                 Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
                 Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
                 Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
-                Assertions.AssertEqual(ActorRefs.NoSender, o.Persistent.Sender);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
                 Assertions.AssertEqual(@event, o.Persistent.Payload);
             });
 
