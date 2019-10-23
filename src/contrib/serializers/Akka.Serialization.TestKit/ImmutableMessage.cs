@@ -40,7 +40,7 @@ namespace Akka.Tests.Serialization
             }
         }
 
-        public ImmutableMessage((string, string) nonConventionalArg)
+        public ImmutableMessage(Tuple<string, string> nonConventionalArg)
         {
             Foo = nonConventionalArg.Item1;
             Bar = nonConventionalArg.Item2;

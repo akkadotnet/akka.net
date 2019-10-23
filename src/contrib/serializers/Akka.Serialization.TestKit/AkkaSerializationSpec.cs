@@ -169,7 +169,7 @@ akka.actor {
         [Fact]
         public void CanSerializeImmutableMessages()
         {
-            var message = new ImmutableMessage(("aaa", "bbb"));
+            var message = new ImmutableMessage(Tuple.Create("aaa", "bbb"));
             AssertEqual(message);
         }
 
