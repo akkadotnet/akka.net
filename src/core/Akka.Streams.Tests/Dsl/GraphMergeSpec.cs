@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -212,11 +212,11 @@ namespace Akka.Streams.Tests.Dsl
                 var src1 = Source.AsSubscriber<int>();
                 var src2 = Source.AsSubscriber<int>();
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, Tuple.Create, (b, s1, s2) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, ValueTuple.Create, (b, s1, s2) =>
                 {
                     var merge = b.Add(new Merge<int>(2));
                     var sink = Sink.FromSubscriber(down)
-                        .MapMaterializedValue<Tuple<ISubscriber<int>, ISubscriber<int>>>(_ => null);
+                        .MapMaterializedValue<(ISubscriber<int>, ISubscriber<int>)?>(_ => null);
 
                     b.From(s1.Outlet).To(merge.In(0));
                     b.From(s2.Outlet).To(merge.In(1));

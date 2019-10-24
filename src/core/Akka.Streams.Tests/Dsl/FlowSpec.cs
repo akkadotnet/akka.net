@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -309,7 +309,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From<IFruit>(Apples()).SplitWhen(_ => true);
             SubFlow<IFruit, NotUsed, IRunnableGraph<NotUsed>> f3 =
                 Source.From<IFruit>(Apples()).GroupBy(2, _ => true);
-            Source<Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> f4 =
+            Source<(IImmutableList<IFruit>, Source<IFruit, NotUsed>), NotUsed> f4 =
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
             SubFlow<IFruit, NotUsed, Sink<string, NotUsed>> d1 =
                 Flow.Create<string>()
@@ -319,7 +319,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.Create<string>()
                     .Select<string, string, IFruit, NotUsed>(_ => new Apple())
                     .GroupBy(-1,_ => 2);
-            Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> d3 =
+            Flow<string, (IImmutableList<IFruit>, Source<IFruit, NotUsed>), NotUsed> d3 =
                 Flow.Create<string>().Select<string, string, IFruit, NotUsed>(_ => new Apple()).PrefixAndTail(1);
         }
 
@@ -753,7 +753,7 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.AsPublisher<TOut>(true).WithAttributes(Attributes.CreateInputBuffer(elasticity, elasticity)),
                     materializer);
 
-        private static Tuple<ISubscriber<TIn>, IPublisher<TOut>> MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
+        private static (ISubscriber<TIn>, IPublisher<TOut>) MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
             Flow<TIn, TOut, TMat> flow, ActorMaterializer materializer)
             => flow.RunWith(Source.AsSubscriber<TIn>(), Sink.AsPublisher<TOut>(false), materializer);
     }

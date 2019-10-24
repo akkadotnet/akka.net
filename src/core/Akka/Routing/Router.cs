@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Router.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,9 @@ using Akka.Util.Internal;
 namespace Akka.Routing
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Used to describe instance where no routee is available.
     /// </summary>
     internal class NoRoutee : Routee
     {
@@ -34,30 +36,32 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// TBD
+    /// Generic base class for routees.
     /// </summary>
     public class Routee
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance for special case "no routee," for when no
+        /// matching routees are found.
         /// </summary>
         public static readonly Routee NoRoutee = new NoRoutee();
 
         /// <summary>
-        /// TBD
+        /// Send a message to the routee.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender, if any.</param>
         public virtual void Send(object message, IActorRef sender)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Ask a routee for a reply message in response to an input.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to send.</param>
+        /// <param name="timeout">Optional timeout parameter. If the parameter is provided
+        /// and the operation times out, will throw an AskTimeoutException.</param>
+        /// <returns>A Task containing the response object.</returns>
         public virtual Task<object> Ask(object message, TimeSpan? timeout)
         {
             return null;
@@ -65,10 +69,8 @@ namespace Akka.Routing
 
 
         /// <summary>
-        /// TBD
+        /// Helper method to create a new Routee instance from an IActorRef.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
         public static Routee FromActorRef(IActorRef actorRef)
         {
             return new ActorRefRoutee(actorRef);

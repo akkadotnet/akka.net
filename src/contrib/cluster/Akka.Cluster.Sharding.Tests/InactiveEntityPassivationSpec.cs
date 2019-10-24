@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ProxyShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -88,7 +89,7 @@ namespace Akka.Cluster.Sharding.Tests
         protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is int msg ? Tuple.Create(msg.ToString(), message) : null;
+            message is int msg ? (msg.ToString(), message) : Option<(string, object)>.None;
 
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;

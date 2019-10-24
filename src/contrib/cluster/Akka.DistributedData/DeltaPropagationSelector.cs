@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeltaPropagationSelector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ namespace Akka.DistributedData
         public abstract int GossipInternalDivisor { get; }
         protected abstract ImmutableArray<Address> AllNodes { get; }
         protected abstract int MaxDeltaSize { get; }
-        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas);
+        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas);
 
         public long CurrentVersion(string key) => _deltaCounter.GetValueOrDefault(key, 0L);
 
@@ -79,12 +79,12 @@ namespace Akka.DistributedData
                 _deltaNodeRoundRobinCounter += sliceSize;
 
                 var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
-                var cache = new Dictionary<Tuple<string, long, long>, IReplicatedData>();
+                var cache = new Dictionary<(string, long, long), IReplicatedData>();
                 foreach (var node in slice)
                 {
                     // collect the deltas that have not already been sent to the node and merge
                     // them into a delta group
-                    var deltas = ImmutableDictionary<string, Tuple<IReplicatedData, long, long>>.Empty.ToBuilder();
+                    var deltas = ImmutableDictionary<string, (IReplicatedData, long, long)>.Empty.ToBuilder();
                     foreach (var entry in _deltaEntries)
                     {
                         var key = entry.Key;
@@ -100,7 +100,7 @@ namespace Akka.DistributedData
 
                             // in most cases the delta group merging will be the same for each node,
                             // so we cache the merged results
-                            var cacheKey = Tuple.Create(key, fromSeqNr, toSeqNr);
+                            var cacheKey = (key, fromSeqNr, toSeqNr);
                             IReplicatedData deltaGroup;
                             if (!cache.TryGetValue(cacheKey, out deltaGroup))
                             {
@@ -121,7 +121,7 @@ namespace Akka.DistributedData
                                 cache[cacheKey] = deltaGroup;
                             }
 
-                            deltas[key] = Tuple.Create(deltaGroup, fromSeqNr, toSeqNr);
+                            deltas[key] = (deltaGroup, fromSeqNr, toSeqNr);
                             _deltaSentToNode = _deltaSentToNode.SetItem(key, deltaSentToNodeForKey.SetItem(node, toSeqNr));
                         }
                     }

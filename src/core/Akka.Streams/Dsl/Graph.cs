@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Graph.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1388,12 +1388,12 @@ namespace Akka.Streams.Dsl
     /// </summary>
     /// <typeparam name="T1">TBD</typeparam>
     /// <typeparam name="T2">TBD</typeparam>
-    public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
+    public sealed class Zip<T1, T2> : ZipWith<T1, T2, (T1, T2)>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
-        public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
+        public Zip() : base((a, b) => (a, b)) { }
 
         /// <summary>
         /// TBD
@@ -1442,7 +1442,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
-        public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
+        public UnZip() : base(kv => (kv.Key, kv.Value)) { }
 
         /// <summary>
         /// TBD

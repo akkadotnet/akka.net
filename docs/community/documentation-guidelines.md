@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: documentation-guidelines
 title: Documentation guidelines
 ---
 # Documentation guidelines
@@ -12,13 +12,14 @@ There is a ton of work that still needs to be done, especially in the API docume
 
 ## Website
 
-This project uses [Markdown](http://daringfireball.net/projects/markdown/syntax) for crafting the documents for the website. The rendering of the website is done with Marked.JS. Thus, any editor based on this will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
+This project uses [DocFX](https://dotnet.github.io/docfx/) to generate our website. This tool uses its own version of the [Markdown](http://daringfireball.net/projects/markdown/syntax) language named 
+[DocFX Flavored Markdown](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html) for crafting the documents for the website. Any editor with a valid Markdown plugin based will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
 
-To contribute to the website's documentation, go to the github project page [getakka.net](https://github.com/akkadotnet/getakka.net). Please be sure to read the [Readme.md](https://github.com/akkadotnet/getakka.net/blob/master/README.md) before getting started to get acquainted with the project's workflow.
+To contribute to the website's documentation, fork the main github repository [Akka.Net](https://github.com/akkadotnet/akka.net). The documentation is under the [docs](https://github.com/akkadotnet/akka.net/tree/dev/docs)  directory. Please be sure to read the [Contributing.md](https://github.com/akkadotnet/akka.net/blob/dev/CONTRIBUTING.md) before getting started to get acquainted with the project's workflow.
 
 ## Code
 
-When documenting code, please use the standard .NET convention of [XML documentation comments](https://msdn.microsoft.com/en-us/library/vstudio/b2s063f7). This allows the project to use tools like Sandcastle to generate the API documentation for the project. The latest stable API documentation can be found [here](http://api.getakka.net/docs/stable/index.html).
+When documenting code, please use the standard .NET convention of [XML documentation comments](https://msdn.microsoft.com/en-us/library/vstudio/b2s063f7). This allows the project to use tools like Sandcastle to generate the API documentation for the project. The latest stable API documentation can be found [here](https://getakka.net/api/index.html).
 
 Please be mindful to including *useful* comments when documenting a class or method. *Useful* comments means including full English sentences when summarizing the code and not relying on pre-generated comments from a tool like GhostDoc. Tools like these are great in what they do *if* supplemented with well-reasoned grammar.
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TickSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
                     b.From(Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                         .MapMaterializedValue(_ => NotUsed.Instance)).To(zip.In1);
                     b.From(zip.Out)
-                        .Via(Flow.Create<Tuple<int, string>>().Select(t => t.Item1))
+                        .Via(Flow.Create<(int, string)>().Select(t => t.Item1))
                         .To(Sink.FromSubscriber(c));
                     return ClosedShape.Instance;
                 })).Run(Materializer);

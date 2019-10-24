@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: contributor-guidelines
 title: Contributor guidelines
 ---
 # Contributor guidelines

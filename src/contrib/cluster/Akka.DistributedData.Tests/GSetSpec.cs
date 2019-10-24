@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GSetSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -32,10 +32,10 @@ namespace Akka.DistributedData.Tests
             var c4 = c3.Add(user3);
             var c5 = c4.Add(user4);
 
-            Assert.Equal(true, c5.Contains(user1));
-            Assert.Equal(true, c5.Contains(user2));
-            Assert.Equal(true, c5.Contains(user3));
-            Assert.Equal(true, c5.Contains(user4));
+            Assert.True(c5.Contains(user1));
+            Assert.True(c5.Contains(user2));
+            Assert.True(c5.Contains(user3));
+            Assert.True(c5.Contains(user4));
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PNCounterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -162,17 +162,17 @@ namespace Akka.DistributedData.Tests
             var c2 = c1.Increment(_address1);
             var c3 = c2.Decrement(_address2);
 
-            Assert.Equal(true, c2.NeedPruningFrom(_address1));
-            Assert.Equal(false, c2.NeedPruningFrom(_address2));
-            Assert.Equal(true, c3.NeedPruningFrom(_address1));
-            Assert.Equal(true, c3.NeedPruningFrom(_address2));
+            Assert.True(c2.NeedPruningFrom(_address1));
+            Assert.False(c2.NeedPruningFrom(_address2));
+            Assert.True(c3.NeedPruningFrom(_address1));
+            Assert.True(c3.NeedPruningFrom(_address2));
 
             var c4 = c3.Prune(_address1, _address2);
-            Assert.Equal(true, c4.NeedPruningFrom(_address2));
-            Assert.Equal(false, c4.NeedPruningFrom(_address1));
+            Assert.True(c4.NeedPruningFrom(_address2));
+            Assert.False(c4.NeedPruningFrom(_address1));
 
             var c5 = (c4.Increment(_address1)).PruningCleanup(_address1);
-            Assert.Equal(false, c5.NeedPruningFrom(_address1));
+            Assert.False(c5.NeedPruningFrom(_address1));
         }
     }
 }

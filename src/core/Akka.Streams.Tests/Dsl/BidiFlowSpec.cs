@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,14 +74,14 @@ namespace Akka.Streams.Tests.Dsl
                     var s = b.Add(Bidi());
                     b.From(
                         Source.Single(1)
-                            .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))))
+                            .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))))
                         .To(s.Inlet1);
                     b.From(s.Outlet1).To(st);
                     b.To(sb).From(s.Outlet2);
                     b.To(s.Inlet2)
                         .From(
                             Source.Single(Bytes)
-                                .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))));
+                                .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))));
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);

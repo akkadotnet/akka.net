@@ -172,6 +172,6 @@ $Arguments = @{
 
 # Start Fake
 Write-Host "Running build script..."
-Invoke-Expression "$FakeExePath `"build.fsx`" $ScriptArgs $Arguments"
-
+Invoke-Expression "& `"$FakeExePath`" `"build.fsx`" $ScriptArgs $Arguments"
+ 
 exit $LASTEXITCODE

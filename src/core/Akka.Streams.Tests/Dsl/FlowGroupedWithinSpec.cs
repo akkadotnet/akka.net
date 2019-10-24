@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedWithinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -229,8 +229,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {x, y, z},
-                        new[] {new[] {x, y, z}});
+                    return ((ICollection<int>)new[] {x, y, z}, (ICollection<IEnumerable<int>>)new[] {new[] {x, y, z}});
                 }).ToArray());
 
             RandomTestRange(Sys)
@@ -244,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<Script<int, IEnumerable<int>>> script = () =>
             {
                 var i = random.Next();
-                var rest = Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {i}, new[] {new[] {i}});
+                var rest = (new[] {i}, new[] {new[] {i}});
 
                 return Script.Create(RandomTestRange(Sys).Select(_ =>
                 {
@@ -252,8 +251,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] { x, y, z },
-                        new[] { new[] { x, y, z }});
+                    return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z }});
                 }).Concat(rest).ToArray());
             };
 

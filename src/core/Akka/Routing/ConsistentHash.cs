@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,20 +47,20 @@ namespace Akka.Routing
             _virtualNodesFactor = virtualNodesFactor;
         }
 
-        private Tuple<int[], T[]> _ring = null;
-        private Tuple<int[], T[]> RingTuple
+        private (int[], T[])? _ring = null;
+        private (int[], T[])? RingTuple
         {
-            get { return _ring ?? (_ring = Tuple.Create(_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
-        }
+            get { return _ring ?? (_ring = (_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
+            }
 
         private int[] NodeHashRing
         {
-            get { return RingTuple.Item1; }
+            get { return RingTuple.Value.Item1; }
         }
 
         private T[] NodeRing
         {
-            get { return RingTuple.Item2; }
+            get { return RingTuple.Value.Item2; }
         }
 
         /// <summary>

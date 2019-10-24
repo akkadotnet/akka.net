@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LastElementSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_source_before_it_failed()
         {
-            var t = Source.Unfold(1, n => n >= 3 ? throw new Exception() : Tuple.Create(n + 1, n + 1))
+            var t = Source.UnfoldInfinite(1, n => n >= 3 ? throw new Exception() : (n + 1, n + 1))
                 .ViaMaterialized(new LastElement<int>(), Keep.Right)
                 .ToMaterialized(Sink.Aggregate<int, Option<int>>(Option<int>.None, (_, o) => new Option<int>(o)), Keep.Both)
                 .Run(Sys.Materializer());

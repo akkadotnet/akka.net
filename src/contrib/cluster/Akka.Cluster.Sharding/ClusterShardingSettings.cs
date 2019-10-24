@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -302,6 +302,11 @@ namespace Akka.Cluster.Sharding
         {
             return string.IsNullOrEmpty(Role) || cluster.SelfRoles.Contains(Role);
         }
+
+        /// <summary>
+        /// If true, idle entities should be passivated if they have not received any message by this interval, otherwise it is not enabled.
+        /// </summary>
+        internal bool ShouldPassivateIdleEntities => PassivateIdleEntityAfter > TimeSpan.Zero && !RememberEntities;
 
         /// <summary>
         /// TBD

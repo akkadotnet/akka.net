@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchExpressionBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ namespace Akka.Tools.MatchHandler
             return new MatchExpressionBuilderResult(lambdaExpression, argumentValues);
         }
 
-        private static Tuple<ParameterExpression[], object[]> DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
+        private static (ParameterExpression[], object[]) DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
         {
             //Warning: This is using the same algorithm as CreateArgumentValuesArray.
             //         Any updates in this should be made in CreateArgumentValuesArray as well.
@@ -204,7 +204,7 @@ namespace Akka.Tools.MatchHandler
                         argument.PredicateAndHandler.PredicateExpression = expression;
                 }
             }
-            return Tuple.Create(parameters, argumentValues);
+            return (parameters, argumentValues);
         }
 
         /// <summary>

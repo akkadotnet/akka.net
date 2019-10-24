@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DelayFlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,22 +71,22 @@ namespace Akka.Streams.Tests.Dsl
             var initial = TimeSpan.FromSeconds(1);
             var max = TimeSpan.FromSeconds(5);
 
-            bool incWhile(Tuple<int, long> i)
+            bool incWhile((int, long) i)
             {
                 return i.Item1 < 7;
             }
 
             var probe = Source.From(elems)
-                .Select(e => Tuple.Create(e, DateTime.Now.Ticks))
-                .Via(new DelayFlow<Tuple<int, long>>(
-                    () => new LinearIncreasingDelay<Tuple<int, long>>(step, incWhile, initial, max))
+                .Select(e => (e, DateTime.Now.Ticks))
+                .Via(new DelayFlow<(int, long)>(
+                    () => new LinearIncreasingDelay<(int, long)>(step, incWhile, initial, max))
                 )
                 .Select(pair => DateTime.Now.Ticks - pair.Item2)
                 .RunWith(this.SinkProbe<long>(), Sys.Materializer());
 
             foreach (var e in elems)
             {
-                if (incWhile(Tuple.Create(e, 1L)))
+                if (incWhile((e, 1L)))
                 {
                     var afterIncrease = initial + TimeSpan.FromTicks(step.Ticks * e);
                     var delay = afterIncrease < max ? afterIncrease : max;

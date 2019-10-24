@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowTimedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Extra
                 () =>
                     Script.Create(
                         Enumerable.Range(1, n)
-                            .Select(x => new Tuple<ICollection<int>, ICollection<int>>(new[] {x}, new[] {x})).ToArray());
+                            .Select(x => ((ICollection<int>)new[] { x }, (ICollection<int>)new[] { x })).ToArray());
             testRuns.ForEach(
                 _ =>
                     RunScript(script(), Materializer.Settings,
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Extra
                 () =>
                     Script.Create(
                         Enumerable.Range(1, n)
-                            .Select(x => new Tuple<ICollection<int>, ICollection<int>>(new[] {x}, new[] {x})).ToArray());
+                            .Select(x => ((ICollection<int>)new[] { x }, (ICollection<int>)new[] { x })).ToArray());
 
             testRuns.ForEach(
                 _ => RunScript(script(), Materializer.Settings, flow => flow.Timed(f => f.Select(x => x), printInfo)));

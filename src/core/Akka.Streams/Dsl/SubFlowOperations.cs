@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SubFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,8 @@ using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
+using Akka.Util;
+
 // ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl
@@ -1200,9 +1202,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed> PrefixAndTail<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
+        public static SubFlow<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat, TClosed> PrefixAndTail<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
         {
-            return (SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (SubFlow<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat, TClosed>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -1269,9 +1271,9 @@ namespace Akka.Streams.Dsl
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static SubFlow<Tuple<TOut1, long>, TMat, TClosed> ZipWithIndex<TOut1, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow)
+        public static SubFlow<(TOut1, long), TMat, TClosed> ZipWithIndex<TOut1, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow)
         {
-            return (SubFlow<Tuple<TOut1, long>, TMat, TClosed>)InternalFlowOperations.ZipWithIndex(flow);
+            return (SubFlow<(TOut1, long), TMat, TClosed>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>
@@ -1637,9 +1639,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<Tuple<T1, T2>, TMat, TClosed> Zip<T1, T2, TMat, TClosed>(this SubFlow<T1, TMat, TClosed> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static SubFlow<(T1, T2), TMat, TClosed> Zip<T1, T2, TMat, TClosed>(this SubFlow<T1, TMat, TClosed> flow, IGraph<SourceShape<T2>, TMat> other)
         {
-            return (SubFlow<Tuple<T1, T2>, TMat, TClosed>)InternalFlowOperations.Zip(flow, other);
+            return (SubFlow<(T1, T2), TMat, TClosed>)InternalFlowOperations.Zip(flow, other);
         }
 
         /// <summary>

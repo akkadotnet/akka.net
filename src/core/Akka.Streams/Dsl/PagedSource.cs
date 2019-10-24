@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PagedSource.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -57,9 +58,9 @@ namespace Akka.Streams.Dsl
                         var page = key.HasValue ? await pageFactory(key.Value) : new Page<T, TKey>(Enumerable.Empty<T>(), Option<TKey>.None);
 
                         if (page.Items != null && page.Items.Any())
-                            return Tuple.Create(page.NextKey, page);
+                            return (page.NextKey, page);
                         else
-                            return null;
+                            return Option<(Option<TKey>, Page<T, TKey>)>.None;
                     }
                 );
 

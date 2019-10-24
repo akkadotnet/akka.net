@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowAggregateAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,8 +197,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = this.CreateSubscriberProbe<Tuple<int, int>>();
-                Source.From(Enumerable.Range(1, 5)).AggregateAsync(Tuple.Create(0, 1), (t, n) =>
+                var probe = this.CreateSubscriberProbe<(int, int)>();
+                Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
                     {
                         var i = t.Item1;
                         var res = t.Item2;
@@ -207,7 +207,7 @@ namespace Akka.Streams.Tests.Dsl
                             if (n == 3)
                                 throw new Exception("err3");
 
-                            return Tuple.Create(n, i + res*n);
+                            return (n, i + res*n);
                         });
                     })
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
@@ -216,7 +216,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var subscription = probe.ExpectSubscription();
                 subscription.Request(10);
-                probe.ExpectNext(Tuple.Create(5, 74));
+                probe.ExpectNext((5, 74));
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -226,8 +226,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = this.CreateSubscriberProbe<Tuple<int, int>>();
-                Source.From(Enumerable.Range(1, 5)).AggregateAsync(Tuple.Create(0, 1), (t, n) =>
+                var probe = this.CreateSubscriberProbe<(int, int)>();
+                Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
                 {
                     var i = t.Item1;
                     var res = t.Item2;
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
                         if (n == 3)
                             throw new Exception("err3");
 
-                        return Tuple.Create(n, i + res * n);
+                        return (n, i + res * n);
                     });
                 })
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
@@ -245,7 +245,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var subscription = probe.ExpectSubscription();
                 subscription.Request(10);
-                probe.ExpectNext(Tuple.Create(5, 24));
+                probe.ExpectNext((5, 24));
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -301,14 +301,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_AggregateAsync_must_resume_when_AggregateAsync_throws()
         {
-            var probe = this.CreateSubscriberProbe<Tuple<int, int>>();
-            Source.From(Enumerable.Range(1, 5)).AggregateAsync(Tuple.Create(0, 1), (t, n) =>
+            var probe = this.CreateSubscriberProbe<(int, int)>();
+            Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
             {
                 var i = t.Item1;
                 var res = t.Item2;
                 if (n == 3)
                     throw new Exception("err4");
-                return Task.Run(() => Tuple.Create(n, i + res * n));
+                return Task.Run(() => (n, i + res * n));
             })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber(probe))
@@ -316,28 +316,28 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = probe.ExpectSubscription();
             subscription.Request(10);
-            probe.ExpectNext(Tuple.Create(5, 74));
+            probe.ExpectNext((5, 74));
             probe.ExpectComplete();
         }
 
         [Fact]
         public void A_AggregateAsync_must_restart_when_AggregateAsync_throws()
         {
-            var probe = this.CreateSubscriberProbe<Tuple<int, int>>();
-            Source.From(Enumerable.Range(1, 5)).AggregateAsync(Tuple.Create(0, 1), (t, n) =>
+            var probe = this.CreateSubscriberProbe<(int, int)>();
+            Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
                 {
                     var i = t.Item1;
                     var res = t.Item2;
                     if (n == 3)
                         throw new Exception("err4");
-                    return Task.Run(() => Tuple.Create(n, i + res*n));
+                    return Task.Run(() => (n, i + res*n));
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .To(Sink.FromSubscriber(probe))
                 .Run(Materializer);
 
             var subscription = probe.ExpectSubscription();
             subscription.Request(10);
-            probe.ExpectNext(Tuple.Create(5, 24));
+            probe.ExpectNext((5, 24));
             probe.ExpectComplete();
         }
 

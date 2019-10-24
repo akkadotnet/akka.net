@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ProxyShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="SupervisionSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,7 +90,7 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is Msg msg ? new Tuple<string, object>(msg.Id.ToString(), msg.Message) : null;
+            message is Msg msg ? (msg.Id.ToString(), msg.Message) : Option<(string, object)>.None;
 
         private readonly ExtractShardId _extractShard = message =>
             message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;

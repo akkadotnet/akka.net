@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteSystemDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,12 +129,12 @@ namespace Akka.Remote
             {
                 var iter = sel.Elements.Iterator();
 
-                Tuple<IEnumerable<string>, object> Rec(IImmutableList<string> acc)
+                (IEnumerable<string>, object) Rec(IImmutableList<string> acc)
                 {
                     while (true)
                     {
                         if (iter.IsEmpty())
-                            return Tuple.Create(acc.Reverse(), sel.Message);
+                            return (acc.Reverse(), sel.Message);
 
                         // find child elements, and the message to send, which is a remaining ActorSelectionMessage
                         // in case of SelectChildPattern, otherwise the actual message of the selection
@@ -149,7 +149,7 @@ namespace Akka.Remote
                                 acc = acc.Skip(1).ToImmutableList();
                                 continue;
                             case SelectChildPattern pat:
-                                return Tuple.Create<IEnumerable<string>, object>(acc.Reverse(), sel.Copy(elements: new[] { pat }.Concat(iter.ToVector()).ToArray()));
+                                return (acc.Reverse(), sel.Copy(elements: new[] { pat }.Concat(iter.ToVector()).ToArray()));
                             default: // compiler ceremony - should never be hit
                                 throw new InvalidOperationException("Unknown ActorSelectionPart []");
                         }

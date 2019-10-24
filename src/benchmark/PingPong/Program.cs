@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -164,7 +164,7 @@ namespace PingPong
             }
         }
 
-        private static async Task<Tuple<bool, long, int>> Benchmark<TActor>(int factor, int numberOfClients, long numberOfRepeats, PrintStats printStats, long bestThroughput, int redCount) where TActor : ActorBase
+        private static async Task<(bool, long, int)> Benchmark<TActor>(int factor, int numberOfClients, long numberOfRepeats, PrintStats printStats, long bestThroughput, int redCount) where TActor : ActorBase
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfRepeats);
             //times 2 since the client and the destination both send messages
@@ -197,7 +197,7 @@ namespace PingPong
             if (!countdown.Wait(TimeSpan.FromSeconds(10)))
             {
                 Console.WriteLine("The system did not start in 10 seconds. Aborting.");
-                return Tuple.Create(false, bestThroughput, redCount);
+                return (false, bestThroughput, redCount);
             }
             var setupTime = totalWatch.Elapsed;
             var sw = Stopwatch.StartNew();
@@ -237,7 +237,7 @@ namespace PingPong
             }
             Console.ForegroundColor = foregroundColor;
 
-            return Tuple.Create(redCount <= 3, bestThroughput, redCount);
+            return (redCount <= 3, bestThroughput, redCount);
         }
 
         private static long GetTotalMessagesReceived(long numberOfRepeats)

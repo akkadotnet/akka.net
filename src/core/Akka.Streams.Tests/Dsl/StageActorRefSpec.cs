@@ -1,4 +1,11 @@
-﻿
+﻿//-----------------------------------------------------------------------
+// <copyright file="StageActorRefSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -279,7 +286,7 @@ namespace Akka.Streams.Tests.Dsl
                     _stage._probe.Tell(Self);
                 }
 
-                private void Behaviour(Tuple<IActorRef, object> args)
+                private void Behaviour((IActorRef, object) args)
                 {
                     var msg = args.Item2;
                     var sender = args.Item1;

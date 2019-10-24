@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDomainEventSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,12 +37,12 @@ namespace Akka.Cluster.Tests
 
         static readonly UniqueAddress selfDummyAddress = new UniqueAddress(new Address("akka.tcp", "sys", "selfDummy", 2552), 17);
 
-        private static Tuple<Gossip, ImmutableHashSet<UniqueAddress>> Converge(Gossip gossip)
+        private static (Gossip, ImmutableHashSet<UniqueAddress>) Converge(Gossip gossip)
         {
-            var seed = Tuple.Create(gossip, ImmutableHashSet.Create<UniqueAddress>());
+            var seed = (gossip, ImmutableHashSet.Create<UniqueAddress>());
 
             return gossip.Members.Aggregate(seed,
-                (t, m) => Tuple.Create(t.Item1.Seen(m.UniqueAddress), t.Item2.Add(m.UniqueAddress)));
+                (t, m) => (t.Item1.Seen(m.UniqueAddress), t.Item2.Add(m.UniqueAddress)));
         }
 
         [Fact]

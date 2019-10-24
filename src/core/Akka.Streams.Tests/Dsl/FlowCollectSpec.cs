@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,8 +36,8 @@ namespace Akka.Streams.Tests.Dsl
             Script<int,string> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next(0, 10000);
-                return new Tuple<ICollection<int>, ICollection<string>>(new[] {x},
-                    (x & 1) == 0 ? new[] {(x*x).ToString()} : new string[] {});
+                return ((ICollection<int>)new[] { x },
+                        (x & 1) == 0 ? (ICollection<string>)new[] { (x*x).ToString() } : (ICollection<string>)new string[] {});
             }).ToArray());
 
             RandomTestRange(Sys).ForEach(_=>RunScript(script, Materializer.Settings,flow => flow.Collect(x => x%2 == 0 ? (x*x).ToString() : null)));

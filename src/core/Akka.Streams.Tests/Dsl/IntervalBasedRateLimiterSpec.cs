@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IntervalBasedRateLimiterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -101,8 +101,8 @@ namespace Akka.Streams.Tests.Dsl
             var flow = source
                 .Take(numOfElements)
                 .Via(IntervalBasedRateLimiter.Create<int>(minInterval, maxBatchSize))
-                .Select(batch => Tuple.Create(DateTime.Now.Ticks, batch))
-                .RunWith(this.SinkProbe<Tuple<long, IEnumerable<int>>>(), Sys.Materializer());
+                .Select(batch => (DateTime.Now.Ticks, batch))
+                .RunWith(this.SinkProbe<(long, IEnumerable<int>)>(), Sys.Materializer());
 
             var timestamps = new List<long>();
             var batches = new List<IEnumerable<int>>();
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 flow.Request(1);
                 var e = flow.ExpectEvent();
 
-                if (e is TestSubscriber.OnNext<Tuple<long, IEnumerable<int>>> onNext)
+                if (e is TestSubscriber.OnNext<(long, IEnumerable<int>)> onNext)
                 {
                     timestamps.Add(onNext.Element.Item1);
                     batches.Add(onNext.Element.Item2);

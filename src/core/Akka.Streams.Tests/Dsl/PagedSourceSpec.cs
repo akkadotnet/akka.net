@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PagedSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -110,15 +111,15 @@ namespace Akka.Streams.Tests.Dsl
                 }
             );
 
-            private static Tuple<int[], string> Page(string key)
+            private static (int[], string) Page(string key)
             {
                 if (key == "first")
-                    return Tuple.Create(new[] { 1, 2 }, "second");
+                    return (new[] { 1, 2 }, "second");
 
                 if (key == "second")
-                    return Tuple.Create(new[] { 3, 4, 5 }, "");
+                    return (new[] { 3, 4, 5 }, "");
 
-                return Tuple.Create(new[] { 6 }, "");
+                return (new[] { 6 }, "");
             }
 
             [Fact]

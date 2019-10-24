@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="CoordinatedShutdownShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="PersistentShardSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -56,12 +57,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
 
+            ExtractEntityId extractEntityId = _ => ("entity-1", "msg");
+
             var props = Props.Create(() => new PersistentShard(
               "cats",
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => Tuple.Create("entity-1", (object)"msg"),
+              extractEntityId,
               _ => "shard-1",
               PoisonPill.Instance
             ));

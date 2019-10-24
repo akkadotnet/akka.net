@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SinkForeachParallelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 4)
-                    .Select(i => Tuple.Create(i, new TestLatch(1)))
+                    .Select(i => (i, new TestLatch(1)))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 5)
-                    .Select(i => Tuple.Create(i, new TestLatch()))
+                    .Select(i => (i, new TestLatch()))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {

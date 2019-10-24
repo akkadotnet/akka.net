@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -245,7 +245,7 @@ namespace Akka.Actor
         internal readonly List<string> OrderedPhases;
 
         private readonly ConcurrentBag<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<Done>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>>();
+        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>>();
         private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
         private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
@@ -287,12 +287,12 @@ namespace Akka.Actor
 
             if (!_tasks.TryGetValue(phase, out var current))
             {
-                if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
+                if (!_tasks.TryAdd(phase, ImmutableList<(string, Func<Task<Done>>)>.Empty.Add((taskName, task))))
                     AddTask(phase, taskName, task); // CAS failed, retry
             }
             else
             {
-                if (!_tasks.TryUpdate(phase, current.Add(Tuple.Create(taskName, task)), current))
+                if (!_tasks.TryUpdate(phase, current.Add((taskName, task)), current))
                     AddTask(phase, taskName, task); // CAS failed, retry
             }
         }

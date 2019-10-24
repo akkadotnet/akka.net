@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -298,7 +298,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="addressesPromise">TBD</param>
             /// <param name="results">TBD</param>
-            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> results)
+            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)> results)
             {
                 Results = results;
                 AddressesPromise = addressesPromise;
@@ -312,7 +312,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public IList<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> Results
+            public IList<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)> Results
             { get; private set; }
         }
 
@@ -379,18 +379,25 @@ namespace Akka.Remote
             {
                 unchecked
                 {
-                    var hash = 17;
-                    hash = hash * 23 + (LocalAddress == null ? 0 : LocalAddress.GetHashCode());
-                    hash = hash * 23 + (RemoteAddress == null ? 0 : RemoteAddress.GetHashCode());
-                    return hash;
+                    return (LocalAddress.GetHashCode() * 397) ^ RemoteAddress.GetHashCode();
                 }
+            }
+
+            private bool Equals(Link other)
+            {
+                return LocalAddress.Equals(other.LocalAddress) && RemoteAddress.Equals(other.RemoteAddress);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is Link other && Equals(other);
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public sealed class ResendState
+        public sealed class ResendState : IEquatable<ResendState>
         {
             /// <summary>
             /// TBD
@@ -412,6 +419,26 @@ namespace Akka.Remote
             /// TBD
             /// </summary>
             public AckedReceiveBuffer<Message> Buffer { get; private set; }
+
+            public bool Equals(ResendState other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Uid == other.Uid && Buffer.Equals(other.Buffer);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is ResendState other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (Uid * 397) ^ Buffer.GetHashCode();
+                }
+            }
         }
 
         #endregion
@@ -698,7 +725,7 @@ namespace Akka.Remote
             {
                 //Stop writers
                 var policy =
-                Tuple.Create(_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
+                (_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
                 if (policy.Item1 is Pass pass && policy.Item2 == null)
                 {
                     var endpoint = pass.Endpoint;
@@ -744,10 +771,10 @@ namespace Akka.Remote
                 }
 
                 // Stop inbound read-only associations
-                var readPolicy = Tuple.Create(_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
+                var readPolicy = (_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
                 if (readPolicy.Item1?.Item1 != null && quarantine.Uid == null)
-                    Context.Stop(readPolicy.Item1.Item1);
-                else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
+                    Context.Stop(readPolicy.Item1.Value.Item1);
+                else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Value.Item1); }
                 else { } // nothing to stop
 
                 bool MatchesQuarantine(AkkaProtocolHandle handle)
@@ -917,7 +944,7 @@ namespace Akka.Remote
             var handle = ((AkkaProtocolHandle)ia.Association);
             if (readonlyEndpoint != null)
             {
-                var endpoint = readonlyEndpoint.Item1;
+                var endpoint = readonlyEndpoint.Value.Item1;
                 if (_pendingReadHandoffs.TryGetValue(endpoint, out var protocolHandle))
                     protocolHandle.Disassociate("the existing readOnly association was replaced by a new incoming one", _log);
 
@@ -980,9 +1007,9 @@ namespace Akka.Remote
             }
         }
 
-        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+        private Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>
             _listens;
-        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+        private Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>
             Listens
         {
             get
@@ -1028,7 +1055,7 @@ namespace Akka.Remote
                         catch (Exception ex)
                         {
                             var ei = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex);
-                            var task = new Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>(() =>
+                            var task = new Task<List<(ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>)>>(() =>
                             {
                                 ei.Throw();
                                 return null;
@@ -1052,7 +1079,7 @@ namespace Akka.Remote
 
                     // Collect all transports, listen addresses, and listener promises in one Task
                     var tasks = transports.Select(x => x.Listen().ContinueWith(
-                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously));
+                        result => (new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously));
                     _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously);
                 }
                 return _listens;

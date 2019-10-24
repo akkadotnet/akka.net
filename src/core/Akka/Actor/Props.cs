@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -105,11 +105,13 @@ namespace Akka.Actor
             return Deploy.Equals(other.Deploy);
         }
 
+#pragma warning disable CS0162 // Disabled because it's marked as a TODO
         private bool CompareSupervisorStrategy(Props other)
         {
             return true; //TODO: fix https://github.com/akkadotnet/akka.net/issues/599
             return Equals(SupervisorStrategy, other.SupervisorStrategy);
         }
+#pragma warning restore CS0162
 
         private bool CompareArguments(Props other)
         {

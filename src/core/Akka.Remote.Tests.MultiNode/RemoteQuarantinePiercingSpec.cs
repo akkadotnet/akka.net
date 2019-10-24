@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteQuarantinePiercingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Remote.Tests.MultiNode
                 Receive<string>(str => str == "shutdown", c => Context.System.Terminate());
                 Receive<string>(str => str == "identify", c =>
                 {
-                    Sender.Tell(Tuple.Create(AddressUidExtension.Uid(Context.System), Self));
+                    Sender.Tell((AddressUidExtension.Uid(Context.System), Self));
                 });
             }
         }
@@ -59,10 +59,10 @@ namespace Akka.Remote.Tests.MultiNode
             _specConfig = specConfig;
         }
 
-        private Tuple<int, IActorRef> Identify(RoleName role, string actorName)
+        private (int, IActorRef) Identify(RoleName role, string actorName)
         {
             Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-            return ExpectMsg<Tuple<int, IActorRef>>();
+            return ExpectMsg<(int, IActorRef)>();
         }
 
         [MultiNodeFact]
@@ -101,7 +101,7 @@ namespace Akka.Remote.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                        var tuple2 = ExpectMsg<Tuple<int, IActorRef>>(TimeSpan.FromSeconds(1));
+                        var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));
                         tuple2.Item1.Should().NotBe(uidFirst);
                         tuple2.Item2.Should().NotBe(subjectFirst);
                     });

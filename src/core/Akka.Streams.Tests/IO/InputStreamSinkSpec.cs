@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -382,11 +382,11 @@ namespace Akka.Streams.Tests.IO
             return ByteString.FromBytes(a);
         }
 
-        private Tuple<int, ByteString> ReadN(Stream s, int n)
+        private (int, ByteString) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return new Tuple<int, ByteString>(r, ByteString.FromBytes(buf, 0, r));
+            return (r, ByteString.FromBytes(buf, 0, r));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)

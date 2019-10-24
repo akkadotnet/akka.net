@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Base64Encoding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,6 +30,7 @@ namespace Akka.Util
         /// TBD
         /// </summary>
         /// <param name="value">TBD</param>
+        /// <param name="sb">TBD</param>
         /// <returns>TBD</returns>
         public static StringBuilder Base64Encode(this long value, StringBuilder sb)
         {
