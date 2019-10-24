@@ -19,7 +19,7 @@
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
-    <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
+    <FluentAssertionsVersion>5.9.0</FluentAssertionsVersion>
     <FsCheckVersion>2.9.0</FsCheckVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
