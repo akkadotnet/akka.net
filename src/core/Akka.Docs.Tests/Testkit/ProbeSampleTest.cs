@@ -1,4 +1,4 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
@@ -31,7 +31,7 @@ namespace DocsExamples.Testkit
 
             //verify correct forwarding
             forwarder.Tell(43, TestActor);
-            probe.ExpectMsg(42);
+            probe.ExpectMsg(43);
             Assert.Equal(TestActor, probe.LastSender);
         }
 
