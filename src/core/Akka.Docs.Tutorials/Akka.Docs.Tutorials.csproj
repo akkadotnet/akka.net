@@ -4,6 +4,7 @@
       <AssemblyTitle>Akka.Docs.Tutorials</AssemblyTitle>
       <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
       <RootNamespace>Tutorials</RootNamespace>
+      <IsPackable>false</IsPackable>
   </PropertyGroup>
 
    <ItemGroup>
