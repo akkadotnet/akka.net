@@ -117,7 +117,7 @@ namespace Akka.Tests.MatchHandler
                     bldr.Match<string>(s => { });
                     bldr.Match<bool>(b => { }, b => b);
                     bldr.Match<int>(i => { }, _ => true);
-                    bldr.Match(typeof(Tuple), t => { });
+                    bldr.Match(typeof(ValueTuple), t => { });
                     bldr.Match(typeof(float), o => true);
                 },
                 bldr =>
@@ -125,7 +125,7 @@ namespace Akka.Tests.MatchHandler
                     bldr.Match<string>(s => { str = s; });
                     bldr.Match<bool>(b => { var x = b && true; }, b => !b);
                     bldr.Match<int>(i => { }, i => i > 0);
-                    bldr.Match(typeof(Tuple), t => { });
+                    bldr.Match(typeof(ValueTuple), t => { });
                     bldr.Match(typeof(float), o => false);
                 });
         }
@@ -182,7 +182,7 @@ namespace Akka.Tests.MatchHandler
                     bldr.Match<string>(s => { });
                     bldr.Match<bool>(b => { });
                     bldr.Match<int>(i => { });
-                    bldr.Match(typeof(Tuple), t => { });
+                    bldr.Match(typeof(ValueTuple), t => { });
                 },
                 bldr =>
                 {

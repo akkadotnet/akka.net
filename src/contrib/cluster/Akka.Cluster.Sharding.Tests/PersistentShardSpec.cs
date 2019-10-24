@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -56,12 +57,14 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
 
+            ExtractEntityId extractEntityId = _ => ("entity-1", "msg");
+
             var props = Props.Create(() => new PersistentShard(
               "cats",
               "shard-1",
               ep,
               ClusterShardingSettings.Create(Sys),
-              _ => Tuple.Create("entity-1", (object)"msg"),
+              extractEntityId,
               _ => "shard-1",
               PoisonPill.Instance
             ));

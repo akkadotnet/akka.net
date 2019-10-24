@@ -15,6 +15,8 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
+using Akka.Util;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -319,14 +321,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Option<Tuple<Tuple<int, int>, int>>.None;
+                    return Option<((int, int), int)>.None;
                 
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                return ((b, a + b), a);
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -339,14 +341,14 @@ namespace Akka.Streams.Tests.Dsl
         {
             EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
-                var task = Source.Unfold<Tuple<int, int>, int>(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold((0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
                     
-                    return Tuple.Create(Tuple.Create(b, a + b), a);
+                    return ((b, a + b), a).AsOption();
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
@@ -361,14 +363,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
         {
-            Source.UnfoldAsync(Tuple.Create(0, 1), tuple =>
+            Source.UnfoldAsync((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Task.FromResult(Option<Tuple<Tuple<int, int>, int>>.None);
+                    return Task.FromResult(Option<((int, int), int)>.None);
                 
-                return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a).AsOption());
+                return Task.FromResult(((b, a + b), a).AsOption());
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -379,11 +381,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_unboundeed_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
-                return Tuple.Create(Tuple.Create(b, a + b), a).AsOption();
+                return((b, a + b), a).AsOption();
             })
             .Take(36)
             .RunAggregate(new LinkedList<int>(), (ints, i) =>

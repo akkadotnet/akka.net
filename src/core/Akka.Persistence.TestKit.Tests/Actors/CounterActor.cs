@@ -70,7 +70,7 @@ namespace Akka.Persistence.TestKit.Tests
         [Fact]
         public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
-            await WithJournalWrite(write => write.Fail(), async () =>
+            await WithJournalWrite(write => write.Fail(), async () => 
             {
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");
@@ -80,7 +80,7 @@ namespace Akka.Persistence.TestKit.Tests
                 ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
 
                 // need to restart actor
-                actor = ActorOf(counterProps, "counter");
+                actor = ActorOf(counterProps, "counter1");
                 actor.Tell("read", TestActor);
 
                 var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));

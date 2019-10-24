@@ -340,7 +340,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
-                var queue = new BlockingQueue<Tuple<TaskCompletionSource<int>, long>>();
+                var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
                 Task.Run(() =>
                 {
@@ -374,7 +374,7 @@ namespace Akka.Streams.Tests.Dsl
                         promise.SetException(new Exception("parallelism exceeded"));
                     else
 
-                        queue.Enqueue(Tuple.Create(promise, DateTime.Now.Ticks));
+                        queue.Enqueue((promise, DateTime.Now.Ticks));
                     return promise.Task;
                 };
 

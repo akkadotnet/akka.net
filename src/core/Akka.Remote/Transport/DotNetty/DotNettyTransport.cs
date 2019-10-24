@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
-        public override async Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             EndPoint listenAddress;
             IPAddress ip;
@@ -206,7 +206,7 @@ namespace Akka.Remote.Transport.DotNetty
 #pragma warning restore 4014
 
 
-                return Tuple.Create(addr, AssociationListenerPromise);
+                return (addr, AssociationListenerPromise);
             }
             catch (Exception ex)
             {

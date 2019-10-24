@@ -167,7 +167,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="register">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public Tuple<Connection[], GraphStageLogic[]> Materialize(
+        public (Connection[], GraphStageLogic[]) Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
@@ -251,7 +251,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            return Tuple.Create(connections, logics);
+            return (connections, logics);
         }
 
         /// <summary>
