@@ -144,7 +144,7 @@ namespace Akka.Tools.MatchHandler
             return new MatchExpressionBuilderResult(lambdaExpression, argumentValues);
         }
 
-        private static Tuple<ParameterExpression[], object[]> DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
+        private static (ParameterExpression[], object[]) DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
         {
             //Warning: This is using the same algorithm as CreateArgumentValuesArray.
             //         Any updates in this should be made in CreateArgumentValuesArray as well.
@@ -204,7 +204,7 @@ namespace Akka.Tools.MatchHandler
                         argument.PredicateAndHandler.PredicateExpression = expression;
                 }
             }
-            return Tuple.Create(parameters, argumentValues);
+            return (parameters, argumentValues);
         }
 
         /// <summary>

@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             Func<long, Script<int, int>> script =
                 d => Script.Create(RandomTestRange(Sys)
-                            .Select(n => new Tuple<ICollection<int>, ICollection<int>>(new[] {n}, n <= d ? new int[] { } : new[] {n}))
+                            .Select(n => ((ICollection<int>)new[] { n }, (ICollection<int>)(n <= d ? new int[] { } : new[] { n })))
                             .ToArray());
             var random = new Random();
             foreach (var _ in RandomTestRange(Sys))

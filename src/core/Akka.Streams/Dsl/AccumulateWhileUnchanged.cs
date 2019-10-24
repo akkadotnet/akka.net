@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {

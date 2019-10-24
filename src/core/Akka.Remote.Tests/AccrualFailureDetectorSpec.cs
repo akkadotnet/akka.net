@@ -17,7 +17,7 @@ namespace Akka.Remote.Tests
 
     public class AccrualFailureDetectorSpec : AkkaSpec
     {
-        public static IEnumerable<Tuple<T, T>> Slide<T>(IEnumerable<T> values)
+        public static IEnumerable<(T, T)> Slide<T>(IEnumerable<T> values)
         {
             using (var iterator = values.GetEnumerator())
             {
@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
                 {
                     var first = iterator.Current;
                     var second = iterator.MoveNext() ? iterator.Current : default(T);
-                    yield return Tuple.Create(first, second);
+                    yield return (first, second);
                 }
             }
         }

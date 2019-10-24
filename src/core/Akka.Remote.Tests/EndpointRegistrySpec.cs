@@ -54,7 +54,7 @@ namespace Akka.Remote.Tests
             Assert.Null(reg.ReadOnlyEndpointFor(address1));
 
             Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA, 0));
-            Assert.Equal(Tuple.Create(actorA, 0), reg.ReadOnlyEndpointFor(address1));
+            Assert.Equal((actorA, 0), reg.ReadOnlyEndpointFor(address1));
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
             Assert.False(reg.IsWritable(actorA));
             Assert.True(reg.IsReadOnly(actorA));
@@ -71,7 +71,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA, 1));
             Assert.Equal(actorB, reg.RegisterWritableEndpoint(address1, actorB, null));
 
-            Assert.Equal(Tuple.Create(actorA,1), reg.ReadOnlyEndpointFor(address1));
+            Assert.Equal((actorA,1), reg.ReadOnlyEndpointFor(address1));
             Assert.Equal(actorB, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Pass>().Endpoint);
 
             Assert.False(reg.IsWritable(actorA));
@@ -158,8 +158,8 @@ namespace Akka.Remote.Tests
             reg.RegisterReadOnlyEndpoint(address1, endpoint, 2);
 
             var ep = reg.ReadOnlyEndpointFor(address1);
-            ep.Item1.ShouldBe(endpoint);
-            ep.Item2.ShouldBe(2);
+            ep.Value.Item1.ShouldBe(endpoint);
+            ep.Value.Item2.ShouldBe(2);
         }
 
         [Fact]

@@ -194,7 +194,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 }
             }
 
-            private void InitialReceive(Tuple<IActorRef, object> args)
+            private void InitialReceive((IActorRef, object) args)
             {
                 var sender = args.Item1;
                 var message = args.Item2;
