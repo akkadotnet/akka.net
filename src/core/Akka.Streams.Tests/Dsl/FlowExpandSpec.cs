@@ -175,8 +175,8 @@ namespace Akka.Streams.Tests.Dsl
         public void Expand_must_work_properly_with_finite_extrapolations()
         {
             var t = TestSource.SourceProbe<int>(this)
-                .Expand(i => Enumerable.Range(0, 4).Select(x => Tuple.Create(i, x)).Take(3).GetEnumerator())
-                .ToMaterialized(this.SinkProbe<Tuple<int, int>>(), Keep.Both)
+                .Expand(i => Enumerable.Range(0, 4).Select(x => (i, x)).Take(3).GetEnumerator())
+                .ToMaterialized(this.SinkProbe<(int, int)>(), Keep.Both)
                 .Run(Materializer);
             var source = t.Item1;
             var sink = t.Item2;
@@ -184,12 +184,12 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext(1);
 
             sink.Request(4)
-                .ExpectNext(Tuple.Create(1, 0), Tuple.Create(1, 1), Tuple.Create(1, 2))
+                .ExpectNext((1, 0), (1, 1), (1, 2))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             source.SendNext(2).SendComplete();
 
-            sink.ExpectNext(Tuple.Create(2, 0)).ExpectComplete();
+            sink.ExpectNext((2, 0)).ExpectComplete();
         }
     }
 }

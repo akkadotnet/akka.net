@@ -82,9 +82,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Log_on_source_must_allow_extracting_value_to_be_logged()
         {
-            Source.Single(Tuple.Create(1, "42"))
+            Source.Single((1, "42"))
                 .Log("flow-s3", t => t.Item2)
-                .RunWith(Sink.Ignore<Tuple<int, string>>(), Materializer);
+                .RunWith(Sink.Ignore<(int, string)>(), Materializer);
 
             var msgs = LogMessages(2);
             msgs[0].Should().Be("[flow-s3] Element: 42");

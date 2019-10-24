@@ -311,17 +311,17 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void SplitAfter_should_not_create_a_subflow_when_no_element_is_left()
         {
-            var result = new ConcurrentQueue<ImmutableList<Tuple<bool, int>>>();
+            var result = new ConcurrentQueue<ImmutableList<(bool, int)>>();
             Source.From(new[]
                 {
-                    Tuple.Create(true, 1), Tuple.Create(true, 2), Tuple.Create(false, 0),
-                    Tuple.Create(true, 3), Tuple.Create(true, 4), Tuple.Create(false, 0),
-                    Tuple.Create(true, 5), Tuple.Create(false, 0)
+                    (true, 1), (true, 2), (false, 0),
+                    (true, 3), (true, 4), (false, 0),
+                    (true, 5), (false, 0)
                 })
                 .SplitAfter(t => !t.Item1)
                 .Where(t => t.Item1)
-                .Aggregate(ImmutableList.Create<Tuple<bool, int>>(), (list, b) => list.Add(b))
-                .To(Sink.ForEach<ImmutableList<Tuple<bool, int>>>(list => result.Enqueue(list)))
+                .Aggregate(ImmutableList.Create<(bool, int)>(), (list, b) => list.Add(b))
+                .To(Sink.ForEach<ImmutableList<(bool, int)>>(list => result.Enqueue(list)))
                 .Run(Materializer);
 
             Thread.Sleep(500);

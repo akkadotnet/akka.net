@@ -120,7 +120,7 @@ namespace Akka.Cluster
         /// <param name="this">TBD</param>
         /// <param name="partitioner">TBD</param>
         /// <returns>TBD</returns>
-        public static Tuple<ImmutableSortedSet<T>, ImmutableSortedSet<T>> Partition<T>(this ImmutableSortedSet<T> @this,
+        public static (ImmutableSortedSet<T>, ImmutableSortedSet<T>) Partition<T>(this ImmutableSortedSet<T> @this,
             Func<T, bool> partitioner)
         {
             var @true = new List<T>();
@@ -131,7 +131,7 @@ namespace Akka.Cluster
                 (partitioner(item) ? @true : @false).Add(item);
             }
 
-            return Tuple.Create(@true.ToImmutableSortedSet(), @false.ToImmutableSortedSet());
+            return (@true.ToImmutableSortedSet(), @false.ToImmutableSortedSet());
         }
     }
 }

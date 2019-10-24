@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var picks in gen)
             {
                 var n = picks.Count;
-                var group = picks.Select((b, i) => Tuple.Create(b, i)).GroupBy(t => t.Item1).ToList();
+                var group = picks.Select((b, i) => (b, i)).GroupBy(t => t.Item1).ToList();
                 var left = group[0].ToList();
                 var right = group[1].ToList();
                 var task = Source.From(left.Select(t => t.Item2))

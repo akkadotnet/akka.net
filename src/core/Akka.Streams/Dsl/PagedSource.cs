@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -57,9 +58,9 @@ namespace Akka.Streams.Dsl
                         var page = key.HasValue ? await pageFactory(key.Value) : new Page<T, TKey>(Enumerable.Empty<T>(), Option<TKey>.None);
 
                         if (page.Items != null && page.Items.Any())
-                            return Tuple.Create(page.NextKey, page).AsOption();
+                            return (page.NextKey, page);
                         else
-                            return Option<Tuple<Option<TKey>, Page<T, TKey>>>.None;
+                            return Option<(Option<TKey>, Page<T, TKey>)>.None;
                     }
                 );
 

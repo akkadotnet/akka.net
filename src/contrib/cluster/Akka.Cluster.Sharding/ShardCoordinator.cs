@@ -426,7 +426,7 @@ namespace Akka.Cluster.Sharding
         {
             var sender = coordinator.Sender;
             Task.WhenAll(
-                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
+                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => (regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
                 ).ContinueWith(allRegionStats =>
                 {
                     if (allRegionStats.IsCanceled)

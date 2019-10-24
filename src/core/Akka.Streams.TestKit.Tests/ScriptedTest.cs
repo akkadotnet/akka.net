@@ -37,7 +37,7 @@ namespace Akka.Streams.TestKit.Tests
     {
         protected static class Script
         {
-            public static Script<TIn, TOut> Create<TIn, TOut>(params Tuple<ICollection<TIn>, ICollection<TOut>>[] phases)
+            public static Script<TIn, TOut> Create<TIn, TOut>(params (ICollection<TIn>, ICollection<TOut>)[] phases)
             {
                 var providedInputs = new List<TIn>();
                 var expectedOutputs = new List<TOut>();
@@ -94,13 +94,13 @@ namespace Akka.Streams.TestKit.Tests
             public bool NoInputsPending => PendingInputs == 0;
             public bool SomeInputsPending => !NoInputsPending;
 
-            public Tuple<TIn, Script<TIn, TOut>> ProvideInput()
+            public (TIn, Script<TIn, TOut>) ProvideInput()
             {
                 if (NoInputsPending)
                     throw new ScriptException("Script cannot provide more inputs");
 
                 var script = new Script<TIn, TOut>(ProvidedInputs, ExpectedOutputs, Jumps, InputCursor + 1, OutputCursor, OutputEndCursor + Jumps[InputCursor], Completed);
-                return Tuple.Create(ProvidedInputs[InputCursor], script);
+                return (ProvidedInputs[InputCursor], script);
             }
 
             public Script<TIn, TOut> ConsumeOutput(TOut output)

@@ -57,7 +57,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, Option<Tuple<TState, TElement>>> UnfoldFunc;
+        public readonly Func<TState, Option<(TState, TElement)>> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -68,7 +68,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public Unfold(TState state, Func<TState, Option<Tuple<TState, TElement>>> unfoldFunc)
+        public Unfold(TState state, Func<TState, Option<(TState, TElement)>> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;
@@ -101,7 +101,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly UnfoldAsync<TState, TElement> _stage;
             private TState _state;
-            private Action<Result<Option<Tuple<TState, TElement>>>> _asyncHandler;
+            private Action<Result<Option<(TState, TElement)>>> _asyncHandler;
 
             public Logic(UnfoldAsync<TState, TElement> stage) : base(stage.Shape)
             {
@@ -120,7 +120,7 @@ namespace Akka.Streams.Implementation
 
             public override void PreStart()
             {
-                var ac = GetAsyncCallback<Result<Option<Tuple<TState, TElement>>>>(result =>
+                var ac = GetAsyncCallback<Result<Option<(TState, TElement)>>>(result =>
                 {
                     if (!result.IsSuccess)
                         Fail(_stage.Out, result.Exception);
@@ -148,7 +148,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, Task<Option<Tuple<TState, TElement>>>> UnfoldFunc;
+        public readonly Func<TState, Task<Option<(TState, TElement)>>> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -159,7 +159,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public UnfoldAsync(TState state, Func<TState, Task<Option<Tuple<TState, TElement>>>> unfoldFunc)
+        public UnfoldAsync(TState state, Func<TState, Task<Option<(TState, TElement)>>> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;
@@ -218,7 +218,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Func<TState, Tuple<TState, TElement>> UnfoldFunc;
+        public readonly Func<TState, (TState, TElement)> UnfoldFunc;
         /// <summary>
         /// TBD
         /// </summary>
@@ -229,7 +229,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="unfoldFunc">TBD</param>
-        public UnfoldInfinite(TState state, Func<TState, Tuple<TState, TElement>> unfoldFunc)
+        public UnfoldInfinite(TState state, Func<TState, (TState, TElement)> unfoldFunc)
         {
             State = state;
             UnfoldFunc = unfoldFunc;

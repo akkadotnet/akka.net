@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -23,12 +24,12 @@ namespace Akka.Cluster.Sharding.Tests
             clusterSharding = ClusterSharding.Get(Sys);
         }
 
-        private Tuple<string, object> ExtractEntityId(object message)
+        private Option<(string, object)> ExtractEntityId(object message)
         {
             switch (message)
             {
                 case int i:
-                    return new Tuple<string, object>(i.ToString(), message);
+                    return (i.ToString(), message);
             }
             throw new NotSupportedException();
         }

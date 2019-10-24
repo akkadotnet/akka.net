@@ -74,14 +74,14 @@ namespace Akka.Streams.Tests.Dsl
                     var s = b.Add(Bidi());
                     b.From(
                         Source.Single(1)
-                            .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))))
+                            .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))))
                         .To(s.Inlet1);
                     b.From(s.Outlet1).To(st);
                     b.To(sb).From(s.Outlet2);
                     b.To(s.Inlet2)
                         .From(
                             Source.Single(Bytes)
-                                .MapMaterializedValue(_ => Tuple.Create(Task.FromResult(1L), Task.FromResult(""))));
+                                .MapMaterializedValue(_ => (Task.FromResult(1L), Task.FromResult(""))));
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);
