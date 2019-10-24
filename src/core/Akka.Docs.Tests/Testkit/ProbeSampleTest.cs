@@ -26,7 +26,7 @@ namespace DocsExamples.Testkit
             var probe = CreateTestProbe();
             
             //create a forwarder, injecting the probo's testActor
-            var props = Props.Create<Forwarder>(new Forwarder(probe));
+            var props = Props.Create(() => new Forwarder(probe));
             var forwarder = Sys.ActorOf(props, "forwarder");
 
             //verify correct forwarding
