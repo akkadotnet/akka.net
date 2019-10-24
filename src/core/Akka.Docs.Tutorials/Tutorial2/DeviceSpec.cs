@@ -17,7 +17,7 @@ namespace Tutorials.Tutorial2
             deviceActor.Tell(new ReadTemperature(requestId: 42), probe.Ref);
             var response = probe.ExpectMsg<RespondTemperature>();
             response.RequestId.Should().Be(42);
-            response.Value.Should().BeNull();
+            response.Value.Should().Be(null);
         }
         #endregion
 
