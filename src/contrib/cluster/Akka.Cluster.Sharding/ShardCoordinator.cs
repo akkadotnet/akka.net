@@ -464,7 +464,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions)
+                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions, coordinator.GracefullShutdownInProgress)
                             .WithDispatcher(coordinator.Context.Props.Dispatcher));
                     }
                     else
