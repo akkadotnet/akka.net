@@ -9,12 +9,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 
@@ -1031,11 +1033,11 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
-                return Tuple.Create(entityId, entityMessage);
+                return (entityId, entityMessage);
             };
 
             return StartProxy(typeName, role, extractEntityId, messageExtractor.ShardId);
@@ -1058,11 +1060,11 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
-                return Tuple.Create(entityId, entityMessage);
+                return (entityId, entityMessage);
             };
 
             return StartProxyAsync(typeName, role, extractEntityId, messageExtractor.ShardId);
@@ -1136,7 +1138,7 @@ namespace Akka.Cluster.Sharding
     /// message to support wrapping in message envelope that is unwrapped before
     /// sending to the entity actor.
     /// </summary>
-    public delegate Tuple<EntityId, Msg> ExtractEntityId(Msg message);
+    public delegate Option<(EntityId, Msg)> ExtractEntityId(Msg message);
 
     /// <summary>
     /// Interface of functions to extract entity id,  shard id, and the message to send
@@ -1187,10 +1189,9 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId = msg =>
             {
                 if (self.EntityId(msg) != null)
-                    return Tuple.Create(self.EntityId(msg), self.EntityMessage(msg));
-                //TODO: should we really use tuples?
-
-                return null;
+                    return (self.EntityId(msg), self.EntityMessage(msg));
+                
+                return Option<(string, object)>.None;
             };
 
             return extractEntityId;
@@ -1252,15 +1253,22 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
+        /// <param name="shuttingDownRegions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
         {
-            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
+            if (shuttingDownRegions.Count() > regions.Count())
+                throw new ArgumentException($"'shuttingDownRegions' must be a subset of 'regions'.", nameof(shuttingDownRegions));
+
+            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions, shuttingDownRegions));
         }
 
         private readonly ShardId _shard;
         private readonly IActorRef _from;
         private readonly ISet<IActorRef> _remaining;
+        private ILoggingAdapter _log;
+
+        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         /// <summary>
         /// TBD
@@ -1269,10 +1277,14 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        /// <param name="shuttingDownRegions">TBD</param>
+        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
         {
             _shard = shard;
             _from = @from;
+
+            foreach (var region in shuttingDownRegions)
+                Context.Watch(region);
 
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
@@ -1291,18 +1303,30 @@ namespace Akka.Cluster.Sharding
             switch (message)
             {
                 case PersistentShardCoordinator.BeginHandOffAck hoa when _shard == hoa.Shard:
-                    _remaining.Remove(Sender);
-                    if (_remaining.Count == 0)
-                    {
-                        _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
-                        Context.Become(StoppingShard);
-                    }
+                    Log.Debug("BeginHandOffAck for shard [{0}] received from {1}.", _shard, Sender);
+                    Acked(Sender);
+                    return true;
+                case Terminated t:
+                    Log.Debug("ShardRegion {0} terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
+                    Acked(t.ActorRef);
                     return true;
                 case ReceiveTimeout _:
                     Done(false);
                     return true;
             }
             return false;
+        }
+
+        private void Acked(IActorRef shardRegion)
+        {
+            Context.Unwatch(shardRegion);
+            _remaining.Remove(Sender);
+            if (_remaining.Count == 0)
+            {
+                Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
+                _from.Tell(new PersistentShardCoordinator.HandOff(_shard));
+                Context.Become(StoppingShard);
+            }
         }
 
         private bool StoppingShard(object message)

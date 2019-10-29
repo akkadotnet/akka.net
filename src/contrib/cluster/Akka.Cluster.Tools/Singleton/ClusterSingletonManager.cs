@@ -728,7 +728,7 @@ namespace Akka.Cluster.Tools.Singleton
 
                         if (youngerData.Oldest.All(m => _removed.ContainsKey(m)))
                         {
-                            GoToOldest();
+                            return GoToOldest();
                         }
                         else
                         {

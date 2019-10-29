@@ -110,7 +110,7 @@ namespace Akka.Remote.Tests.Transport
 
                         if (seq > Limit*0.5)
                         {
-                            _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                            _controller.Tell((MaxSeq, Losses));
                             Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
                                 ResendFinal.Instance, Self);
                             Context.Become(Done);
@@ -128,7 +128,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 if (message is ResendFinal)
                 {
-                    _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                    _controller.Tell((MaxSeq, Losses));
                 }
             }
         }
@@ -195,7 +195,7 @@ namespace Akka.Remote.Tests.Transport
             var tester = Sys.ActorOf(Props.Create(() => new SequenceVerifier(here, TestActor)));
             tester.Tell("start");
 
-            ExpectMsg<Tuple<int,int>>(TimeSpan.FromSeconds(60));
+            ExpectMsg<(int,int)>(TimeSpan.FromSeconds(60));
         }
 
         #endregion

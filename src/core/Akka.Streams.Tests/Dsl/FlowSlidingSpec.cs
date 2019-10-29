@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private void Check(IEnumerable<Tuple<int, int, int>> gen)
+        private void Check(IEnumerable<(int, int, int)> gen)
         {
             gen.ForEach(t =>
             {
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, random.Next(1, win));
+                        return (random.Next(0, 32), win, random.Next(1, win));
                     });
 
                 Check(gen);
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, win);
+                        return (random.Next(0, 32), win, win);
                     });
 
                 Check(gen);
@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(_ =>
                     {
                         var win = random.Next(1, 62);
-                        return Tuple.Create(random.Next(0, 32), win, random.Next(win + 1, 128));
+                        return (random.Next(0, 32), win, random.Next(win + 1, 128));
                     });
 
                 Check(gen);

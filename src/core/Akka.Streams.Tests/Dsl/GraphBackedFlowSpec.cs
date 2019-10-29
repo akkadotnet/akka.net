@@ -224,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
                 var merge = b.Add(new Merge<int>(2));
                 b.From(s1.Outlet).To(merge.In(0));
                 b.From(merge.Out)
-                    .To(Sink.FromSubscriber(probe).MapMaterializedValue(_ => Tuple.Create(NotUsed.Instance, NotUsed.Instance)));
+                    .To(Sink.FromSubscriber(probe).MapMaterializedValue(_ => (NotUsed.Instance, NotUsed.Instance)));
                 b.From(s2.Outlet).Via(Flow.Create<int>().Select(x => x*10)).To(merge.In(1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
@@ -273,7 +273,7 @@ namespace Akka.Streams.Tests.Dsl
                     (b, partial, flow) =>
                     {
                         var s = Sink.FromSubscriber(probe)
-                            .MapMaterializedValue(_ => Tuple.Create(NotUsed.Instance, NotUsed.Instance));
+                            .MapMaterializedValue(_ => (NotUsed.Instance, NotUsed.Instance));
 
                         b.From(flow.Outlet).To(partial.Inlet);
                         b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(s);
@@ -334,7 +334,7 @@ namespace Akka.Streams.Tests.Dsl
                     return new SinkShape<string>(f.Inlet);
                 }));
 
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(source, flow, sink, (src, _, snk) => Tuple.Create(src, snk),
+            var t = RunnableGraph.FromGraph(GraphDsl.Create(source, flow, sink, (src, _, snk) => (src, snk),
                 (b, src, f, snk) =>
                 {
                     b.From(src.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(f.Inlet);

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using Akka.Util;
 
 namespace Akka.Streams.Util
 {

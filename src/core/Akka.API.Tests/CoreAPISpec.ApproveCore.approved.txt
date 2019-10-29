@@ -4143,6 +4143,7 @@ namespace Akka.Routing
     public sealed class GetRoutees : Akka.Routing.RouterManagementMessage
     {
         public GetRoutees() { }
+        public static Akka.Routing.GetRoutees Instance { get; }
     }
     public abstract class Group : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Group>
     {
@@ -4779,6 +4780,17 @@ namespace Akka.Util
         public static int StringHash(string s) { }
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
     }
+    public struct Option<T>
+    {
+        public static readonly Akka.Util.Option<T> None;
+        public Option(T value) { }
+        public bool HasValue { get; }
+        public T Value { get; }
+        public bool Equals(Akka.Util.Option<T> other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public abstract class Resolve : Akka.Actor.IIndirectActorProducer
     {
         protected Resolve() { }
@@ -4915,6 +4927,13 @@ namespace Akka.Util
         public Akka.Util.WildcardTree<T> Insert(System.Collections.Generic.IEnumerator<string> elements, T data) { }
     }
 }
+namespace Akka.Util.Extensions
+{
+    public class static ObjectExtensions
+    {
+        public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
+    }
+}
 namespace Akka.Util.Internal
 {
     public class AtomicCounter : Akka.Util.Internal.IAtomicCounter<int>
@@ -4991,7 +5010,7 @@ namespace Akka.Util.Internal
     }
     public class static InterlockedSpin
     {
-        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.Tuple<bool, T, TReturn>> updateIfTrue)
+        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.ValueTuple<bool, T, TReturn>> updateIfTrue)
             where T :  class { }
         public static T Swap<T>(ref T reference, System.Func<T, T> updater)
             where T :  class { }

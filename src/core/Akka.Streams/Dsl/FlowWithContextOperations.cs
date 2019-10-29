@@ -22,7 +22,7 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> Select<TCtx, TIn, TOut, TOut2, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<TOut, TOut2> fn)
         {
-            var stage = new Select<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(x => Tuple.Create(fn(x.Item1), x.Item2));
+            var stage = new Select<(TOut, TCtx), (TOut2, TCtx)>(x => (fn(x.Item1), x.Item2));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -32,8 +32,8 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> SelectAsync<TCtx, TIn, TOut, TOut2, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, int parallelism, Func<TOut, Task<TOut2>> fn)
         {
-            var stage = new SelectAsync<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(parallelism,
-                async x => Tuple.Create(await fn(x.Item1), x.Item2));
+            var stage = new SelectAsync<(TOut, TCtx), (TOut2, TCtx)>(parallelism,
+                async x => (await fn(x.Item1), x.Item2));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -43,10 +43,10 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> Collect<TCtx, TIn, TOut, TOut2, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
         {
-            var stage = new Collect<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(func: x =>
+            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
-                return ReferenceEquals(result, null) ? null : Tuple.Create(result, x.Item2);
+                return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
             return flow.Via(Flow.FromGraph(stage));
         }
@@ -57,7 +57,7 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> Where<TCtx, TIn, TOut, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            var stage = new Where<Tuple<TOut, TCtx>>(x => predicate(x.Item1));
+            var stage = new Where<(TOut, TCtx)>(x => predicate(x.Item1));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -67,7 +67,7 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> WhereNot<TCtx, TIn, TOut, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            var stage = new Where<Tuple<TOut, TCtx>>(x => !predicate(x.Item1));
+            var stage = new Where<(TOut, TCtx)>(x => !predicate(x.Item1));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -79,7 +79,7 @@ namespace Akka.Streams.Dsl
             TOut, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, int n)
         {
-            var stage = new Grouped<Tuple<TOut, TCtx>>(n);
+            var stage = new Grouped<(TOut, TCtx)>(n);
             return flow.Via(Flow.FromGraph(stage).Select(itemsWithContexts =>
             {
                 var items = new List<TOut>(n);
@@ -91,7 +91,7 @@ namespace Akka.Streams.Dsl
                     ctxs.Add(tuple.Item2);
                 }
 
-                return Tuple.Create<IReadOnlyList<TOut>, IReadOnlyList<TCtx>>(items, ctxs);
+                return ((IReadOnlyList<TOut>)items, (IReadOnlyList<TCtx>)ctxs);
             }));
         }
 
@@ -103,7 +103,7 @@ namespace Akka.Streams.Dsl
             TOut, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, int n, int step = 1)
         {
-            var stage = new Sliding<Tuple<TOut, TCtx>>(n, step);
+            var stage = new Sliding<(TOut, TCtx)>(n, step);
             return flow.Via(Flow.FromGraph(stage).Select(itemsWithContexts =>
             {
                 var items = new List<TOut>(n);
@@ -115,7 +115,7 @@ namespace Akka.Streams.Dsl
                     ctxs.Add(tuple.Item2);
                 }
 
-                return Tuple.Create<IReadOnlyList<TOut>, IReadOnlyList<TCtx>>(items, ctxs);
+                return ((IReadOnlyList<TOut>)items, (IReadOnlyList<TCtx>)ctxs);
             }));
         }
 
@@ -134,13 +134,13 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx, TOut2, TMat> StatefulSelectConcat<TCtx, TIn, TOut, TOut2, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<Func<TOut, IEnumerable<TOut2>>> fn)
         {
-            var stage = new StatefulSelectMany<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(() =>
+            var stage = new StatefulSelectMany<(TOut, TCtx), (TOut2, TCtx)>(() =>
             {
                 var fun = fn();
                 return itemWithContext =>
                 {
                     var items = fun(itemWithContext.Item1);
-                    return items.Select(i => Tuple.Create<TOut2, TCtx>(i, itemWithContext.Item2));
+                    return items.Select(i => (i, itemWithContext.Item2));
                 };
             });
             return flow.Via(Flow.FromGraph(stage));
@@ -152,8 +152,8 @@ namespace Akka.Streams.Dsl
         public static FlowWithContext<TCtx, TIn, TCtx2, TOut, TMat> SelectContext<TCtx, TIn, TCtx2, TOut, TMat>(
             this FlowWithContext<TCtx, TIn, TCtx, TOut, TMat> flow, Func<TCtx, TCtx2> mapContext)
         {
-            var stage = new Select<Tuple<TOut, TCtx>, Tuple<TOut, TCtx2>>(x =>
-                Tuple.Create(x.Item1, mapContext(x.Item2)));
+            var stage = new Select<(TOut, TCtx), (TOut, TCtx2)>(x =>
+                (x.Item1, mapContext(x.Item2)));
             return flow.Via(Flow.FromGraph(stage));
         }
     }
@@ -167,7 +167,7 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut2, TMat> Select<TCtx, TOut, TOut2, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<TOut, TOut2> fn)
         {
-            var stage = new Select<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(x => Tuple.Create(fn(x.Item1), x.Item2));
+            var stage = new Select<(TOut, TCtx), (TOut2, TCtx)>(x => (fn(x.Item1), x.Item2));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -177,8 +177,8 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut2, TMat> SelectAsync<TCtx, TOut, TOut2, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, int parallelism, Func<TOut, Task<TOut2>> fn)
         {
-            var stage = new SelectAsync<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(parallelism,
-                async x => Tuple.Create(await fn(x.Item1), x.Item2));
+            var stage = new SelectAsync<(TOut, TCtx), (TOut2, TCtx)>(parallelism,
+                async x => (await fn(x.Item1), x.Item2));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -188,10 +188,10 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut2, TMat> Collect<TCtx, TOut, TOut2, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
         {
-            var stage = new Collect<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(func: x =>
+            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
             {
                 var result = fn(x.Item1);
-                return ReferenceEquals(result, null) ? null : Tuple.Create(result, x.Item2);
+                return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
             });
             return flow.Via(Flow.FromGraph(stage));
         }
@@ -202,7 +202,7 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut, TMat> Where<TCtx, TOut, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            var stage = new Where<Tuple<TOut, TCtx>>(x => predicate(x.Item1));
+            var stage = new Where<(TOut, TCtx)>(x => predicate(x.Item1));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -212,7 +212,7 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut, TMat> WhereNot<TCtx, TOut, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            var stage = new Where<Tuple<TOut, TCtx>>(x => !predicate(x.Item1));
+            var stage = new Where<(TOut, TCtx)>(x => !predicate(x.Item1));
             return flow.Via(Flow.FromGraph(stage));
         }
 
@@ -223,7 +223,7 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<IReadOnlyList<TCtx>, IReadOnlyList<TOut>, TMat> Grouped<TCtx, TOut, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, int n)
         {
-            var stage = new Grouped<Tuple<TOut, TCtx>>(n);
+            var stage = new Grouped<(TOut, TCtx)>(n);
             return flow.Via(Flow.FromGraph(stage).Select(itemsWithContexts =>
             {
                 var items = new List<TOut>(n);
@@ -235,7 +235,7 @@ namespace Akka.Streams.Dsl
                     ctxs.Add(tuple.Item2);
                 }
 
-                return Tuple.Create<IReadOnlyList<TOut>, IReadOnlyList<TCtx>>(items, ctxs);
+                return ((IReadOnlyList<TOut>)items, (IReadOnlyList<TCtx>)ctxs);
             }));
         }
 
@@ -246,7 +246,7 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<IReadOnlyList<TCtx>, IReadOnlyList<TOut>, TMat> Sliding<TCtx, TOut, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, int n, int step = 1)
         {
-            var stage = new Sliding<Tuple<TOut, TCtx>>(n, step);
+            var stage = new Sliding<(TOut, TCtx)>(n, step);
             return flow.Via(Flow.FromGraph(stage).Select(itemsWithContexts =>
             {
                 var items = new List<TOut>(n);
@@ -258,7 +258,7 @@ namespace Akka.Streams.Dsl
                     ctxs.Add(tuple.Item2);
                 }
 
-                return Tuple.Create<IReadOnlyList<TOut>, IReadOnlyList<TCtx>>(items, ctxs);
+                return ((IReadOnlyList<TOut>)items, (IReadOnlyList<TCtx>)ctxs);
             }));
         }
 
@@ -277,13 +277,13 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx, TOut2, TMat> StatefulSelectConcat<TCtx, TOut, TOut2, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<Func<TOut, IEnumerable<TOut2>>> fn)
         {
-            var stage = new StatefulSelectMany<Tuple<TOut, TCtx>, Tuple<TOut2, TCtx>>(() =>
+            var stage = new StatefulSelectMany<(TOut, TCtx), (TOut2, TCtx)>(() =>
             {
                 var fun = fn();
                 return itemWithContext =>
                 {
                     var items = fun(itemWithContext.Item1);
-                    return items.Select(i => Tuple.Create<TOut2, TCtx>(i, itemWithContext.Item2));
+                    return items.Select(i => (i, itemWithContext.Item2));
                 };
             });
             return flow.Via(Flow.FromGraph(stage));
@@ -295,8 +295,8 @@ namespace Akka.Streams.Dsl
         public static SourceWithContext<TCtx2, TOut, TMat> SelectContext<TCtx, TCtx2, TOut, TMat>(
             this SourceWithContext<TCtx, TOut, TMat> flow, Func<TCtx, TCtx2> mapContext)
         {
-            var stage = new Select<Tuple<TOut, TCtx>, Tuple<TOut, TCtx2>>(x =>
-                Tuple.Create(x.Item1, mapContext(x.Item2)));
+            var stage = new Select<(TOut, TCtx), (TOut, TCtx2)>(x =>
+                (x.Item1, mapContext(x.Item2)));
             return flow.Via(Flow.FromGraph(stage));
         }
     }
