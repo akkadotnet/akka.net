@@ -84,6 +84,8 @@
     href: persistence/custom-serialization.md
   - name: Persistence Query
     href: persistence/persistence-query.md
+  - name: Persistence Testing
+    href: persistence/persistence-testing.md
 - name: Streams
   items: 
   - name: Introduction

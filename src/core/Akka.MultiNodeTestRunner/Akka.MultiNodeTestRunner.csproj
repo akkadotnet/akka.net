@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.8" />
+    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.12" />
   </ItemGroup>
 
   <ItemGroup>

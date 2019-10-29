@@ -20,6 +20,7 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -197,11 +198,11 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case EntityEnvelope env:
-                    return Tuple.Create(env.Id.ToString(), env.Payload);
+                    return (env.Id.ToString(), env.Payload);
                 case Get msg:
-                    return Tuple.Create(msg.CounterId.ToString(), message);
+                    return (msg.CounterId.ToString(), message);
             }
-            return null;
+            return Option<(string, object)>.None;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>

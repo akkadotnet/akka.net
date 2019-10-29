@@ -286,7 +286,7 @@ namespace Akka.Streams.Tests.Dsl
                     _stage._probe.Tell(Self);
                 }
 
-                private void Behaviour(Tuple<IActorRef, object> args)
+                private void Behaviour((IActorRef, object) args)
                 {
                     var msg = args.Item2;
                     var sender = args.Item1;

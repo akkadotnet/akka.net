@@ -60,11 +60,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 private readonly Action<GraphInterpreter> _interpreterSetter;
                 private readonly IList<IGraphStageWithMaterializedValue<Shape, object>> _stages;
 
-                private readonly IList<Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>> _upstreams =
-                    new List<Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>>();
-                private readonly IList<Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>> _downstreams =
-                    new List<Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>>();
-                private readonly IList<Tuple<Outlet, Inlet>> _connections = new List<Tuple<Outlet, Inlet>>();
+                private readonly IList<(GraphInterpreter.UpstreamBoundaryStageLogic, Inlet)> _upstreams =
+                    new List<(GraphInterpreter.UpstreamBoundaryStageLogic, Inlet)>();
+                private readonly IList<(Outlet, GraphInterpreter.DownstreamBoundaryStageLogic)> _downstreams =
+                    new List<(Outlet, GraphInterpreter.DownstreamBoundaryStageLogic)>();
+                private readonly IList<(Outlet, Inlet)> _connections = new List<(Outlet, Inlet)>();
 
                 public AssemblyBuilder(ILoggingAdapter logger, Action<GraphInterpreter> interpreterSetter, IEnumerable<IGraphStageWithMaterializedValue<Shape, object>> stages)
                 {
@@ -75,19 +75,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public AssemblyBuilder Connect<T>(GraphInterpreter.UpstreamBoundaryStageLogic upstream, Inlet<T> inlet)
                 {
-                    _upstreams.Add(new Tuple<GraphInterpreter.UpstreamBoundaryStageLogic, Inlet>(upstream, inlet));
+                    _upstreams.Add((upstream, (Inlet)inlet));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, GraphInterpreter.DownstreamBoundaryStageLogic downstream)
                 {
-                    _downstreams.Add(new Tuple<Outlet, GraphInterpreter.DownstreamBoundaryStageLogic>(outlet, downstream));
+                    _downstreams.Add(((Outlet)outlet, downstream));
                     return this;
                 }
 
                 public AssemblyBuilder Connect<T>(Outlet<T> outlet, Inlet<T> inlet)
                 {
-                    _connections.Add(new Tuple<Outlet, Inlet>(outlet, inlet));
+                    _connections.Add(((Outlet)outlet, (Inlet)inlet));
                     return this;
                 }
 

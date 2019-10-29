@@ -347,12 +347,12 @@ namespace Akka.DistributedData.Tests
                     Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe)))))
                 .ToImmutableDictionary();
 
-        private IImmutableDictionary<Address, Tuple<TestProbe, IActorRef>> Probes() =>
+        private IImmutableDictionary<Address, (TestProbe, IActorRef)> Probes() =>
             _nodes.Select(address =>
                 {
                     var probe = CreateTestProbe("probe-" + address.Host);
-                    return new KeyValuePair<Address, Tuple<TestProbe, IActorRef>>(address,
-                        Tuple.Create(probe, Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe.Ref)))));
+                    return new KeyValuePair<Address, (TestProbe, IActorRef)>(address,
+                        (probe, Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe.Ref)))));
                 })
                 .ToImmutableDictionary();
     }
