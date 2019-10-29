@@ -89,10 +89,10 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">The materializer.</param>
         /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Sink"/>
         ///  that can be used to consume elements from the newly materialized <see cref="Sink"/>.</returns>
-        public Tuple<TMat, Sink<TIn, NotUsed>> PreMaterialize(IMaterializer materializer)
+        public (TMat, Sink<TIn, NotUsed>) PreMaterialize(IMaterializer materializer)
         {
             var sub = Source.AsSubscriber<TIn>().ToMaterialized(this, Keep.Both).Run(materializer);
-            return Tuple.Create(sub.Item2, Sink.FromSubscriber(sub.Item1));
+            return (sub.Item2, Sink.FromSubscriber(sub.Item1));
         }
 
         /// <summary>

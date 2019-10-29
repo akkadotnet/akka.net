@@ -289,7 +289,7 @@ Target "MultiNodeTests" (fun _ ->
 
             let args = StringBuilder()
                     |> append assembly
-                    |> append (sprintf "-Dmultinode.teamcity=%b" hasTeamCity)
+                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
@@ -328,7 +328,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 let args = StringBuilder()
                         |> append multiNodeTestPath
                         |> append assembly
-                        |> append "-Dmultinode.teamcity=true"
+                        |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                         |> append "-Dmultinode.platform=netcore"
@@ -486,17 +486,15 @@ Target "PublishNuget" (fun _ ->
     if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
         printfn "Pushing nuget packages"
         if shouldPushNugetPackages then
-            let normalPackages= 
-                !! (outputNuGet @@ "*.nupkg") 
-                -- (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            let normalPackages= !! (outputNuGet @@ "*.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
                 try
-                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "https://api.nuget.org/v3/index.json") (getBuildParam "nugetkey") 3 package
                 with exn ->
                     printfn "%s" exn.Message
 
         if shouldPushSymbolsPackages then
-            let symbolPackages= !! (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            let symbolPackages= !! (outputNuGet @@ "*.snupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in symbolPackages do
                 try
                     publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
@@ -602,14 +600,13 @@ Target "Help" <| fun _ ->
 Target "HelpNuget" <| fun _ ->
     List.iter printfn [
       "usage: "
-      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] "
-      "            [symbolspublishurl=<url>] "
+      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] [symbolskey=<key> symbolspublishurl=<url>]"
       ""
       "In order to publish a nuget package, keys must be specified."
       "If a key is not specified the nuget packages will only be created on disk"
       "After a build you can find them in build/nuget"
       ""
-      "For pushing nuget packages to nuget.org and symbols to symbolsource.org"
+      "For pushing nuget packages and symbols to nuget.org"
       "you need to specify nugetkey=<key>"
       "   build Nuget nugetKey=<key for nuget.org>"
       ""

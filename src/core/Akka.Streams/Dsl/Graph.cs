@@ -1388,12 +1388,12 @@ namespace Akka.Streams.Dsl
     /// </summary>
     /// <typeparam name="T1">TBD</typeparam>
     /// <typeparam name="T2">TBD</typeparam>
-    public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
+    public sealed class Zip<T1, T2> : ZipWith<T1, T2, (T1, T2)>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
-        public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
+        public Zip() : base((a, b) => (a, b)) { }
 
         /// <summary>
         /// TBD
@@ -1442,7 +1442,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
-        public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
+        public UnZip() : base(kv => (kv.Key, kv.Value)) { }
 
         /// <summary>
         /// TBD

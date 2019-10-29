@@ -15,6 +15,8 @@ using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
+using Akka.Util;
+
 // ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl
@@ -1243,9 +1245,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
+        public static Flow<TIn, (IImmutableList<TOut>, Source<TOut, NotUsed>), TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
         {
-            return (Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Flow<TIn, (IImmutableList<TOut>, Source<TOut, NotUsed>), TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -1511,9 +1513,9 @@ namespace Akka.Streams.Dsl
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, Tuple<TOut, long>, TMat> ZipWithIndex<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
+        public static Flow<TIn, (TOut, long), TMat> ZipWithIndex<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
         {
-            return (Flow<TIn, Tuple<TOut, long>, TMat>)InternalFlowOperations.ZipWithIndex(flow);
+            return (Flow<TIn, (TOut, long), TMat>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>
@@ -1901,9 +1903,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, Tuple<T1, T2>, TMat> Zip<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static Flow<TIn, (T1, T2), TMat> Zip<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
-            return (Flow<TIn, Tuple<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
+            return (Flow<TIn, (T1, T2), TMat>)InternalFlowOperations.Zip(flow, other);
         }
 
         /// <summary>

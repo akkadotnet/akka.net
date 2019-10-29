@@ -88,10 +88,8 @@ namespace Akka.Actor
             }
             finally
             {
-                if (influenceReceiveTimeout)
-                {
-                    CheckReceiveTimeout(); // Reschedule receive timeout
-                }
+                // Schedule or reschedule receive timeout
+                CheckReceiveTimeout(influenceReceiveTimeout);
             }
         }
 

@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             Script<int, int> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next();
-                return new Tuple<ICollection<int>, ICollection<int>>(new[] {x}, (x & 1) == 0 ? new[] {x} : new int[] {});
+                return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 0 ? new[] { x } : new int[] { }));
             }).ToArray());
 
             RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Where(x => x%2 == 0)));
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
             Script<int, int> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next();
-                return new Tuple<ICollection<int>, ICollection<int>>(new[] { x }, (x & 1) == 1 ? new[] { x } : new int[] { });
+                return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 1 ? new[] { x } : new int[] { }));
             }).ToArray());
 
             RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));

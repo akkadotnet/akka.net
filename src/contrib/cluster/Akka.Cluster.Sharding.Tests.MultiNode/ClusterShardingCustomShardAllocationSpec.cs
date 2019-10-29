@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -181,7 +182,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
 
         internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 
