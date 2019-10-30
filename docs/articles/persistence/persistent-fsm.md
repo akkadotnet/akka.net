@@ -9,12 +9,12 @@ title: Persistence FSM
 ## A Simple Example
 To demonstrate the features of the `PersistentFSM` class, consider an actor which represents a Web store customer. The contract of our "`WebStoreCustomerFSMActor`" is that it accepts the following commands:
 
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-commands)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-commands)]
 
 `AddItem` sent when the customer adds an item to a shopping cart `Buy` - when the customer finishes the purchase `Leave` - when the customer leaves the store without purchasing anything `GetCurrentCart` allows to query the current state of customer's shopping cart
 
 The customer can be in one of the following states:
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-states)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-states)]
 
 `LookingAround` customer is browsing the site, but hasn't added anything to the shopping cart `Shopping` customer has recently added items to the shopping cart `Inactive` customer has items in the shopping cart, but hasn't added anything recently `Paid` customer has purchased the items
 
@@ -23,23 +23,23 @@ The customer can be in one of the following states:
 
 Customer's actions are "recorded" as a sequence of "domain events" which are persisted. Those events are replayed on an actor's start in order to restore the latest customer's state:
 
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-domain-events)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-domain-events)]
 
 Customer state data represents the items in a customer's shopping cart:
 
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-domain-messages)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-domain-messages)]
 
 Side-effects:
 
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-side-effects)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-side-effects)]
 
 Here is how everything is wired together:
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-setup)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-setup)]
 
 > [!NOTE]
 > State data can only be modified directly on initialization. Later it's modified only as a result of applying domain events. Override the `ApplyEvent` method to define how state data is affected by domain events, see the example below
 
-[!code-csharp[WebStoreCustomerFSMActor.cs](../../examples/DocsExamples/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-apply-event)]
+[!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-apply-event)]
 
 `AndThen` can be used to define actions which will be executed following event’s persistence - convenient for "side effects" like sending a message or logging. Notice that actions defined in andThen block are not executed on recovery:
 ```cs

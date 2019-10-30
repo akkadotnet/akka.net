@@ -1,4 +1,4 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
@@ -26,12 +26,12 @@ namespace DocsExamples.Testkit
             var probe = CreateTestProbe();
             
             //create a forwarder, injecting the probo's testActor
-            var props = Props.Create<Forwarder>(new Forwarder(probe));
+            var props = Props.Create(() => new Forwarder(probe));
             var forwarder = Sys.ActorOf(props, "forwarder");
 
             //verify correct forwarding
             forwarder.Tell(43, TestActor);
-            probe.ExpectMsg(42);
+            probe.ExpectMsg(43);
             Assert.Equal(TestActor, probe.LastSender);
         }
 
@@ -41,8 +41,8 @@ namespace DocsExamples.Testkit
             var worker = CreateTestProbe("worker");
             var aggregator = CreateTestProbe("aggregator");
 
-            Assert.True(worker.Ref.Path.Name.StartsWith("worker"));
-            Assert.True(aggregator.Ref.Path.Name.StartsWith("aggregator"));
+            Assert.StartsWith("worker", worker.Ref.Path.Name);
+            Assert.StartsWith("aggregator", aggregator.Ref.Path.Name);
         }
 
         [Fact]

@@ -393,7 +393,7 @@ This is particularly useful in the case of "materialized value powered" `Source`
 
 By using the `PreMaterialize` operator on a `Source`, you can obtain its materialized value and another `Source`. The latter can be used to consume messages from the original `Source`. Note that this can be materialized multiple times.
 
-[!code-csharp[FlowDocTests.cs](../../examples/DocsExamples/Streams/FlowDocTests.cs?name=source-prematerialization)]
+[!code-csharp[FlowDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/FlowDocTests.cs?name=source-prematerialization)]
 
 ## Stream ordering
 In Akka Streams almost all computation stages *preserve input order* of elements. This means that if inputs ``{IA1,IA2,...,IAn}``
