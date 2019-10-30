@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.TestKit.TestActors;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -24,12 +24,12 @@ namespace Akka.Cluster.Sharding.Tests
             clusterSharding = ClusterSharding.Get(Sys);
         }
 
-        private Tuple<string, object> ExtractEntityId(object message)
+        private Option<(string, object)> ExtractEntityId(object message)
         {
             switch (message)
             {
                 case int i:
-                    return new Tuple<string, object>(i.ToString(), message);
+                    return (i.ToString(), message);
             }
             throw new NotSupportedException();
         }
@@ -81,20 +81,20 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void HandOffStopper_must_stop_the_entity_even_if_the_entity_doesnt_handle_handOffStopMessage()
+        public void ClusterSharding_must_stop_entities_from_HandOffStopper_even_if_the_entity_doesnt_handle_handOffStopMessage()
         {
-
             var probe = CreateTestProbe();
             var shardName = "test";
             var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
             var handOffStopper = Sys.ActorOf(
-                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instsnce, TimeSpan.FromMilliseconds(10)))
+                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
               );
 
             Watch(emptyHandlerActor);
             ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
 
             probe.ExpectMsg(new PersistentShardCoordinator.ShardStopped(shardName), TimeSpan.FromSeconds(1));
+            probe.LastSender.Should().BeSameAs(handOffStopper);
 
             Watch(handOffStopper);
             ExpectTerminated(handOffStopper, TimeSpan.FromSeconds(1));
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class HandOffStopMessage : INoSerializationVerificationNeeded
         {
-            public static readonly HandOffStopMessage Instsnce = new HandOffStopMessage();
+            public static readonly HandOffStopMessage Instance = new HandOffStopMessage();
             private HandOffStopMessage()
             {
             }

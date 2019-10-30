@@ -26,7 +26,7 @@ steps:
   displayName: 'FAKE Build'
   inputs:
     filename: build.cmd
-    arguments: 'nuget nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(nugetKey)'
+    arguments: 'nuget nugetpublishurl=https://api.nuget.org/v3/index.json nugetkey=$(nugetKey)'
 
 
 - task: GitHubRelease@0

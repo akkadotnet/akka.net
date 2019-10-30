@@ -21,9 +21,9 @@ namespace Akka.Streams.Dsl
     /// API MAY CHANGE
     ///</summary> 
     public sealed class FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat>
-        : GraphDelegate<FlowShape<Tuple<TIn, TCtxIn>, Tuple<TOut, TCtxOut>>, TMat>
+        : GraphDelegate<FlowShape<(TIn, TCtxIn), (TOut, TCtxOut)>, TMat>
     {
-        internal FlowWithContext(Flow<Tuple<TIn, TCtxIn>, Tuple<TOut, TCtxOut>, TMat> flow) 
+        internal FlowWithContext(Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> flow) 
             : base(flow)
         {
         }
@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
         /// context propagation here.
         ///</summary>
         public FlowWithContext<TCtxIn, TIn, TCtx2, TOut2, TMat> Via<TCtx2, TOut2, TMat2>(
-            IGraph<FlowShape<Tuple<TOut, TCtxOut>, Tuple<TOut2, TCtx2>>, TMat2> viaFlow) =>
+            IGraph<FlowShape<(TOut, TCtxOut), (TOut2, TCtx2)>, TMat2> viaFlow) =>
             FlowWithContext.From(Flow.FromGraph(Inner).Via(viaFlow));
         
         ///<summary>
@@ -50,11 +50,11 @@ namespace Akka.Streams.Dsl
         /// flow into the materialized value of the resulting Flow.
         ///</summary>
         public FlowWithContext<TCtxIn, TIn, TCtx2, TOut2, TMat3> ViaMaterialized<TCtx2, TOut2, TMat2, TMat3>(
-            IGraph<FlowShape<Tuple<TOut, TCtxOut>, Tuple<TOut2, TCtx2>>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
+            IGraph<FlowShape<(TOut, TCtxOut), (TOut2, TCtx2)>, TMat2> viaFlow, Func<TMat, TMat2, TMat3> combine) =>
             FlowWithContext.From(Flow.FromGraph(Inner).ViaMaterialized(viaFlow, combine));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Flow<Tuple<TIn, TCtxIn>, Tuple<TOut, TCtxOut>, TMat> AsFlow() => Flow.FromGraph(Inner);
+        public Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> AsFlow() => Flow.FromGraph(Inner);
     }
 
     public static class FlowWithContext
@@ -67,7 +67,7 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static FlowWithContext<TCtx, TIn, TCtx, TIn, NotUsed> Create<TCtx, TIn>()
         {
-            var under = Flow.Create<Tuple<TIn, TCtx>, NotUsed>();
+            var under = Flow.Create<(TIn, TCtx), NotUsed>();
             return new FlowWithContext<TCtx, TIn, TCtx, TIn, NotUsed>(under);
         }
         
@@ -82,7 +82,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat"></typeparam>
         /// <returns></returns>
         public static FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat> From<TCtxIn, TIn, TCtxOut, TOut, TMat>(
-            Flow<Tuple<TIn, TCtxIn>, Tuple<TOut, TCtxOut>, TMat> flow) => 
+            Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> flow) => 
             new FlowWithContext<TCtxIn, TIn, TCtxOut, TOut, TMat>(flow);
     }
 }

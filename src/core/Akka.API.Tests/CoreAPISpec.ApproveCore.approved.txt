@@ -78,7 +78,7 @@ namespace Akka.Actor
         protected virtual void AutoReceiveMessage(Akka.Actor.Envelope envelope) { }
         public void Become(Akka.Actor.Receive receive) { }
         public void BecomeStacked(Akka.Actor.Receive receive) { }
-        public void CheckReceiveTimeout() { }
+        public void CheckReceiveTimeout(bool reschedule = True) { }
         protected void ClearActor(Akka.Actor.ActorBase actor) { }
         protected void ClearActorCell() { }
         protected virtual Akka.Actor.ActorBase CreateNewActorInstance() { }
@@ -1903,6 +1903,7 @@ namespace Akka.Actor.Internal
         public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public override System.Threading.Tasks.Task Terminate() { }
+        public override string ToString() { }
         public override bool TryGetExtension(System.Type extensionType, out object extension) { }
         public override bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension { }
@@ -2999,6 +3000,8 @@ namespace Akka.Event
         public static Akka.Event.LogLevel LogLevelFor(string logLevel) { }
         public static Akka.Event.LogLevel LogLevelFor<T>()
             where T : Akka.Event.LogEvent { }
+        public static string SimpleName(object o) { }
+        public static string SimpleName(System.Type t) { }
         public static string StringFor(this Akka.Event.LogLevel logLevel) { }
     }
     public abstract class LoggingAdapterBase : Akka.Event.ILoggingAdapter
@@ -3055,6 +3058,18 @@ namespace Akka.Event
         public object[] Args { get; }
         public string Format { get; }
         public override string ToString() { }
+    }
+    public struct LogSource
+    {
+        public string Source { get; }
+        public System.Type Type { get; }
+        public static Akka.Event.LogSource Create(object o) { }
+        public static Akka.Event.LogSource Create(object o, Akka.Actor.ActorSystem system) { }
+        public static string FromActor(Akka.Actor.IActorContext actor, Akka.Actor.ActorSystem system) { }
+        public static string FromActorRef(Akka.Actor.IActorRef a, Akka.Actor.ActorSystem system) { }
+        public static string FromString(string source, Akka.Actor.ActorSystem system) { }
+        public static string FromType(System.Type t, Akka.Actor.ActorSystem system) { }
+        public static System.Type SourceType(object o) { }
     }
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
@@ -4143,6 +4158,7 @@ namespace Akka.Routing
     public sealed class GetRoutees : Akka.Routing.RouterManagementMessage
     {
         public GetRoutees() { }
+        public static Akka.Routing.GetRoutees Instance { get; }
     }
     public abstract class Group : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Group>
     {
@@ -4779,6 +4795,17 @@ namespace Akka.Util
         public static int StringHash(string s) { }
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
     }
+    public struct Option<T>
+    {
+        public static readonly Akka.Util.Option<T> None;
+        public Option(T value) { }
+        public bool HasValue { get; }
+        public T Value { get; }
+        public bool Equals(Akka.Util.Option<T> other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public abstract class Resolve : Akka.Actor.IIndirectActorProducer
     {
         protected Resolve() { }
@@ -4915,6 +4942,13 @@ namespace Akka.Util
         public Akka.Util.WildcardTree<T> Insert(System.Collections.Generic.IEnumerator<string> elements, T data) { }
     }
 }
+namespace Akka.Util.Extensions
+{
+    public class static ObjectExtensions
+    {
+        public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
+    }
+}
 namespace Akka.Util.Internal
 {
     public class AtomicCounter : Akka.Util.Internal.IAtomicCounter<int>
@@ -4991,7 +5025,7 @@ namespace Akka.Util.Internal
     }
     public class static InterlockedSpin
     {
-        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.Tuple<bool, T, TReturn>> updateIfTrue)
+        public static TReturn ConditionallySwap<T, TReturn>(ref T reference, System.Func<T, System.ValueTuple<bool, T, TReturn>> updateIfTrue)
             where T :  class { }
         public static T Swap<T>(ref T reference, System.Func<T, T> updater)
             where T :  class { }

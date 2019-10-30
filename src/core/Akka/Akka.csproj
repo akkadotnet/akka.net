@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
@@ -7,6 +7,7 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetIsMono Condition="'$(TargetFramework)' == '$(NetFrameworkLibVersion)' and '$(OS)' == 'Unix'">true</TargetIsMono>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,12 +16,16 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.6.0" />
+  </ItemGroup>
+    
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
+    <Reference Include="System.Configuration" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <Reference Include="System.Configuration" />
+  <!-- Mono includes System.ValueTuple out of the box, so this is required to avoid conflicts -->
+  <ItemGroup Condition=" '$(TargetIsMono)' != 'true' ">
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
 
   <ItemGroup>

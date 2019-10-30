@@ -575,12 +575,12 @@ namespace Akka.Cluster
                 // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
                 // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
                 // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
-                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, Tuple<int, ImmutableSortedSet<UniqueAddress>>> take = null;
+                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, (int, ImmutableSortedSet<UniqueAddress>)> take = null;
                 take = (n, iter, acc) =>
                 {
                     if (iter.MoveNext() == false || n == 0)
                     {
-                        return Tuple.Create(n, acc);
+                        return (n, acc);
                     }
                     else
                     {
