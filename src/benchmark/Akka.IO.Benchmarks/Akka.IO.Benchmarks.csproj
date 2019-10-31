@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="NBench" Version="1.2.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
+    </ItemGroup>
+	
+	<ItemGroup>
+	  <DotNetCliToolReference Include="dotnet-nbench" Version="1.2.2" />
+    </ItemGroup>
+
+</Project>
