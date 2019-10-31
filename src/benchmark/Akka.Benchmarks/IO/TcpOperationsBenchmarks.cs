@@ -19,11 +19,12 @@ using Akka.IO;
 using Akka.Util.Internal;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
+using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(warmupCount: 0)]
+    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring, targetCount: 100)]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;
@@ -31,9 +32,9 @@ namespace Akka.Benchmarks
         private IActorRef _server;
         private IActorRef _client;
 
-        [Params(10/*, 100, 1000*/)]
+        [Params(100, 1000)]
         public int MessageCount { get; set; }
-        [Params(10/*, 100, 1000*/)]
+        [Params(10, 100)]
         public int MessageLength { get; set; }
         
         [GlobalSetup]
@@ -42,7 +43,7 @@ namespace Akka.Benchmarks
             _system = ActorSystem.Create("system");
             _message = new byte[MessageLength];
 
-            var port = 18765;
+            var port = new Random().Next(18000, 19000);
             _server = _system.ActorOf(Props.Create(() => new EchoServer(port)));
             _client = _system.ActorOf(Props.Create(() => new Client("127.0.0.1", port)));
         }
