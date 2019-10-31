@@ -18,7 +18,7 @@ namespace DocsExamples.Streams
             var matPoweredSource =
                 Source.ActorRef<string>(bufferSize: 100, overflowStrategy: OverflowStrategy.Fail);
 
-            Tuple<IActorRef, Source<string, NotUsed>> materialized = matPoweredSource.PreMaterialize(Sys.Materializer());
+            (IActorRef, Source<string, NotUsed>) materialized = matPoweredSource.PreMaterialize(Sys.Materializer());
 
             var actorRef = materialized.Item1;
             var source = materialized.Item2;

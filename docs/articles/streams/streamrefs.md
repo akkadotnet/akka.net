@@ -31,11 +31,11 @@ A `SourceRef` can be offered to a remote actor system in order for it to consume
 
 In order to share a `Source` with a remote endpoint you need to materialize it by running it into the `StreamRefs.SourceRef`. That sink materializes the `ISourceRef<T>` that you can then send to other nodes. Please note that it materializes into a Task so you will have to use the continuation (either `PipeTo` or async/await pattern).
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-source-actor)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=data-source-actor)]
 
 The origin actor which creates and owns the `Source` could also perform some validation or additional setup when preparing the source. Once it has handed out the `ISourceRef<T>` the remote side can run it like this:
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=source-ref-materialization)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=source-ref-materialization)]
 
 The process of preparing and running a `ISourceRef<T>` powered distributed stream is shown by the animation below:
 
@@ -51,11 +51,11 @@ They can be used to offer the other side the capability to send to the origin si
 > [!NOTE]
 To form a good mental model of `SinkRef`s, you can think of them as being similar to “passive mode” in FTP.
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-sink-actor)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=data-sink-actor)]
 
 Using the offered `ISinkRef<>` to send data to the origin of the `Sink` is also simple, as we can treat the `ISinkRef<>` just as any other sink and directly runWith or run with it.
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=sink-ref-materialization)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=sink-ref-materialization)]
 
 The process of preparing and running a `ISinkRef<>` powered distributed stream is shown by the animation below:
 
