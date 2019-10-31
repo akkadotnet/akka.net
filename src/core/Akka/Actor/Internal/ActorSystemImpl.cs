@@ -28,7 +28,7 @@ namespace Akka.Actor.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
@@ -520,12 +520,17 @@ namespace Akka.Actor.Internal
             else
                 ((IInternalActorRef)actor).Stop();
         }
+
+        public override string ToString()
+        {
+            return LookupRoot.Path.Root.Address.ToString();
+        }
     }
 
     /// <summary>
     /// This class represents a callback used to run a task when the actor system is terminating.
     /// </summary>
-    class TerminationCallbacks
+    internal class TerminationCallbacks
     {
         private Task _terminationTask;
         private readonly AtomicReference<Task> _atomicRef;
