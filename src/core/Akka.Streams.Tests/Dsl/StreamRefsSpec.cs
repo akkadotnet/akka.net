@@ -16,6 +16,9 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
+using Akka.Event;
+using Akka.Serialization;
+using Akka.Streams.Serialization;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -176,6 +179,319 @@ namespace Akka.Streams.Tests
         public BulkSinkMsg(ISinkRef<ByteString> dataSink)
         {
             DataSink = dataSink;
+        }
+    }
+
+    public class ProbeStreamRefSerializer : SerializerWithStringManifest
+    {
+        public ProbeStreamRefSerializer(ExtendedActorSystem system) : base(system)
+        {
+            innerSerializer = new StreamRefSerializer(system);
+        }
+
+        private StreamRefSerializer innerSerializer;
+
+        public static bool IsCalledToBinary;
+        public static bool IsCalledFromBinary;
+        public static bool IsCalledManifest;
+
+        public override byte[] ToBinary(object obj)
+        {
+            IsCalledToBinary = true;
+            return innerSerializer.ToBinary(obj);
+        }
+
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            IsCalledFromBinary = true;
+            return innerSerializer.FromBinary(bytes, manifest);
+        }
+
+        public override string Manifest(object o)
+        {
+            IsCalledManifest = true;
+            return innerSerializer.Manifest(o);
+        }
+    }
+
+    [Serializable]
+    public sealed class LogsOffer
+    {
+        public int StreamId { get; }
+        public ISourceRef<string> SourceRef { get; }
+
+        public LogsOffer(int streamId, ISourceRef<string> sourceRef)
+        {
+            StreamId = streamId;
+            SourceRef = sourceRef;
+        }
+    }
+
+    public static class TestCase
+    {
+        [Serializable]
+        public sealed class RequestLogs
+        {
+            public int StreamId { get; }
+
+            public RequestLogs(int streamId)
+            {
+                StreamId = streamId;
+            }
+        }
+
+        public static class ActorSystem1
+        {
+            public static ActorSystem CreateActorSystem()
+            {
+                var system = ActorSystem.Create("system1",
+                    ConfigurationFactory.ParseString(@"
+                akka {  
+                   actor {
+                        provider = remote
+                    }
+                    remote {
+                        helios.tcp {
+		                    port = 8090
+		                    hostname = localhost
+                        }
+                    }
+                }"));
+
+
+                var sourceActor = system.ActorOf(DataSourceActor.Props(), "source");
+                return system;
+            }
+        }
+
+        public class DataSourceActor : ReceiveActor
+        {
+            public DataSourceActor()
+            {
+                Receive<RequestLogs>(request =>
+                {
+                    if (request.StreamId == 2)
+                    {
+                        // create a source
+                        StreamLogs(request.StreamId)
+                            // materialize it using stream refs
+                            .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
+                            // and send to sender
+                            .PipeTo(Sender, success: sourceRef => sourceRef);
+                    }
+                    else
+                    {
+                        // create a source
+                        StreamLogs(request.StreamId)
+                            // materialize it using stream refs
+                            .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
+                            // and send to sender
+                            .PipeTo(Sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
+                    }
+                });
+
+                Receive<string>(_ => Sender.Tell("pong"));
+            }
+
+            private Source<string, NotUsed> StreamLogs(int streamId) =>
+                Source.From(Enumerable.Range(1, 100)).Select(i => i.ToString());
+
+            public static Props Props( )
+            {
+                return Akka.Actor.Props.Create(() => new DataSourceActor());
+            }
+
+        }
+
+        public static class ActorSystem2
+        {
+            public static ActorSystem CreateActorSystem()
+            {
+                var system = ActorSystem.Create("system2",
+                    ConfigurationFactory.ParseString(@"
+                akka {  
+                   actor {
+                        provider = remote
+                    }
+                    remote {
+                        helios.tcp {
+		                    port = 0
+		                    hostname = localhost
+                        }
+                    }
+                }"));
+
+                return system;
+            }
+        }
+
+        public sealed class StartListening
+        {
+            public string Id { get; }
+            public StartListening(string id)
+            {
+                Id = id;
+            }
+        }
+
+        public sealed class MeasurementsSinkReady
+        {
+            public string Id { get; }
+            public ISinkRef<string> SinkRef { get; }
+            public MeasurementsSinkReady(string id, ISinkRef<string> sinkRef)
+            {
+                Id = id;
+                SinkRef = sinkRef;
+            }
+        }
+
+        public class DataReceiverActor : ReceiveActor
+        {
+            protected ILoggingAdapter Log { get; } = Context.GetLogger();
+            private IMaterializer _materializer = Context.Materializer();
+
+            public DataReceiverActor(string sourceActorPath, IActorRef probe)
+            {
+                var sourceActor = Context.ActorSelection(sourceActorPath);
+
+                Receive<StartListening>((listening =>
+                {
+                    if (listening.Id == "2")
+                    {
+                        sourceActor.Tell(new RequestLogs(2));
+                    }
+                    else
+                    {
+                        sourceActor.Tell(new RequestLogs(1));
+                    }
+                }));
+
+                Receive<LogsOffer>((offer =>
+                {
+                    offer.SourceRef.Source.RunWith(Sink.ForEach<string>((s => Log.Info(s))), _materializer);
+                    probe.Tell(offer);
+                }));
+
+                Receive<ISourceRef<string>>((sref=>
+                {
+                    sref.Source.RunWith(Sink.ForEach<string>((s => Log.Info(s))), _materializer);
+                    probe.Tell("ok");
+                }));
+            }
+      
+
+            public static Props Props(string sourceActorPath, IActorRef probe)
+            {
+                return Akka.Actor.Props.Create(() => new DataReceiverActor(sourceActorPath, probe));
+            }
+        }
+    }
+
+    public class StreamRefsSerializerSpec : AkkaSpec
+    {
+        public static Config Config()
+        {
+            var address = TestUtils.TemporaryServerAddress();
+            return ConfigurationFactory.ParseString($@"        
+            akka {{
+              loglevel = INFO
+              actor {{
+                provider = remote
+                serialize-messages = off
+                serializers {{
+                    akka-stream-ref = ""Akka.Streams.Tests.ProbeStreamRefSerializer, Akka.Streams.Tests""
+                }}
+                serialization-bindings {{
+                    ""Akka.Streams.Tests.LogsOffer, Akka.Streams.Tests"" = akka-stream-ref
+                }}
+
+                serialization-identifiers {{
+                    ""Akka.Streams.Tests.ProbeStreamRefSerializer, Akka.Streams.Tests"" = 30
+                }}
+              }}
+              remote.dot-netty.tcp {{
+                port = {address.Port}
+                hostname = ""{address.Address}""
+              }}
+            }}").WithFallback(ConfigurationFactory.Load());
+        }
+
+        public StreamRefsSerializerSpec(ITestOutputHelper output) : this(Config(), output: output)
+        {
+        }
+
+        protected StreamRefsSerializerSpec(Config config, ITestOutputHelper output = null) : base(config, output)
+        {
+            Materializer = Sys.Materializer();
+            RemoteSystem = ActorSystem.Create("remote-system", Config());
+            InitializeLogger(RemoteSystem);
+            _probe = CreateTestProbe();
+
+            var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
+            var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
+            Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
+
+            _remoteActor = ExpectMsg<ActorIdentity>(TimeSpan.FromMinutes(1)).Subject;
+        }
+
+        protected readonly ActorSystem RemoteSystem;
+        protected readonly ActorMaterializer Materializer;
+        private readonly TestProbe _probe;
+        private readonly IActorRef _remoteActor;
+
+        protected override void BeforeTermination()
+        {
+            base.BeforeTermination();
+            RemoteSystem.Dispose();
+            Materializer.Dispose();
+        }
+
+        [Fact]
+        public void consuming_remote_streamref_should_not_fail()
+        {
+            var source = ActorOf(TestCase.DataSourceActor.Props(), "source");
+            var remoteAddress = ((ActorSystemImpl)Sys).Provider.DefaultAddress;
+
+            var sinkActor = RemoteSystem.ActorOf(TestCase.DataReceiverActor.Props(source.Path.ToStringWithAddress(remoteAddress), _probe), "sink");
+            sinkActor.Tell(new TestCase.StartListening("1"));
+
+            _probe.ExpectMsg<LogsOffer>();
+        }
+
+        [Fact]
+        public void consuming_remote_streamref_should_not_fail2()
+        {
+            var source = ActorOf(TestCase.DataSourceActor.Props(), "source");
+            var remoteAddress = ((ActorSystemImpl)Sys).Provider.DefaultAddress;
+
+            var sinkActor = RemoteSystem.ActorOf(TestCase.DataReceiverActor.Props(source.Path.ToStringWithAddress(remoteAddress), _probe), "sink");
+            sinkActor.Tell(new TestCase.StartListening("2"));
+
+            _probe.ExpectMsg("ok");
+        }
+
+        [Fact]
+        public void akka_system_must_have_custom_streamref_serializer_in_list()
+        {
+            var ser = Sys.Serialization.FindSerializerForType(typeof(Akka.Streams.Implementation.StreamRef.SequencedOnNext));
+            (ser is ProbeStreamRefSerializer).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void custom_stream_ref_serializer_must_be_called()
+        {
+            _remoteActor.Tell("give");
+            var sourceRef = ExpectMsg<ISourceRef<string>>(TimeSpan.FromMinutes(2));
+
+            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+
+            _probe.ExpectMsg("hello", TimeSpan.FromMinutes(2));
+            _probe.ExpectMsg("world", TimeSpan.FromMinutes(2));
+            _probe.ExpectMsg("<COMPLETE>", TimeSpan.FromMinutes(2));
+
+            ProbeStreamRefSerializer.IsCalledManifest.ShouldBeTrue("Manifest");
+            ProbeStreamRefSerializer.IsCalledFromBinary.ShouldBeTrue("FromBinary");
+            ProbeStreamRefSerializer.IsCalledToBinary.ShouldBeTrue("ToBinary");
         }
     }
 
