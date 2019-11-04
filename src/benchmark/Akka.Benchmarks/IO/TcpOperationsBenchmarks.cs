@@ -31,7 +31,7 @@ namespace Akka.Benchmarks
         private IActorRef _server;
         private IActorRef _clientCoordinator;
 
-        [Params(100, 1000)]
+        [Params(100, 1000, 10000)]
         public int MessageCount { get; set; }
         [Params(10, 100)]
         public int MessageLength { get; set; }
