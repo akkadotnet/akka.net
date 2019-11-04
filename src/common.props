@@ -15,9 +15,9 @@
     <NewtonsoftJsonVersion>9.0.1</NewtonsoftJsonVersion>
     <NBenchVersion>1.2.2</NBenchVersion>
     <ProtobufVersion>3.10.0</ProtobufVersion>
-    <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
+    <NetCoreTestVersion>netcoreapp3.0</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
-    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetStandardLibVersion>netstandard2.1</NetStandardLibVersion>
     <NetFrameworkLibVersion>net461</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
     <FsCheckVersion>2.9.0</FsCheckVersion>

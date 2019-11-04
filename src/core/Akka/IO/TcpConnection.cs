@@ -6,11 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -83,6 +86,7 @@ namespace Akka.IO
         private ConnectionStatus status;
         protected readonly TcpExt Tcp;
         protected readonly Socket Socket;
+        protected Pipe ReceivePipe;
         protected SocketAsyncEventArgs ReceiveArgs;
         protected SocketAsyncEventArgs SendArgs;
 
@@ -191,6 +195,8 @@ namespace Akka.IO
                     case SuspendReading _: SuspendReading(); return true;
                     case ResumeReading _: ResumeReading(); return true;
                     case SocketReceived _: DoRead(info, null); return true;
+                    case SocketReceivePipeUpdated update: HandleReceivePipeUpdated(info, null, update); return true;
+                    case SocketReceivePipeFlushCompleted flush: HandleReceivePipeFlushed(info, flush.Result); return true;
                     case CloseCommand cmd: HandleClose(info, Sender, cmd.Event); return true;
                     default: return false;
                 }
@@ -229,6 +235,8 @@ namespace Akka.IO
                     case SuspendReading _: SuspendReading(); return true;
                     case ResumeReading _: ResumeReading(); return true;
                     case SocketReceived _: DoRead(info, closeCommander); return true;
+                    case SocketReceivePipeUpdated update: HandleReceivePipeUpdated(info, closeCommander, update); return true;
+                    case SocketReceivePipeFlushCompleted flush: HandleReceivePipeFlushed(info, flush.Result); return true;
                     case SocketSent _:
                         AcknowledgeSent();
                         if (IsWritePending) DoWrite(info);
@@ -258,6 +266,8 @@ namespace Akka.IO
                     case SuspendReading _: SuspendReading(); return true;
                     case ResumeReading _: ResumeReading(); return true;
                     case SocketReceived _: DoRead(info, closeCommandor); return true;
+                    case SocketReceivePipeUpdated update: HandleReceivePipeUpdated(info, closeCommandor, update); return true;
+                    case SocketReceivePipeFlushCompleted flush: HandleReceivePipeFlushed(info, flush.Result); return true;
                     case Abort _: HandleClose(info, Sender, Aborted.Instance); return true;
                     default: return false;
                 }
@@ -387,6 +397,94 @@ namespace Akka.IO
             ClearStatus(ConnectionStatus.Sending);
         }
 
+        private void HandleReceivePipeFlushed(ConnectionInfo info, FlushResult flushResult)
+        {
+            if (HasStatus(ConnectionStatus.ReadingSuspended))
+                return;
+
+            if (flushResult.IsCompleted)
+                ReceivePipe.Writer.Complete();
+
+            // Can make synchronous read, because we know that there is something ready in the buffer
+            if (ReceivePipe.Reader.TryRead(out var readResult))
+            {
+                ReadOnlySequence<byte> buffer = readResult.Buffer;
+                // TODO: eliminate ByteString copy operaiton - use same ReadOnlySequence<byte> internally
+                info.Handler.Tell(new Tcp.Received(ByteString.FromBytes(buffer.ToArray())));
+                ReceivePipe.Reader.AdvanceTo(buffer.End);
+            }
+        }
+        
+        private void HandleReceivePipeUpdated(ConnectionInfo info, IActorRef closeCommander, SocketReceivePipeUpdated update)
+        {
+            //TODO: What should we do if reading is suspended with an oustanding read - this will discard the read
+            //      Should probably have an 'oustanding read'
+            if (HasStatus(ConnectionStatus.ReadingSuspended)) 
+                return;
+            
+            try
+            {
+                var read = FlushPipe(info, Tcp.Settings.ReceivedMessageSizeLimit, ReceivePipe, update);
+                ClearStatus(ConnectionStatus.Receiving);
+                switch (read.Type)
+                {
+                    case ReadResultType.AllRead:
+                        if (!pullMode)
+                            ReceiveAsync();
+                        break;
+                    case ReadResultType.EndOfStream:
+                        if (isOutputShutdown)
+                        {
+                            if (traceLogging) Log.Debug("Read returned end-of-stream, our side already closed");
+                            DoCloseConnection(info, closeCommander, ConfirmedClosed.Instance);
+                        }
+                        else
+                        {
+                            if (traceLogging) Log.Debug("Read returned end-of-stream, our side not yet closed");
+                            HandleClose(info, closeCommander, PeerClosed.Instance);
+                        }
+
+                        break;
+                    case ReadResultType.ReadError:
+                        HandleError(info.Handler, read.Error);
+                        break;
+                }
+            }
+            catch (SocketException cause)
+            {
+                HandleError(info.Handler, cause);
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReadResult FlushPipe(ConnectionInfo info, int remainingLimit, Pipe receivePipe, SocketReceivePipeUpdated update)
+        {
+            if (remainingLimit <= 0) 
+                return ReadResult.AllRead;
+            
+            if (update.IsFaulted)
+                return new ReadResult(ReadResultType.ReadError, update.Error.Value);
+                
+            var readBytes = update.BytesReceived;
+            if (traceLogging) 
+                Log.Debug("Read [{0}] bytes.", readBytes);
+                
+            if (readBytes > 0)
+            {
+                receivePipe.Writer.Advance(readBytes);
+                receivePipe.Writer.FlushAsync().AsTask().PipeTo(Self, Self, result => new SocketReceivePipeFlushCompleted(result));
+                return ReadResult.AllRead;
+            }
+
+            if (readBytes == 0)
+            {
+                receivePipe.Writer.Complete();
+                return ReadResult.EndOfStream;
+            }
+                
+            throw new IllegalStateException($"Unexpected value returned from read: {readBytes}");
+        }
+
         private void DoRead(ConnectionInfo info, IActorRef closeCommander)
         {
             //TODO: What should we do if reading is suspended with an oustanding read - this will discard the read
@@ -414,9 +512,10 @@ namespace Akka.IO
                                 if (traceLogging) Log.Debug("Read returned end-of-stream, our side not yet closed");
                                 HandleClose(info, closeCommander, PeerClosed.Instance);
                             }
+
                             break;
                         case ReadResultType.ReadError:
-                            HandleError(info.Handler, new SocketException((int)read.Error));
+                            HandleError(info.Handler, read.Error);
                             break;
                     }
                 }
@@ -512,7 +611,7 @@ namespace Akka.IO
             StopWith(new CloseInformation(notifications, closedEvent));
         }
 
-        private void HandleError(IActorRef handler, SocketException exception)
+        private void HandleError(IActorRef handler, Exception exception)
         {
             Log.Debug("Closing connection due to IO error {0}", exception);
             StopWith(new CloseInformation(new HashSet<IActorRef>(new[] { handler }), new ErrorClosed(exception.Message)));
@@ -534,18 +633,26 @@ namespace Akka.IO
 
         protected void AcquireSocketAsyncEventArgs()
         {
+    #if NETSTANDARD2_1
+            ReceivePipe = new Pipe();
+    #else
             if (ReceiveArgs != null) throw new InvalidOperationException($"Cannot acquire receive SocketAsyncEventArgs. It's already has been initialized");
             if (SendArgs != null) throw new InvalidOperationException($"Cannot acquire send SocketAsyncEventArgs. It's already has been initialized");
 
             ReceiveArgs = Tcp.SocketEventArgsPool.Acquire(Self);
             var buffer = Tcp.BufferPool.Rent();
             ReceiveArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-
+    #endif
+            
             SendArgs = Tcp.SocketEventArgsPool.Acquire(Self);
         }
 
         private void ReleaseSocketAsyncEventArgs()
         {
+    #if NETSTANDARD2_1
+            ReceivePipe.Writer.Complete();
+            ReceivePipe.Reader.Complete();
+    #else
             if (ReceiveArgs != null)
             {
                 var buffer = new ByteBuffer(ReceiveArgs.Buffer, ReceiveArgs.Offset, ReceiveArgs.Count);
@@ -554,7 +661,8 @@ namespace Akka.IO
                 Tcp.BufferPool.Release(buffer);
                 ReceiveArgs = null;
             }
-
+    #endif
+            
             if (SendArgs != null)
             {
                 Tcp.SocketEventArgsPool.Release(SendArgs);
@@ -594,10 +702,20 @@ namespace Akka.IO
         {
             if (!HasStatus(ConnectionStatus.Receiving))
             {
+                SetStatus(ConnectionStatus.Receiving);
+                
+    #if NETSTANDARD2_1
+                // TODO: Set some buffer size here
+                var memory = ReceivePipe.Writer.GetMemory(/*512*/);
+                Socket.ReceiveAsync(memory, SocketFlags.None)
+                    .AsTask()
+                    .PipeTo(Self, Self, 
+                        success: bytesReceived => new SocketReceivePipeUpdated(bytesReceived), 
+                        failure: ex => new SocketReceivePipeUpdated(ex));
+    #else
                 if (!Socket.ReceiveAsync(ReceiveArgs))
                     Self.Tell(SocketReceived.Instance);
-
-                SetStatus(ConnectionStatus.Receiving);
+    #endif
             }
         }
 
@@ -708,9 +826,15 @@ namespace Akka.IO
             public static readonly ReadResult AllRead = new ReadResult(ReadResultType.AllRead, SocketError.Success);
 
             public readonly ReadResultType Type;
-            public readonly SocketError Error;
+            public readonly Exception Error;
 
             public ReadResult(ReadResultType type, SocketError error)
+            {
+                Type = type;
+                Error = new SocketException((int)error);
+            }
+            
+            public ReadResult(ReadResultType type, Exception error)
             {
                 Type = type;
                 Error = error;
