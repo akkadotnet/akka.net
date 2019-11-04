@@ -18,7 +18,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Util.Internal;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks
@@ -30,12 +29,14 @@ namespace Akka.Benchmarks
         private ActorSystem _system;
         private byte[] _message;
         private IActorRef _server;
-        private IActorRef _client;
+        private IActorRef _clientCoordinator;
 
         [Params(100, 1000)]
         public int MessageCount { get; set; }
         [Params(10, 100)]
         public int MessageLength { get; set; }
+        [Params(1, 3, 5, 7, 10, 20, 30, 40)]
+        public int ClientsCount { get; set; }
         
         [GlobalSetup]
         public void Setup()
@@ -45,7 +46,7 @@ namespace Akka.Benchmarks
 
             var port = new Random().Next(18000, 19000);
             _server = _system.ActorOf(Props.Create(() => new EchoServer(port)));
-            _client = _system.ActorOf(Props.Create(() => new Client("127.0.0.1", port)));
+            _clientCoordinator = _system.ActorOf(Props.Create(() => new ClientCoordinator("127.0.0.1", port, ClientsCount)));
         }
         
         [GlobalCleanup]
@@ -57,22 +58,23 @@ namespace Akka.Benchmarks
         [Benchmark]
         public async Task ClientServerCommunication()
         {
-            await _client.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));
+            await _clientCoordinator.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));
         }
 
         public class CommunicationRequest
         {
-            public CommunicationRequest(int totalMessageCount, byte[] message)
+            public CommunicationRequest(int messagesToSend, byte[] message)
             {
-                TotalMessageCount = totalMessageCount;
+                MessagesToSend = messagesToSend;
                 Message = message;
             }
 
-            public int TotalMessageCount { get; }
+            public int MessagesToSend { get; }
             public byte[] Message { get; }
         }
         
         public class CommunicationFinished { }
+        public class ChildCommunicationFinished { }
         
         private class EchoServer : ReceiveActor
         {
@@ -97,59 +99,69 @@ namespace Akka.Benchmarks
                 {
                     connection.Tell(Tcp.Write.Create(received.Data));
                 });
+            }
+        }
 
+        private class ClientCoordinator : ReceiveActor
+        {
+            private readonly HashSet<IActorRef> _waitingChildren = new HashSet<IActorRef>();
+            private IActorRef _requester;
+            
+            public ClientCoordinator(string host, int port, int clientsCount)
+            {
+                var endpoint = new DnsEndPoint(host, port);
+                Receive<CommunicationRequest>(request =>
+                {
+                    _requester = Sender;
+                    var messagesPerActor = request.MessagesToSend / clientsCount;
+                    for (var i = 0; i < clientsCount; ++i)
+                    {
+                        var child = Context.ActorOf(Props.Create(() => new Client(endpoint, messagesPerActor, request.Message)));
+                        _waitingChildren.Add(child);
+                    }
+                });
+                Receive<ChildCommunicationFinished>(_ =>
+                {
+                    Context.Stop(Sender);
+                    
+                    _waitingChildren.Remove(Sender);
+                    
+                    if (_waitingChildren.Count == 0)
+                        _requester.Tell(new CommunicationFinished());
+                });
             }
         }
         
         private class Client : ReceiveActor
         {
-            private int _totalMessageCount;
-            private byte[] _message;
             private int _receivedCount = 0;
-            private readonly DnsEndPoint _endpoint;
-            private IActorRef _requester;
+            private IActorRef _connection;
 
-            public Client(string host, int port)
+            public Client(DnsEndPoint endpoint, int messagesToSend, byte[] message)
             {
-                _endpoint = new DnsEndPoint(host, port);
-                Become(Waiting);
-            }
-            
-            private void Waiting()
-            {
-                Receive<CommunicationRequest>(request =>
-                {
-                    _receivedCount = 0;
-                    _totalMessageCount = request.TotalMessageCount;
-                    _message = request.Message;
-                    _requester = Sender;
-                    
-                    Context.System.Tcp().Tell(new Tcp.Connect(_endpoint));
-                });
+                Context.System.Tcp().Tell(new Tcp.Connect(endpoint));
                 Receive<Tcp.Connected>(_ =>
                 {
                     Sender.Tell(new Tcp.Register(Self));
-                    Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(_message)));
-                    
-                    Become(() => Connected(Sender));
+                    Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
+                    _connection = Sender;
                 });
                 Receive<Tcp.CommandFailed>(_ => throw new Exception("Connection failed"));
-            }
-
-            private void Connected(IActorRef connection)
-            {
                 Receive<Tcp.Received>(_ =>
                 {
                     _receivedCount++;
-                    if (_receivedCount >= _totalMessageCount)
+                    if (_receivedCount >= messagesToSend)
                     {
-                        _requester.Tell(new CommunicationFinished());
-                        Become(Waiting);
+                        _connection.Tell(Tcp.Close.Instance);
                     }
                     else
                     {
-                        connection.Tell(Tcp.Write.Create(ByteString.FromBytes(_message)));
+                        _connection.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
                     }
+                });
+                Receive<Tcp.Closed>(_ =>
+                {
+                    Context.Parent.Tell(new ChildCommunicationFinished());
                 });
             }
         }
