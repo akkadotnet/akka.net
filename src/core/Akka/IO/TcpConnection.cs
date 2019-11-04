@@ -412,6 +412,9 @@ namespace Akka.IO
                 // TODO: eliminate ByteString copy operaiton - use same ReadOnlySequence<byte> internally
                 info.Handler.Tell(new Tcp.Received(ByteString.FromBytes(buffer.ToArray())));
                 ReceivePipe.Reader.AdvanceTo(buffer.End);
+                
+                if (readResult.IsCompleted)
+                    ReceivePipe.Reader.Complete();
             }
         }
         
