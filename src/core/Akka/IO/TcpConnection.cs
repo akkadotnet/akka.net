@@ -271,16 +271,20 @@ namespace Akka.IO
                 switch (message)
                 {
                     case SocketSent _:
+                        // Send ack to sender
                         AcknowledgeSent();
+                        
+                        // If write command was CompoundWrite, send the tail
                         if (IsWritePending)
-                        {
                             DoWrite(info);
-                            if (!IsWritePending && interestedInResume != null)
-                            {
-                                interestedInResume.Tell(WritingResumed.Instance);
-                                interestedInResume = null;
-                            }
+                        
+                        // If message is fully sent, notify sender who sent ResumeWriting command
+                        if (!IsWritePending && interestedInResume != null)
+                        {
+                            interestedInResume.Tell(WritingResumed.Instance);
+                            interestedInResume = null;
                         }
+                        
                         return true;
                     case WriteCommand write:
                         if (HasStatus(ConnectionStatus.WritingSuspended))
@@ -452,6 +456,9 @@ namespace Akka.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DoWrite(ConnectionInfo info)
         {
+            if (!pendingWrite.Ack.Equals(NoAck.Instance))
+                pendingAck = Tuple.Create<IActorRef, object>(info.Handler, pendingWrite.Ack);
+            
             pendingWrite = pendingWrite.DoWrite(info);
         }
 
@@ -833,51 +840,18 @@ namespace Akka.IO
             {
                 try
                 {
-                    var data = _buffer;
-                    while(true)
-                    {
-                        var bytesWritten = Send(data);
-
-                        if (_connection.traceLogging)
-                            _connection.Log.Debug("Wrote [{0}] bytes to channel", bytesWritten);
-                        if (bytesWritten < data.Count)
-                        {
-                            // we weren't able to write all bytes from the buffer, so we need to try again later
-                            data = data.Slice(bytesWritten);
-                        }
-                        else // finished writing
-                        {
-                            if(Ack != NoAck.Instance) Commander.Tell(Ack);
-                            Release();
-                            return _connection.CreatePendingWrite(Commander, _tail, info);
-                        }
-                    }
-
+                    _sendArgs.SetBuffer(_buffer);
+                    if (!_connection.Socket.SendAsync(_sendArgs))
+                        _self.Tell(SocketSent.Instance);
+                    
+                    Release();
+                    
+                    return _connection.CreatePendingWrite(Commander, _tail, info);
                 }
                 catch (SocketException e)
                 {
                     _connection.HandleError(info.Handler, e);
                     return this;
-                }
-            }
-
-            private int Send(ByteString data)
-            {
-                try
-                {
-                    return _connection.Socket.Send(data.Buffers);
-                }
-                catch (SocketException e) when (e.SocketErrorCode == SocketError.WouldBlock)
-                {
-                    try
-                    {
-                        _connection.Socket.Blocking = true;
-                        return _connection.Socket.Send(data.Buffers);
-                    }
-                    finally
-                    {
-                        _connection.Socket.Blocking = false;
-                    }
                 }
             }
 
