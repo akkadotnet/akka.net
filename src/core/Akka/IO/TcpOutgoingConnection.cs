@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -31,7 +32,8 @@ namespace Akka.IO
                    tcp.Settings.OutgoingSocketForceIpv4
                        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
                        : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   connect.PullMode)
+                   connect.PullMode,
+                   tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
         {
             _commander = commander;
             _connect = connect;

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using Akka.Actor;
 using System;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -33,7 +34,7 @@ namespace Akka.IO
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(tcp, socket, readThrottling)
+            : base(tcp, socket, readThrottling, Option<int>.None)
         {
             _bindHandler = bindHandler;
             _options = options;
