@@ -3587,7 +3587,7 @@ namespace Akka.IO
     }
     public class TcpSettings
     {
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4) { }
+        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4, int writeCommandsQueueMaxSize) { }
         public int BatchAcceptLimit { get; }
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
@@ -3599,6 +3599,7 @@ namespace Akka.IO
         public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
         public bool TraceLogging { get; }
         public int TransferToLimit { get; set; }
+        public int WriteCommandsQueueMaxSize { get; }
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
     }
