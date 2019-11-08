@@ -27,9 +27,12 @@ namespace Akka.Tests.IO
 {
     public class TcpIntegrationSpec : AkkaSpec
     {
+        public const int InternalConnectionActorMaxQueueSize = 10000;
+        
         public TcpIntegrationSpec(ITestOutputHelper output)
-            : base(@"akka.loglevel = DEBUG
-                     akka.io.tcp.trace-logging = true", output: output)
+            : base($@"akka.loglevel = DEBUG
+                     akka.io.tcp.trace-logging = true
+                     akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
 
         private void VerifyActorTermination(IActorRef actor)
@@ -213,6 +216,36 @@ namespace Akka.Tests.IO
                 }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
 
                 serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
+            });
+        }
+
+        [Fact]
+        public void Should_fail_writing_when_buffer_is_filled()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection();
+
+                // create a buffer-overflow message
+                var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
+                var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
+
+                // try sending overflow
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>();
+
+                // First overflow data will be received anyway
+                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    .Sum(m => m.Data.Count)
+                    .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                
+                // Check that almost-overflow size does not cause any problems
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
+                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    .Sum(m => m.Data.Count)
+                    .Should().Be(InternalConnectionActorMaxQueueSize);
             });
         }
 
