@@ -58,10 +58,9 @@ namespace Akka.Tests.IO
         private void AssertTimingsAreSmallEnough()
         {
             var msRequiredWithoutRounding = HashedWheelTimerScheduler.TotalTicksRequiredToWaitStrict.Current * 1.0M / TimeSpan.TicksPerSecond;
-            var msRounded = HashedWheelTimerScheduler.TotalTicksRequiredToWaitRounded.Current * 1.0M / TimeSpan.TicksPerSecond;
             var msActual = HashedWheelTimerScheduler.TotalTicksActual.Current * 1.0M / TimeSpan.TicksPerSecond;
             
-            _outputHelper.WriteLine($"Required wait time is {msRequiredWithoutRounding}ms, when rounded is would be {msRounded}ms, and actual is {msActual}ms");
+            _outputHelper.WriteLine($"Required wait time is {msRequiredWithoutRounding}ms, and actual is {msActual}ms");
             
             msActual.ShouldBeLessThan(msRequiredWithoutRounding * 1.1M, "We absolutelly do not want scheduler to have more then 10% sleep overhead");
             msActual.ShouldBeLessThan(msRequiredWithoutRounding * 1.05M, "We do not want scheduler to have more then 5% sleep overhead");

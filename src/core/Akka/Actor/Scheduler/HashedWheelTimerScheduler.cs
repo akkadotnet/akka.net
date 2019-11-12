@@ -40,7 +40,6 @@ namespace Akka.Actor
         private readonly long _tickDuration; // a timespan expressed as ticks
 
         public static AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
-        public static AtomicCounter TotalTicksRequiredToWaitRounded = new AtomicCounter(0);
         public static AtomicCounter TotalTicksActual = new AtomicCounter(0);
 
         /// <summary>
@@ -222,15 +221,14 @@ namespace Akka.Actor
             {
                 for (;;)
                 {
-                    long currentTime = HighResMonotonicClock.Ticks - _startTime;
-                    var sleepMs = RuntimeDetector.IsWindows
-                        ? ((deadline - currentTime + TimeSpan.TicksPerMillisecond * 5 - 1) / (TimeSpan.TicksPerMillisecond * 10) * 10)
-                        : ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
-
-                    if (sleepMs <= 0) // no need to sleep
+                    var currentTime = HighResMonotonicClock.Ticks - _startTime;
+                    var ticksToSleep = deadline - currentTime;
+                    
+                    if (ticksToSleep <= 0) // no need to sleep
                     {
                         if (currentTime == long.MinValue) // wrap-around
-                            return -long.MaxValue;
+                            return -1;
+                        
                         return currentTime;
                     }
 
@@ -239,8 +237,7 @@ namespace Akka.Actor
 #if UNSAFE_THREADING
                     try
                     {
-                        Sleep(deadline - currentTime);
-                        // Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                        Sleep(ticksToSleep);
                     }
                     catch (ThreadInterruptedException)
                     {
@@ -248,13 +245,11 @@ namespace Akka.Actor
                             return long.MinValue;
                     }
 #else             
-                    Sleep(deadline - currentTime);
-                    // Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                    Sleep(ticksToSleep);
 #endif
                     
                     stopWatch.Stop();
                     TotalTicksRequiredToWaitStrict.AddAndGet((int)Math.Min(deadline - currentTime, int.MaxValue));
-                    TotalTicksRequiredToWaitRounded.AddAndGet((int)Math.Min(sleepMs * TimeSpan.TicksPerMillisecond, int.MaxValue));
                     TotalTicksActual.AddAndGet((int)Math.Min(stopWatch.ElapsedTicks, int.MaxValue));
                 }
             }
@@ -262,9 +257,19 @@ namespace Akka.Actor
         
         private void Sleep(long ticks)
         {
-            _sleepWatch.Restart();
-            while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
-            _sleepWatch.Stop();
+            var sleepMs = ticks / TimeSpan.TicksPerMillisecond;
+            if (sleepMs >= 1 && !RuntimeDetector.IsWindows || sleepMs >= 10) // Windows clocks are too slow
+            {
+                // If sleep is going to be long enough, let it release unused CPU resources for that time
+                Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+            }
+            else
+            {
+                // If there is no much time to sleep, let's be more accurate
+                _sleepWatch.Restart();
+                while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
+                _sleepWatch.Stop();
+            }
         }
 
         private void TransferRegistrationsToBuckets()
