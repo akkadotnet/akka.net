@@ -117,20 +117,17 @@ namespace Akka.Actor
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
         private readonly Stopwatch _sleepWatch = new Stopwatch();
 
-        private Thread _worker;
-
         private void Start()
         {
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
 #pragma warning disable 420
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    _worker.Start();
+                    Task.Run(Run);
                 }
             }
 
@@ -143,24 +140,14 @@ namespace Akka.Actor
                 throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
             }
 
-            while (_startTime == 0)
-            {
-#if UNSAFE_THREADING
-                try
-                {
-                    _workerInitialized.Wait();
-                }
-                catch (ThreadInterruptedException) { }
-#else
-                _workerInitialized.Wait();
-#endif
-            }
+            // Wait until _startTime is initialized in Run task
+            _workerInitialized.Wait();
         }
 
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
-        private void Run()
+        private async Task Run()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -174,7 +161,7 @@ namespace Akka.Actor
 
             do
             {
-                var deadline = WaitForNextTick();
+                var deadline = await WaitForNextTick();
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
@@ -214,7 +201,7 @@ namespace Akka.Actor
             _rescheduleRegistrations.Clear();
         }
 
-        private long WaitForNextTick()
+        private async Task<long> WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
@@ -237,15 +224,15 @@ namespace Akka.Actor
 #if UNSAFE_THREADING
                     try
                     {
-                        Sleep(ticksToSleep);
+                        await Sleep(ticksToSleep);
                     }
-                    catch (ThreadInterruptedException)
+                    catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                     {
                         if (_workerState == WORKER_STATE_SHUTDOWN)
                             return long.MinValue;
                     }
 #else             
-                    Sleep(ticksToSleep);
+                    await Sleep(ticksToSleep);
 #endif
                     
                     stopWatch.Stop();
@@ -255,13 +242,13 @@ namespace Akka.Actor
             }
         }
         
-        private void Sleep(long ticks)
+        private async Task Sleep(long ticks)
         {
             var sleepMs = ticks / TimeSpan.TicksPerMillisecond;
             if (sleepMs >= 1 && !RuntimeDetector.IsWindows || sleepMs >= 10) // Windows clocks are too slow
             {
                 // If sleep is going to be long enough, let it release unused CPU resources for that time
-                Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                await Task.Delay(TimeSpan.FromMilliseconds(sleepMs));
             }
             else
             {
