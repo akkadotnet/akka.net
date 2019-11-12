@@ -8,12 +8,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 
 // ReSharper disable NotResolvedInText
 
@@ -36,6 +38,10 @@ namespace Akka.Actor
     {
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
+
+        public static AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
+        public static AtomicCounter TotalTicksRequiredToWaitRounded = new AtomicCounter(0);
+        public static AtomicCounter TotalTicksActual = new AtomicCounter(0);
 
         /// <summary>
         /// TBD
@@ -110,6 +116,7 @@ namespace Akka.Actor
 
         private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
+        private readonly Stopwatch _sleepWatch = new Stopwatch();
 
         private Thread _worker;
 
@@ -216,31 +223,48 @@ namespace Akka.Actor
                 for (;;)
                 {
                     long currentTime = HighResMonotonicClock.Ticks - _startTime;
-                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
+                    var sleepMs = RuntimeDetector.IsWindows
+                        ? ((deadline - currentTime + TimeSpan.TicksPerMillisecond * 5 - 1) / (TimeSpan.TicksPerMillisecond * 10) * 10)
+                        : ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
 
                     if (sleepMs <= 0) // no need to sleep
                     {
                         if (currentTime == long.MinValue) // wrap-around
                             return -long.MaxValue;
                         return currentTime;
-
                     }
 
+                    var stopWatch = Stopwatch.StartNew();
+                    
 #if UNSAFE_THREADING
                     try
                     {
-                        Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                        Sleep(deadline - currentTime);
+                        // Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
                     }
                     catch (ThreadInterruptedException)
                     {
                         if (_workerState == WORKER_STATE_SHUTDOWN)
                             return long.MinValue;
                     }
-#else
-                    Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+#else             
+                    Sleep(deadline - currentTime);
+                    // Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
 #endif
+                    
+                    stopWatch.Stop();
+                    TotalTicksRequiredToWaitStrict.AddAndGet((int)Math.Min(deadline - currentTime, int.MaxValue));
+                    TotalTicksRequiredToWaitRounded.AddAndGet((int)Math.Min(sleepMs * TimeSpan.TicksPerMillisecond, int.MaxValue));
+                    TotalTicksActual.AddAndGet((int)Math.Min(stopWatch.ElapsedTicks, int.MaxValue));
                 }
             }
+        }
+        
+        private void Sleep(long ticks)
+        {
+            _sleepWatch.Restart();
+            while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
+            _sleepWatch.Stop();
         }
 
         private void TransferRegistrationsToBuckets()
