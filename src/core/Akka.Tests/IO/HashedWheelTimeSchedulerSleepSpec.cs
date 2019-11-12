@@ -57,14 +57,14 @@ namespace Akka.Tests.IO
 
         private void AssertTimingsAreSmallEnough()
         {
-            var msRequiredWithoutRounding = HashedWheelTimerScheduler.TotalTicksRequiredToWaitStrict.Current * 1.0M / TimeSpan.TicksPerSecond;
+            var msRequired = HashedWheelTimerScheduler.TotalTicksRequiredToWaitStrict.Current * 1.0M / TimeSpan.TicksPerSecond;
             var msActual = HashedWheelTimerScheduler.TotalTicksActual.Current * 1.0M / TimeSpan.TicksPerSecond;
             
-            _outputHelper.WriteLine($"Required wait time is {msRequiredWithoutRounding}ms, and actual is {msActual}ms");
+            _outputHelper.WriteLine($"Required wait time is {msRequired}ms, and actual is {msActual}ms");
             
-            msActual.ShouldBeLessThan(msRequiredWithoutRounding * 1.1M, "We absolutelly do not want scheduler to have more then 10% sleep overhead");
-            msActual.ShouldBeLessThan(msRequiredWithoutRounding * 1.05M, "We do not want scheduler to have more then 5% sleep overhead");
-            msActual.ShouldBeLessThan(msRequiredWithoutRounding * 1.01M, "Would be really nice for scheduler to have less then 1% sleep overhead");
+            msActual.ShouldBeLessThan(msRequired * 1.1M, "We absolutelly do not want scheduler to have more then 10% sleep overhead");
+            msActual.ShouldBeLessThan(msRequired * 1.05M, "We do not want scheduler to have more then 5% sleep overhead");
+            msActual.ShouldBeLessThan(msRequired * 1.01M, "Would be really nice for scheduler to have less then 1% sleep overhead");
         }
 
         private async Task ExecuteClientServerCommunication(int countOfMessages, byte[] message)
