@@ -12,7 +12,7 @@
     <XunitVersion>2.4.1</XunitVersion>
     <TestSdkVersion>16.3.0</TestSdkVersion>
     <HyperionVersion>0.9.10</HyperionVersion>
-    <NewtonsoftJsonVersion>9.0.1</NewtonsoftJsonVersion>
+    <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
     <NBenchVersion>1.2.2</NBenchVersion>
     <ProtobufVersion>3.10.0</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
@@ -62,7 +62,7 @@ We expect to release more beta versions in the future, and if you wish to [get a
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19554-01" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
