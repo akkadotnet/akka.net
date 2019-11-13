@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -687,7 +688,7 @@ namespace Akka.IO
 
         private Option<PendingWrite> GetNextWrite(IEnumerable<(SimpleWriteCommand Command, IActorRef Sender)> headCommands = null)
         {
-            headCommands = headCommands ?? new List<(SimpleWriteCommand Command, IActorRef Sender)>();
+            headCommands = headCommands ?? ImmutableList<(SimpleWriteCommand Command, IActorRef Sender)>.Empty;
             foreach (var commandInfo in headCommands.Concat(_writeCommandsQueue.DequeueAll()))
             {
                 switch (commandInfo.Command)
