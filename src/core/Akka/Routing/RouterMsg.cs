@@ -20,7 +20,7 @@ namespace Akka.Routing
         /// Sends a <see cref="RouterManagementMessage"/> to a <see cref="Router"/>
         /// to retrieve a list of routees that the router is currently using.
         /// </summary>
-        public static readonly GetRoutees GetRoutees = new GetRoutees();
+        public static readonly GetRoutees GetRoutees = GetRoutees.Instance;
     }
 
     /// <summary>
@@ -39,6 +39,10 @@ namespace Akka.Routing
     /// </summary>
     public sealed class GetRoutees : RouterManagementMessage
     {
+        /// <summary>
+        /// The singleton instance of GetRoutees.
+        /// </summary>
+        public static GetRoutees Instance { get; } = new GetRoutees();
     }
 
     /// <summary>

@@ -12,6 +12,7 @@ using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 
@@ -226,6 +227,41 @@ namespace Akka.Tests.Actor
             //We should not get any messages now. If we get a message now, 
             //it's a DeadLetter with ReceiveTimeout, meaning the receivetimeout wasn't cancelled.
             ExpectNoMsg(TimeSpan.FromSeconds(1));
+        }
+
+        [Fact]
+        public void An_actor_with_receive_timeout_must_be_able_to_turn_on_timeout_in_NotInfluenceReceiveTimeout_message_handler()
+        {
+            var timeoutLatch = new TestLatch();
+
+            Action<IActorDsl> actor = d =>
+            {
+                d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(500.Milliseconds()));
+                d.Receive<ReceiveTimeout>((_, __) => timeoutLatch.Open());
+            };
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
+            timeoutActor.Tell(new TransparentTick());
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            Sys.Stop(timeoutActor);
+        }
+        
+        [Fact]
+        public void An_actor_with_receive_timeout_must_be_able_to_turn_off_timeout_in_NotInfluenceReceiveTimeout_message_handler()
+        {
+            var timeoutLatch = new TestLatch();
+
+            Action<IActorDsl> actor = d =>
+            {
+                d.OnPreStart = c => c.SetReceiveTimeout(500.Milliseconds());
+                d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(null));
+                d.Receive<ReceiveTimeout>((_, __) => timeoutLatch.Open());
+            };
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
+            timeoutActor.Tell(new TransparentTick());
+
+            Intercept<TimeoutException>(() => timeoutLatch.Ready(1.Seconds()));
+            Sys.Stop(timeoutActor);
         }
     }
 }
