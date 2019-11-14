@@ -226,7 +226,7 @@ namespace Akka.Tests.IO
                 var serverMsgs = actors.ServerHandler.ReceiveWhile<Tcp.Received>(o =>
                 {
                     return o as Tcp.Received;
-                }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
+                }, RemainingOrDefault, TimeSpan.FromSeconds(2));
 
                 serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
             });
@@ -253,7 +253,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(1));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
                 received.Sum(r => r.Data.Count).ShouldBe(counter.Current);
             });
         }
@@ -280,7 +280,7 @@ namespace Akka.Tests.IO
                 // All acks should be received
                 clients.ForEach(client =>
                 {
-                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index));
+                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
                 });
             });
         }
@@ -306,7 +306,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received, and be in the same order as they were sent
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(1));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
                 var content = string.Join("", received.Select(r => r.Data.ToString()));
                 content.ShouldBe(contentBuilder.ToString());
             });
@@ -326,7 +326,7 @@ namespace Akka.Tests.IO
                 // try sending overflow
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>();
+                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
 
                 // First overflow data will be received anyway
                 actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
