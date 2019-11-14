@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -165,6 +165,7 @@ stable-prio-mailbox{
 ";
         }
 
+#if FSCHECK
         [Property]
         public Property UnboundedPriorityQueue_should_sort_items_in_expected_order(int[] integers, PositiveInt capacity)
         {
@@ -191,6 +192,7 @@ stable-prio-mailbox{
                 expectedOrder.SequenceEqual(actualOrder)
                     .Label($"Expected [{string.Join(";", expectedOrder)}], but was [{string.Join(";", actualOrder)}]");
         }
+#endif
 
         [Fact]
         public void Can_use_unbounded_priority_mailbox()

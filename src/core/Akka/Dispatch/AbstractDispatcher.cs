@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -330,6 +330,7 @@ namespace Akka.Dispatch
         /// </summary>
         internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors = new Lazy<Index<MessageDispatcher, IInternalActorRef>>(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API - Debugging purposes only! Should be elided by compiler in release builds.
         /// </summary>
@@ -353,6 +354,7 @@ namespace Akka.Dispatch
                 }
             }
         }
+#pragma warning restore CS0162
 
         /// <summary>
         ///     The default throughput
@@ -645,6 +647,7 @@ namespace Akka.Dispatch
             RegisterForExecution(cell.Mailbox, false, true);
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API 
         /// 
@@ -656,6 +659,7 @@ namespace Akka.Dispatch
             if (DebugDispatcher) Actors.Value.Put(this, (IInternalActorRef)actor.Self);
             AddInhabitants(1);
         }
+#pragma warning restore CS0162
 
         /// <summary>
         /// INTERNAL API
@@ -700,6 +704,7 @@ namespace Akka.Dispatch
             }
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API
         /// 
@@ -714,6 +719,7 @@ namespace Akka.Dispatch
             mailbox.BecomeClosed();
             mailbox.CleanUp();
         }
+#pragma warning restore CS0162
 
         /// <summary>
         /// After the call to this method, the dispatcher mustn't begin any new message processing for the specified reference 

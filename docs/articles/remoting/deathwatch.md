@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: remote-deathwatch
 title: Detecting & Handling Network Failures with Remote DeathWatch
 ---
 

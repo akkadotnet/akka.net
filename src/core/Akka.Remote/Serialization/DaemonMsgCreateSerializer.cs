@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DaemonMsgCreateSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -203,7 +203,7 @@ namespace Akka.Remote.Serialization
             return system.Provider.ResolveActorRef(actorRefData.Path);
         }
 
-        private Tuple<int, bool, string, byte[]> Serialize(object obj)
+        private (int, bool, string, byte[]) Serialize(object obj)
         {
             var serializer = system.Serialization.FindSerializerFor(obj);
 
@@ -223,7 +223,7 @@ namespace Akka.Remote.Serialization
                 manifest = obj == null ? "null" : obj.GetType().TypeQualifiedName();
             }
 
-            return Tuple.Create(serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
+            return (serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
         }
     }
 }

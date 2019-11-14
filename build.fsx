@@ -1,4 +1,4 @@
-﻿#I @"tools/FAKE/tools"
+#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
 open System
@@ -32,7 +32,8 @@ let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (build
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
-    | _ -> ""
+    | "" -> ""
+    | str -> str
 
 let releaseNotes =
     File.ReadLines "./RELEASE_NOTES.md"
@@ -43,8 +44,8 @@ let runIncrementally = hasBuildParam "incremental"
 let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
-let testNetFrameworkVersion = "net452"
-let testNetCoreVersion = "netcoreapp1.1"
+let testNetFrameworkVersion = "net461"
+let testNetCoreVersion = "netcoreapp2.1"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -229,15 +230,15 @@ Target "RunTests" (fun _ ->
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
             info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -254,15 +255,15 @@ Target "RunTestsNetCore" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetCoreVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetCoreVersion outputTests)
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputTests
         projects |> Seq.iter (runSingleProject)
@@ -288,7 +289,7 @@ Target "MultiNodeTests" (fun _ ->
 
             let args = StringBuilder()
                     |> append assembly
-                    |> append "-Dmultinode.teamcity=true"
+                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
@@ -327,7 +328,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 let args = StringBuilder()
                         |> append multiNodeTestPath
                         |> append assembly
-                        |> append "-Dmultinode.teamcity=true"
+                        |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                         |> append "-Dmultinode.platform=netcore"
@@ -345,55 +346,28 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 
 Target "NBench" <| fun _ ->
     if not skipBuild.Value then
-        CleanDir outputPerfTests
-
-        let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-        printfn "Using NBench.Runner: %s" nbenchTestPath
-
         let projects = 
             let rawProjects = match (isWindows) with 
-                                | true -> !! "./src/**/*.Tests.Peformance.csproj"
+                                | true -> !! "./src/**/*.Tests.Performance.csproj"
                                 | _ -> !! "./src/**/*.Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+
+            rawProjects |> Seq.iter log
             rawProjects |> Seq.choose filterProjects
 
-        let nbenchTestAssemblies = 
-            projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
+        let runSingleProject project =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "nbench --nobuild --concurrent true --trace true --output %s --framework %s" outputPerfTests testNetFrameworkVersion)
+                | false -> (sprintf "nbench --nobuild --concurrent true --trace true --output %s --framework %s" outputPerfTests testNetFrameworkVersion)
 
-        let runNBench assembly =
-            let includes = getBuildParam "include"
-            let excludes = getBuildParam "exclude"
-            let teamcityStr = (getBuildParam "teamcity")
-            let enableTeamCity = 
-                match teamcityStr with
-                | null -> false
-                | "" -> false
-                | _ -> bool.Parse teamcityStr
-
-            let args = StringBuilder()
-                    |> append assembly
-                    |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
-                    |> append (sprintf "concurrent=\"%b\"" true)
-                    |> append (sprintf "trace=\"%b\"" true)
-                    |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
-                    |> appendIfNotNullOrEmpty includes "include="
-                    |> appendIfNotNullOrEmpty excludes "include="
-                    |> toText
-
-            let result = ExecProcess(fun info -> 
-                info.FileName <- nbenchTestPath
-                info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
-                info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-            if result <> 0 then failwithf "%s %s \nexited with code %i" nbenchTestPath args result
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
         
-        let failedRuns =
-            nbenchTestAssemblies
-            |> Seq.map (fun asm -> try runNBench asm; None with e -> Some(e.ToString()))
-            |> Seq.filter Option.isSome
-            |> Seq.map Option.get
-            |> Seq.mapi (fun i s -> sprintf "%i: \"%s\"" (i + 1) s)
-            |> Seq.toArray
-        if failedRuns.Length > 0 then
-            failwithf "NBench.Runner failed for %i run(s):\n%s\n\n" failedRuns.Length (String.concat "\n\n" failedRuns)
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+    
+        projects |> Seq.iter runSingleProject
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -420,7 +394,7 @@ Target "CreateNuget" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet })
+                        OutputPath = "\"" + outputNuGet + "\"" })
 
         projects |> Seq.iter (runSingleProject)
 )
@@ -479,7 +453,7 @@ Target "CreateMntrNuget" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet } )
+                        OutputPath = "\"" + outputNuGet + "\"" } )
         )
 
         DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
@@ -548,7 +522,8 @@ Target "Protobuf" <| fun _ ->
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
-        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");        
+        ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/") ]
 
     printfn "Using proto.exe: %s" protocPath
 
@@ -574,10 +549,13 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
-    // build the project with samples
-    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
-    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
-    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
+    // build the projects with samples
+    let docsTestsProject = "./src/core/Akka.Docs.Tests/Akka.Docs.Tests.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTestsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTestsProject; Configuration = configuration })
+    let docsTutorialsProject = "./src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTutorialsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTutorialsProject; Configuration = configuration })
 
     // install MSDN references
     NugetInstall (fun p -> 
@@ -669,6 +647,7 @@ Target "RunTestsNetCoreFull" DoNothing
 // tests dependencies
 "Build" ==> "RunTests"
 "Build" ==> "RunTestsNetCore"
+//"Build" ==> "NBench"
 
 "BuildRelease" ==> "MultiNodeTestsNetCore"
 "BuildRelease" ==> "MultiNodeTests"

@@ -3,15 +3,15 @@ uid: cluster-routing
 title: Akka.Cluster Routing
 ---
 # Akka.Cluster Routing
-[Akka.Cluster](cluster-overview.md) extends the capabilities of both [`Pool` and `Group`](xref:routers#pools-vs-groups) routers to work across entire clusters of Akka.NET applications, and can automatically add or remove routees as new nodes join and exit the cluster.
+[Akka.Cluster](xref:cluster-overview) extends the capabilities of both [`Pool` and `Group`](xref:routers#pools-vs-groups) routers to work across entire clusters of Akka.NET applications, and can automatically add or remove routees as new nodes join and exit the cluster.
 
 ![Akka.Cluster clustered routers capabilities overview](/images/cluster-routers.png)
 
 ## How Routers Use Cluster Gossip
-How the gossip is used depends on the type of the router. Clustered `Pool` routers will automatically [remote-deploy](../remoting/deployment.md) routees onto nodes they discover as a result of changes in cluster membership. `Group` routers will add new `ActorSelectionRoutee`s to their routees list instead.
+How the gossip is used depends on the type of the router. Clustered `Pool` routers will automatically [remote-deploy](xref:remote-deployment) routees onto nodes they discover as a result of changes in cluster membership. `Group` routers will add new `ActorSelectionRoutee`s to their routees list instead.
 
 > [!NOTE]
-> this section refers to gossip events, such as `ClusterEvent.MemberUp`, which are [covered here](cluster-extension.md#cluster-gossip-event-types).
+> this section refers to gossip events, such as `ClusterEvent.MemberUp`, which are [covered here](xref:cluster-extension#cluster-gossip-event-types).
 
 Clustered routers subscribe to gossip messages from the `Cluster` object (which [you can also do in a user-defined actor](xref:cluster-extension#subscribing-and-unsubscribing-from-cluster-gossip)), and they use the information they dynamically receive from the cluster to ad or remove routees on the fly.
 
@@ -80,7 +80,7 @@ Here are the essential options you will use to configure cluster-aware routers.
 - **`nr-of-instances`**: this is the maximum number of total routees that this router will route to.
 - **`max-nr-of-instances-per-node`**: this does not apply to `Group` routers.
 - **`routees.paths`**: the comma-separated path(s) of the routees on each node in the cluster.
-    + This setting can use what's called a *wildcard* path, meaning we don't care about the name of the actor in the `*` position. e.g. [in the Webcrawler sample,](https://github.com/petabridge/akkadotnet-code-samples/blob/master/Cluster.WebCrawler/src/WebCrawler.Service/App.config#L38) as long as the actor being deployed is named `coordinators` and the grandparent is named `api`, then this deployment configuration can be safely reused. You can write [`ActorSelection`s](/concepts/addressing.md#summary-actorof-vs-actorselection-) using wildcard paths also!
+    + This setting can use what's called a *wildcard* path, meaning we don't care about the name of the actor in the `*` position. e.g. [in the Webcrawler sample,](https://github.com/petabridge/akkadotnet-code-samples/blob/master/Cluster.WebCrawler/src/WebCrawler.Service/App.config#L38) as long as the actor being deployed is named `coordinators` and the grandparent is named `api`, then this deployment configuration can be safely reused. You can write [ActorSelections](xref:addressing#summary-actorof-vs-actorselection) using wildcard paths also!
     + You do *not* need to specify `/user` at the start of each path. It is implied.
 - **`use-role`**: the `Group` router will only route to routees at the specified `paths` on nodes marked with the given role. Can only specify one role here.
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Util.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ namespace Akka.Cluster
         /// <param name="this">TBD</param>
         /// <param name="partitioner">TBD</param>
         /// <returns>TBD</returns>
-        public static Tuple<ImmutableSortedSet<T>, ImmutableSortedSet<T>> Partition<T>(this ImmutableSortedSet<T> @this,
+        public static (ImmutableSortedSet<T>, ImmutableSortedSet<T>) Partition<T>(this ImmutableSortedSet<T> @this,
             Func<T, bool> partitioner)
         {
             var @true = new List<T>();
@@ -131,7 +131,7 @@ namespace Akka.Cluster
                 (partitioner(item) ? @true : @false).Add(item);
             }
 
-            return Tuple.Create(@true.ToImmutableSortedSet(), @false.ToImmutableSortedSet());
+            return (@true.ToImmutableSortedSet(), @false.ToImmutableSortedSet());
         }
     }
 }

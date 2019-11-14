@@ -1,3 +1,8 @@
+---
+uid: akka-cluster-configuration
+title: Akka.Cluster Configuration
+---
+
 ## Akka.Cluster Configuration
 Below is the default HOCON configuration for the base `Akka.Cluster` package.
 
