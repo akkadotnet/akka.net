@@ -8,6 +8,8 @@
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.IO.Buffers;
@@ -114,6 +116,28 @@ namespace Akka.IO
                     args.SetBuffer(null, 0, 0);
                     args.BufferList = data.Buffers;
                 }
+            }
+        }
+        
+        public static void SetBuffer(this SocketAsyncEventArgs args, IEnumerable<ByteString> dataCollection)
+        {
+            if (RuntimeDetector.IsMono)
+            {
+                // Mono doesn't support BufferList - falback to compacting ByteString
+                var dataList = dataCollection.ToList();
+                var totalSize = dataList.SelectMany(d => d.Buffers).Sum(d => d.Count);
+                var bytes = new byte[totalSize];
+                var position = 0;
+                foreach (var byteString in dataList)
+                {
+                    var copied = byteString.CopyTo(bytes, position, byteString.Count);
+                    position += copied;
+                }
+            }
+            else
+            {
+                args.SetBuffer(null, 0, 0);
+                args.BufferList = dataCollection.SelectMany(d => d.Buffers).ToList();
             }
         }
     }

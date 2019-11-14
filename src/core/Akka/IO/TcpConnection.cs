@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -16,6 +17,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.IO.Buffers;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -96,7 +98,7 @@ namespace Akka.IO
 
         private bool _isOutputShutdown;
 
-        private Tuple<IActorRef, object> _pendingAck = null;
+        private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new ConcurrentQueue<(IActorRef, object)>();
         private bool _peerClosed;
         private IActorRef _interestedInResume;
         private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
@@ -305,22 +307,29 @@ namespace Akka.IO
                             Sender.Tell(write.FailureMessage);
                         }
 
-                        SimpleWriteCommand simpleWriteCommand = null;
-                        IActorRef sender = null;
                         try
                         {
-                            // Enqueue all sending data, or all except one that we will send right now 
-                            // (not enqueue first one to avoid buffer size checks for it)
                             if (HasStatus(ConnectionStatus.Sending))
                             {
+                                // If we are sending something right now, just enqueue incoming write
                                 _writeCommandsQueue.EnqueueSimpleWrites(write, Sender);
                             }
                             else
                             {
-                                simpleWriteCommand = _writeCommandsQueue.EnqueueSimpleWritesExceptFirst(write, Sender);
+                                Option<PendingWrite> nextWrite;
+                                if (_writeCommandsQueue.IsEmpty)
+                                {
+                                    // If writes queue is empty, do not enqueue first write - we will send it immidiately
+                                    var simpleWriteCommand = _writeCommandsQueue.EnqueueSimpleWritesExceptFirst(write, Sender);
+                                    nextWrite = GetNextWrite(headCommands: new []{ (simpleWriteCommand, Sender) });
+                                }
+                                else
+                                {
+                                    _writeCommandsQueue.EnqueueSimpleWrites(write, Sender);
+                                    nextWrite = GetNextWrite();
+                                }
                                 
                                 // If there is something to send and we are allowed to, lets put the next command on the wire
-                                var nextWrite = GetNextWrite(headCommands: new []{ (simpleWriteCommand, Sender) });
                                 if (nextWrite.HasValue)
                                 {
                                     SetStatus(ConnectionStatus.Sending);
@@ -409,18 +418,14 @@ namespace Akka.IO
             ClearStatus(ConnectionStatus.ReadingSuspended);
             ReceiveAsync();
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Tuple<IActorRef, object> SetPendingAcknowledgement(Tuple<IActorRef, object> pending)
-        {
-            return Interlocked.Exchange(ref _pendingAck, pending);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AcknowledgeSent()
         {
-            var ack = SetPendingAcknowledgement(null);
-            ack?.Item1.Tell(ack.Item2);
+            while (_pendingAcks.TryDequeue(out var ackInfo))
+            {
+                ackInfo.Commander.Tell(ackInfo.Ack);
+            }
+           
             ClearStatus(ConnectionStatus.Sending);
         }
 
@@ -491,9 +496,12 @@ namespace Akka.IO
         {
             if (!write.HasValue)
                 return;
-            
-            if (!write.Value.Ack.Equals(NoAck.Instance))
-                _pendingAck = Tuple.Create(info.Handler, write.Value.Ack);
+
+            // Enqueue all acks assigned to this write to be sent once write is finished
+            foreach (var pendingAck in write.Value.PendingAcks.Where(ackInfo => !ackInfo.Ack.Equals(NoAck.Instance)))
+            {
+                _pendingAcks.Enqueue(pendingAck);
+            }
             
             write.Value.DoWrite(info);
         }
@@ -689,13 +697,15 @@ namespace Akka.IO
         private Option<PendingWrite> GetNextWrite(IEnumerable<(SimpleWriteCommand Command, IActorRef Sender)> headCommands = null)
         {
             headCommands = headCommands ?? ImmutableList<(SimpleWriteCommand Command, IActorRef Sender)>.Empty;
+            var writeCommands = new List<(Write Command, IActorRef Sender)>(_writeCommandsQueue.ItemsCount);
             foreach (var commandInfo in headCommands.Concat(_writeCommandsQueue.DequeueAll()))
             {
                 switch (commandInfo.Command)
                 {
                     case Write w when !w.Data.IsEmpty:
                         // Have real write - go on and put it to the wire
-                        return CreatePendingBufferWrite(commandInfo.Sender, w.Data, w.Ack);
+                        writeCommands.Add((w, commandInfo.Sender));
+                        break;
                     case Write w:
                         // Write command is empty, so just sending Ask if required
                         if (w.WantsAck) commandInfo.Sender.Tell(w.Ack);
@@ -705,15 +715,22 @@ namespace Akka.IO
                         throw new InvalidOperationException("Non reachable code");
                 }
             }
+
+            if (writeCommands.Count > 0)
+            {
+                return CreatePendingBufferWrite(writeCommands);
+            }
             
             // No more writes out there
             return Option<PendingWrite>.None;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private PendingWrite CreatePendingBufferWrite(IActorRef commander, ByteString data, Tcp.Event ack)
+        private PendingWrite CreatePendingBufferWrite(List<(Write Command, IActorRef Sender)> writes)
         {
-            return new PendingBufferWrite(this, SendArgs, Self, commander, data, ack);
+            var acks = writes.Select(w => (w.Sender, (object)w.Command.Ack)).ToImmutableList();
+            var dataList = writes.Select(w => w.Command.Data);
+            return new PendingBufferWrite(this, SendArgs, Self, acks, dataList, Tcp.BufferPool);
         }
 
         //TODO: Port File IO - currently .NET Core doesn't support TransmitFile API
@@ -801,62 +818,52 @@ namespace Akka.IO
 
         private abstract class PendingWrite
         {
-            public IActorRef Commander { get; }
-            public object Ack { get; }
+            public IImmutableList<(IActorRef Commander, object Ack)> PendingAcks { get; }
 
-            protected PendingWrite(IActorRef commander, object ack)
+            protected PendingWrite(IImmutableList<(IActorRef Commander, object Ack)> pendingAcks)
             {
-                Commander = commander;
-                Ack = ack;
+                PendingAcks = pendingAcks;
             }
 
             public abstract void DoWrite(ConnectionInfo info);
-            public abstract void Release();
         }
 
         private sealed class PendingBufferWrite : PendingWrite
         {
             private readonly TcpConnection _connection;
             private readonly IActorRef _self;
-            private readonly ByteString _remainingData;
-            private readonly ByteString _buffer;
+            private readonly IEnumerable<ByteString> _dataToSend;
+            private readonly IBufferPool _bufferPool;
             private readonly SocketAsyncEventArgs _sendArgs;
 
             public PendingBufferWrite(
                 TcpConnection connection,
                 SocketAsyncEventArgs sendArgs,
                 IActorRef self,
-                IActorRef commander,
-                ByteString buffer,
-                object ack) : base(commander, ack)
+                IImmutableList<(IActorRef Commander, object Ack)> acks,
+                IEnumerable<ByteString> dataToSend,
+                IBufferPool bufferPool) : base(acks)
             {
                 _connection = connection;
                 _sendArgs = sendArgs;
                 _self = self;
-                _buffer = buffer;
-
-                // start immediatelly as we'll need to cover the case if 
-                // after buffer write request, the remaining enumerator is empty
-                //hasData = this.remainingData.MoveNext();
+                _dataToSend = dataToSend;
+                _bufferPool = bufferPool;
             }
 
             public override void DoWrite(ConnectionInfo info)
             {
                 try
                 {
-                    _sendArgs.SetBuffer(_buffer);
+                    _sendArgs.SetBuffer(_dataToSend);
                     if (!_connection.Socket.SendAsync(_sendArgs))
                         _self.Tell(SocketSent.Instance);
-                    
-                    Release();
                 }
                 catch (SocketException e)
                 {
                     _connection.HandleError(info.Handler, e);
                 }
             }
-
-            public override void Release() { }
         }
 
         public class PendingSimpleWritesQueue
@@ -870,6 +877,11 @@ namespace Akka.IO
                 _maxQueueSizeInBytes = maxQueueSizeInBytes;
                 _queue = new Queue<(SimpleWriteCommand Command, IActorRef Commander, int Size)>();
             }
+
+            /// <summary>
+            /// Gets total number of items in queue
+            /// </summary>
+            public int ItemsCount => _queue.Count;
 
             /// <summary>
             /// Adds all <see cref="SimpleWriteCommand"/> subcommands stored in provided command.
