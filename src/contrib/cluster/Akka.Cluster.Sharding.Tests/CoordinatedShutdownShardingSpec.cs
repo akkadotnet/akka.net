@@ -161,7 +161,7 @@ namespace Akka.Cluster.Sharding.Tests
         private void RunCoordinatedShutdownWhenLeaving()
         {
             Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
-            _probe1.ExpectMsg("CS-unbind-1");
+            _probe1.ExpectMsg("CS-unbind-1", TimeSpan.FromSeconds(10));
 
             Within(30.Seconds(), () =>
             {
@@ -172,7 +172,7 @@ namespace Akka.Cluster.Sharding.Tests
                 });
             });
 
-            Within(20.Seconds(), () =>
+            Within(30.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
