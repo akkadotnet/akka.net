@@ -233,7 +233,7 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void When_multiple_concurrent_writing_clients_Should_not_loose_messages()
+        public void When_multiple_concurrent_writing_clients_Should_not_lose_messages()
         {
             const int clientsCount = 50;
             

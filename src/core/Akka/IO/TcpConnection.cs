@@ -110,7 +110,7 @@ namespace Akka.IO
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             
             _pullMode = pullMode;
-            _writeCommandsQueue = new PendingSimpleWritesQueue(writeCommandsBufferMaxSize);
+            _writeCommandsQueue = new PendingSimpleWritesQueue(Log, writeCommandsBufferMaxSize);
             _traceLogging = tcp.Settings.TraceLogging;
             
             Tcp = tcp;
@@ -307,41 +307,41 @@ namespace Akka.IO
                             Sender.Tell(write.FailureMessage);
                         }
 
-                        try
+                        if (HasStatus(ConnectionStatus.Sending))
                         {
-                            if (HasStatus(ConnectionStatus.Sending))
+                            // If we are sending something right now, just enqueue incoming write
+                            if (!_writeCommandsQueue.EnqueueSimpleWrites(write, Sender))
                             {
-                                // If we are sending something right now, just enqueue incoming write
-                                _writeCommandsQueue.EnqueueSimpleWrites(write, Sender);
+                                DropWrite(info, write);
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            Option<PendingWrite> nextWrite;
+                            if (_writeCommandsQueue.IsEmpty)
+                            {
+                                // If writes queue is empty, do not enqueue first write - we will send it immidiately
+                                if (!_writeCommandsQueue.EnqueueSimpleWritesExceptFirst(write, Sender, out var simpleWriteCommand))
+                                {
+                                    DropWrite(info, write);
+                                    return true;
+                                }
+                                
+                                nextWrite = GetNextWrite(headCommands: new []{ (simpleWriteCommand, Sender) });
                             }
                             else
                             {
-                                Option<PendingWrite> nextWrite;
-                                if (_writeCommandsQueue.IsEmpty)
-                                {
-                                    // If writes queue is empty, do not enqueue first write - we will send it immidiately
-                                    var simpleWriteCommand = _writeCommandsQueue.EnqueueSimpleWritesExceptFirst(write, Sender);
-                                    nextWrite = GetNextWrite(headCommands: new []{ (simpleWriteCommand, Sender) });
-                                }
-                                else
-                                {
-                                    _writeCommandsQueue.EnqueueSimpleWrites(write, Sender);
-                                    nextWrite = GetNextWrite();
-                                }
-                                
-                                // If there is something to send and we are allowed to, lets put the next command on the wire
-                                if (nextWrite.HasValue)
-                                {
-                                    SetStatus(ConnectionStatus.Sending);
-                                    DoWrite(info, nextWrite.Value);
-                                } 
+                                _writeCommandsQueue.EnqueueSimpleWrites(write, Sender);
+                                nextWrite = GetNextWrite();
                             }
-                        }
-                        catch (InternalBufferOverflowException)
-                        {
-                            if (_traceLogging) Log.Debug("Dropping write because queue is full");
-                            Sender.Tell(write.FailureMessage);
-                            if (info.UseResumeWriting) SetStatus(ConnectionStatus.WritingSuspended);
+                            
+                            // If there is something to send and we are allowed to, lets put the next command on the wire
+                            if (nextWrite.HasValue)
+                            {
+                                SetStatus(ConnectionStatus.Sending);
+                                DoWrite(info, nextWrite.Value);
+                            } 
                         }
                         
                         return true;
@@ -376,6 +376,13 @@ namespace Akka.IO
                     default: return false;
                 }
             };
+        }
+
+        private void DropWrite(ConnectionInfo info, WriteCommand write)
+        {
+            if (_traceLogging) Log.Debug("Dropping write because queue is full");
+            Sender.Tell(write.FailureMessage);
+            if (info.UseResumeWriting) SetStatus(ConnectionStatus.WritingSuspended);
         }
 
         // AUXILIARIES and IMPLEMENTATION
@@ -868,12 +875,14 @@ namespace Akka.IO
 
         public class PendingSimpleWritesQueue
         {
+            private readonly ILoggingAdapter _log;
             private readonly Option<int> _maxQueueSizeInBytes;
             private readonly Queue<(SimpleWriteCommand Command, IActorRef Commander, int Size)> _queue;
             private int _totalSizeInBytes = 0;
 
-            public PendingSimpleWritesQueue(Option<int> maxQueueSizeInBytes)
+            public PendingSimpleWritesQueue(ILoggingAdapter log, Option<int> maxQueueSizeInBytes)
             {
+                _log = log;
                 _maxQueueSizeInBytes = maxQueueSizeInBytes;
                 _queue = new Queue<(SimpleWriteCommand Command, IActorRef Commander, int Size)>();
             }
@@ -890,21 +899,24 @@ namespace Akka.IO
             /// <exception cref="InternalBufferOverflowException">
             /// Thrown when data to buffer is larger then allowed <see cref="_maxQueueSizeInBytes"/>
             /// </exception>
-            public void EnqueueSimpleWrites(WriteCommand command, IActorRef sender)
+            public bool EnqueueSimpleWrites(WriteCommand command, IActorRef sender)
             {
                 foreach (var writeInfo in ExtractFromCommand(command))
                 {
                     var sizeAfterAppending = _totalSizeInBytes + writeInfo.DataSize;
                     if (_maxQueueSizeInBytes.HasValue && _maxQueueSizeInBytes.Value < sizeAfterAppending)
                     {
-                        throw new InternalBufferOverflowException($"Could not receive write command of size {writeInfo.DataSize} bytes, " +
-                                                                  $"because buffer limit is {_maxQueueSizeInBytes} bytes and " +
-                                                                  $"it is already {_totalSizeInBytes} bytes");
+                        _log.Warning("Could not receive write command of size {0} bytes, " +
+                                    "because buffer limit is {1} bytes and " +
+                                    "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
+                        return false;
                     }
 
                     _totalSizeInBytes = sizeAfterAppending;
                     _queue.Enqueue((writeInfo.Command, sender, writeInfo.DataSize));
                 }
+                
+                return true;
             }
             
             /// <summary>
@@ -917,9 +929,9 @@ namespace Akka.IO
             /// <exception cref="InternalBufferOverflowException">
             /// Thrown when data to buffer is larger then allowed <see cref="_maxQueueSizeInBytes"/>
             /// </exception>
-            public SimpleWriteCommand EnqueueSimpleWritesExceptFirst(WriteCommand command, IActorRef sender)
+            public bool EnqueueSimpleWritesExceptFirst(WriteCommand command, IActorRef sender, out SimpleWriteCommand first)
             {
-                SimpleWriteCommand first = null;
+                first = null;
                 foreach (var writeInfo in ExtractFromCommand(command))
                 {
                     if (first == null)
@@ -931,16 +943,17 @@ namespace Akka.IO
                     var sizeAfterAppending = _totalSizeInBytes + writeInfo.DataSize;
                     if (_maxQueueSizeInBytes.HasValue && _maxQueueSizeInBytes.Value < sizeAfterAppending)
                     {
-                        throw new InternalBufferOverflowException($"Could not receive write command of size {writeInfo.DataSize} bytes, " +
-                                                                  $"because buffer limit is {_maxQueueSizeInBytes} bytes and " +
-                                                                  $"it is already {_totalSizeInBytes} bytes");
+                        _log.Warning("Could not receive write command of size {0} bytes, " +
+                                    "because buffer limit is {1} bytes and " +
+                                    "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
+                        return false;
                     }
 
                     _totalSizeInBytes = sizeAfterAppending;
                     _queue.Enqueue((writeInfo.Command, sender, writeInfo.DataSize));
                 }
 
-                return first;
+                return true;
             }
 
             /// <summary>
