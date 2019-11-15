@@ -9,6 +9,7 @@ using System;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -18,6 +19,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.IO.Buffers;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -65,6 +67,34 @@ namespace Akka.IO
         {
             public static readonly SocketReceived Instance = new SocketReceived();
             private SocketReceived() { }
+        }
+
+        internal sealed class SocketReceivePipeUpdated
+        {
+            public SocketReceivePipeUpdated(int bytesReceived)
+            {
+                BytesReceived = bytesReceived;
+                Error = Option<Exception>.None;
+            }
+            
+            public SocketReceivePipeUpdated(Exception error)
+            {
+                Error = error;
+            }
+
+            public int BytesReceived { get; }
+            public Option<Exception> Error { get; }
+            public bool IsFaulted => Error.HasValue;
+        }
+
+        internal sealed class SocketReceivePipeFlushCompleted
+        {
+            public SocketReceivePipeFlushCompleted(FlushResult result)
+            {
+                Result = result;
+            }
+
+            public FlushResult Result { get; }
         }
 
         internal sealed class SocketAccepted : SocketCompleted

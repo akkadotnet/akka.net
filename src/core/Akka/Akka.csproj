@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
@@ -17,6 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="1.6.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="4.6.0" />
   </ItemGroup>
     
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
