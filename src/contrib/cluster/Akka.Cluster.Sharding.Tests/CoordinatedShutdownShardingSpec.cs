@@ -130,7 +130,7 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
 
             Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
-            Within(20.Seconds(), () =>
+            Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -142,7 +142,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
 
             Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
-            Within(20.Seconds(), () =>
+            Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {

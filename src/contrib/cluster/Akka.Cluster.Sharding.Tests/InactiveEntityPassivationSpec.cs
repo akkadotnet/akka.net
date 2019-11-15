@@ -173,8 +173,8 @@ namespace Akka.Cluster.Sharding.Tests
 
             var responses = new[]
             {
-                probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10)),
-                probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10))
+                probe.ExpectMsg<Entity.GotIt>(),
+                probe.ExpectMsg<Entity.GotIt>()
             };
             responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
         }
