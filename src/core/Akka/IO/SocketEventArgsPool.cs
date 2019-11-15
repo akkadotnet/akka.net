@@ -60,6 +60,11 @@ namespace Akka.IO
             try
             {
                 e.SetBuffer(null, 0, 0);
+                if (e.BufferList != null)
+                {
+                    e.BufferList = null;
+                }
+                
                 if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
                 {
                     _pool.Push(e);
