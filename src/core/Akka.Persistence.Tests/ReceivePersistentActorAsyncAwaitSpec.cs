@@ -627,7 +627,7 @@ namespace Akka.Persistence.Tests
             var actor = Sys.ActorOf(Props.Create(() => new AsyncPipeToDelayActor("pid")));
 
             actor.Tell("hello");
-            ExpectMsg<string>(m => "hello".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "hello".Equals(m), TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]
