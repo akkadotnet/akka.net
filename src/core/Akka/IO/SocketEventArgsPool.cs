@@ -133,6 +133,7 @@ namespace Akka.IO
                     var copied = byteString.CopyTo(bytes, position, byteString.Count);
                     position += copied;
                 }
+                args.SetBuffer(bytes, 0, bytes.Length);
             }
             else
             {
