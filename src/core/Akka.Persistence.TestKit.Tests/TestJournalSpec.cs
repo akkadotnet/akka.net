@@ -64,7 +64,7 @@ namespace Akka.Persistence.TestKit.Tests
             await Journal.OnWrite.Reject();
             actor.Tell("write", TestActor);
 
-            _probe.ExpectMsg("rejected", TimeSpan.FromSeconds(30));
+            _probe.ExpectMsg("rejected");
         }
 
         [Fact]

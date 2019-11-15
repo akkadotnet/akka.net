@@ -130,7 +130,7 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
 
             Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
-            Within(20.Seconds(), () =>
+            Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -142,7 +142,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
 
             Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
-            Within(20.Seconds(), () =>
+            Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -161,9 +161,9 @@ namespace Akka.Cluster.Sharding.Tests
         private void RunCoordinatedShutdownWhenLeaving()
         {
             Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
-            _probe1.ExpectMsg("CS-unbind-1", TimeSpan.FromSeconds(10));
+            _probe1.ExpectMsg("CS-unbind-1");
 
-            Within(30.Seconds(), () =>
+            Within(20.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -172,7 +172,7 @@ namespace Akka.Cluster.Sharding.Tests
                 });
             });
 
-            Within(30.Seconds(), () =>
+            Within(10.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
