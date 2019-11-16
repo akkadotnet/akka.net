@@ -50,7 +50,7 @@ stages:
             displayName: 'If above is partially succeeded, then fail'
             condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
 
-  - stage: '.NET Framework Unit Tests (Windows)'
+  - stage: 'netfx_tests_windows'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
@@ -62,7 +62,7 @@ stages:
           outputDirectory: 'TestResults'
           artifactName: 'netfx_tests_windows-$(Build.BuildId)'
 
-  - stage: '.NET Core Unit Tests (Windows)'
+  - stage: 'net_core_tests_windows'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
@@ -74,7 +74,7 @@ stages:
           outputDirectory: 'TestResults'
           artifactName: 'net_core_tests_windows-$(Build.BuildId)'
 
-  - stage: '.NET Core Unit Tests (Linux)'
+  - stage: 'net_core_tests_linux'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
@@ -86,7 +86,7 @@ stages:
           outputDirectory: 'TestResults'
           artifactName: 'net_core_tests_linux-$(Build.BuildId)'
 
-  - stage: '.NET Core Multi-Node Tests (Windows)'
+  - stage: 'net_core_mntr_windows'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
@@ -98,7 +98,7 @@ stages:
           outputDirectory: 'TestResults'
           artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
 
-  - stage: '.NET Framework Multi-Node Tests (Windows)'
+  - stage: 'net_fx_mntr_windows'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
@@ -110,7 +110,7 @@ stages:
           outputDirectory: 'TestResults'
           artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
 
-  - stage: 'NuGet Pack'
+  - stage: 'nuget_pack'
     jobs:
       - template: azure-pipeline.template.yaml
         parameters:
