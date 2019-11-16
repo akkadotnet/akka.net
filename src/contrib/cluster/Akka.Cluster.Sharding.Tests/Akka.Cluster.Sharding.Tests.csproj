@@ -1,12 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\..\common.props" />
-    
-    <!-- use the xunit JSON settings file to disable parallel tests running-->
-    <ItemGroup>
-        <Content Include="..\..\..\xunit.runner.json" Link="xunit.runner.json">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
+  <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding.Tests</AssemblyTitle>
