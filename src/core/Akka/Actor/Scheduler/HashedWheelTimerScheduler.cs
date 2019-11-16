@@ -252,12 +252,7 @@ namespace Akka.Actor
             }
             else
             {
-                // Sleep some ms anyway, if there is at least one tick
-                sleepMs = (ticks + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond;
-                await Task.Delay(TimeSpan.FromMilliseconds(sleepMs));
-                return;
-                
-                // If there is no much time to sleep, let's be more accurate
+               // If there is no much time to sleep, let's be more accurate
                 _sleepWatch.Restart();
                 while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
                 _sleepWatch.Stop();
