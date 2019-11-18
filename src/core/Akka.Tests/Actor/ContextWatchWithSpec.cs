@@ -34,7 +34,7 @@ namespace Akka.Tests.Actor
         [Fact]
         [DotMemoryUnit(CollectAllocations=true)]
         // This requires to run with DotMemory profiler: https://www.jetbrains.com/dotmemory/
-        // Otherwise, all `dotMemory.Check` calles are ignored
+        // Otherwise, all `dotMemory.Check` calls are ignored
         public void Context_WatchWith_Should_not_have_memory_leak()
         {
             using (var actorSystem = ActorSystem.Create("repro"))
