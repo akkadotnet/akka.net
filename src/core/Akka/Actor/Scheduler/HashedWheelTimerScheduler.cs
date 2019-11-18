@@ -236,7 +236,7 @@ namespace Akka.Actor
 #endif
                     
                     stopWatch.Stop();
-                    TotalTicksRequiredToWaitStrict.AddAndGet((int)Math.Min(deadline - currentTime, int.MaxValue));
+                    TotalTicksRequiredToWaitStrict.AddAndGet((int)Math.Min(ticksToSleep, int.MaxValue));
                     TotalTicksActual.AddAndGet((int)Math.Min(stopWatch.ElapsedTicks, int.MaxValue));
                 }
             }
@@ -244,9 +244,13 @@ namespace Akka.Actor
         
         private void Sleep(long ticks)
         {
-            // If there is no much time to sleep, let's be more accurate
+            var remainingTicks = (int)Math.Min(int.MaxValue, ticks);
             _sleepWatch.Restart();
-            while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
+            while (remainingTicks > 0)
+            {
+                Thread.SpinWait(remainingTicks);
+                remainingTicks = (int)(ticks - _sleepWatch.ElapsedTicks);
+            }
             _sleepWatch.Stop();
         }
 
