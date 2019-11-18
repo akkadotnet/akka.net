@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
-using JetBrains.dotMemoryUnit;
 using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,8 +26,6 @@ namespace Akka.Tests.Actor
         public ContextWatchWithSpec(ITestOutputHelper outputHelper)
         {
             _outputHelper = outputHelper;
-            
-            JetBrains.dotMemoryUnit.DotMemoryUnitTestOutput.SetOutputMethod(s => _outputHelper.WriteLine(s));
         }
         
         [Fact(Skip = "This test is used with Performance Profiler to check memory leaks")]
