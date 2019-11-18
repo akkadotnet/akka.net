@@ -209,7 +209,8 @@ namespace Akka.Cluster.Sharding
 
                 Receive<ReceiveTimeout>(t =>
                 {
-                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard, stopping the remaining entities.", stopMessage.GetType(), shard);
+                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard after [{2}], " +
+                        "stopping the remaining [{3}] entities.", stopMessage.GetType(), shard, handoffTimeout, remaining.Count);
                     foreach (var r in remaining)
                         Context.Stop(r);
                 });
