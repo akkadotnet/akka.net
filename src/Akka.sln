@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29201.188
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.645
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -203,11 +203,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit.Xu
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{C7012F7B-F68E-440D-9265-987266A04302}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Docs.Tests", "core\Akka.Docs.Tests\Akka.Docs.Tests.csproj", "{159F6312-3F12-4A84-9E7C-0A4B4FD72D1E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Docs.Tests", "core\Akka.Docs.Tests\Akka.Docs.Tests.csproj", "{159F6312-3F12-4A84-9E7C-0A4B4FD72D1E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Docs.Tutorials", "core\Akka.Docs.Tutorials\Akka.Docs.Tutorials.csproj", "{9AE636F2-988C-42E4-9B40-FF1F7177DF91}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Docs.Tutorials", "core\Akka.Docs.Tutorials\Akka.Docs.Tutorials.csproj", "{9AE636F2-988C-42E4-9B40-FF1F7177DF91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.ContextWatchWithLeak.Full", "core\Akka.ContextWatchWithLeak\Akka.ContextWatchWithLeak.Full.csproj", "{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -906,6 +911,18 @@ Global
 		{9AE636F2-988C-42E4-9B40-FF1F7177DF91}.Release|x64.Build.0 = Release|Any CPU
 		{9AE636F2-988C-42E4-9B40-FF1F7177DF91}.Release|x86.ActiveCfg = Release|Any CPU
 		{9AE636F2-988C-42E4-9B40-FF1F7177DF91}.Release|x86.Build.0 = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|x64.Build.0 = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Debug|x86.Build.0 = Debug|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|x64.ActiveCfg = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|x64.Build.0 = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|x86.ActiveCfg = Release|Any CPU
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -995,6 +1012,7 @@ Global
 		{6F8FECD6-6E39-473E-9B9A-9EE22CBF479F} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{159F6312-3F12-4A84-9E7C-0A4B4FD72D1E} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{9AE636F2-988C-42E4-9B40-FF1F7177DF91} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{7F7E0D11-01EF-491C-BDB4-DB1D2E2A1FA6} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
