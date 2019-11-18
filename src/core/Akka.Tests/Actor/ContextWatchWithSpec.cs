@@ -31,10 +31,7 @@ namespace Akka.Tests.Actor
             JetBrains.dotMemoryUnit.DotMemoryUnitTestOutput.SetOutputMethod(s => _outputHelper.WriteLine(s));
         }
         
-        [Fact]
-        [DotMemoryUnit(CollectAllocations=true)]
-        // This requires to run with DotMemory profiler: https://www.jetbrains.com/dotmemory/
-        // Otherwise, all `dotMemory.Check` calls are ignored
+        [Fact(Skip = "This test is used with Performance Profiler to check memory leaks")]
         public void Context_WatchWith_Should_not_have_memory_leak()
         {
             using (var actorSystem = ActorSystem.Create("repro"))
@@ -42,18 +39,6 @@ namespace Akka.Tests.Actor
                 actorSystem.ActorOf(Props.Create<LoadHandler>());
 
                 Thread.Sleep(60.Seconds());
-
-                // Collect pending object to have clear test results
-                GC.Collect();
-                
-                dotMemory.Check(memory =>
-                {
-                    // Since we are watching for 10k actors on each iteration,
-                    // at any given time there can not be more then 20k of watching messages
-                    var stoppedCount = memory.GetObjects(where => where.Type.Is<LoadHandler.Stopped>()).ObjectsCount;
-                    _outputHelper.WriteLine($"Instances: stopped = {stoppedCount}");
-                    stoppedCount.Should().BeLessThan(20_000);
-                });
             }
         }
         
