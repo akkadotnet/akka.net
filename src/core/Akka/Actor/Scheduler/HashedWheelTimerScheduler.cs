@@ -147,7 +147,7 @@ namespace Akka.Actor
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
-        private async Task Run()
+        private void Run()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -161,7 +161,7 @@ namespace Akka.Actor
 
             do
             {
-                var deadline = await WaitForNextTick();
+                var deadline = WaitForNextTick();
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
@@ -201,7 +201,7 @@ namespace Akka.Actor
             _rescheduleRegistrations.Clear();
         }
 
-        private async Task<long> WaitForNextTick()
+        private long WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
@@ -224,7 +224,7 @@ namespace Akka.Actor
 #if UNSAFE_THREADING
                     try
                     {
-                        await Sleep(ticksToSleep);
+                        Sleep(ticksToSleep);
                     }
                     catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                     {
@@ -232,7 +232,7 @@ namespace Akka.Actor
                             return long.MinValue;
                     }
 #else             
-                    await Sleep(ticksToSleep);
+                    Sleep(ticksToSleep);
 #endif
                     
                     stopWatch.Stop();
@@ -242,21 +242,12 @@ namespace Akka.Actor
             }
         }
         
-        private async Task Sleep(long ticks)
+        private void Sleep(long ticks)
         {
-            var sleepMs = ticks / TimeSpan.TicksPerMillisecond;
-            if (sleepMs >= 1 && !RuntimeDetector.IsWindows || sleepMs >= 10) // Windows clocks are too slow
-            {
-                // If sleep is going to be long enough, let it release unused CPU resources for that time
-                await Task.Delay(TimeSpan.FromMilliseconds(sleepMs));
-            }
-            else
-            {
-               // If there is no much time to sleep, let's be more accurate
-                _sleepWatch.Restart();
-                while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
-                _sleepWatch.Stop();
-            }
+            // If there is no much time to sleep, let's be more accurate
+            _sleepWatch.Restart();
+            while (_sleepWatch.ElapsedTicks < ticks) { /*waiting*/ }
+            _sleepWatch.Stop();
         }
 
         private void TransferRegistrationsToBuckets()
