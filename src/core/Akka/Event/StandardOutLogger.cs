@@ -104,11 +104,22 @@ namespace Akka.Event
         public static bool UseColors { get; set; }
 
         /// <summary>
+        /// Custom print log delegate.
+        /// </summary>
+        public static Action<LogEvent> PrintLog;
+
+        /// <summary>
         /// Prints a specified event to the console.
         /// </summary>
         /// <param name="logEvent">The event to print</param>
         public static void PrintLogEvent(LogEvent logEvent)
         {
+            if (PrintLog != null)
+            {
+                PrintLog(logEvent);
+                return;
+            }
+
             try
             {
                 ConsoleColor? color = null;
