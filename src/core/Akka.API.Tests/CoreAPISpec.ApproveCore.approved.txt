@@ -2870,6 +2870,7 @@ namespace Akka.Event
         public DeadLetterListener() { }
         protected override void PostRestart(System.Exception reason) { }
         protected override void PostStop() { }
+        protected override void PreRestart(System.Exception reason, object message) { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
     }
