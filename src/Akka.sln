@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29201.188
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.645
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -203,11 +203,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit.Xu
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{C7012F7B-F68E-440D-9265-987266A04302}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Docs.Tests", "core\Akka.Docs.Tests\Akka.Docs.Tests.csproj", "{159F6312-3F12-4A84-9E7C-0A4B4FD72D1E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Docs.Tests", "core\Akka.Docs.Tests\Akka.Docs.Tests.csproj", "{159F6312-3F12-4A84-9E7C-0A4B4FD72D1E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Docs.Tutorials", "core\Akka.Docs.Tutorials\Akka.Docs.Tutorials.csproj", "{9AE636F2-988C-42E4-9B40-FF1F7177DF91}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Docs.Tutorials", "core\Akka.Docs.Tutorials\Akka.Docs.Tutorials.csproj", "{9AE636F2-988C-42E4-9B40-FF1F7177DF91}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
