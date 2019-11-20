@@ -106,6 +106,26 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void Log_dead_letters()
+        {
+            var sys = ActorSystem.Create("LogDeadLetters", ConfigurationFactory.ParseString("akka.loglevel=INFO")
+                .WithFallback(DefaultConfig));
+
+            try
+            {
+                var a = sys.ActorOf(Props.Create<Terminater>());
+
+                var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
+                eventFilter.Info(contains: "not delivered").Expect(1, () =>
+                {
+                    a.Tell("run");
+                    a.Tell("boom");
+                });
+            }
+            finally { Shutdown(sys); }
+        }
+
+        [Fact]
         public void Block_until_exit()
         {
             var actorSystem = ActorSystem
