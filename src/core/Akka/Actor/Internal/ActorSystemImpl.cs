@@ -493,6 +493,8 @@ namespace Akka.Actor.Internal
         public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
+            if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null) 
+                Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
             return WhenTerminated;
         }
