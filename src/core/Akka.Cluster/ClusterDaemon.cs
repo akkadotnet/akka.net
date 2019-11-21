@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -998,6 +997,7 @@ namespace Akka.Cluster
         private ImmutableList<Address> _seedNodes;
         private IActorRef _seedNodeProcess;
         private int _seedNodeProcessCounter = 0; //for unique names
+        private Deadline _joinSeedNodesDeadline;
 
         readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
@@ -1209,70 +1209,101 @@ namespace Akka.Cluster
 
         private void Uninitialized(object message)
         {
-            if (message is InternalClusterAction.InitJoin)
+            switch (message)
             {
-                _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
-                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
-            }
-            else if (message is ClusterUserAction.JoinTo jt)
-            {
-                Join(jt.Address);
-            }
-            else if (message is InternalClusterAction.JoinSeedNodes js)
-            {
-                JoinSeedNodes(js.SeedNodes);
-            }
-            else if (message is InternalClusterAction.ISubscriptionMessage isub)
-            {
-                _publisher.Forward(isub);
-            }
-            else if (ReceiveExitingCompleted(message)) { }
-            else
-            {
-                Unhandled(message);
+                case InternalClusterAction.InitJoin _:
+                    {
+                        _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
+                        Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+                        break;
+                    }
+                case ClusterUserAction.JoinTo jt:
+                    Join(jt.Address);
+                    break;
+                case InternalClusterAction.JoinSeedNodes js:
+                    {
+                        ResetJoinSeedNodesDeadline();
+                        JoinSeedNodes(js.SeedNodes);
+                        break;
+                    }
+                case InternalClusterAction.ISubscriptionMessage isub:
+                    _publisher.Forward(isub);
+                    break;
+                case InternalClusterAction.ITick _:
+                    if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue) JoinSeedNodesWasUnsuccessful();
+                    break;
+                default:
+                    if (!ReceiveExitingCompleted(message)) Unhandled(message);
+                    break;
             }
         }
 
         private void TryingToJoin(object message, Address joinWith, Deadline deadline)
         {
-            if (message is InternalClusterAction.Welcome w)
+            switch (message)
             {
-                Welcome(joinWith, w.From, w.Gossip);
+                case InternalClusterAction.Welcome w:
+                    Welcome(joinWith, w.From, w.Gossip);
+                    break;
+                case InternalClusterAction.InitJoin _:
+                    {
+                        _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
+                        Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+                        break;
+                    }
+
+                case ClusterUserAction.JoinTo jt:
+                    {
+                        BecomeUninitialized();
+                        Join(jt.Address);
+                        break;
+                    }
+                case InternalClusterAction.JoinSeedNodes js:
+                    {
+                        ResetJoinSeedNodesDeadline();
+                        BecomeUninitialized();
+                        JoinSeedNodes(js.SeedNodes);
+                        break;
+                    }
+                case InternalClusterAction.ISubscriptionMessage isub:
+                    _publisher.Forward(isub);
+                    break;
+                case InternalClusterAction.ITick _:
+                    {
+                        if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue)
+                        {
+                            JoinSeedNodesWasUnsuccessful();
+                        }
+                        else if (deadline != null && deadline.IsOverdue)
+                        {
+                            // join attempt failed, retry
+                            BecomeUninitialized();
+                            if (!_seedNodes.IsEmpty) JoinSeedNodes(_seedNodes);
+                            else Join(joinWith);
+                        }
+
+                        break;
+                    }
+                default:
+                    if (!ReceiveExitingCompleted(message)) Unhandled(message);
+                    break;
             }
-            else if (message is InternalClusterAction.InitJoin)
-            {
-                _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
-                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
-            }
-            else if (message is ClusterUserAction.JoinTo jt)
-            {
-                BecomeUninitialized();
-                Join(jt.Address);
-            }
-            else if (message is InternalClusterAction.JoinSeedNodes js)
-            {
-                BecomeUninitialized();
-                JoinSeedNodes(js.SeedNodes);
-            }
-            else if (message is InternalClusterAction.ISubscriptionMessage isub)
-            {
-                _publisher.Forward(isub);
-            }
-            else if (message is InternalClusterAction.ITick)
-            {
-                if (deadline != null && deadline.IsOverdue)
-                {
-                    // join attempt failed, retry
-                    BecomeUninitialized();
-                    if (!_seedNodes.IsEmpty) JoinSeedNodes(_seedNodes);
-                    else Join(joinWith);
-                }
-            }
-            else if (ReceiveExitingCompleted(message)) { }
-            else
-            {
-                Unhandled(message);
-            }
+        }
+
+        private void ResetJoinSeedNodesDeadline()
+        {
+            _joinSeedNodesDeadline = _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes != null
+                ? Deadline.Now + _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes
+                : null;
+        }
+
+        private void JoinSeedNodesWasUnsuccessful()
+        {
+            _log.Warning("Joining of seed-nodes [{0}] was unsuccessful after configured shutdown-after-unsuccessful-join-seed-nodes [{1}]. Running CoordinatedShutdown.",
+                string.Join(", ", _seedNodes), _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes);
+
+            _joinSeedNodesDeadline = null;
+            _coordShutdown.Run(CoordinatedShutdown.ClusterJoinUnsuccessfulReason.Instance);
         }
 
         private void BecomeUninitialized()

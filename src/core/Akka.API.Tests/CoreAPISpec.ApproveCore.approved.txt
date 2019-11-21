@@ -522,6 +522,10 @@ namespace Akka.Actor
         {
             public static Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
+        public class ClusterJoinUnsuccessfulReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
         public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static Akka.Actor.CoordinatedShutdown.Reason Instance;

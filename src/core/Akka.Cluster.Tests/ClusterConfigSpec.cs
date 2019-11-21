@@ -11,9 +11,8 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
-using Xunit;
-using Assert = Xunit.Assert;
 using FluentAssertions;
+using Xunit;
 
 namespace Akka.Cluster.Tests
 {
@@ -30,6 +29,7 @@ namespace Akka.Cluster.Tests
             settings.SeedNodes.Should().BeEquivalentTo(ImmutableList.Create<Address>());
             settings.SeedNodeTimeout.Should().Be(5.Seconds());
             settings.RetryUnsuccessfulJoinAfter.Should().Be(10.Seconds());
+            settings.ShutdownAfterUnsuccessfulJoinSeedNodes .Should().Be(null);
             settings.PeriodicTasksInitialDelay.Should().Be(1.Seconds());
             settings.GossipInterval.Should().Be(1.Seconds());
             settings.GossipTimeToLive.Should().Be(2.Seconds());
