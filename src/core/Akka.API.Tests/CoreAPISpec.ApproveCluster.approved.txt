@@ -208,6 +208,7 @@ namespace Akka.Cluster
         public int SchedulerTicksPerWheel { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
+        public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
