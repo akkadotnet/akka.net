@@ -133,7 +133,7 @@ namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 
                 result.Output.StdErr.Add(message.Message);
                 result.Output.DebugTrace.Add(message.Message);
-                result.Output.ErrorInfo.Message = message.Message;
+                result.Output.ErrorInfo = new ErrorInfo() { Message = message.Message };
             }
         }
 
