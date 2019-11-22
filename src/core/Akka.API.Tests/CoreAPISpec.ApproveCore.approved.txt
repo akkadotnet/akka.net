@@ -117,7 +117,7 @@ namespace Akka.Actor
         protected void StopFunctionRefs() { }
         public void Suspend() { }
         protected void TellWatchersWeDied() { }
-        public void TerminatedQueuedFor(Akka.Actor.IActorRef subject) { }
+        public void TerminatedQueuedFor(Akka.Actor.IActorRef subject, Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
         protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, out Akka.Actor.Internal.ChildRestartStats child) { }
         public bool TryGetSingleChild(string name, out Akka.Actor.IInternalActorRef child) { }
@@ -520,6 +520,10 @@ namespace Akka.Actor
             public static Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
         public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
+        public class ClusterJoinUnsuccessfulReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
@@ -1903,6 +1907,7 @@ namespace Akka.Actor.Internal
         public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public override System.Threading.Tasks.Task Terminate() { }
+        public override string ToString() { }
         public override bool TryGetExtension(System.Type extensionType, out object extension) { }
         public override bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension { }
@@ -2877,6 +2882,7 @@ namespace Akka.Event
         public DeadLetterListener() { }
         protected override void PostRestart(System.Exception reason) { }
         protected override void PostStop() { }
+        protected override void PreRestart(System.Exception reason, object message) { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
     }
@@ -2999,6 +3005,8 @@ namespace Akka.Event
         public static Akka.Event.LogLevel LogLevelFor(string logLevel) { }
         public static Akka.Event.LogLevel LogLevelFor<T>()
             where T : Akka.Event.LogEvent { }
+        public static string SimpleName(object o) { }
+        public static string SimpleName(System.Type t) { }
         public static string StringFor(this Akka.Event.LogLevel logLevel) { }
     }
     public abstract class LoggingAdapterBase : Akka.Event.ILoggingAdapter
@@ -3055,6 +3063,18 @@ namespace Akka.Event
         public object[] Args { get; }
         public string Format { get; }
         public override string ToString() { }
+    }
+    public struct LogSource
+    {
+        public string Source { get; }
+        public System.Type Type { get; }
+        public static Akka.Event.LogSource Create(object o) { }
+        public static Akka.Event.LogSource Create(object o, Akka.Actor.ActorSystem system) { }
+        public static string FromActor(Akka.Actor.IActorContext actor, Akka.Actor.ActorSystem system) { }
+        public static string FromActorRef(Akka.Actor.IActorRef a, Akka.Actor.ActorSystem system) { }
+        public static string FromString(string source, Akka.Actor.ActorSystem system) { }
+        public static string FromType(System.Type t, Akka.Actor.ActorSystem system) { }
+        public static System.Type SourceType(object o) { }
     }
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
@@ -4789,6 +4809,7 @@ namespace Akka.Util
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+        public T GetOrElse(T fallbackValue) { }
         public override string ToString() { }
     }
     public abstract class Resolve : Akka.Actor.IIndirectActorProducer

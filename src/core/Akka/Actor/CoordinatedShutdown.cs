@@ -223,6 +223,15 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// The shutdown was initiated by a failure to join a seed node.
+        /// </summary>
+        public class ClusterJoinUnsuccessfulReason : Reason
+        {
+            public static Reason Instance = new ClusterJoinUnsuccessfulReason();
+            private ClusterJoinUnsuccessfulReason() { }
+        }
+
+        /// <summary>
         /// The <see cref="ActorSystem"/>
         /// </summary>
         public ExtendedActorSystem System { get; }

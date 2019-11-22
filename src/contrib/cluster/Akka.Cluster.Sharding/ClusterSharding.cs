@@ -9,12 +9,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 
@@ -1251,15 +1253,22 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
+        /// <param name="shuttingDownRegions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
         {
-            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
+            if (shuttingDownRegions.Count() > regions.Count())
+                throw new ArgumentException($"'shuttingDownRegions' must be a subset of 'regions'.", nameof(shuttingDownRegions));
+
+            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions, shuttingDownRegions));
         }
 
         private readonly ShardId _shard;
         private readonly IActorRef _from;
         private readonly ISet<IActorRef> _remaining;
+        private ILoggingAdapter _log;
+
+        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         /// <summary>
         /// TBD
@@ -1268,10 +1277,14 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        /// <param name="shuttingDownRegions">TBD</param>
+        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
         {
             _shard = shard;
             _from = @from;
+
+            foreach (var region in shuttingDownRegions)
+                Context.Watch(region);
 
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
@@ -1290,18 +1303,30 @@ namespace Akka.Cluster.Sharding
             switch (message)
             {
                 case PersistentShardCoordinator.BeginHandOffAck hoa when _shard == hoa.Shard:
-                    _remaining.Remove(Sender);
-                    if (_remaining.Count == 0)
-                    {
-                        _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
-                        Context.Become(StoppingShard);
-                    }
+                    Log.Debug("BeginHandOffAck for shard [{0}] received from {1}.", _shard, Sender);
+                    Acked(Sender);
+                    return true;
+                case Terminated t:
+                    Log.Debug("ShardRegion {0} terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
+                    Acked(t.ActorRef);
                     return true;
                 case ReceiveTimeout _:
                     Done(false);
                     return true;
             }
             return false;
+        }
+
+        private void Acked(IActorRef shardRegion)
+        {
+            Context.Unwatch(shardRegion);
+            _remaining.Remove(Sender);
+            if (_remaining.Count == 0)
+            {
+                Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
+                _from.Tell(new PersistentShardCoordinator.HandOff(_shard));
+                Context.Become(StoppingShard);
+            }
         }
 
         private bool StoppingShard(object message)
