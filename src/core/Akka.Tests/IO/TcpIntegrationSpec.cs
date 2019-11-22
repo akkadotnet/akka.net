@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
@@ -27,9 +28,24 @@ namespace Akka.Tests.IO
 {
     public class TcpIntegrationSpec : AkkaSpec
     {
+        public const int InternalConnectionActorMaxQueueSize = 10000;
+        
+        class Aye : Tcp.Event { public static readonly Aye Instance = new Aye(); }
+        class Yes : Tcp.Event { public static readonly Yes Instance = new Yes(); }
+        class Ack : Tcp.Event { public static readonly Ack Instance = new Ack(); }
+
+        class AckWithValue : Tcp.Event
+        {
+            public object Value { get; }
+            public static AckWithValue Create(object value) => new AckWithValue(value);
+            private AckWithValue(object value) { Value = value; }
+        }
+
+        
         public TcpIntegrationSpec(ITestOutputHelper output)
-            : base(@"akka.loglevel = DEBUG
-                     akka.io.tcp.trace-logging = true", output: output)
+            : base($@"akka.loglevel = DEBUG
+                     akka.io.tcp.trace-logging = true
+                     akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
 
         private void VerifyActorTermination(IActorRef actor)
@@ -210,14 +226,123 @@ namespace Akka.Tests.IO
                 var serverMsgs = actors.ServerHandler.ReceiveWhile<Tcp.Received>(o =>
                 {
                     return o as Tcp.Received;
-                }, RemainingOrDefault, TimeSpan.FromSeconds(0.5));
+                }, RemainingOrDefault, TimeSpan.FromSeconds(2));
 
                 serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
             });
         }
 
-        class Aye : Tcp.Event { public static readonly Aye Instance = new Aye();}
-        class Yes : Tcp.Event { public static readonly Yes Instance = new Yes();}
+        [Fact]
+        public void When_multiple_concurrent_writing_clients_Should_not_lose_messages()
+        {
+            const int clientsCount = 50;
+            
+            new TestSetup(this).Run(x =>
+            {
+                // Setup multiple clients
+                var actors = x.EstablishNewClientConnection();
+
+                // Each client sends his index to server
+                var clients = Enumerable.Range(0, clientsCount).Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
+                var counter = new AtomicCounter(0);
+                Parallel.ForEach(clients, client =>
+                {
+                    var msg = ByteString.FromString(client.Index.ToString());
+                    counter.AddAndGet(msg.Count);
+                    client.Probe.Send(actors.ClientConnection, Tcp.Write.Create(msg));
+                });
+                
+                // All messages data should be received
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                received.Sum(r => r.Data.Count).ShouldBe(counter.Current);
+            });
+        }
+        
+        [Fact]
+        public void When_multiple_concurrent_writing_clients_All_acks_should_be_received()
+        {
+            const int clientsCount = 50;
+            
+            new TestSetup(this).Run(x =>
+            {
+                // Setup multiple clients
+                var actors = x.EstablishNewClientConnection();
+
+                // Each client sends his index to server
+                var indexRange = Enumerable.Range(0, clientsCount).ToList();
+                var clients = indexRange.Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
+                Parallel.ForEach(clients, client =>
+                {
+                    var msg = ByteString.FromBytes(new byte[1]);
+                    client.Probe.Send(actors.ClientConnection, Tcp.Write.Create(msg, AckWithValue.Create(client.Index)));
+                });
+                
+                // All acks should be received
+                clients.ForEach(client =>
+                {
+                    client.Probe.ExpectMsg<AckWithValue>(ack => ack.Value.ShouldBe(client.Index), TimeSpan.FromSeconds(10));
+                });
+            });
+        }
+        
+        [Fact]
+        public void When_multiple_writing_clients_Should_receive_messages_in_order()
+        {
+            const int clientsCount = 50;
+            
+            new TestSetup(this).Run(x =>
+            {
+                // Setup multiple clients
+                var actors = x.EstablishNewClientConnection();
+
+                // Each client sends his index to server
+                var clients = Enumerable.Range(0, clientsCount).Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
+                var contentBuilder = new StringBuilder();
+                clients.ForEach(client =>
+                {
+                    var msg = client.Index.ToString();
+                    contentBuilder.Append(msg);
+                    client.Probe.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromString(msg)));
+                });
+                
+                // All messages data should be received, and be in the same order as they were sent
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                var content = string.Join("", received.Select(r => r.Data.ToString()));
+                content.ShouldBe(contentBuilder.ToString());
+            });
+        }
+
+        [Fact]
+        public void Should_fail_writing_when_buffer_is_filled()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection();
+
+                // create a buffer-overflow message
+                var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
+                var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
+
+                // try sending overflow
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+
+                // First overflow data will be received anyway
+                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    .Sum(m => m.Data.Count)
+                    .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                
+                // Check that almost-overflow size does not cause any problems
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
+                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                    .Sum(m => m.Data.Count)
+                    .Should().Be(InternalConnectionActorMaxQueueSize);
+            });
+        }
+
+        
         [Fact]
         public void The_TCP_transport_implementation_should_properly_complete_one_client_server_request_response_cycle()
         {
@@ -242,7 +367,7 @@ namespace Akka.Tests.IO
             });
         }
 
-        class Ack : Tcp.Event { public static readonly Ack Instance = new Ack(); }
+        
         [Fact]
         public void The_TCP_transport_implementation_should_support_waiting_for_writes_with_backpressure()
         {
@@ -348,7 +473,7 @@ namespace Akka.Tests.IO
                 var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
                 connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
                 connectCommander.ExpectMsg<Tcp.Connected>();
-                var clientHandler = _spec.CreateTestProbe("client-handler-probe");
+                var clientHandler = _spec.CreateTestProbe($"client-handler-probe");
                 connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
 
                 _bindHandler.ExpectMsg<Tcp.Connected>();
