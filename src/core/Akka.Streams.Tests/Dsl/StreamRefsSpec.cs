@@ -233,10 +233,12 @@ namespace Akka.Streams.Tests
         public sealed class RequestLogs
         {
             public int StreamId { get; }
+            public IActorRef ActorRef { get; }
 
-            public RequestLogs(int streamId)
+            public RequestLogs(int streamId, IActorRef actorRef)
             {
                 StreamId = streamId;
+                ActorRef = actorRef;
             }
         }
 
@@ -328,9 +330,12 @@ namespace Akka.Streams.Tests
         public sealed class StartListening
         {
             public string Id { get; }
-            public StartListening(string id)
+            public IActorRef Dummy { get; set; }
+
+            public StartListening(string id, IActorRef dummy)
             {
                 Id = id;
+                Dummy = dummy;
             }
         }
 
@@ -358,18 +363,18 @@ namespace Akka.Streams.Tests
                 {
                     if (listening.Id == "2")
                     {
-                        sourceActor.Tell(new RequestLogs(2));
+                        sourceActor.Tell(new RequestLogs(2, Self));
                     }
                     else
                     {
-                        sourceActor.Tell(new RequestLogs(1));
+                        sourceActor.Tell(new RequestLogs(1, Self));
                     }
                 }));
 
                 Receive<LogsOffer>((offer =>
                 {
                     offer.SourceRef.Source.RunWith(Sink.ForEach<string>((s => Log.Info(s))), _materializer);
-                    probe.Tell(offer);
+                    probe.Tell("ok");
                 }));
 
                 Receive<ISourceRef<string>>((sref=>
@@ -401,9 +406,9 @@ namespace Akka.Streams.Tests
                 serializers {{
                     akka-stream-ref = ""Akka.Streams.Tests.ProbeStreamRefSerializer, Akka.Streams.Tests""
                 }}
-                serialization-bindings {{
-                    ""Akka.Streams.Tests.LogsOffer, Akka.Streams.Tests"" = akka-stream-ref
-                }}
+                #serialization-bindings {{
+                #    ""Akka.Streams.Tests.LogsOffer, Akka.Streams.Tests"" = akka-stream-ref
+                #}}
 
                 serialization-identifiers {{
                     ""Akka.Streams.Tests.ProbeStreamRefSerializer, Akka.Streams.Tests"" = 30
@@ -423,7 +428,7 @@ namespace Akka.Streams.Tests
         protected StreamRefsSerializerSpec(Config config, ITestOutputHelper output = null) : base(config, output)
         {
             Materializer = Sys.Materializer();
-            RemoteSystem = ActorSystem.Create("remote-system", Config());
+            RemoteSystem = ActorSystem.Create("remote", Config());
             InitializeLogger(RemoteSystem);
             _probe = CreateTestProbe();
 
@@ -431,7 +436,7 @@ namespace Akka.Streams.Tests
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
 
-            _remoteActor = ExpectMsg<ActorIdentity>(TimeSpan.FromMinutes(1)).Subject;
+            _remoteActor = ExpectMsg<ActorIdentity>(TimeSpan.FromMinutes(30)).Subject;
         }
 
         protected readonly ActorSystem RemoteSystem;
@@ -449,23 +454,25 @@ namespace Akka.Streams.Tests
         [Fact]
         public void consuming_remote_streamref_should_not_fail()
         {
+            var dummyRef = CreateTestProbe();
             var source = ActorOf(TestCase.DataSourceActor.Props(), "source");
             var remoteAddress = ((ActorSystemImpl)Sys).Provider.DefaultAddress;
 
             var sinkActor = RemoteSystem.ActorOf(TestCase.DataReceiverActor.Props(source.Path.ToStringWithAddress(remoteAddress), _probe), "sink");
-            sinkActor.Tell(new TestCase.StartListening("1"));
+            sinkActor.Tell(new TestCase.StartListening("1", dummyRef.Ref));
 
-            _probe.ExpectMsg<LogsOffer>();
+            _probe.ExpectMsg("ok");
         }
 
         [Fact]
         public void consuming_remote_streamref_should_not_fail2()
         {
+            var dummyRef = CreateTestProbe();
             var source = ActorOf(TestCase.DataSourceActor.Props(), "source");
             var remoteAddress = ((ActorSystemImpl)Sys).Provider.DefaultAddress;
 
             var sinkActor = RemoteSystem.ActorOf(TestCase.DataReceiverActor.Props(source.Path.ToStringWithAddress(remoteAddress), _probe), "sink");
-            sinkActor.Tell(new TestCase.StartListening("2"));
+            sinkActor.Tell(new TestCase.StartListening("2", dummyRef.Ref));
 
             _probe.ExpectMsg("ok");
         }

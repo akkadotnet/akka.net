@@ -12,7 +12,11 @@ using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
+using Akka.Util;
+using Google.Protobuf.WellKnownTypes;
+using Type = System.Type;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
@@ -40,13 +44,47 @@ namespace Akka.Streams.Implementation.StreamRef
     /// <summary>
     /// INTERNAL API:  Implementation class, not intended to be touched directly by end-users.
     /// </summary>
-    [InternalApi]
+    [InternalApi]   
     internal sealed class SourceRefImpl<T> : SourceRefImpl, ISourceRef<T>
     {
         public SourceRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
         public override Type EventType => typeof(T);
         public Source<T, NotUsed> Source =>
             Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate(this);
+        }
+
+        public sealed class Surrogate : ISurrogate
+        {
+            public Surrogate()
+            {
+            }
+
+            public Surrogate(SourceRefImpl sourceRef)
+            {
+                EventType = sourceRef.EventType.TypeQualifiedName();
+                OriginRef = new ActorRef
+                {
+                    Path = Akka.Serialization.Serialization.SerializedActorPath(sourceRef.InitialPartnerRef)
+                };
+            }
+
+            public string EventType { get; set; }
+            public ActorRef OriginRef { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                var type = Type.GetType(EventType, throwOnError: true);
+                var originRef = ((ExtendedActorSystem) system).Provider.ResolveActorRef(OriginRef.Path);
+                var instance = SourceRefImpl.Create(type, originRef);
+                var surrogated = instance as ISurrogated;
+                
+                return surrogated;
+            }
+        }
     }
 
     /// <summary>
