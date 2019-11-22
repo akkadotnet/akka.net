@@ -209,7 +209,7 @@ namespace Akka.MultiNodeTestRunner
 
                     if (discovery.WasSuccessful)
                     {
-                        foreach (var test in discovery.Tests.Reverse().Skip(1).Take(1))
+                        foreach (var test in discovery.Tests.Reverse())
                         {
                             if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
                             {
