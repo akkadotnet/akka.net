@@ -273,6 +273,12 @@ namespace Akka.Tests.IO
                 });
                 
                 actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                
+                // After failed receive, next "good" writes should be handled with no issues
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[1])));
+                actors.ClientHandler.Send(actors.ClientConnection, new Tcp.Register(actors.ClientHandler));
+                var serverMsgs = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(2));
+                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Count == 1);
             });
         }
 
