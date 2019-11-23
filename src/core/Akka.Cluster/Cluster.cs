@@ -25,7 +25,7 @@ namespace Akka.Cluster
     /// <summary>
     /// This class represents an <see cref="ActorSystem"/> provider used to create the cluster extension.
     /// </summary>
-    public class ClusterExtension : ExtensionIdProvider<Cluster>
+    public class ClusterExtension : ExtensionIdProvider<Cluster> 
     {
         /// <summary>
         /// Creates the cluster extension using a given actor system.
