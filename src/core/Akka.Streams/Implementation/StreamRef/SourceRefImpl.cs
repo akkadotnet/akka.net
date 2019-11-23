@@ -12,6 +12,7 @@ using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Serialization;
 using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -24,7 +25,7 @@ namespace Akka.Streams.Implementation.StreamRef
     /// Abstract class defined serialization purposes of <see cref="SourceRefImpl{T}"/>.
     /// </summary>
     [InternalApi]
-    internal abstract class SourceRefImpl
+    internal abstract class SourceRefImpl : ISurrogated
     {
         public static SourceRefImpl Create(Type eventType, IActorRef initialPartnerRef)
         {
@@ -39,6 +40,7 @@ namespace Akka.Streams.Implementation.StreamRef
 
         public IActorRef InitialPartnerRef { get; }
         public abstract Type EventType { get; }
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
     /// <summary>
@@ -52,39 +54,7 @@ namespace Akka.Streams.Implementation.StreamRef
         public Source<T, NotUsed> Source =>
             Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
 
-        public ISurrogate ToSurrogate(ActorSystem system)
-        {
-            return new Surrogate(this);
-        }
-
-        public sealed class Surrogate : ISurrogate
-        {
-            public Surrogate()
-            {
-            }
-
-            public Surrogate(SourceRefImpl sourceRef)
-            {
-                EventType = sourceRef.EventType.TypeQualifiedName();
-                OriginRef = new ActorRef
-                {
-                    Path = Akka.Serialization.Serialization.SerializedActorPath(sourceRef.InitialPartnerRef)
-                };
-            }
-
-            public string EventType { get; set; }
-            public ActorRef OriginRef { get; set; }
-
-            public ISurrogated FromSurrogate(ActorSystem system)
-            {
-                var type = Type.GetType(EventType, throwOnError: true);
-                var originRef = ((ExtendedActorSystem) system).Provider.ResolveActorRef(OriginRef.Path);
-                var instance = SourceRefImpl.Create(type, originRef);
-                var surrogated = instance as ISurrogated;
-                
-                return surrogated;
-            }
-        }
+        public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
     }
 
     /// <summary>
