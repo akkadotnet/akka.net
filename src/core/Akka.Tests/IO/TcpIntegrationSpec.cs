@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -229,6 +230,30 @@ namespace Akka.Tests.IO
                 }, RemainingOrDefault, TimeSpan.FromSeconds(2));
 
                 serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
+            });
+        }
+
+        [Fact]
+        public void Write_before_Register_should_not_be_silently_dropped()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection(registerClientHandler: false);
+
+                var msg = ByteString.FromString("msg"); // 3 bytes
+
+                EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOne(() =>
+                {
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
+                    actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
+                });
+                
+                var serverMsgs = actors.ServerHandler.ReceiveWhile(o =>
+                {
+                    return o as Tcp.Received;
+                }, RemainingOrDefault, TimeSpan.FromSeconds(2));
+
+                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Equals(msg));
             });
         }
 
@@ -468,13 +493,15 @@ namespace Akka.Tests.IO
                 bindCommander.ExpectMsg<Tcp.Bound>(); //TODO: check endpoint
             }
 
-            public ConnectionDetail EstablishNewClientConnection()
+            public ConnectionDetail EstablishNewClientConnection(bool registerClientHandler = true)
             {
                 var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
                 connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
                 connectCommander.ExpectMsg<Tcp.Connected>();
+                
                 var clientHandler = _spec.CreateTestProbe($"client-handler-probe");
-                connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
+                if (registerClientHandler)
+                    connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
 
                 _bindHandler.ExpectMsg<Tcp.Connected>();
                 var serverHandler = _spec.CreateTestProbe("server-handler-probe");
