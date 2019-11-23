@@ -266,7 +266,12 @@ namespace Akka.Tests.IO
 
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
 
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
+                // We do not want message about receiving Write to be logged, if the write was actually discarded
+                EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).Expect(0, () =>
+                {
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
+                });
+                
                 actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
             });
         }

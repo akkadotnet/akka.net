@@ -194,9 +194,18 @@ namespace Akka.IO
                         return true;
                     case WriteCommand write:
                         // When getting Write before regestered handler, have to buffer writes until registration
-                        _writeCommandsQueue.EnqueueSimpleWrites(write, Sender, out var commandSize);
-                        Log.Warning("Received Write command before Register command. " +
-                                    "It will be buffered until Register will be received (buffered write size is {0} bytes)", commandSize);
+                        var buffered = _writeCommandsQueue.EnqueueSimpleWrites(write, Sender, out var commandSize);
+                        if (!buffered)
+                        {
+                            var writerInfo = new ConnectionInfo(Sender, false, false);
+                            DropWrite(writerInfo, write);
+                        }
+                        else
+                        {
+                            Log.Warning("Received Write command before Register command. " +
+                                        "It will be buffered until Register will be received (buffered write size is {0} bytes)", commandSize);
+                        }
+                        
                         return true;
                     default: return false;
                 }
