@@ -256,6 +256,20 @@ namespace Akka.Tests.IO
                 serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Equals(msg));
             });
         }
+        
+        [Fact]
+        public void Write_before_Register_should_Be_dropped_if_buffer_is_full()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                var actors = x.EstablishNewClientConnection(registerClientHandler: false);
+
+                var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
+
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
+                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+            });
+        }
 
         [Fact]
         public void When_multiple_concurrent_writing_clients_Should_not_lose_messages()
