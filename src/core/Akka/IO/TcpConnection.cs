@@ -170,6 +170,15 @@ namespace Akka.IO
 
                         Context.SetReceiveTimeout(null);
                         Context.Become(Connected(registerInfo));
+
+                        // If there is something buffered before we got Register message - put it all to the socket
+                        var bufferedWrite = GetNextWrite();
+                        if (bufferedWrite.HasValue)
+                        {
+                            SetStatus(ConnectionStatus.Sending);
+                            DoWrite(registerInfo, bufferedWrite.Value);
+                        } 
+                        
                         return true;
                     case ResumeReading _: ClearStatus(ConnectionStatus.ReadingSuspended); return true;
                     case SuspendReading _: SetStatus(ConnectionStatus.ReadingSuspended); return true;
@@ -182,6 +191,12 @@ namespace Akka.IO
                         // it didn't die because of the timeout
                         Log.Debug("Configured registration timeout of [{0}] expired, stopping", Tcp.Settings.RegisterTimeout);
                         Context.Stop(Self);
+                        return true;
+                    case WriteCommand write:
+                        // When getting Write before regestered handler, have to buffer writes until registration
+                        _writeCommandsQueue.EnqueueSimpleWrites(write, Sender, out var commandSize);
+                        Log.Warning("Received Write command before Register command. " +
+                                    "It will be buffered until Register will be received (buffered write size is {0} bytes)", commandSize);
                         return true;
                     default: return false;
                 }
@@ -901,19 +916,34 @@ namespace Akka.IO
             /// </exception>
             public bool EnqueueSimpleWrites(WriteCommand command, IActorRef sender)
             {
+                return EnqueueSimpleWrites(command, sender, out _);
+            }
+            
+            /// <summary>
+            /// Adds all <see cref="SimpleWriteCommand"/> subcommands stored in provided command.
+            /// Performs buffer size checks
+            /// </summary>
+            /// <exception cref="InternalBufferOverflowException">
+            /// Thrown when data to buffer is larger then allowed <see cref="_maxQueueSizeInBytes"/>
+            /// </exception>
+            public bool EnqueueSimpleWrites(WriteCommand command, IActorRef sender, out int bufferedSize)
+            {
+                bufferedSize = 0;
+                
                 foreach (var writeInfo in ExtractFromCommand(command))
                 {
                     var sizeAfterAppending = _totalSizeInBytes + writeInfo.DataSize;
                     if (_maxQueueSizeInBytes.HasValue && _maxQueueSizeInBytes.Value < sizeAfterAppending)
                     {
                         _log.Warning("Could not receive write command of size {0} bytes, " +
-                                    "because buffer limit is {1} bytes and " +
-                                    "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
+                                     "because buffer limit is {1} bytes and " +
+                                     "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
                         return false;
                     }
 
                     _totalSizeInBytes = sizeAfterAppending;
                     _queue.Enqueue((writeInfo.Command, sender, writeInfo.DataSize));
+                    bufferedSize += writeInfo.DataSize;
                 }
                 
                 return true;
