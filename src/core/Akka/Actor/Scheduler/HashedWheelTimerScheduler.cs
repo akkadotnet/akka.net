@@ -16,6 +16,7 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
+using Helios.Concurrency;
 
 // ReSharper disable NotResolvedInText
 
@@ -127,7 +128,7 @@ namespace Akka.Actor
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    Task.Run(Run);
+                    Task.Factory.StartNew(Run, CancellationToken.None, TaskCreationOptions.None, new CustomTaskScheduler());
                 }
             }
 
@@ -758,6 +759,17 @@ namespace Akka.Actor
 
                 head.Reset();
                 return head;
+            }
+        }
+
+        /// <summary>
+        /// Custom task scheduler using single dedicated thread to schedule <see cref="HashedWheelTimerScheduler"/> tick handler
+        /// </summary>
+        private class CustomTaskScheduler : DedicatedThreadPoolTaskScheduler
+        {
+            public CustomTaskScheduler() 
+                : base(new DedicatedThreadPool(new DedicatedThreadPoolSettings(numThreads: 1, ThreadType.Background)))
+            {
             }
         }
     }
