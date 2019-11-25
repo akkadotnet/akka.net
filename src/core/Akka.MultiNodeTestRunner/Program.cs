@@ -15,6 +15,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
@@ -345,12 +346,17 @@ namespace Akka.MultiNodeTestRunner
                                 var exitCode = process.ExitCode;
                                 process.Dispose();
                             }
-                            
-                            if (testOutputDir != null)
-                                timelineCollector.Tell(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt")));
 
                             PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
                             Thread.Sleep(TimeSpan.FromSeconds(3));
+                            
+                            if (testOutputDir != null)
+                            {
+                                var dumpTask = timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt")));
+                                var printTask = timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole());
+                                Task.WaitAll(dumpTask, printTask);
+                            }
+                            
                             FinishSpec(test.Value);
                         }
                         Console.WriteLine("Complete");

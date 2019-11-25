@@ -36,7 +36,27 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             
             Receive<DumpToFile>(dump =>
             {
-                File.AppendAllLines(dump.FilePath, _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => $"[Node #{m.Node.Index}({m.Node.Role})]{m.OriginalMessage}"));
+                File.AppendAllLines(dump.FilePath, _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => m.ToString()));
+                Sender.Tell(Done.Instance);
+            });
+            
+            Receive<PrintToConsole>(_ =>
+            {
+                var logsPerTest = _timeline
+                    .Select(pairs => pairs.Value)
+                    .SelectMany(msg => msg)
+                    .GroupBy(m => m.Node.TestName);
+
+                foreach (var testLogs in logsPerTest)
+                {
+                    Console.WriteLine($"Detailed logs for {testLogs.Key}\n");
+                    foreach (var log in testLogs)
+                    {
+                        Console.WriteLine(log);
+                    }
+                    Console.WriteLine($"\nEnd logs for {testLogs.Key}\n");
+                }
+                
                 Sender.Tell(Done.Instance);
             });
         }
@@ -68,6 +88,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     if (TryParseLogLevel(piece.Value, out var logLevel))
                         LogLevel = logLevel;
                 }
+            }
+
+            public override string ToString()
+            {
+                return $"[Node #{Node.Index}({Node.Role})]{OriginalMessage}";
             }
 
             private bool TryParseLogLevel(string str, out LogLevel logLevel)
@@ -116,6 +141,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         public class SendMeAll { }
+        
+        public class PrintToConsole{ }
 
         public class DumpToFile
         {
