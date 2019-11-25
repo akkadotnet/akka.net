@@ -44,7 +44,7 @@ namespace Akka.Benchmarks
             _system = ActorSystem.Create("system");
             _message = new byte[MessageLength];
 
-            var port = new Random().Next(18000, 19000);
+            var port = GetFreeTcpPort();
             _server = _system.ActorOf(Props.Create(() => new EchoServer(port)));
             _clientCoordinator = _system.ActorOf(Props.Create(() => new ClientCoordinator("127.0.0.1", port, ClientsCount)));
         }
@@ -164,6 +164,15 @@ namespace Akka.Benchmarks
                     Context.Parent.Tell(new ChildCommunicationFinished());
                 });
             }
+        }
+        
+        private static int GetFreeTcpPort()
+        {
+            var l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            l.Start();
+            var port = ((IPEndPoint)l.LocalEndpoint).Port;
+            l.Stop();
+            return port;
         }
     }
 }

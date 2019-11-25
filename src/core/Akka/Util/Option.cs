@@ -49,6 +49,11 @@ namespace Akka.Util
         /// <returns>The result of the conversion.</returns>
         public static implicit operator Option<T>(T value) => new Option<T>(value);
 
+        /// <summary>
+        /// Gets option value, if any, otherwise returns default value provided
+        /// </summary>
+        public T GetOrElse(T fallbackValue) => HasValue ? Value : fallbackValue;
+
         /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -167,7 +167,7 @@ namespace Akka.MultiNodeTestRunner
 #endif
 
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
-            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
+            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint), sender: tcpLogger);
 
             var assemblyPath = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
 
@@ -367,7 +367,8 @@ namespace Akka.MultiNodeTestRunner
                     }
                 }
             }
-
+            
+            AbortTcpLoggingServer(tcpLogger);
             CloseAllSinks();
 
             //Block until all Sinks have been terminated.
@@ -415,6 +416,11 @@ namespace Akka.MultiNodeTestRunner
             }
         }
 
+        private static void AbortTcpLoggingServer(IActorRef tcpLogger)
+        {
+            tcpLogger.Ask<TcpLoggingServer.ListenerStopped>(new TcpLoggingServer.StopListener(), TimeSpan.FromMinutes(1)).Wait();
+        }
+
         private static void CloseAllSinks()
         {
             SinkCoordinator.Tell(new SinkCoordinator.CloseAllSinks());
@@ -450,9 +456,12 @@ namespace Akka.MultiNodeTestRunner
     internal class TcpLoggingServer : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private IActorRef _tcpManager = Nobody.Instance;
+        private IActorRef _abortSender;
 
         public TcpLoggingServer(IActorRef sinkCoordinator)
         {
+            Receive<Tcp.Bound>(_ => _tcpManager = Sender);
             Receive<Tcp.Connected>(connected =>
             {
                 _log.Info($"Node connected on {Sender}");
@@ -467,7 +476,17 @@ namespace Akka.MultiNodeTestRunner
                 var message = received.Data.ToString();
                 sinkCoordinator.Tell(message);
             });
+
+            Receive<StopListener>(_ =>
+            {
+                _abortSender = Sender;
+                _tcpManager.Tell(Tcp.Unbind.Instance);
+            });
+            Receive<Tcp.Unbound>(_ => _abortSender.Tell(new ListenerStopped()));
         }
+        
+        public class StopListener { }
+        public class ListenerStopped { }
     }
 }
 
