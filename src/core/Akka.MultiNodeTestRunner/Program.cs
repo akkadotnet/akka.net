@@ -237,6 +237,9 @@ namespace Akka.MultiNodeTestRunner
                             var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
 #endif
+                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
+                            string testOutputDir = null;
+                            
                             foreach (var nodeTest in test.Value)
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
@@ -306,13 +309,16 @@ namespace Akka.MultiNodeTestRunner
 
                                 //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                                 var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
+                                testOutputDir = testOutputDir ?? folder.FullName;
                                 var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
+                                var nodeInfo = new TimelineLogCollectorActor.NodeInfo(nodeIndex, nodeRole, platform, nodeTest.TestName);
                                 var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                                 process.OutputDataReceived += (sender, eventArgs) =>
                                 {
                                     if (eventArgs?.Data != null)
                                     {
                                         fileActor.Tell(eventArgs.Data);
+                                        timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, eventArgs.Data));
                                         if (TeamCityFormattingOn)
                                         {
                                             // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
@@ -324,8 +330,7 @@ namespace Akka.MultiNodeTestRunner
                                 {
                                     if (process.ExitCode == 0)
                                     {
-                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole,
-                                            closureTest.TestName);
+                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
                                     }
                                 };
 
@@ -340,6 +345,9 @@ namespace Akka.MultiNodeTestRunner
                                 var exitCode = process.ExitCode;
                                 process.Dispose();
                             }
+                            
+                            if (testOutputDir != null)
+                                timelineCollector.Tell(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt")));
 
                             PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
                             Thread.Sleep(TimeSpan.FromSeconds(3));
@@ -489,4 +497,3 @@ namespace Akka.MultiNodeTestRunner
         public class ListenerStopped { }
     }
 }
-
