@@ -234,6 +234,29 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
+        public void When_sending_Close_to_TcpManager_Should_log_detailed_error_message()
+        {
+            new TestSetup(this).Run(x =>
+            {
+                // Setup multiple clients
+                var actors = x.EstablishNewClientConnection();
+
+                // Error message should contain invalid message type
+                EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOne(() =>
+                {
+                    // Sending `Tcp.Close` to TcpManager instead of outgoing connection
+                    Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
+                });
+                // Should also contain ref to documentation
+                EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOne(() =>
+                {
+                    // Sending `Tcp.Close` to TcpManager instead of outgoing connection
+                    Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
+                });
+            });
+        }
+
+        [Fact]
         public void Write_before_Register_should_not_be_silently_dropped()
         {
             new TestSetup(this).Run(x =>
