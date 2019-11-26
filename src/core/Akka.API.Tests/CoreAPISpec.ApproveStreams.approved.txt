@@ -651,7 +651,7 @@ namespace Akka.Streams
         void Fail(System.Exception ex);
         new System.Threading.Tasks.Task WatchCompletionAsync();
     }
-    public interface ISourceRef<TOut>
+    public interface ISourceRef<TOut> : Akka.Util.ISurrogated
     {
         Akka.Streams.Dsl.Source<TOut, Akka.NotUsed> Source { get; }
     }
