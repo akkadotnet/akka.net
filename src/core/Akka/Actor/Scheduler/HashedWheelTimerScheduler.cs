@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
@@ -40,7 +41,15 @@ namespace Akka.Actor
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
 
+        /// <summary>
+        /// API for internal usage
+        /// </summary>
+        [InternalApi]
         public static AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
+        /// <summary>
+        /// API for internal usage
+        /// </summary>
+        [InternalApi]
         public static AtomicCounter TotalTicksActual = new AtomicCounter(0);
 
         /// <summary>
