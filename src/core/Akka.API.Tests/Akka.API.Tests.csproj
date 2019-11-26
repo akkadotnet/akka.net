@@ -44,7 +44,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <PackageReference Include="ApiApprover" Version="3.0.1" />
+    <PackageReference Include="ApiApprover" Version="9.3.0" />
     <PackageReference Include="ApprovalTests" Version="3.0.10" />
     <PackageReference Include="ApprovalUtilities" Version="3.0.10" />
     <PackageReference Include="Mono.Cecil" Version="0.9.6.4" />
