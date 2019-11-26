@@ -148,7 +148,7 @@ namespace Akka.Actor
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
-        private void Run()
+        private async Task Run()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -162,7 +162,7 @@ namespace Akka.Actor
 
             do
             {
-                var deadline = WaitForNextTick();
+                var deadline = await WaitForNextTick();
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
@@ -202,7 +202,7 @@ namespace Akka.Actor
             _rescheduleRegistrations.Clear();
         }
 
-        private long WaitForNextTick()
+        private async Task<long> WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
@@ -225,7 +225,7 @@ namespace Akka.Actor
 #if UNSAFE_THREADING
                     try
                     {
-                        Sleep(ticksToSleep);
+                        await Sleep(ticksToSleep);
                     }
                     catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                     {
@@ -233,7 +233,7 @@ namespace Akka.Actor
                             return long.MinValue;
                     }
 #else             
-                    Sleep(ticksToSleep);
+                    await Sleep(ticksToSleep);
 #endif
                     
                     stopWatch.Stop();
@@ -243,16 +243,10 @@ namespace Akka.Actor
             }
         }
         
-        private void Sleep(long ticks)
+        private async Task Sleep(long ticks)
         {
-            var remainingTicks = (int)Math.Min(int.MaxValue, ticks);
-            _sleepWatch.Restart();
-            while (remainingTicks > 0)
-            {
-                Thread.SpinWait(remainingTicks);
-                remainingTicks = (int)(ticks - _sleepWatch.ElapsedTicks);
-            }
-            _sleepWatch.Stop();
+            var ms = (ticks + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond;
+            await Task.Delay(TimeSpan.FromMilliseconds(ms));
         }
 
         private void TransferRegistrationsToBuckets()
@@ -289,7 +283,6 @@ namespace Akka.Actor
             var bucket = _wheel[stopIndex];
             bucket.AddRegistration(reg);
         }
-
 
         /// <summary>
         /// TBD
