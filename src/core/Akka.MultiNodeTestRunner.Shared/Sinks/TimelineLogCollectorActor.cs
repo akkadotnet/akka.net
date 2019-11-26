@@ -82,7 +82,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 {
                     Message = Message.Replace(piece.Value, "");
                     
-                    if (DateTime.TryParseExact(piece.Value, "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var when))
+                    if (DateTime.TryParse(piece.Value, CultureInfo.CurrentCulture, DateTimeStyles.None, out var when))
                         When = when;
 
                     if (TryParseLogLevel(piece.Value, out var logLevel))
