@@ -253,7 +253,7 @@ namespace Akka.Tests.IO
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
                 });
-            }
+            });
         }
 
         [Fact]
