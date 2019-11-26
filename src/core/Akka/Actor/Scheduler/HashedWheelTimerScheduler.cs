@@ -38,19 +38,45 @@ namespace Akka.Actor
     /// </summary>
     public class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
+        /// <summary>
+        /// When there are too small number of ticks to wait, use SpinWait instead
+        /// </summary>
+        private const int TicksToUseThreadSpinWait = 100;
+        
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
+        
+        private long _startTime = 0;
+        private long _tick;
+        private readonly int _mask;
+        private readonly Stopwatch _sleepWatch = new Stopwatch();
+        private readonly CountdownEvent _workerInitialized = new CountdownEvent(1);
+        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new ConcurrentQueue<SchedulerRegistration>();
+        private readonly Bucket[] _wheel;
+        private Thread _worker;
+
+        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
+        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
+
+        private const int WORKER_STATE_INIT = 0;
+        private const int WORKER_STATE_STARTED = 1;
+        private const int WORKER_STATE_SHUTDOWN = 2;
+        
+        /// <summary>
+        /// 0 - init, 1 - started, 2 - shutdown
+        /// </summary>
+        private volatile int _workerState = WORKER_STATE_INIT;
 
         /// <summary>
         /// API for internal usage
         /// </summary>
         [InternalApi]
-        public static AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
+        public static readonly AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
         /// <summary>
         /// API for internal usage
         /// </summary>
         [InternalApi]
-        public static AtomicCounter TotalTicksActual = new AtomicCounter(0);
+        public static readonly AtomicCounter TotalTicksActual = new AtomicCounter(0);
 
         /// <summary>
         /// TBD
@@ -80,22 +106,6 @@ namespace Akka.Actor
             _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
         }
 
-        private long _startTime = 0;
-        private long _tick;
-        private readonly int _mask;
-        private readonly CountdownEvent _workerInitialized = new CountdownEvent(1);
-        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new ConcurrentQueue<SchedulerRegistration>();
-        private readonly Bucket[] _wheel;
-
-        private const int WORKER_STATE_INIT = 0;
-        private const int WORKER_STATE_STARTED = 1;
-        private const int WORKER_STATE_SHUTDOWN = 2;
-
-        /// <summary>
-        /// 0 - init, 1 - started, 2 - shutdown
-        /// </summary>
-        private volatile int _workerState = WORKER_STATE_INIT;
-
         private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
         {
             if (ticksPerWheel <= 0)
@@ -123,21 +133,18 @@ namespace Akka.Actor
             return normalizedTicksPerWheel;
         }
 
-        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
-        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
-        private readonly Stopwatch _sleepWatch = new Stopwatch();
-
         private void Start()
         {
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
+                _worker = new Thread(Run) { IsBackground = true };
 #pragma warning disable 420
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
 #pragma warning restore 420
                     WORKER_STATE_INIT)
                 {
-                    Task.Factory.StartNew(Run, CancellationToken.None, TaskCreationOptions.None, new CustomTaskScheduler());
+                    _worker.Start();
                 }
             }
 
@@ -150,14 +157,24 @@ namespace Akka.Actor
                 throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
             }
 
-            // Wait until _startTime is initialized in Run task
-            _workerInitialized.Wait();
+            while (_startTime == 0)
+            {
+#if UNSAFE_THREADING
+                try
+                {
+                    _workerInitialized.Wait();
+                }
+                catch (ThreadInterruptedException) { }
+#else
+                _workerInitialized.Wait();
+#endif
+            }
         }
 
         /// <summary>
         /// Scheduler thread entry method
         /// </summary>
-        private async Task Run()
+        private void Run()
         {
             // Initialize the clock
             _startTime = HighResMonotonicClock.Ticks;
@@ -171,7 +188,7 @@ namespace Akka.Actor
 
             do
             {
-                var deadline = await WaitForNextTick();
+                var deadline = WaitForNextTick();
                 if (deadline > 0)
                 {
                     var idx = (int)(_tick & _mask);
@@ -211,7 +228,7 @@ namespace Akka.Actor
             _rescheduleRegistrations.Clear();
         }
 
-        private async Task<long> WaitForNextTick()
+        private long WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
@@ -234,7 +251,7 @@ namespace Akka.Actor
 #if UNSAFE_THREADING
                     try
                     {
-                        await Sleep(ticksToSleep);
+                        Sleep(ticksToSleep);
                     }
                     catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                     {
@@ -242,7 +259,7 @@ namespace Akka.Actor
                             return long.MinValue;
                     }
 #else             
-                    await Sleep(ticksToSleep);
+                    Sleep(ticksToSleep);
 #endif
                     
                     stopWatch.Stop();
@@ -252,10 +269,25 @@ namespace Akka.Actor
             }
         }
         
-        private async Task Sleep(long ticks)
+        private void Sleep(long ticks)
         {
-            var ms = (ticks + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond;
-            await Task.Delay(TimeSpan.FromMilliseconds(ms));
+            if (ticks < TicksToUseThreadSpinWait)
+            {
+                _sleepWatch.Restart();
+                while (_sleepWatch.ElapsedTicks < ticks)
+                {
+                    var ticksToWait = (int)(ticks - _sleepWatch.ElapsedTicks);
+                    // SpinWait does not wait for ticks - it is performing iterations instead,
+                    // so may need to make this call several times
+                    Thread.SpinWait(ticksToWait); 
+                }
+                _sleepWatch.Stop();
+            }
+            else
+            {
+                var ms = (ticks + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond;
+                Thread.Sleep(TimeSpan.FromMilliseconds(ms));
+            }
         }
 
         private void TransferRegistrationsToBuckets()
@@ -761,17 +793,6 @@ namespace Akka.Actor
 
                 head.Reset();
                 return head;
-            }
-        }
-
-        /// <summary>
-        /// Custom task scheduler using single dedicated thread to schedule <see cref="HashedWheelTimerScheduler"/> tick handler
-        /// </summary>
-        private class CustomTaskScheduler : DedicatedThreadPoolTaskScheduler
-        {
-            public CustomTaskScheduler() 
-                : base(new DedicatedThreadPool(new DedicatedThreadPoolSettings(numThreads: 1, ThreadType.Background)))
-            {
             }
         }
     }
