@@ -96,7 +96,9 @@ namespace Akka.IO
                 }
                 return true;
             }
-            throw new ArgumentException("The supplied message type is invalid. Only Connect and Bind messages are supported.", nameof(message));
+            throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +
+                                        $"If you are going to manage your connection state, you need to communicate with Tcp.Connected sender actor. " +
+                                        $"See more here: https://getakka.net/articles/networking/io.html", nameof(message));
         }
     }
 }
