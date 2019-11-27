@@ -253,7 +253,7 @@ namespace Akka.Actor
                     {
                         Sleep(ticksToSleep);
                     }
-                    catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
+                    catch (ThreadInterruptedException)
                     {
                         if (_workerState == WORKER_STATE_SHUTDOWN)
                             return long.MinValue;
