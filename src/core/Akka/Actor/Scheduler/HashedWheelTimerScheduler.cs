@@ -241,7 +241,7 @@ namespace Akka.Actor
                     if (ticksToSleep <= 0) // no need to sleep
                     {
                         if (currentTime == long.MinValue) // wrap-around
-                            return -1;
+                            return -long.MaxValue;
                         
                         return currentTime;
                     }
