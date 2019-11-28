@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
@@ -159,7 +160,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void ActorSystem_must_find_temporary_actors()
+        public async Task ActorSystem_must_find_temporary_actors()
         {
             var f = c1.Ask(new GetSender(TestActor));
             var a = ExpectMsg<IInternalActorRef>();
@@ -170,8 +171,8 @@ namespace Akka.Tests.Actor
             f.IsCompleted.Should().Be(false);
             a.IsTerminated.Should().Be(false);
             a.Tell(42);
-            AwaitAssert(() => f.IsCompleted.Should().Be(true));
-            AwaitAssert(() => f.Result.Should().Be(42));
+            await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true));
+            await AwaitAssertAsync(() => f.Result.Should().Be(42));
         }
 
         /*

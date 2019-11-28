@@ -192,14 +192,14 @@ namespace Akka.Tests.Actor
             });
         }
 
-        private void Are_Temp_Actors_Removed(IActorRef actor)
+        private async Task Are_Temp_Actors_Removed(IActorRef actor)
         {
             var actorCell = actor as ActorRefWithCell;
             Assert.True(actorCell != null, "Test method only valid with ActorRefWithCell actors.");
             // ReSharper disable once PossibleNullReferenceException
             var container = actorCell.Provider.TempContainer as VirtualPathContainer;
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 var childCounter = 0;
                 // ReSharper disable once PossibleNullReferenceException

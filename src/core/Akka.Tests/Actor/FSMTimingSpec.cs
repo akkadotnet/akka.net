@@ -274,7 +274,7 @@ namespace Akka.Tests.Actor
 
         public static void StaticAwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan? interval)
         {
-            InternalAwaitCondition(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args)));
+            InternalAwaitConditionAsync(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args))).Wait();
         }
 
         public class StateMachine : FSM<FsmState, int>, ILoggingFSM

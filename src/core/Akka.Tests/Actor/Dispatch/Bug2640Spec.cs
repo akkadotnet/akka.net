@@ -78,12 +78,12 @@ namespace Akka.Tests.Actor.Dispatch
                 .ToDictionary(x => x.Key, grouping => grouping.First());
 
             await Sys.Terminate();
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
                 threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
         }
 
         [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
-        public void ForkJoinExecutorShouldShutdownUponAllActorsTerminating()
+        public async Task ForkJoinExecutorShouldShutdownUponAllActorsTerminating()
         {
             var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
                 .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
@@ -99,12 +99,12 @@ namespace Akka.Tests.Actor.Dispatch
 
             Sys.Stop(actor);
             ExpectTerminated(actor);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
                 threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
         }
 
         [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
-        public void PinnedDispatcherShouldShutdownUponActorTermination()
+        public async Task PinnedDispatcherShouldShutdownUponActorTermination()
         {
             var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
                 .WithDispatcher("myapp.my-pinned-dispatcher"));
@@ -116,7 +116,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             Sys.Stop(actor);
             ExpectTerminated(actor);
-            AwaitCondition(() => !thread.IsAlive); // wait for thread to terminate
+            await AwaitConditionAsync(() => !thread.IsAlive); // wait for thread to terminate
         }
     }
 }

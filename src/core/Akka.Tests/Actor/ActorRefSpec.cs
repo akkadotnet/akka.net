@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Serialization;
@@ -107,9 +108,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void
-            An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled
-            ()
+        public async Task An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
         {
             var aref = ActorOf<BlackHoleActor>("non-existing");
             var aserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
@@ -123,7 +122,7 @@ namespace Akka.Tests.Actor
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
                 try

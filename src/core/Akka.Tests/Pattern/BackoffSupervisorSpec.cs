@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
@@ -90,7 +91,7 @@ namespace Akka.Tests.Pattern
         #endregion
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
+        public async Task BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
             var supervisor = Create(OnStopOptions());
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
@@ -98,7 +99,7 @@ namespace Akka.Tests.Pattern
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
             ExpectTerminated(c1);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance
@@ -120,16 +121,16 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_custom_supervision_strategy()
+        public async Task BackoffSupervisor_must_support_custom_supervision_strategy()
         {
-            Action<IActorRef> assertCustomStrategy = supervisor =>
+            Func<IActorRef, Task> assertCustomStrategy = async supervisor =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
                 Watch(c1);
                 c1.Tell("boom");
                 ExpectTerminated(c1);
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
@@ -138,7 +139,7 @@ namespace Akka.Tests.Pattern
             };
 
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(2, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(2, async () =>
             {
                 var stoppingStrategy = new OneForOneStrategy(ex =>
                 {
@@ -160,16 +161,16 @@ namespace Akka.Tests.Pattern
                     return Directive.Escalate;
                 });
 
-                assertCustomStrategy(Create(OnStopOptions().WithSupervisorStrategy(stoppingStrategy)));
-                assertCustomStrategy(Create(OnFailureOptions().WithSupervisorStrategy(restartingStrategy)));
+                await assertCustomStrategy(Create(OnStopOptions().WithSupervisorStrategy(stoppingStrategy)));
+                await assertCustomStrategy(Create(OnFailureOptions().WithSupervisorStrategy(restartingStrategy)));
             });
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_default_stopping_strategy_when_using_Backoff_OnStop()
+        public async Task BackoffSupervisor_must_support_default_stopping_strategy_when_using_Backoff_OnStop()
         {
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
             {
                 var supervisor = Create(OnStopOptions().WithDefaultStoppingStrategy());
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
@@ -180,7 +181,7 @@ namespace Akka.Tests.Pattern
 
                 c1.Tell("boom");
                 ExpectTerminated(c1);
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
@@ -192,9 +193,9 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_must_support_manual_reset()
+        public async Task BackoffSupervisor_must_support_manual_reset()
         {
-            Action<IActorRef> assertManualReset = supervisor =>
+            Func<IActorRef, Task> assertManualReset = async supervisor =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
@@ -202,13 +203,13 @@ namespace Akka.Tests.Pattern
                 c1.Tell("boom");
                 ExpectTerminated(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                     ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
                 });
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     // new instance
@@ -230,7 +231,7 @@ namespace Akka.Tests.Pattern
             };
 
             // TODO: use FilterException
-            EventFilter.Exception<TestException>().Expect(2, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(2, async () =>
             {
                 var stoppingStrategy = new OneForOneStrategy(ex =>
                 {
@@ -254,12 +255,12 @@ namespace Akka.Tests.Pattern
                     return Directive.Restart;
                 });
 
-                assertManualReset(
+                await assertManualReset(
                     Create(OnStopOptions(ManualChild.Props(TestActor))
                         .WithManualReset()
                         .WithSupervisorStrategy(stoppingStrategy)));
 
-                assertManualReset(
+                await assertManualReset(
                     Create(OnFailureOptions(ManualChild.Props(TestActor))
                         .WithManualReset()
                         .WithSupervisorStrategy(restartingStrategy)));
@@ -267,9 +268,9 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_must_reply_to_sender_if_replyWhileStopped_is_specified()
+        public async Task BackoffSupervisor_must_reply_to_sender_if_replyWhileStopped_is_specified()
         {
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
             {
                 var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1)
                     .WithReplyWhileStopped("child was stopped"));
@@ -283,7 +284,7 @@ namespace Akka.Tests.Pattern
                 c1.Tell("boom");
                 ExpectTerminated(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                     ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
@@ -295,9 +296,9 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffSupervisor_must_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
+        public async Task BackoffSupervisor_must_not_reply_to_sender_if_replyWhileStopped_is_not_specified()
         {
-            EventFilter.Exception<TestException>().Expect(1, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
             {
                 var supervisor = Create(Backoff.OnFailure(Child.Props(TestActor), "c1", TimeSpan.FromSeconds(100), TimeSpan.FromSeconds(300), 0.2, -1));
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
@@ -310,7 +311,7 @@ namespace Akka.Tests.Pattern
                 c1.Tell("boom");
                 ExpectTerminated(c1);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                     ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
@@ -345,13 +346,13 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
+        public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
         {
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
 
-            IActorRef WaitForChild()
+            async Task<IActorRef> WaitForChild()
             {
-                AwaitCondition(() =>
+                await AwaitConditionAsync(() =>
                 {
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
@@ -376,8 +377,8 @@ namespace Akka.Tests.Pattern
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
             ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
 
-            var c2 = WaitForChild();
-            AwaitAssert(() => c2.ShouldNotBe(c1));
+            var c2 = await WaitForChild();
+            await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
             Watch(c2);
             c2.Tell(PoisonPill.Instance);
             ExpectTerminated(c2);
@@ -385,8 +386,8 @@ namespace Akka.Tests.Pattern
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
             ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
 
-            var c3 = WaitForChild();
-            AwaitAssert(() => c3.ShouldNotBe(c2));
+            var c3 = await WaitForChild();
+            await AwaitAssertAsync(() => c3.ShouldNotBe(c2));
             Watch(c3);
             c3.Tell(PoisonPill.Instance);
             ExpectTerminated(c3);
@@ -394,15 +395,15 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
+        public async Task BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
         {
-            EventFilter.Exception<TestException>().Expect(3, () =>
+            await EventFilter.Exception<TestException>().ExpectAsync(3, async () =>
             {
                 var supervisor = Create(OnFailureOptions(maxNrOfRetries: 2));
 
-                IActorRef WaitForChild()
+                async Task<IActorRef> WaitForChild()
                 {
-                    AwaitCondition(() =>
+                    await AwaitConditionAsync(() =>
                     {
                         supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                         var c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
@@ -427,8 +428,8 @@ namespace Akka.Tests.Pattern
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                 ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
 
-                var c2 = WaitForChild();
-                AwaitAssert(() => c2.ShouldNotBe(c1));
+                var c2 = await WaitForChild();
+                await AwaitAssertAsync(() => c2.ShouldNotBe(c1));
                 Watch(c2);
                 c2.Tell("boom");
                 ExpectTerminated(c2);
@@ -436,8 +437,8 @@ namespace Akka.Tests.Pattern
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                 ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(2);
 
-                var c3 = WaitForChild();
-                AwaitAssert(() => c3.ShouldNotBe(c2));
+                var c3 = await WaitForChild();
+                await AwaitAssertAsync(() => c3.ShouldNotBe(c2));
                 Watch(c3);
                 c3.Tell("boom");
                 ExpectTerminated(c3);

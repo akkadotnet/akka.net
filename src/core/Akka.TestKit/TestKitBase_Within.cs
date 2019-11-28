@@ -31,6 +31,14 @@ namespace Akka.TestKit
         {
             Within(TimeSpan.Zero, max, action, epsilonValue: epsilonValue);
         }
+        
+        /// <summary>
+        /// Async version of Within
+        /// </summary>
+        public Task WithinAsync(TimeSpan max, Func<Task> actionAsync, TimeSpan? epsilonValue = null)
+        {
+            return WithinAsync(TimeSpan.Zero, max, actionAsync, epsilonValue: epsilonValue);
+        }
 
         /// <summary>
         /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
@@ -47,6 +55,14 @@ namespace Akka.TestKit
         public void Within(TimeSpan min, TimeSpan max, Action action, string hint = null, TimeSpan? epsilonValue = null)
         {
             Within<object>(min, max, () => { action(); return null; }, hint, epsilonValue);
+        }
+        
+        /// <summary>
+        /// Async version of <see cref="Within(System.TimeSpan,System.Action,System.Nullable{System.TimeSpan})"/>
+        /// </summary>
+        public Task WithinAsync(TimeSpan min, TimeSpan max, Func<Task> actionAsync, string hint = null, TimeSpan? epsilonValue = null)
+        {
+            return WithinAsync<object>(min, max, async () => { await actionAsync(); return null; }, hint, epsilonValue);
         }
 
         /// <summary>

@@ -471,9 +471,9 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
+        public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
-            new TestSetup(this, shouldBindServer:false).Run(x =>
+            await new TestSetup(this, shouldBindServer:false).RunAsync(async x =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 serverSocket.Bind(x.Endpoint);
@@ -488,7 +488,7 @@ namespace Akka.Tests.IO
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
-                AwaitConditionNoThrow(() =>
+                await AwaitConditionNoThrowAsync(() =>
                 {
                     try
                     {
@@ -590,6 +590,12 @@ namespace Akka.Tests.IO
             {
                 if (_shouldBindServer) BindServer();
                 action(this);
+            }
+            
+            public Task RunAsync(Func<TestSetup, Task> actionAsync)
+            {
+                if (_shouldBindServer) BindServer();
+                return actionAsync(this);
             }
         }
 

@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Tests.Pattern
 {
@@ -219,7 +220,7 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact]
-        public void BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
+        public async Task BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
         {
             var postStopLatch = CreateTestLatch(1);
             var options = Backoff.OnFailure(SlowlyFailingActor.Props(postStopLatch), "someChildName", 1.Ticks(), 1.Ticks(), 0.0, -1)
@@ -250,7 +251,7 @@ namespace Akka.Tests.Pattern
             postStopLatch.CountDown();
 
             // New child is ready
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance

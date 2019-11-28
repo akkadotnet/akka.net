@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -266,9 +267,9 @@ namespace Akka.Tests.Routing
         }
 
         [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
-        public void DefaultResizer_must_backoff()
+        public async Task DefaultResizer_must_backoff()
         {
-            Within(10.Seconds(), () =>
+            await WithinAsync(10.Seconds(), async () =>
             {
                 var resizer = new DefaultResizer(
                     lower: 2,
@@ -296,7 +297,7 @@ namespace Akka.Tests.Routing
                 Thread.Sleep(Dilated(300.Milliseconds()));
 
                 // let it cool down
-                AwaitCondition(() =>
+                await AwaitConditionAsync(() =>
                 {
                     router.Tell(0); //trigger resize
                     Thread.Sleep(Dilated(20.Milliseconds()));

@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
@@ -212,7 +213,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_suspend_children_while_failing()
+        public async Task A_supervisor_hierarchy_must_suspend_children_while_failing()
         {
             var latch = CreateTestLatch();
             var slowResumer = ActorOf(c =>
@@ -240,11 +241,11 @@ namespace Akka.Tests.Actor
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
             ExpectMsg("pong");
-            EventFilter.Warning("expected").ExpectOne(() => //expected exception is thrown by the boss when it crashes
+            await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
+                await AwaitConditionAsync(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping

@@ -19,7 +19,7 @@ namespace Akka.Tests.Actor
     public class LocalActorRefProviderSpec : AkkaSpec
     {
         [Fact]
-        public void A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
+        public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
@@ -29,7 +29,7 @@ namespace Akka.Tests.Actor
             Watch(parent);
             Sys.Stop(parent);
             ExpectTerminated(parent);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
                 {
                     var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
                     Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);

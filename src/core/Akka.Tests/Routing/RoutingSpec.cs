@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -160,7 +161,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Routers_in_general_must_evict_terminated_routees()
+        public async Task Routers_in_general_must_evict_terminated_routees()
         {
             var router = Sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()));
             router.Tell("");
@@ -175,7 +176,7 @@ namespace Akka.Tests.Routing
             ExpectTerminated(c2).ExistenceConfirmed.Should().BeTrue();
 
             // it might take a while until the Router has actually processed the Terminated message
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 router.Tell("");
                 router.Tell("");

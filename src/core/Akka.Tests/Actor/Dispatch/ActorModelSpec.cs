@@ -418,9 +418,9 @@ namespace Akka.Tests.Actor.Dispatch
             return Sys.ActorOf(Props.Create<DispatcherActor>().WithDispatcher(dispatcher));
         }
 
-        void AwaitStarted(IActorRef actorRef)
+        async Task AwaitStartedAsync(IActorRef actorRef)
         {
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 if (actorRef is RepointableActorRef)
                     return actorRef.AsInstanceOf<RepointableActorRef>().IsStarted;
@@ -453,13 +453,13 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_must_process_messages_one_at_a_time()
+        public async Task A_dispatcher_must_process_messages_one_at_a_time()
         {
             var dispatcher = InterceptedDispatcher();
             var start = new CountdownEvent(1);
             var oneAtTime = new CountdownEvent(1);
             var a = NewTestActor(dispatcher.Id);
-            AwaitStarted(a);
+            await AwaitStartedAsync(a);
 
             a.Tell(new CountDown(start));
             AssertCountdown(start, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process first message within 3 seconds");
@@ -499,11 +499,11 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_should_not_process_messages_for_a_suspended_actor()
+        public async Task A_dispatcher_should_not_process_messages_for_a_suspended_actor()
         {
             var dispatcher = InterceptedDispatcher();
             var a = NewTestActor(dispatcher.Id).AsInstanceOf<IInternalActorRef>();
-            AwaitStarted(a);
+            await AwaitStartedAsync(a);
             var done = new CountdownEvent(1);
             a.Suspend();
             a.Tell(new CountDown(done));
@@ -613,7 +613,7 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_must_not_double_deregister()
+        public async Task A_dispatcher_must_not_double_deregister()
         {
             var dispatcher = InterceptedDispatcher();
             for (var i = 1; i <= 1000; i++)
@@ -622,8 +622,8 @@ namespace Akka.Tests.Actor.Dispatch
             }
             var a = NewTestActor(dispatcher.Id);
             a.Tell(DoubleStop.Instance);
-            AwaitCondition(() => StatsFor(a, dispatcher).Registers.Current == 1);
-            AwaitCondition(() => StatsFor(a, dispatcher).Unregisters.Current == 1);
+            await AwaitConditionAsync(() => StatsFor(a, dispatcher).Registers.Current == 1);
+            await AwaitConditionAsync(() => StatsFor(a, dispatcher).Unregisters.Current == 1);
         }
     }
 

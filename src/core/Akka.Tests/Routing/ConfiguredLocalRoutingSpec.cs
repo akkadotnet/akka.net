@@ -127,7 +127,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        private RouterConfig RouterConfig(IActorRef actor)
+        private async Task<RouterConfig> RouterConfigAsync(IActorRef actor)
         {
             var routedActor = (RoutedActorRef)actor;
             if (routedActor != null)
@@ -139,8 +139,8 @@ namespace Akka.Tests.Routing
                 }
                 else
                 {
-                    AwaitCondition(() => routedActor.IsStarted, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
-                    return RouterConfig(actor);
+                    await AwaitConditionAsync(() => routedActor.IsStarted, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
+                    return await RouterConfigAsync(actor);
                 }
             }
 
@@ -201,7 +201,7 @@ namespace Akka.Tests.Routing
         public async Task RouterConfig_must_be_picked_up_from_Props()
         {
             var actor = Sys.ActorOf(new RoundRobinPool(12).Props(Props.Create<EchoProps>()), "someOther");
-            var routerConfig = RouterConfig(actor);
+            var routerConfig = await RouterConfigAsync(actor);
 
             routerConfig.Should().BeOfType<RoundRobinPool>();
             var roundRobinPool = (RoundRobinPool)routerConfig;
@@ -215,7 +215,7 @@ namespace Akka.Tests.Routing
         public async Task RouterConfig_must_be_overridable_in_config()
         {
             var actor = Sys.ActorOf(new RoundRobinPool(12).Props(Props.Create<EchoProps>()), "config");
-            var routerConfig = RouterConfig(actor);
+            var routerConfig = await RouterConfigAsync(actor);
 
             routerConfig.Should().BeOfType<RandomPool>();
             var randomPool = (RandomPool)routerConfig;
@@ -230,7 +230,7 @@ namespace Akka.Tests.Routing
         public async Task RouterConfig_must_use_routeesPaths_from_config()
         {
             var actor = Sys.ActorOf(new RandomPool(12).Props(Props.Create<EchoProps>()), "paths");
-            var routerConfig = RouterConfig(actor);
+            var routerConfig = await RouterConfigAsync(actor);
 
             routerConfig.Should().BeOfType<RandomGroup>();
             var randomGroup = (RandomGroup)routerConfig;
@@ -244,7 +244,7 @@ namespace Akka.Tests.Routing
         public async Task RouterConfig_must_be_overridable_in_explicit_deployment()
         {
             var actor = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<EchoProps>()).WithDeploy(new Deploy(new RoundRobinPool(12))), "someOther");
-            var routerConfig = RouterConfig(actor);
+            var routerConfig = await RouterConfigAsync(actor);
 
             routerConfig.Should().BeOfType<RoundRobinPool>();
             var roundRobinPool = (RoundRobinPool)routerConfig;
@@ -258,7 +258,7 @@ namespace Akka.Tests.Routing
         public async Task RouterConfig_must_be_overridable_in_config_even_with_explicit_deployment()
         {
             var actor = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<EchoProps>()).WithDeploy(new Deploy(new RoundRobinPool(12))), "config");
-            var routerConfig = RouterConfig(actor);
+            var routerConfig = await RouterConfigAsync(actor);
 
             routerConfig.GetType().ShouldBe(typeof(RandomPool));
             var randomPool = (RandomPool)routerConfig;

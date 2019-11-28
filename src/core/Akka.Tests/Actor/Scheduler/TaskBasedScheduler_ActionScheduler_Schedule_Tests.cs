@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -273,7 +274,7 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
+        public async Task When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
         {
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
@@ -285,7 +286,7 @@ namespace Akka.Tests.Actor.Scheduler
                     Interlocked.Increment(ref timesCalled);
                     throw new Exception("Crash");
                 });
-                AwaitCondition(() => timesCalled >= 1);
+                await AwaitConditionAsync(() => timesCalled >= 1);
                 Thread.Sleep(200); //Allow any scheduled actions to be fired. 
 
                 //We expect only one of the scheduled actions to actually fire
