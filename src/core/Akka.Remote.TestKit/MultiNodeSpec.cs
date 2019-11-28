@@ -15,7 +15,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -429,14 +429,16 @@ namespace Akka.Remote.TestKit
             AtStartup();
         }
 
-        public void MultiNodeSpecAfterAll()
+        public async Task MultiNodeSpecAfterAllAsync()
         {
             // wait for all nodes to remove themselves before we shut the conductor down
             if (SelfIndex == 0)
             {
                 TestConductor.RemoveNode(_myself);
                 Within(TestConductor.Settings.BarrierTimeout, () =>
-                    AwaitCondition(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))));
+                {
+                    AwaitConditionAsync(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))).Wait();
+                });
 
             }
             Shutdown(Sys);
