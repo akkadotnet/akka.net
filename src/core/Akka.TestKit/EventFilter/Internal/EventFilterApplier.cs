@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit.TestEvent;
@@ -40,30 +41,59 @@ namespace Akka.TestKit.Internal
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
+        [Obsolete("Use async version instead", true)]
         public void ExpectOne(Action action)
         {
             InternalExpect(action, _actorSystem, 1);
         }
+        
+        /// <summary>
+        /// Async version of <see cref="ExpectOne(System.Action)"/>
+        /// </summary>
+        /// <param name="action"></param>
+        public async Task ExpectOneAsync(Action action)
+        {
+            await InternalExpectAsync(action, _actorSystem, 1);
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="timeout">TBD</param>
         /// <param name="action">TBD</param>
+        [Obsolete("Use async version instead", true)]
         public void ExpectOne(TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, 1, timeout);
         }
+        
+        /// <summary>
+        /// Async version of <see cref="ExpectOne(System.TimeSpan,System.Action) "/>
+        /// </summary>
+        /// <returns></returns>
+        public async Task ExpectOneAsync(TimeSpan timeout, Action action)
+        {
+            await InternalExpectAsync(action, _actorSystem, 1, timeout);
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="expectedCount">TBD</param>
         /// <param name="action">TBD</param>
+        [Obsolete("Use async version instead", true)]
         public void Expect(int expectedCount, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, null);
         }
+        
+        /// <summary>
+        /// Async version of <see cref="Expect(int,System.Action)"/>
+        /// </summary>
+        public async Task ExpectAsync(int expectedCount, Action action)
+        {
+            await InternalExpectAsync(action, _actorSystem, expectedCount, null);
+        }
 
         /// <summary>
         /// TBD
@@ -71,10 +101,19 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="action">TBD</param>
+        [Obsolete("Use async version instead", true)]
         public void Expect(int expectedCount, TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, timeout);
         }
+        
+        /// <summary>
+        /// Async version of <see cref="Expect(int,System.TimeSpan,System.Action)"/>
+        /// </summary>
+        public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action)
+        {
+            await InternalExpectAsync(action, _actorSystem, expectedCount, timeout);
+        }
 
         /// <summary>
         /// TBD
@@ -82,10 +121,19 @@ namespace Akka.TestKit.Internal
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         public T ExpectOne<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, 1);
         }
+        
+        /// <summary>
+        /// Async version of ExpectOne
+        /// </summary>
+        public async Task<T> ExpectOneAsync<T>(Func<T> func)
+        {
+            return await InterceptAsync(func, _actorSystem, null, 1);
+        }
 
         /// <summary>
         /// TBD
@@ -94,10 +142,19 @@ namespace Akka.TestKit.Internal
         /// <param name="timeout">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         public T ExpectOne<T>(TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, 1);
         }
+        
+        /// <summary>
+        /// Async version of ExpectOne
+        /// </summary>
+        public async Task<T> ExpectOneAsync<T>(TimeSpan timeout, Func<T> func)
+        {
+            return await InterceptAsync(func, _actorSystem, timeout, 1);
+        }
 
         /// <summary>
         /// TBD
@@ -106,9 +163,18 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         public T Expect<T>(int expectedCount, Func<T> func)
         {
             return Intercept(func, _actorSystem, null, expectedCount);
+        }
+        
+        /// <summary>
+        /// Async version of Expect
+        /// </summary>
+        public async Task<T> ExpectAsync<T>(int expectedCount, Func<T> func)
+        {
+            return await InterceptAsync(func, _actorSystem, null, expectedCount);
         }
 
         /// <summary>
@@ -119,9 +185,18 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         public T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, expectedCount);
+        }
+        
+        /// <summary>
+        /// Async version of Expect
+        /// </summary>
+        public async Task<T> ExpectAsync<T>(int expectedCount, TimeSpan timeout, Func<T> func)
+        {
+            return await InterceptAsync(func, _actorSystem, timeout, expectedCount);
         }
 
         /// <summary>
@@ -130,18 +205,36 @@ namespace Akka.TestKit.Internal
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         public T Mute<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, null);
+        }
+        
+        /// <summary>
+        /// Async version of Mute
+        /// </summary>
+        public async Task<T> MuteAsync<T>(Func<T> func)
+        {
+            return await InterceptAsync(func, _actorSystem, null, null);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
+        [Obsolete("Use async version instead", true)]
         public void Mute(Action action)
         {
             Intercept<object>(() => { action(); return null; }, _actorSystem, null, null);
+        }
+        
+        /// <summary>
+        /// Async version of Mute
+        /// </summary>
+        public async Task MuteAsync(Action action)
+        {
+            await InterceptAsync<object>(() => { action(); return null; }, _actorSystem, null, null);
         }
 
         /// <summary>
@@ -175,6 +268,7 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedOccurrences">TBD</param>
         /// <param name="matchedEventHandler">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         protected T Intercept<T>(Func<T> func, ActorSystem system, TimeSpan? timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler = null)
         {
             var leeway = system.HasExtension<TestKitSettings>()
@@ -226,6 +320,61 @@ namespace Akka.TestKit.Internal
                 system.EventStream.Publish(new Unmute(_filters));
             }
         }
+        
+        /// <summary>
+        /// Async version of <see cref="Intercept{T}"/>
+        /// </summary>
+        protected async Task<T> InterceptAsync<T>(Func<T> func, ActorSystem system, TimeSpan? timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler = null)
+        {
+            var leeway = system.HasExtension<TestKitSettings>()
+                ? TestKitExtension.For(system).TestEventFilterLeeway
+                : _testkit.TestKitSettings.TestEventFilterLeeway;
+
+            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : leeway;
+            matchedEventHandler = matchedEventHandler ?? new MatchedEventHandler();
+            system.EventStream.Publish(new Mute(_filters));
+            try
+            {
+                foreach(var filter in _filters)
+                {
+                    filter.EventMatched += matchedEventHandler.HandleEvent;
+                }
+                var result = func();
+
+                if(!await AwaitDoneAsync(timeoutValue, expectedOccurrences, matchedEventHandler))
+                {
+                    var actualNumberOfEvents = matchedEventHandler.ReceivedCount;
+                    string msg;
+                    if(expectedOccurrences.HasValue)
+                    {
+                        var expectedNumberOfEvents = expectedOccurrences.Value;
+                        if(actualNumberOfEvents < expectedNumberOfEvents)
+                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters));
+                        else
+                        {
+                            var tooMany = actualNumberOfEvents - expectedNumberOfEvents;
+                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
+                        }
+                    }
+                    else
+                        msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, _filters);
+
+                    var assertionsProvider = system.HasExtension<TestKitAssertionsProvider>()
+                        ? TestKitAssertionsExtension.For(system)
+                        : TestKitAssertionsExtension.For(_testkit.Sys);
+                    assertionsProvider.Assertions.Fail(msg);
+                }
+                return result;
+            }
+            finally
+            {
+                foreach(var filter in _filters)
+                {
+                    filter.EventMatched -= matchedEventHandler.HandleEvent;
+                }
+                system.EventStream.Publish(new Unmute(_filters));
+            }
+        }
 
         /// <summary>
         /// TBD
@@ -234,12 +383,27 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedOccurrences">TBD</param>
         /// <param name="matchedEventHandler">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use async version instead", true)]
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
             if(expectedOccurrences.HasValue)
             {
                 var expected = expectedOccurrences.GetValueOrDefault();
-                _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                return matchedEventHandler.ReceivedCount == expected;
+            }
+            return true;
+        }
+        
+        /// <summary>
+        /// Async version of <see cref="AwaitDone"/>
+        /// </summary>
+        protected async Task<bool> AwaitDoneAsync(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
+        {
+            if(expectedOccurrences.HasValue)
+            {
+                var expected = expectedOccurrences.GetValueOrDefault();
+                await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
                 return matchedEventHandler.ReceivedCount == expected;
             }
             return true;
@@ -255,9 +419,18 @@ namespace Akka.TestKit.Internal
             return number == 1 ? "message" : "messages";
         }
 
+        [Obsolete("Use async version instead", true)]
         private void InternalExpect(Action action, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
         {
             Intercept<object>(() => { action(); return null; }, actorSystem, timeout, expectedCount);
+        }
+        
+        /// <summary>
+        /// Async version of <see cref="InternalExpect"/>
+        /// </summary>
+        private async Task InternalExpectAsync(Action action, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
+        {
+            await InterceptAsync<object>(() => { action(); return null; }, actorSystem, timeout, expectedCount);
         }
 
         /// <summary>

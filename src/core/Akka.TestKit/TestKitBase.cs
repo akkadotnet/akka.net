@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -134,11 +135,11 @@ namespace Akka.TestKit
 
             var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
-            AwaitCondition(() =>
+            AwaitConditionAsync(() =>
             {
                 var repRef = testActor as IRepointableRef;
                 return repRef == null || repRef.IsStarted;
-            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10)).Wait();
 
             if (!(this is INoImplicitSender))
             {
@@ -155,7 +156,7 @@ namespace Akka.TestKit
 
             _testState.TestActor = testActor;
         }
-
+        
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
 
         /// <summary>
