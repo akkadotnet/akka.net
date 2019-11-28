@@ -7,6 +7,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -179,7 +180,7 @@ namespace Akka.Remote.Tests.Transport
         #region Tests
 
         [Fact(Skip = "Extremely racy")]
-        public void AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
+        public async Task AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
             //todo mute both systems for deadletters for any type of message
             EventFilter.DeadLetter().Mute();
@@ -188,7 +189,7 @@ namespace Akka.Remote.Tests.Transport
                 RARP.For(Sys)
                     .Provider.Transport.ManagementCommand(new FailureInjectorTransportAdapter.One(AddressB,
                         new FailureInjectorTransportAdapter.Drop(0.1, 0.1)));
-            AwaitCondition(() => mc.IsCompleted && mc.Result, TimeSpan.FromSeconds(3));
+            await AwaitConditionAsync(() => mc.IsCompleted && mc.Result, TimeSpan.FromSeconds(3));
 
             var here = Here;
 

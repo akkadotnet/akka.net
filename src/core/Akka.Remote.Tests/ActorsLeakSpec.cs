@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -86,7 +87,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Remoting_must_not_leak_actors()
+        public async Task Remoting_must_not_leak_actors()
         {
             var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
             var echoPath = new RootActorPath(RARP.For(Sys).Provider.DefaultAddress)/"user"/"echo";
@@ -231,7 +232,7 @@ namespace Akka.Remote.Tests
              */
             EventFilter.Exception<TimeoutException>().ExpectOne(() => { });
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 AssertActors(initialActors, targets.SelectMany(CollectLiveActors).ToImmutableHashSet());
             }, 10.Seconds());

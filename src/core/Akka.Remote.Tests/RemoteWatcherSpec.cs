@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -270,7 +271,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_heartbeats()
+        public async Task A_RemoteWatcher_must_generate_address_terminated_when_missing_heartbeats()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -293,9 +294,9 @@ namespace Akka.Remote.Tests
             ExpectMsg<RemoteWatcher.Heartbeat>();
             monitorA.Tell(_heartbeatRspB, monitorB);
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
                     ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -311,7 +312,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_first_heartbeat()
+        public async Task A_RemoteWatcher_must_generate_address_terminated_when_missing_first_heartbeat()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -332,9 +333,9 @@ namespace Akka.Remote.Tests
             ExpectMsg<RemoteWatcher.Heartbeat>();
             // no HeartbeatRsp sent
 
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
                     ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -351,8 +352,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void
-            A_RemoteWatcher_must_generate_address_terminated_for_new_watch_after_broken_connection_was_reestablished_and_broken_again()
+        public async Task A_RemoteWatcher_must_generate_address_terminated_for_new_watch_after_broken_connection_was_reestablished_and_broken_again()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -375,9 +375,9 @@ namespace Akka.Remote.Tests
             ExpectMsg<RemoteWatcher.Heartbeat>();
             monitorA.Tell(_heartbeatRspB, monitorB);
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
                     ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -391,7 +391,7 @@ namespace Akka.Remote.Tests
 
             //real AddressTerminated would trigger Terminated for b6, simulate that here
             _remoteSystem.Stop(b);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
                 ExpectMsg(RemoteWatcher.Stats.Empty);
@@ -423,9 +423,9 @@ namespace Akka.Remote.Tests
             q.ExpectNoMsg(TimeSpan.FromSeconds(1));
 
             //then stop heartbeating again; should generate a new AddressTerminated
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
                     ExpectMsg<RemoteWatcher.Heartbeat>();

@@ -7,6 +7,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -195,7 +196,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ThrottlerTransportAdapter_must_survive_blackholing()
+        public async Task ThrottlerTransportAdapter_must_survive_blackholing()
         {
             Here.Tell(new ThrottlingTester.Lost("BlackHole 1"));
             ExpectMsg(new ThrottlingTester.Lost("BlackHole 1"));
@@ -215,7 +216,7 @@ namespace Akka.Remote.Tests.Transport
             // after we remove the Blackhole we can't be certain of the state
             // of the connection, repeat until success
             here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 var received = ReceiveOne(TimeSpan.Zero);
                 if (received != null && received.Equals(new ThrottlingTester.Lost("BlackHole 3")))

@@ -463,7 +463,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Stash_inbound_connections_until_UID_is_known_for_pending_outbound()
+        public async Task Stash_inbound_connections_until_UID_is_known_for_pending_outbound()
         {
             var localAddress = new Address("akka.test", "system1", "localhost", 1);
             var rawLocalAddress = new Address("test", "system1", "localhost", 1);
@@ -495,7 +495,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -514,7 +514,7 @@ namespace Akka.Remote.Tests
                 var inboundHandle = inboundHandleTask.Result;
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
                 });
@@ -545,7 +545,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Properly_quarantine_stashed_inbound_connections()
+        public async Task Properly_quarantine_stashed_inbound_connections()
         {
             var localAddress = new Address("akka.test", "system1", "localhost", 1);
             var rawLocalAddress = new Address("test", "system1", "localhost", 1);
@@ -577,7 +577,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -596,7 +596,7 @@ namespace Akka.Remote.Tests
                 var inboundHandle = inboundHandleTask.Result;
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should().NotBeNull();
                 });

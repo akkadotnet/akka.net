@@ -89,8 +89,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
-                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -100,8 +100,8 @@ namespace Akka.Remote.Tests.Transport
 
                 // verify that the connections are terminated
                 p1.ExpectMsg<Disassociated>();
-                AwaitCondition(() => t1.ConnectionGroup.Count == 1);
-                AwaitCondition(() => t2.ConnectionGroup.Count == 1);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 1);
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 1);
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -136,8 +136,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
-                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -147,8 +147,8 @@ namespace Akka.Remote.Tests.Transport
 
                 p2.ExpectMsg<Disassociated>();
                 // verify that the connections are terminated
-                AwaitCondition(() => t1.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t1.ConnectionGroup.Count}");
-                AwaitCondition(() => t2.ConnectionGroup.Count == 1, null,message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t1.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 1, null,message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -183,8 +183,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
-                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -193,8 +193,8 @@ namespace Akka.Remote.Tests.Transport
                 inboundHandle.Disassociate();
 
                 // verify that the connections are terminated
-                AwaitCondition(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
-                AwaitCondition(() => t2.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -229,8 +229,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
-                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 2);
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -239,8 +239,8 @@ namespace Akka.Remote.Tests.Transport
                 await t2.Shutdown();
 
                 // verify that the connections are terminated
-                AwaitCondition(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
-                AwaitCondition(() => t2.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => t2.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t2.ConnectionGroup.Count}");
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -272,7 +272,7 @@ namespace Akka.Remote.Tests.Transport
                 });
 
 
-                AwaitCondition(() => t1.ConnectionGroup.Count == 1);
+                await AwaitConditionAsync(() => t1.ConnectionGroup.Count == 1);
             }
             finally
             {

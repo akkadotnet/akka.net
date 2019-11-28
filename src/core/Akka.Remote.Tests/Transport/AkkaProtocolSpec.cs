@@ -135,18 +135,18 @@ namespace Akka.Remote.Tests.Transport
         #region Tests
 
         [Fact]
-        public void ProtocolStateActor_must_register_itself_as_reader_on_injected_handles()
+        public async Task ProtocolStateActor_must_register_itself_as_reader_on_injected_handles()
         {
             var collaborators = GetCollaborators();
             Sys.ActorOf(ProtocolStateActor.InboundProps(new HandshakeInfo(_localAddress, 42), collaborators.Handle,
                 new ActorAssociationEventListener(TestActor), new AkkaProtocolSettings(config), codec,
                 collaborators.FailureDetector));
 
-            AwaitCondition(() => collaborators.Handle.ReadHandlerSource.Task.IsCompleted, DefaultTimeout);
+            await AwaitConditionAsync(() => collaborators.Handle.ReadHandlerSource.Task.IsCompleted, DefaultTimeout);
         }
 
         [Fact]
-        public void ProtocolStateActor_must_in_inbound_mode_accept_payload_after_Associate_PDU_received()
+        public async Task ProtocolStateActor_must_in_inbound_mode_accept_payload_after_Associate_PDU_received()
         {
             var collaborators = GetCollaborators();
             var reader =
@@ -156,7 +156,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(testAssociate(33), Self);
 
-            AwaitCondition(() => collaborators.FailureDetector.called, DefaultTimeout);
+            await AwaitConditionAsync(() => collaborators.FailureDetector.called, DefaultTimeout);
 
             var wrappedHandle = ExpectMsgPf<AkkaProtocolHandle>(DefaultTimeout, "expected InboundAssociation", o =>
             {
@@ -172,7 +172,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.True(collaborators.FailureDetector.called);
 
             // Heartbeat was sent in response to Associate
-            AwaitCondition(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             reader.Tell(testPayload, Self);
             ExpectMsg<InboundPayload>(inbound =>
@@ -182,7 +182,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_in_inbound_mode_disassociate_when_an_unexpected_message_arrives_instead_of_Associate()
+        public async Task ProtocolStateActor_must_in_inbound_mode_disassociate_when_an_unexpected_message_arrives_instead_of_Associate()
         {
             var collaborators = GetCollaborators();
 
@@ -197,7 +197,7 @@ namespace Akka.Remote.Tests.Transport
             //this associate will now be ignored
             reader.Tell(testAssociate(33), Self);
 
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 var snapshots = collaborators.Registry.LogSnapshot();
                 return snapshots.Any(x => x is DisassociateAttempt);
@@ -205,7 +205,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_in_outbound_mode_delay_readiness_until_handshake_finished()
+        public async Task ProtocolStateActor_must_in_outbound_mode_delay_readiness_until_handshake_finished()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -216,11 +216,11 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
             Assert.True(collaborators.FailureDetector.called);
 
             //keeps sending heartbeats
-            AwaitCondition(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             Assert.False(statusPromise.Task.IsCompleted);
 
@@ -239,7 +239,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_handle_explicit_disassociate_messages()
+        public async Task ProtocolStateActor_must_handle_explicit_disassociate_messages()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -250,7 +250,7 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             reader.Tell(testAssociate(33), Self);
 
@@ -280,7 +280,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_handle_transport_level_disassociations()
+        public async Task ProtocolStateActor_must_handle_transport_level_disassociations()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -291,7 +291,7 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             reader.Tell(testAssociate(33), Self);
 
@@ -321,7 +321,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_disassociate_when_failure_detector_signals_failure()
+        public async Task ProtocolStateActor_must_disassociate_when_failure_detector_signals_failure()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -332,7 +332,7 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             stateActor.Tell(testAssociate(33), Self);
 
@@ -349,7 +349,7 @@ namespace Akka.Remote.Tests.Transport
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             //wait for one heartbeat
-            AwaitCondition(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             collaborators.FailureDetector.isAvailable = false;
 
@@ -365,7 +365,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ProtocolStateActor_must_handle_correctly_when_the_handler_is_registered_only_after_the_association_is_already_closed()
+        public async Task ProtocolStateActor_must_handle_correctly_when_the_handler_is_registered_only_after_the_association_is_already_closed()
         {
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -376,7 +376,7 @@ namespace Akka.Remote.Tests.Transport
                     statusPromise, collaborators.Transport,
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
-            AwaitCondition(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
+            await AwaitConditionAsync(() => LastActivityIsAssociate(collaborators.Registry, 42), DefaultTimeout);
 
             stateActor.Tell(testAssociate(33), Self);
 
