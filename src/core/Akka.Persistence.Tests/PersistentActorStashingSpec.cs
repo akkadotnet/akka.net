@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Tests.Journal;
 using Xunit;
@@ -443,10 +444,10 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed()
+        public async Task Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed()
         {
             var pref = Sys.ActorOf(Props.Create(() => new AsyncStashingActor(Name)));
-            AwaitAssert(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
+            await AwaitAssertAsync(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
             var journal = SteppingMemoryJournal.GetRef("persistence-stash");
 
             // initial read highest
@@ -463,9 +464,9 @@ namespace Akka.Persistence.Tests
             SteppingMemoryJournal.Step(journal);
             SteppingMemoryJournal.Step(journal);
 
-            Within(TimeSpan.FromSeconds(3), () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     pref.Tell(GetState.Instance);
                     ExpectMsgInOrder("a", "c", "b");
@@ -474,10 +475,10 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed_within_handler()
+        public async Task Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed_within_handler()
         {
             var pref = Sys.ActorOf(Props.Create(() => new AsyncStashingWithinHandlerActor(Name)));
-            AwaitAssert(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
+            await AwaitAssertAsync(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
             var journal = SteppingMemoryJournal.GetRef("persistence-stash");
 
             // initial read highest
@@ -494,9 +495,9 @@ namespace Akka.Persistence.Tests
             SteppingMemoryJournal.Step(journal);
             SteppingMemoryJournal.Step(journal);
 
-            Within(TimeSpan.FromSeconds(3), () =>
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     pref.Tell(GetState.Instance);
                     ExpectMsgInOrder("a", "c", "b");

@@ -100,7 +100,7 @@ namespace Akka.Persistence.Tests
         {
             // initialize journal early
             Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.stepping-inmem");
-            AwaitAssert(() => SteppingMemoryJournal.GetRef(JournalId), TimeSpan.FromSeconds(3));
+            AwaitAssertAsync(() => SteppingMemoryJournal.GetRef(JournalId), TimeSpan.FromSeconds(3)).Wait();
             _journal = SteppingMemoryJournal.GetRef(JournalId);
         }
 
