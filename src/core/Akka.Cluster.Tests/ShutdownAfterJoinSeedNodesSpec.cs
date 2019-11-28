@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -46,7 +47,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void Joining_seed_nodes_must_be_aborted_after_shutdown_after_unsuccessful_join_seed_nodes()
+        public async Task Joining_seed_nodes_must_be_aborted_after_shutdown_after_unsuccessful_join_seed_nodes()
         {
             var seedNodes = ImmutableList.Create(
                 Cluster.Get(_seed1).SelfAddress, 
@@ -57,8 +58,8 @@ namespace Akka.Cluster.Tests
             Cluster.Get(_seed2).JoinSeedNodes(seedNodes);
             Cluster.Get(_ordinary1).JoinSeedNodes(seedNodes);
 
-            AwaitCondition(() => _seed2.WhenTerminated.IsCompleted, Cluster.Get(_seed2).Settings.ShutdownAfterUnsuccessfulJoinSeedNodes + TimeSpan.FromSeconds(10));
-            AwaitCondition(() => _ordinary1.WhenTerminated.IsCompleted, Cluster.Get(_ordinary1).Settings.ShutdownAfterUnsuccessfulJoinSeedNodes + TimeSpan.FromSeconds(10));
+            await AwaitConditionAsync(() => _seed2.WhenTerminated.IsCompleted, Cluster.Get(_seed2).Settings.ShutdownAfterUnsuccessfulJoinSeedNodes + TimeSpan.FromSeconds(10));
+            await AwaitConditionAsync(() => _ordinary1.WhenTerminated.IsCompleted, Cluster.Get(_ordinary1).Settings.ShutdownAfterUnsuccessfulJoinSeedNodes + TimeSpan.FromSeconds(10));
         }
     }
 }

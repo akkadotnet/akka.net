@@ -66,16 +66,16 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_initially_become_singleton_cluster_when_joining_itself_and_reach_convergence()
+        public async Task A_cluster_must_initially_become_singleton_cluster_when_joining_itself_and_reach_convergence()
         {
             ClusterView.Members.Count.Should().Be(0);
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
-            AwaitCondition(() => ClusterView.IsSingletonCluster);
+            await AwaitConditionAsync(() => ClusterView.IsSingletonCluster);
             ClusterView.Self.Address.Should().Be(_selfAddress);
             ClusterView.Members.Select(m => m.Address).ToImmutableHashSet()
                 .Should().BeEquivalentTo(ImmutableHashSet.Create(_selfAddress));
-            AwaitAssert(() => ClusterView.Status.Should().Be(MemberStatus.Up));
+            await AwaitAssertAsync(() => ClusterView.Status.Should().Be(MemberStatus.Up));
         }
 
         [Fact]
@@ -167,7 +167,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
+        public async Task A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
@@ -192,14 +192,14 @@ namespace Akka.Cluster.Tests
             var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
             removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
 
-            AwaitCondition(() => leaveTask.IsCompleted);
+            await AwaitConditionAsync(() => leaveTask.IsCompleted);
 
             // A second call for LeaveAsync should complete immediately (should be the same task as before)
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
         [Fact]
-        public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
+        public async Task A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
             // Join cluster
             _cluster.Join(_selfAddress);
@@ -222,11 +222,11 @@ namespace Akka.Cluster.Tests
             });
 
             // LeaveAsync() task expected to complete immediately
-            AwaitCondition(() => _cluster.LeaveAsync().IsCompleted);
+            await AwaitConditionAsync(() => _cluster.LeaveAsync().IsCompleted);
         }
 
         [Fact]
-        public void A_cluster_must_cancel_LeaveAsync_task_if_CancellationToken_fired_before_node_left()
+        public async Task A_cluster_must_cancel_LeaveAsync_task_if_CancellationToken_fired_before_node_left()
         {
             // Join cluster
             _cluster.Join(_selfAddress);
@@ -245,9 +245,9 @@ namespace Akka.Cluster.Tests
 
             // Cancelling the first task
             cts.Cancel();
-            AwaitCondition(() => task1.IsCanceled, null, "Task should be cancelled");
+            await AwaitConditionAsync(() => task1.IsCanceled, null, "Task should be cancelled");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
                 // Second task should continue awaiting for cluster leave
                 task2.IsCompleted.Should().BeFalse();
@@ -260,16 +260,16 @@ namespace Akka.Cluster.Tests
                 ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
 
                 // Second task should complete (not cancelled)
-                AwaitCondition(() => task2.IsCompleted && !task2.IsCanceled, null, "Task should be completed, but not cancelled.");
+                await AwaitConditionAsync(() => task2.IsCompleted && !task2.IsCanceled, null, "Task should be completed, but not cancelled.");
             });
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
             var task3 = _cluster.LeaveAsync();
-            AwaitCondition(() => task3.IsCompleted && !task3.IsCanceled, null, "Task should be completed, but not cancelled.");
+            await AwaitConditionAsync(() => task3.IsCompleted && !task3.IsCanceled, null, "Task should be completed, but not cancelled.");
         }
 
         [Fact]
-        public void A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
+        public async Task A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.dot-netty.tcp.port = 0"));
@@ -278,9 +278,9 @@ namespace Akka.Cluster.Tests
             {
                 var @ref = sys2.ActorOf(Props.Empty);
                 Cluster.Get(sys2).Join(@ref.Path.Address); // address doesn't contain full address information
-                Within(5.Seconds(), () =>
+                await WithinAsync(5.Seconds(), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.Get(sys2).State.Members.Count.Should().Be(1);
                         Cluster.Get(sys2).State.Members.First().Status.Should().Be(MemberStatus.Up);
@@ -289,9 +289,9 @@ namespace Akka.Cluster.Tests
 
                 Cluster.Get(sys2).Leave(@ref.Path.Address);
 
-                Within(5.Seconds(), () =>
+                await WithinAsync(5.Seconds(), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                     });
@@ -489,7 +489,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_terminate_ActorSystem_via_leave_CoordinatedShutdown()
+        public async Task A_cluster_must_terminate_ActorSystem_via_leave_CoordinatedShutdown()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
@@ -511,7 +511,7 @@ namespace Akka.Cluster.Tests
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
                 removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
-                AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
+                await AwaitConditionAsync(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();
             }
@@ -522,7 +522,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_cluster_must_terminate_ActorSystem_via_Down_CoordinatedShutdown()
+        public async Task A_cluster_must_terminate_ActorSystem_via_Down_CoordinatedShutdown()
         {
             var sys3 = ActorSystem.Create("ClusterSpec3", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
@@ -544,7 +544,7 @@ namespace Akka.Cluster.Tests
 
                 probe.ExpectMsg<ClusterEvent.MemberDowned>();
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
-                AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
+                await AwaitConditionAsync(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys3).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterDowningReason>();
             }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -87,7 +88,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void Downing_provider_should_use_specified_downing_provider()
+        public async Task Downing_provider_should_use_specified_downing_provider()
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.cluster.downing-provider-class = ""Akka.Cluster.Tests.DummyDowningProvider, Akka.Cluster.Tests""");
@@ -95,14 +96,14 @@ namespace Akka.Cluster.Tests
             {
                 var downingProvider = Cluster.Get(system).DowningProvider;
                 downingProvider.Should().BeOfType<DummyDowningProvider>();
-                AwaitCondition(() =>
+                await AwaitConditionAsync(() =>
                     (downingProvider as DummyDowningProvider).ActorPropsAccessed.Value,
                     TimeSpan.FromSeconds(3));
             }
         }
 
         [Fact]
-        public void Downing_provider_should_stop_the_cluster_if_the_downing_provider_throws_exception_in_props()
+        public async Task Downing_provider_should_stop_the_cluster_if_the_downing_provider_throws_exception_in_props()
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.cluster.downing-provider-class = ""Akka.Cluster.Tests.FailingDowningProvider, Akka.Cluster.Tests""");
@@ -112,7 +113,7 @@ namespace Akka.Cluster.Tests
             var cluster = Cluster.Get(system);
             cluster.Join(cluster.SelfAddress);
 
-            AwaitCondition(() => cluster.IsTerminated, TimeSpan.FromSeconds(3));
+            await AwaitConditionAsync(() => cluster.IsTerminated, TimeSpan.FromSeconds(3));
 
             Shutdown(system);
         }
