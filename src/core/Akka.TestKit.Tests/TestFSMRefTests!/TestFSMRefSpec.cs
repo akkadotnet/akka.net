@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -15,7 +16,7 @@ namespace Akka.Testkit.Tests.TestFSMRefTests
     public class TestFSMRefSpec : AkkaSpec
     {
         [Fact]
-        public void A_TestFSMRef_must_allow_access_to_internal_state()
+        public async Task A_TestFSMRef_must_allow_access_to_internal_state()
         {
             var fsm = ActorOfAsTestFSMRef<StateTestFsm, int, string>("test-fsm-ref-1");
 
@@ -35,9 +36,9 @@ namespace Akka.Testkit.Tests.TestFSMRefTests
             fsm.StateData.ShouldBe("buh");
 
             fsm.SetStateTimeout(TimeSpan.FromMilliseconds(100));
-            Within(TimeSpan.FromMilliseconds(80), TimeSpan.FromMilliseconds(500), () =>
-                AwaitCondition(() => fsm.StateName == 2 && fsm.StateData == "timeout")
-                );
+            await WithinAsync(TimeSpan.FromMilliseconds(80), TimeSpan.FromMilliseconds(500), async () =>
+                await AwaitConditionAsync(() => fsm.StateName == 2 && fsm.StateData == "timeout")
+            );
         }
 
         [Fact]

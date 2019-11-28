@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.TestKit;
 using Xunit;
 
@@ -30,10 +31,10 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public void AwaitCondition_should_dilate_timeout()
+        public async Task AwaitCondition_should_dilate_timeout()
         {
             var before = Now;
-            Intercept(() => AwaitCondition(() => false, TimeSpan.FromMilliseconds(Timeout)));
+            await InterceptAsync(async () => await AwaitConditionAsync(() => false, TimeSpan.FromMilliseconds(Timeout)));
             var after = Now;
             var diff = (after - before).TotalMilliseconds;
             Assert.True(Math.Abs(diff - ExpectedTimeout) <= DiffDelta);

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Sdk;
 
@@ -18,18 +19,20 @@ namespace Akka.TestKit.Tests.Xunit2.TestKitBaseTests
         }
 
         [Fact]
-        public void AwaitAssert_must_not_throw_any_exception_when_assertion_is_valid()
+        public async Task AwaitAssert_must_not_throw_any_exception_when_assertion_is_valid()
         {
-            AwaitAssert(() => Assert.Equal("foo", "foo"));
+            await AwaitAssertAsync(() => Assert.Equal("foo", "foo"));
         }
 
         [Fact]
-        public void AwaitAssert_must_throw_exception_when_assertion_is_invalid()
+        public async Task AwaitAssert_must_throw_exception_when_assertion_is_invalid()
         {
-            Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () =>
+            await WithinAsync(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), async () =>
             {
-                Assert.Throws<EqualException>(() =>
-                    AwaitAssert(() => Assert.Equal("foo", "bar"), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(300)));
+                await Assert.ThrowsAsync<EqualException>(async () =>
+                {
+                    await AwaitAssertAsync(() => Assert.Equal("foo", "bar"), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(300));
+                });
             });
         }
     }
