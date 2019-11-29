@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -48,12 +49,12 @@ namespace Akka.Remote.Tests.MultiNode
 
 
         [MultiNodeFact]
-        public void RemoteNodeRestart_must_allow_restarted_node_to_pass_through_gate()
+        public async Task RemoteNodeRestart_must_allow_restarted_node_to_pass_through_gate()
         {
             Sys.ActorOf(Props.Create(() => new Subject()), "subject");
             EnterBarrier("subject-started");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_specConfig.Second).Address;
 
@@ -69,9 +70,9 @@ namespace Akka.Remote.Tests.MultiNode
 
                 EnterBarrier("gated");
                 TestConductor.Shutdown(_specConfig.Second).Wait();
-                Within(TimeSpan.FromSeconds(10), () =>
+                await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                 {
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () =>
                         {
                             Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject")
@@ -82,7 +83,7 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("shutdown");
             }, _specConfig.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var addr = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
                 var firstAddress = Node(_specConfig.First).Address;
@@ -104,10 +105,9 @@ namespace Akka.Remote.Tests.MultiNode
                 var probe = CreateTestProbe(freshSystem);
 
                 // Pierce the gate
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    AwaitAssert(() =>
-
+                    await AwaitAssertAsync(() =>
                     {
                         freshSystem.ActorSelection(new RootActorPath(firstAddress) / "user" / "subject")
                             .Tell(new Identify("subject"), probe);

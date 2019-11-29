@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -73,7 +74,7 @@ namespace Akka.Remote.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
         [MultiNodeFact]
-        public void RemoteGatePiercing_must_allow_restarted_node_to_pass_through_gate()
+        public async Task RemoteGatePiercing_must_allow_restarted_node_to_pass_through_gate()
         {
             Sys.ActorOf<RemoteGatePiercingMultiNetSpec.Subject>("subject");
             EnterBarrier("actors-started");
@@ -96,15 +97,15 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("gate-pierced");
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 EnterBarrier("actors-communicate");
                 EnterBarrier("gated");
 
                 // Pierce the gate
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    AwaitAssert(() => _identify(_config.First, "subject"));
+                    await AwaitAssertAsync(() => _identify(_config.First, "subject"));
                 });
 
                 EnterBarrier("gate-pierced");

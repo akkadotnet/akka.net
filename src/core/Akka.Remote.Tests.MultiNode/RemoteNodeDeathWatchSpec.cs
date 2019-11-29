@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -141,13 +142,13 @@ namespace Akka.Remote.Tests.MultiNode
 
         protected abstract Action Sleep { get; }
 
-        private void AssertCleanup(TimeSpan? timeout = null)
+        private async Task AssertCleanup(TimeSpan? timeout = null)
         {
             timeout = timeout ?? TimeSpan.FromSeconds(5);
 
-            Within(timeout.Value, () =>
+            await WithinAsync(timeout.Value, async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     _remoteWatcher.Value.Tell(RemoteWatcher.Stats.Empty);
                     ExpectMsg<RemoteWatcher.Stats>(s => Equals(s, RemoteWatcher.Stats.Empty));
@@ -156,20 +157,20 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void RemoteNodeDeathWatchSpecs()
+        public async Task RemoteNodeDeathWatchSpecs()
         {
             Console.WriteLine($"Executing with {Scenario} scenario");
 
-            RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stopped();
-            RemoteNodeDeathWatch_must_cleanup_after_watch_unwatch();
-            RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_unwatch();
-            RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_stop_unwatch();
-            RemoteNodeDeathWatch_must_cleanup_after_stop();
-            RemoteNodeDeathWatch_must_receive_Terminated_when_watched_node_crash();
-            RemoteNodeDeathWatch_must_cleanup_when_watching_node_crash();
+            await RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stopped();
+            await RemoteNodeDeathWatch_must_cleanup_after_watch_unwatch();
+            await RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_unwatch();
+            await RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_stop_unwatch();
+            await RemoteNodeDeathWatch_must_cleanup_after_stop();
+            await RemoteNodeDeathWatch_must_receive_Terminated_when_watched_node_crash();
+            await RemoteNodeDeathWatch_must_cleanup_when_watching_node_crash();
         }
 
-        private void RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stopped()
+        private async Task RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stopped()
         {
             RunOn(() =>
             {
@@ -210,14 +211,14 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("terminated-verified-1");
 
             // verify that things are cleaned up, and heartbeating is stopped
-            AssertCleanup();
+            await AssertCleanup();
             ExpectNoMsg(TimeSpan.FromSeconds(2));
-            AssertCleanup();
+            await AssertCleanup();
 
             EnterBarrier("after-1");
         }
 
-        private void RemoteNodeDeathWatch_must_cleanup_after_watch_unwatch()
+        private async Task RemoteNodeDeathWatch_must_cleanup_after_watch_unwatch()
         {
             RunOn(() =>
             {
@@ -246,14 +247,14 @@ namespace Akka.Remote.Tests.MultiNode
             }, _config.Second, _config.Third);
 
             // verify that things are cleaned up, and heartbeating is stopped
-            AssertCleanup();
+            await AssertCleanup();
             ExpectNoMsg(TimeSpan.FromSeconds(2));
-            AssertCleanup();
+            await AssertCleanup();
 
             EnterBarrier("after-2");
         }
 
-        private void RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_unwatch()
+        private async Task RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_unwatch()
         {
             RunOn(() =>
             {
@@ -282,14 +283,14 @@ namespace Akka.Remote.Tests.MultiNode
             }, _config.Third);
 
             // verify that things are cleaned up, and heartbeating is stopped
-            AssertCleanup();
+            await AssertCleanup();
             ExpectNoMsg(TimeSpan.FromSeconds(2));
-            AssertCleanup();
+            await AssertCleanup();
 
             EnterBarrier("after-3");
         }
 
-        private void RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_stop_unwatch()
+        private async Task RemoteNodeDeathWatch_must_cleanup_after_bi_directional_watch_stop_unwatch()
         {
             RunOn(() =>
             {
@@ -332,16 +333,16 @@ namespace Akka.Remote.Tests.MultiNode
             }, _config.Third);
 
             // verify that things are cleaned up, and heartbeating is stopped
-            AssertCleanup();
+            await AssertCleanup();
             ExpectNoMsg(TimeSpan.FromSeconds(2));
-            AssertCleanup();
+            await AssertCleanup();
 
             EnterBarrier("after-4");
         }
 
-        private void RemoteNodeDeathWatch_must_cleanup_after_stop()
+        private async Task RemoteNodeDeathWatch_must_cleanup_after_stop()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var p1 = CreateTestProbe();
                 var p2 = CreateTestProbe();
@@ -380,12 +381,12 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("terminated-verified-5");
 
                 // verify that things are cleaned up, and heartbeating is stopped
-                AssertCleanup();
+                await AssertCleanup();
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
-                AssertCleanup();
+                await AssertCleanup();
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var p1 = CreateTestProbe();
                 var p2 = CreateTestProbe();
@@ -425,12 +426,12 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("terminated-verified-5");
                 
                 // verify that things are cleaned up, and heartbeating is stopped
-                AssertCleanup();
+                await AssertCleanup();
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
                 p1.ExpectNoMsg(100);
                 p2.ExpectNoMsg(100);
                 p3.ExpectNoMsg(100);
-                AssertCleanup();
+                await AssertCleanup();
             }, _config.Second);
 
             RunOn(() =>
@@ -444,9 +445,9 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("after-5");
         }
 
-        private void RemoteNodeDeathWatch_must_receive_Terminated_when_watched_node_crash()
+        private async Task RemoteNodeDeathWatch_must_receive_Terminated_when_watched_node_crash()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var watcher = Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "watcher6");
                 var watcher2 = Sys.ActorOf(Props.Create(() => new ProbeActor(Sys.DeadLetters)));
@@ -473,9 +474,9 @@ namespace Akka.Remote.Tests.MultiNode
                 ExpectMsg<WrappedTerminated>(TimeSpan.FromSeconds(15)).T.ActorRef.ShouldBe(subject);
                 
                 // verify that things are cleaned up, and heartbeating is stopped
-                AssertCleanup();
+                await AssertCleanup();
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
-                AssertCleanup();
+                await AssertCleanup();
             }, _config.First);
 
             RunOn(() =>
@@ -496,7 +497,7 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("after-6");
         }
 
-        private void RemoteNodeDeathWatch_must_cleanup_when_watching_node_crash()
+        private async Task RemoteNodeDeathWatch_must_cleanup_when_watching_node_crash()
         {
             RunOn(() =>
             {
@@ -510,7 +511,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established-7");
             }, _config.Third);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "subject7");
                 EnterBarrier("actors-started-7");
@@ -524,9 +525,9 @@ namespace Akka.Remote.Tests.MultiNode
                 TestConductor.Exit(_config.Third, 0).Wait();
 
                 // verify that things are cleaned up, and heartbeating is stopped
-                AssertCleanup(TimeSpan.FromSeconds(20));
+                await AssertCleanup(TimeSpan.FromSeconds(20));
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
-                AssertCleanup();
+                await AssertCleanup();
             }, _config.First);
 
             EnterBarrier("after-7");

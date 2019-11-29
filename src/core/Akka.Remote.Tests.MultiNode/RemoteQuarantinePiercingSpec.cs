@@ -7,6 +7,7 @@
 
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -66,14 +67,14 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void RemoteQuarantinePiercingSpecs()
+        public async Task RemoteQuarantinePiercingSpecs()
         {
-            RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new();
+            await RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new();
         }
 
-        private void RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new()
+        private async Task RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_specConfig.Second).Address;
                 EnterBarrier("actors-started");
@@ -95,10 +96,10 @@ namespace Akka.Remote.Tests.MultiNode
                 TestConductor.Shutdown(_specConfig.Second).Wait(TimeSpan.FromSeconds(30));
 
                 // Now wait until second system becomes alive again
-                Within(30.Seconds(), () =>
+                await WithinAsync(30.Seconds(), async () =>
                 {
                     // retry because the Subject actor might not be started yet
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
                         var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));

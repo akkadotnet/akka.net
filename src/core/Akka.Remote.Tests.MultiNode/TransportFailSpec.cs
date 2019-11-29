@@ -94,7 +94,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void TransportFail_should_reconnect()
+        public async Task TransportFail_should_reconnect()
         {
             RunOn(() =>
             {
@@ -117,22 +117,22 @@ namespace Akka.Remote.Tests.MultiNode
             TransportFailSpecConfig.FdAvailable.GetAndSet(false);
 
             // wait for ungated (also later awaitAssert retry)
-            Task.Delay(RARP.For(Sys).Provider.RemoteSettings.RetryGateClosedFor).Wait();
+            await Task.Delay(RARP.For(Sys).Provider.RemoteSettings.RetryGateClosedFor);
             TransportFailSpecConfig.FdAvailable.GetAndSet(true);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 EnterBarrier("actors-started2");
                 var quarantineProbe = CreateTestProbe();
                 Sys.EventStream.Subscribe(quarantineProbe.Ref, typeof(QuarantinedEvent));
 
                 IActorRef subject2 = null;
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // TODO: harden
-                    Within(TimeSpan.FromSeconds(3), () =>
+                    await WithinAsync(TimeSpan.FromSeconds(3), async () =>
                     {
-                        AwaitCondition(() =>
+                        await AwaitConditionAsync(() =>
                         {
                             subject2 = Identify(_config.Second, "subject2");
                             return subject2 != null;

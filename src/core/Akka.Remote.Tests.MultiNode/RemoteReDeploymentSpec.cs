@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -66,7 +67,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
+        public async Task RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
         {
             var echo = Sys.ActorOf(EchoProps(TestActor), "echo");
             EnterBarrier("echo-started");
@@ -87,7 +88,7 @@ namespace Akka.Remote.Tests.MultiNode
 
             EnterBarrier("first-deployed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 TestConductor.Blackhole(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both)
                     .Wait();
@@ -106,7 +107,7 @@ namespace Akka.Remote.Tests.MultiNode
                 {
                     ExpectNoMsg(SleepAfterKill);
                 }
-                AwaitAssert(() => Node(_config.Second), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
+                await AwaitAssertAsync(() => Node(_config.Second), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
             }, _config.First);
 
             ActorSystem tempSys = null;

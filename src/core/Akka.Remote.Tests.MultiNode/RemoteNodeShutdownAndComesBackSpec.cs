@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -72,9 +73,9 @@ namespace Akka.Remote.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
         [MultiNodeFact]
-        public void RemoteNodeShutdownAndComesBack_must_properly_reset_system_message_buffer_state_when_new_system_with_same_Address_comes_up()
+        public async Task RemoteNodeShutdownAndComesBack_must_properly_reset_system_message_buffer_state_when_new_system_with_same_Address_comes_up()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_config.Second).Address;
                 Sys.ActorOf<RemoteNodeShutdownAndComesBackMultiNetSpec.Subject>("subject");
@@ -112,10 +113,10 @@ namespace Akka.Remote.Tests.MultiNode
                 // the system message send state
 
                 // Now wait until second system becomes alive again
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // retry because the Subject actor might not be started yet
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         var p = CreateTestProbe();
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell(new Identify("subject"), p.Ref);
