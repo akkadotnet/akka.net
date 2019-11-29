@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
@@ -271,13 +272,13 @@ namespace Akka.Cluster.TestKit
             EnterBarrier(roles.Select(r => r.Name).Aggregate((a, b) => a + "-" + b) + "-joined");
         }
 
-        public void JoinWithin(RoleName joinNode, TimeSpan? max = null, TimeSpan? interval = null)
+        public async Task JoinWithinAsync(RoleName joinNode, TimeSpan? max = null, TimeSpan? interval = null)
         {
             if (max == null) max = RemainingOrDefault;
             if (interval == null) interval = TimeSpan.FromSeconds(1);
 
             Cluster.Join(GetAddress(joinNode));
-            AwaitCondition(() =>
+            await AwaitConditionAsync(() =>
             {
                 ClusterView.RefreshCurrentState();
                 if (MemberInState(GetAddress(joinNode), new[] { MemberStatus.Up }) &&
@@ -287,7 +288,6 @@ namespace Akka.Cluster.TestKit
                 Cluster.Join(GetAddress(joinNode));
                 return false;
             }, max, interval);
-
         }
 
         private bool MemberInState(Address member, IEnumerable<MemberStatus> status)

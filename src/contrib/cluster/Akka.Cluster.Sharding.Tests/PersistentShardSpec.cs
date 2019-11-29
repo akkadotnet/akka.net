@@ -53,7 +53,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void Persistent_Shard_must_remember_entities_started_with_StartEntity()
+        public async Task Persistent_Shard_must_remember_entities_started_with_StartEntity()
         {
             Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
 
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding.Tests
             var secondIncarnation = Sys.ActorOf(props);
 
             secondIncarnation.Tell(Shard.GetShardStats.Instance);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 ExpectMsgAllOf(new Shard.ShardStats("shard-1", 1));
             });

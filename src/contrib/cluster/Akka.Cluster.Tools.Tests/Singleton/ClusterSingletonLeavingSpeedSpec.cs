@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -72,7 +73,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _probes = _systems.Select(i => CreateTestProbe()).ToArray();
         }
 
-        public void Join(ActorSystem from, ActorSystem to, IActorRef probe)
+        public async Task JoinAsync(ActorSystem from, ActorSystem to, IActorRef probe)
         {
             from.ActorOf(ClusterSingletonManager.Props(
                 TheSingleton.props(probe),
@@ -81,9 +82,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
 
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.Get(from).State.Members.Select(x => x.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
                     Cluster.Get(from)
@@ -96,24 +97,24 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void ClusterSingleton_that_is_leaving_must()
+        public async Task ClusterSingleton_that_is_leaving_must()
         {
-            ClusterSingleton_that_is_leaving_must_join_cluster();
-            ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
+            await ClusterSingleton_that_is_leaving_must_join_cluster();
+            await ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest();
         }
 
-        private void ClusterSingleton_that_is_leaving_must_join_cluster()
+        private async Task ClusterSingleton_that_is_leaving_must_join_cluster()
         {
             for (int i = 0; i < _systems.Length; i++)
-                Join(_systems[i], _systems[0], _probes[i]);
+                await JoinAsync(_systems[i], _systems[0], _probes[i]);
 
             // leader is most likely on system, lowest port
-            Join(Sys, _systems[0], TestActor);
+            await JoinAsync(Sys, _systems[0], TestActor);
 
             _probes[0].ExpectMsg("started");
         }
 
-        private void ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
+        private async Task ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
         {
             List<(TimeSpan, TimeSpan)> durations = new List<(TimeSpan, TimeSpan)>();
             Stopwatch sw = new Stopwatch();
@@ -132,9 +133,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
                 var startedDuration = sw.Elapsed;
 
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.Get(_systems[i]).IsTerminated.Should().BeTrue();
                         Cluster.Get(Sys).State.Members.Select(m => m.Address).Should().NotContain(leaveAddress);

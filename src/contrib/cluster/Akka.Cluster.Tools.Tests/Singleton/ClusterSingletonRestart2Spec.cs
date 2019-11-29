@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 .WithFallback(Sys.Settings.Config));
         }
 
-        public void Join(ActorSystem from, ActorSystem to)
+        public async Task JoinAsync(ActorSystem from, ActorSystem to)
         {
             if (Cluster.Get(from).SelfRoles.Contains("singleton"))
             {
@@ -54,9 +54,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
 
 
-            Within(TimeSpan.FromSeconds(45), () =>
+            await WithinAsync(TimeSpan.FromSeconds(45), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
                     Cluster.Get(from).State.Members.Select(x => x.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
@@ -70,18 +70,18 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
+        public async Task Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
         {
-            Join(_sys1, _sys1);
-            Join(_sys2, _sys1);
-            Join(_sys3, _sys1);
+            await JoinAsync(_sys1, _sys1);
+            await JoinAsync(_sys2, _sys1);
+            await JoinAsync(_sys3, _sys1);
 
             var proxy3 = _sys3.ActorOf(
                 ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3).WithRole("singleton")), "proxy3");
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello", probe.Ref);
@@ -104,14 +104,14 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 .WithFallback(_sys1.Settings.Config);
             _sys4 = ActorSystem.Create(_sys1.Name, sys4Config);
 
-            Join(_sys4, _sys3);
+            await JoinAsync(_sys4, _sys3);
 
             // let it stabilize
             Task.Delay(TimeSpan.FromSeconds(5)).Wait();
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello2", probe.Ref);

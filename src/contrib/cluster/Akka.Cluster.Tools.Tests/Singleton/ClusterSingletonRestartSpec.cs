@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -39,15 +40,15 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
         }
 
-        public void Join(ActorSystem from, ActorSystem to)
+        public async Task JoinAsync(ActorSystem from, ActorSystem to)
         {
             from.ActorOf(ClusterSingletonManager.Props(Echo.Props,
                 PoisonPill.Instance,
                 ClusterSingletonManagerSettings.Create(from)), "echo");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
                     Cluster.Get(from).State.Members.Select(x => x.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
@@ -61,17 +62,17 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
+        public async Task Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
         {
-            Join(_sys1, _sys1);
-            Join(_sys2, _sys1);
+            await JoinAsync(_sys1, _sys1);
+            await JoinAsync(_sys2, _sys1);
 
             var proxy2 = _sys2.ActorOf(
                 ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys2)), "proxy2");
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     var probe = CreateTestProbe(_sys2);
                     proxy2.Tell("hello", probe.Ref);
@@ -88,11 +89,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 .WithFallback(_sys1.Settings.Config);
             _sys3 = ActorSystem.Create(_sys1.Name, sys3Config);
 
-            Join(_sys3, _sys2);
+            await JoinAsync(_sys3, _sys2);
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     var probe = CreateTestProbe(_sys2);
                     proxy2.Tell("hello2", probe.Ref);
@@ -102,9 +103,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
 
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.Get(_sys3)
                         .State.Members.Select(x => x.UniqueAddress)
@@ -117,9 +118,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),
                     "proxy3");
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello3", probe.Ref);

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
@@ -24,9 +25,9 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         [Fact]
-        public void TestPublisher_and_TestSubscriber_should_have_all_events_accessible_from_manual_probes()
+        public async Task TestPublisher_and_TestSubscriber_should_have_all_events_accessible_from_manual_probes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreateManualPublisherProbe<int>();
                 var downstream = this.CreateManualSubscriberProbe<int>();

@@ -331,61 +331,61 @@ namespace Akka.DI.TestKit
         }
 
         [Fact]
-        public void DependencyResolver_should_inject_into_normal_mailbox_Actor()
+        public async Task DependencyResolver_should_inject_into_normal_mailbox_Actor()
         {
             var stashActorProps = Sys.DI().Props<DiPerRequestActor>();
             var stashActor = Sys.ActorOf(stashActorProps);
 
             var internalRef = (RepointableActorRef)stashActor;
-            AwaitCondition(() => internalRef.IsStarted);
+            await AwaitConditionAsync(() => internalRef.IsStarted);
 
             Assert.IsType<UnboundedMessageQueue>(internalRef.Underlying.AsInstanceOf<ActorCell>().Mailbox.MessageQueue);
         }
 
         [Fact]
-        public void DependencyResolver_should_inject_into_UnboundedStash_Actor()
+        public async Task DependencyResolver_should_inject_into_UnboundedStash_Actor()
         {
             var stashActorProps = Sys.DI().Props<UnboundedStashActor>();
             var stashActor = Sys.ActorOf(stashActorProps);
 
             var internalRef = (RepointableActorRef)stashActor;
-            AwaitCondition(() => internalRef.IsStarted);
+            await AwaitConditionAsync(() => internalRef.IsStarted);
 
             Assert.IsType<UnboundedDequeMessageQueue>(internalRef.Underlying.AsInstanceOf<ActorCell>().Mailbox.MessageQueue);
         }
 
         [Fact]
-        public void DependencyResolver_should_inject_into_BoundedStash_Actor()
+        public async Task DependencyResolver_should_inject_into_BoundedStash_Actor()
         {
             var stashActorProps = Sys.DI().Props<BoundedStashActor>();
             var stashActor = Sys.ActorOf(stashActorProps);
 
             var internalRef = (RepointableActorRef)stashActor;
-            AwaitCondition(() => internalRef.IsStarted);
+            await AwaitConditionAsync(() => internalRef.IsStarted);
 
             Assert.IsType<BoundedDequeMessageQueue>(internalRef.Underlying.AsInstanceOf<ActorCell>().Mailbox.MessageQueue);
         }
 
         [Fact]
-        public void DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Termination()
+        public async Task DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Termination()
         {
             var disposableActorProps = Sys.DI().Props<DisposableActor>();
             var disposableActor = Sys.ActorOf(disposableActorProps);
 
             var currentDisposeCounter = _disposeCounter.Current;
             Assert.True(disposableActor.GracefulStop(TimeSpan.FromSeconds(1)).Result);
-            AwaitAssert(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
+            await AwaitAssertAsync(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
         }
 
         [Fact]
-        public void DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Restart()
+        public async Task DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Restart()
         {
             var disposableActorProps = Sys.DI().Props<DisposableActor>();
             var disposableActor = Sys.ActorOf(disposableActorProps);
 
             var currentDisposeCounter = _disposeCounter.Current;
             disposableActor.Tell(new DisposableActor.Restart());
-            AwaitAssert(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
+            await AwaitAssertAsync(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
         }
 
         #endregion
