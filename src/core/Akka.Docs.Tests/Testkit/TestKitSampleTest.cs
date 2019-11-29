@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Xunit;
@@ -31,7 +32,7 @@ namespace DocsExamples.Testkit
         private TimeSpan EpsilonValueForWithins => new TimeSpan(0, 0, 1); // https://github.com/akkadotnet/akka.net/issues/2130
 
         [Fact]
-        public void Test()
+        public async Task Test()
         {
             var subject = this.Sys.ActorOf<SomeActor>();
 
@@ -44,12 +45,12 @@ namespace DocsExamples.Testkit
             ExpectMsg("done", TimeSpan.FromSeconds(1));
 
             // the action needs to finish within 3 seconds
-            Within(TimeSpan.FromSeconds(3), () => {
+            await WithinAsync(TimeSpan.FromSeconds(3), async () => {
                 subject.Tell("hello", this.TestActor);
 
                 // This is a demo: would normally use expectMsgEquals().
                 // Wait time is bounded by 3-second deadline above.
-                AwaitCondition(() => probe.HasMessages);
+                await AwaitConditionAsync(() => probe.HasMessages);
 
                 // response must have been enqueued to us before probe
                 ExpectMsg("world", TimeSpan.FromSeconds(0));

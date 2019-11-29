@@ -429,7 +429,7 @@ namespace Akka.Remote.TestKit
             AtStartup();
         }
 
-        public async Task MultiNodeSpecAfterAllAsync()
+        public void MultiNodeSpecAfterAll()
         {
             // wait for all nodes to remove themselves before we shut the conductor down
             if (SelfIndex == 0)
@@ -437,6 +437,7 @@ namespace Akka.Remote.TestKit
                 TestConductor.RemoveNode(_myself);
                 Within(TestConductor.Settings.BarrierTimeout, () =>
                 {
+                    // Method is used in Dispose method, so have to make it synchronous
                     AwaitConditionAsync(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))).Wait();
                 });
 

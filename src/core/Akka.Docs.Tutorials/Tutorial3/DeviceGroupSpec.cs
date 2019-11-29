@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using FluentAssertions;
@@ -83,7 +84,7 @@ namespace Tutorials.Tutorial3
             }
 
             [Fact]
-            public void DeviceGroup_actor_must_be_able_to_list_active_devices_after_one_shuts_down()
+            public async Task DeviceGroup_actor_must_be_able_to_list_active_devices_after_one_shuts_down()
             {
                 var probe = CreateTestProbe();
                 var groupActor = Sys.ActorOf(DeviceGroup.Props("group"));
@@ -106,7 +107,7 @@ namespace Tutorials.Tutorial3
 
                 // using awaitAssert to retry because it might take longer for the groupActor
                 // to see the Terminated, that order is undefined
-                probe.AwaitAssert(() =>
+                await probe.AwaitAssertAsync(() =>
                 {
                     groupActor.Tell(new RequestDeviceList(requestId: 1), probe.Ref);
                     probe.ExpectMsg<ReplyDeviceList>(s => s.RequestId == 1 && s.Ids.Contains("device2"));

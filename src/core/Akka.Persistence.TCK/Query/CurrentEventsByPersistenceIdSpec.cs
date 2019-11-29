@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -85,39 +86,39 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
+        public virtual async Task ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("g1");
 
             pref.Tell(new TestActor.DeleteCommand(3));
-            AwaitAssert(() => ExpectMsg("3-deleted"));
+            await AwaitAssertAsync(() => ExpectMsg("3-deleted"));
 
             var src = queries.CurrentEventsByPersistenceId("g1", 0, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
 
         [Fact]
-        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
+        public virtual async Task ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("g2");
 
             pref.Tell(new TestActor.DeleteCommand(3));
-            AwaitAssert(() => ExpectMsg("3-deleted"));
+            await AwaitAssertAsync(() => ExpectMsg("3-deleted"));
 
             var src = queries.CurrentEventsByPersistenceId("g2", 0, 0);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
 
         [Fact]
-        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
+        public virtual async Task ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("h");
 
             pref.Tell(new TestActor.DeleteCommand(2));
-            AwaitAssert(() => ExpectMsg("2-deleted"));
+            await AwaitAssertAsync(() => ExpectMsg("2-deleted"));
 
             var src = queries.CurrentEventsByPersistenceId("h", 0L, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)

@@ -22,16 +22,16 @@ namespace Akka.Streams.TestKit.Tests
         public static Config UnboundedMailboxConfig { get; } =
             ConfigurationFactory.ParseString(@"akka.actor.default-mailbox.mailbox-type = ""Akka.Dispatch.UnboundedMailbox, Akka""");
 
-        public static void AssertAllStagesStopped(this AkkaSpec spec, Action block, IMaterializer materializer)
+        public static async Task AssertAllStagesStoppedAsync(this AkkaSpec spec, Action block, IMaterializer materializer)
         {
-            AssertAllStagesStopped(spec, () =>
+            await AssertAllStagesStoppedAsync(spec, () =>
             {
                 block();
                 return NotUsed.Instance;
             }, materializer);
         }
 
-        public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
+        public static async Task<T> AssertAllStagesStoppedAsync<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
         {
             var impl = materializer as ActorMaterializerImpl;
             if (impl == null)
@@ -42,12 +42,12 @@ namespace Akka.Streams.TestKit.Tests
             probe.ExpectMsg<StreamSupervisor.StoppedChildren>();
             var result = block();
 
-            probe.Within(TimeSpan.FromSeconds(5), () =>
+            await probe.WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 IImmutableSet<IActorRef> children = ImmutableHashSet<IActorRef>.Empty;
                 try
                 {
-                    probe.AwaitAssert(() =>
+                    await probe.AwaitAssertAsync(() =>
                     {
                         impl.Supervisor.Tell(StreamSupervisor.GetChildren.Instance, probe.Ref);
                         children = probe.ExpectMsg<StreamSupervisor.Children>().Refs;

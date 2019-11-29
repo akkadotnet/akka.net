@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.TestKit.Xunit2;
@@ -24,7 +25,7 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
-        public void Unique_kill_switch_must_control_graph_completion_with_shutdown()
+        public async Task Unique_kill_switch_must_control_graph_completion_with_shutdown()
         {
             #region unique-shutdown
             var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
@@ -39,7 +40,7 @@ namespace DocsExamples.Streams
 
             killSwitch.Shutdown();
 
-            AwaitCondition(() => last.IsCompleted);
+            await AwaitConditionAsync(() => last.IsCompleted);
             #endregion
         }
 
@@ -64,7 +65,7 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
-        public void Shared_kill_switch_must_control_graph_completion_with_shutdown()
+        public async Task Shared_kill_switch_must_control_graph_completion_with_shutdown()
         {
             #region shared-shutdown
             var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
@@ -84,8 +85,8 @@ namespace DocsExamples.Streams
 
             sharedKillSwitch.Shutdown();
 
-            AwaitCondition(() => last.IsCompleted);
-            AwaitCondition(() => delayedLast.IsCompleted);
+            await AwaitConditionAsync(() => last.IsCompleted);
+            await AwaitConditionAsync(() => delayedLast.IsCompleted);
             #endregion
         }
 

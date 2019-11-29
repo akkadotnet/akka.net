@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -32,7 +33,7 @@ namespace Akka.Remote.TestKit.Tests
         private readonly RoleName B = new RoleName("b");
 
         [Fact]
-        public void Controller_must_publish_its_nodes()
+        public async Task Controller_must_publish_its_nodes()
         {
             var c = Sys.ActorOf(Props.Create(() => new Controller(1, new IPEndPoint(IPAddress.Loopback, 0))));
             c.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), TestActor));
@@ -41,7 +42,7 @@ namespace Akka.Remote.TestKit.Tests
             ExpectMsg<ToClient<Done>>();
             c.Tell(Controller.GetNodes.Instance);
             ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 Watch(c);
                 c.Tell(PoisonPill.Instance);

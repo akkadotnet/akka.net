@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Xunit;
@@ -46,7 +47,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void Updates_from_same_node_should_be_possible_to_do_from_two_actors()
+        public async Task Updates_from_same_node_should_be_possible_to_do_from_two_actors()
         {
             var updater1 = ActorOf(Props.Create<Updater>(), "updater1");
             var updater2 = ActorOf(Props.Create<Updater>(), "updater2");
@@ -64,7 +65,7 @@ namespace Akka.DistributedData.Tests
             }
 
             var expected = b.ToImmutable();
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 _replicator.Tell(Dsl.Get(Updater.Key, ReadLocal.Instance));
                 var msg = ExpectMsg<GetSuccess>();
