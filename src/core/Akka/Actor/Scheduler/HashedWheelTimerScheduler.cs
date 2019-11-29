@@ -49,7 +49,6 @@ namespace Akka.Actor
         private long _startTime = 0;
         private long _tick;
         private readonly int _mask;
-        private readonly Stopwatch _sleepWatch = new Stopwatch();
         private readonly CountdownEvent _workerInitialized = new CountdownEvent(1);
         private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new ConcurrentQueue<SchedulerRegistration>();
         private readonly Bucket[] _wheel;
@@ -69,11 +68,17 @@ namespace Akka.Actor
 
         /// <summary>
         /// API for internal usage
+        ///
+        /// This counter stores number of ticks that we expect <see cref="HashedWheelTimerScheduler"/> to be sleeping.
+        /// It is shared between all scheduler instances, and is used for performance testing/debugging.
         /// </summary>
         [InternalApi]
         public static readonly AtomicCounter TotalTicksRequiredToWaitStrict = new AtomicCounter(0);
         /// <summary>
         /// API for internal usage
+        ///
+        /// This counter stores number of ticks that was actually spent by <see cref="HashedWheelTimerScheduler"/> in sleeping state.
+        /// It is shared between all scheduler instances, and is used for performance testing/debugging.
         /// </summary>
         [InternalApi]
         public static readonly AtomicCounter TotalTicksActual = new AtomicCounter(0);
@@ -246,7 +251,7 @@ namespace Akka.Actor
                         return currentTime;
                     }
 
-                    var stopWatch = Stopwatch.StartNew();
+                    var ticksBeforeSleep = HighResMonotonicClock.Ticks;
                     
 #if UNSAFE_THREADING
                     try
@@ -262,26 +267,29 @@ namespace Akka.Actor
                     Sleep(ticksToSleep);
 #endif
                     
-                    stopWatch.Stop();
+                    var ticksAfterSleep = HighResMonotonicClock.Ticks;
                     TotalTicksRequiredToWaitStrict.AddAndGet((int)Math.Min(ticksToSleep, int.MaxValue));
-                    TotalTicksActual.AddAndGet((int)Math.Min(stopWatch.ElapsedTicks, int.MaxValue));
+                    TotalTicksActual.AddAndGet((int)Math.Min(ticksAfterSleep - ticksBeforeSleep, int.MaxValue));
                 }
             }
         }
         
         private void Sleep(long ticks)
         {
+            // If we are going to have _really_ small pause, Thread.Sleep will usually take much longer then that.
+            // So instead of sleeping, we will try to be as accurate as possible
             if (ticks < TicksToUseThreadSpinWait)
             {
-                _sleepWatch.Restart();
-                while (_sleepWatch.ElapsedTicks < ticks)
+                var start = HighResMonotonicClock.Ticks;
+                var ticksSleeping = 0L;
+                while (ticksSleeping < ticks)
                 {
-                    var ticksToWait = (int)(ticks - _sleepWatch.ElapsedTicks);
+                    var ticksToWait = (int)(ticks - ticksSleeping);
                     // SpinWait does not wait for ticks - it is performing iterations instead,
                     // so may need to make this call several times
                     Thread.SpinWait(ticksToWait); 
+                    ticksSleeping = HighResMonotonicClock.Ticks - start;
                 }
-                _sleepWatch.Stop();
             }
             else
             {
