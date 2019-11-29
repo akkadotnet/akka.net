@@ -31,7 +31,7 @@ namespace Akka.TestKit
         /// <param name="assertion">The action.</param>
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
-        [Obsolete("Use async version instead", true)]
+        [Obsolete("Use async version instead")]
         public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(800));
