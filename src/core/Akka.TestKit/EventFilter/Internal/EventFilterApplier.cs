@@ -418,7 +418,7 @@ namespace Akka.TestKit.Internal
             if(expectedOccurrences.HasValue)
             {
                 var expected = expectedOccurrences.GetValueOrDefault();
-                _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout).Wait();
                 return matchedEventHandler.ReceivedCount == expected;
             }
             return true;
