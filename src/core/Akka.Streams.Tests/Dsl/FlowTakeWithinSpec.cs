@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -52,9 +53,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWithin_must_deliver_buffered_elements_OnComplete_before_the_timeout()
+        public async Task A_TakeWithin_must_deliver_buffered_elements_OnComplete_before_the_timeout()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))

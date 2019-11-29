@@ -32,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_partition_to_three_subscribers()
+        public async Task A_Partition_must_partition_to_three_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = Sink.Seq<int>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, ValueTuple.Create, (b, sink1, sink2, sink3) =>
@@ -61,9 +61,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_complete_stage_after_upstream_completes()
+        public async Task A_Partition_must_complete_stage_after_upstream_completes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateSubscriberProbe<string>();
                 var c2 = this.CreateSubscriberProbe<string>();
@@ -90,9 +90,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_remember_first_pull_even_thought_first_element_target_another_out()
+        public async Task A_Partition_must_remember_first_pull_even_thought_first_element_target_another_out()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateSubscriberProbe<int>();
                 var c2 = this.CreateSubscriberProbe<int>();
@@ -120,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_cancel_upstream_when_downstreams_cancel()
+        public async Task A_Partition_must_cancel_upstream_when_downstreams_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p1 = this.CreatePublisherProbe<int>();
                 var c1 = this.CreateSubscriberProbe<int>();
@@ -162,9 +162,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_work_with_merge()
+        public async Task A_Partition_must_work_with_merge()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = Sink.Seq<int>();
                 var input = new[] {5, 2, 9, 1, 1, 1, 10};
@@ -189,9 +189,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_stage_completion_is_waiting_for_pending_output()
+        public async Task A_Partition_must_stage_completion_is_waiting_for_pending_output()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateSubscriberProbe<int>();
                 var c2 = this.CreateSubscriberProbe<int>();
@@ -218,9 +218,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_fail_stage_if_partitioner_outcome_is_out_of_bound()
+        public async Task A_Partition_must_fail_stage_if_partitioner_outcome_is_out_of_bound()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateSubscriberProbe<int>();
 

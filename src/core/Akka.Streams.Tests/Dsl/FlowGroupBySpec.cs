@@ -96,9 +96,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_work_in_the_happy_case()
+        public async Task GroupBy_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(2, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -167,9 +167,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_support_cancelling_substreams()
+        public async Task GroupBy_must_support_cancelling_substreams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(2, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -192,9 +192,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_accept_cancellation_of_master_stream_when_not_consume_anything()
+        public async Task GroupBy_must_accept_cancellation_of_master_stream_when_not_consume_anything()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
@@ -213,9 +213,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_work_with_empty_input_stream()
+        public async Task GroupBy_must_work_with_empty_input_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher =
                     Source.From(new List<int>())
@@ -230,9 +230,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_abort_onError_from_upstream()
+        public async Task GroupBy_must_abort_onError_from_upstream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
@@ -254,9 +254,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_abort_onError_from_upstream_when_substreams_are_running()
+        public async Task GroupBy_must_abort_onError_from_upstream_when_substreams_are_running()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
@@ -286,9 +286,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_fail_stream_when_GroupBy_function_throws()
+        public async Task GroupBy_must_fail_stream_when_GroupBy_function_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
@@ -325,9 +325,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_resume_stream_when_GroupBy_function_throws()
+        public async Task GroupBy_must_resume_stream_when_GroupBy_function_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
@@ -379,9 +379,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_pass_along_early_cancellation()
+        public async Task GroupBy_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var up = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
@@ -401,9 +401,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_fail_when_exceeding_maxSubstreams()
+        public async Task GroupBy_must_fail_when_exceeding_maxSubstreams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var f = Flow.Create<int>().GroupBy(1, x => x % 2).PrefixAndTail(0).MergeSubstreams();
                 var t = ((Flow<int, (IImmutableList<int>, Source<int, NotUsed>), NotUsed>)f)
@@ -428,9 +428,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_emit_subscribe_before_completed()
+        public async Task GroupBy_must_emit_subscribe_before_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = (Source<Source<int, NotUsed>, NotUsed>)Source.Single(0).GroupBy(1, _ => "all")
                     .PrefixAndTail(0)
@@ -449,9 +449,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_work_under_fuzzing_stress_test()
+        public async Task GroupBy_must_work_under_fuzzing_stress_test()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<ByteString>();
                 var subscriber = this.CreateManualSubscriberProbe<IEnumerable<byte>>();
@@ -483,9 +483,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_Work_if_pull_is_exercised_from_both_substream_and_main()
+        public async Task GroupBy_must_Work_if_pull_is_exercised_from_both_substream_and_main()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstreamMaster = this.CreateSubscriberProbe<Source<int, NotUsed>>();
@@ -518,9 +518,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_work_with_random_demand()
+        public async Task GroupBy_must_work_with_random_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1);
                 var materializer = Sys.Materializer(settings);

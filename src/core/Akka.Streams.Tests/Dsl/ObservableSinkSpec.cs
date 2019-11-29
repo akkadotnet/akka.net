@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -55,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_allow_the_same_observer_to_be_subscribed_only_once()
+        public async Task An_ObservableSink_must_allow_the_same_observer_to_be_subscribed_only_once()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = new TestObserver<int>(this);
                 var observable = Source.From(new[] { 1, 2, 3 })
@@ -78,9 +79,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_propagate_events_to_all_observers()
+        public async Task An_ObservableSink_must_propagate_events_to_all_observers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe1 = new TestObserver<int>(this);
                 var probe2 = new TestObserver<int>(this);
@@ -104,9 +105,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void An_ObservableSink_must_propagate_error_to_all_observers()
+        public async Task An_ObservableSink_must_propagate_error_to_all_observers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var e = new Exception("boom");
                 var probe1 = new TestObserver<int>(this);
@@ -129,34 +130,34 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void An_ObservableSink_subscriber_must_be_disposable()
         {
-                var probe = new TestObserver<int>(this);
-                var tuple = Source.Queue<int>(1, OverflowStrategy.DropHead)
-                    .ToMaterialized(Sink.AsObservable<int>(), Keep.Both)
-                    .Run(Materializer);
-                var queue = tuple.Item1;
-                var observable = tuple.Item2;
+            var probe = new TestObserver<int>(this);
+            var tuple = Source.Queue<int>(1, OverflowStrategy.DropHead)
+                .ToMaterialized(Sink.AsObservable<int>(), Keep.Both)
+                .Run(Materializer);
+            var queue = tuple.Item1;
+            var observable = tuple.Item2;
 
-                var d1 = observable.Subscribe(probe);
+            var d1 = observable.Subscribe(probe);
 
-                var t = queue.OfferAsync(1);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
-                t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
+            var t = queue.OfferAsync(1);
+            t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+            t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
 
-                probe.ExpectEvent(1);
+            probe.ExpectEvent(1);
 
-                t = queue.OfferAsync(2);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
-                t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
+            t = queue.OfferAsync(2);
+            t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+            t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
 
-                probe.ExpectEvent(2);
+            probe.ExpectEvent(2);
 
-                d1.Dispose();
+            d1.Dispose();
 
-                t = queue.OfferAsync(3);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+            t = queue.OfferAsync(3);
+            t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
 
-                probe.ExpectCompleted();
-                probe.ExpectNoMsg();
+            probe.ExpectCompleted();
+            probe.ExpectNoMsg();
         }
     }
 }

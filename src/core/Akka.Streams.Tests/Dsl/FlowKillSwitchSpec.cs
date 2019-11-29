@@ -9,6 +9,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -132,9 +133,9 @@ namespace Akka.Streams.Tests.Dsl
         #region shared kill switch
 
         [Fact]
-        public void A_SharedKillSwitch_must_stop_a_stream_if_requested()
+        public async Task A_SharedKillSwitch_must_stop_a_stream_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -156,9 +157,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_fail_a_stream_if_requested()
+        public async Task A_SharedKillSwitch_must_fail_a_stream_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -181,9 +182,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_pass_through_all_elements_unmodified()
+        public async Task A_SharedKillSwitch_must_pass_through_all_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
                 var task = Source.From(Enumerable.Range(1, 100))
@@ -195,9 +196,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
+        public async Task A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -233,9 +234,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
+        public async Task A_SharedKillSwitch_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -272,9 +273,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
+        public async Task A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -304,9 +305,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_abort()
+        public async Task A_SharedKillSwitch_must_ignore_subsequent_aborts_and_shutdowns_after_abort()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
 
@@ -337,9 +338,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_complete_immediately_flows_materialized_after_switch_shutdown()
+        public async Task A_SharedKillSwitch_must_complete_immediately_flows_materialized_after_switch_shutdown()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
                 killSwitch.Shutdown();
@@ -357,9 +358,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_fail_immediately_flows_materialized_after_switch_failure()
+        public async Task A_SharedKillSwitch_must_fail_immediately_flows_materialized_after_switch_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
                 var testException = new TestException("Abort");
@@ -378,9 +379,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
+        public async Task A_SharedKillSwitch_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
                 var task = Source.From(Enumerable.Range(1, 10))
@@ -393,9 +394,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_provide_flows_that_materialize_to_its_owner_KillSwitch()
+        public async Task A_SharedKillSwitch_must_provide_flows_that_materialize_to_its_owner_KillSwitch()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("switch");
                 var t = Source.Maybe<int>()
@@ -413,9 +414,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_not_affect_streams_corresponding_to_another_KillSwitch()
+        public async Task A_SharedKillSwitch_must_not_affect_streams_corresponding_to_another_KillSwitch()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch1 = KillSwitches.Shared("switch");
                 var killSwitch2 = KillSwitches.Shared("switch");
@@ -458,9 +459,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_allow_using_multiple_KillSwitch_in_one_graph()
+        public async Task A_SharedKillSwitch_must_allow_using_multiple_KillSwitch_in_one_graph()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch1 = KillSwitches.Shared("switch");
                 var killSwitch2 = KillSwitches.Shared("switch");
@@ -489,9 +490,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_use_its_name_on_the_flows_it_hands_out()
+        public async Task A_SharedKillSwitch_must_use_its_name_on_the_flows_it_hands_out()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("MySwitchName");
                 killSwitch.ToString().Should().Be("KillSwitch(MySwitchName)");
@@ -504,9 +505,9 @@ namespace Akka.Streams.Tests.Dsl
         #region cancellable kill switch
 
         [Fact]
-        public void A_CancellationToken_flow_must_stop_a_stream_if_requested()
+        public async Task A_CancellationToken_flow_must_stop_a_stream_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
 
@@ -528,9 +529,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_fail_a_stream_if_requested()
+        public async Task A_CancellationToken_flow_must_fail_a_stream_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
 
@@ -552,9 +553,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_pass_through_all_elements_unmodified()
+        public async Task A_CancellationToken_flow_must_pass_through_all_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
                 var task = Source.From(Enumerable.Range(1, 100))
@@ -566,9 +567,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
+        public async Task A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_stops_all_streams_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
 
@@ -604,9 +605,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
+        public async Task A_CancellationToken_flow_must_provide_a_flow_that_if_materialized_multiple_times_with_multiple_types_fails_all_streams_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
 
@@ -642,9 +643,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
+        public async Task A_CancellationToken_flow_must_ignore_subsequent_aborts_and_shutdowns_after_shutdown()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
 
@@ -674,9 +675,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_complete_immediately_flows_materialized_after_switch_shutdown()
+        public async Task A_CancellationToken_flow_must_complete_immediately_flows_materialized_after_switch_shutdown()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
                 cancel.Cancel();
@@ -694,9 +695,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_must_fail_immediately_flows_materialized_after_switch_failure()
+        public async Task A_CancellationToken_flow_must_fail_immediately_flows_materialized_after_switch_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
                 cancel.Cancel();
@@ -714,9 +715,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_CancellationToken_flow_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
+        public async Task A_CancellationToken_flow_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var cancel = new CancellationTokenSource();
                 var task = Source.From(Enumerable.Range(1, 10))

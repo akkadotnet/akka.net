@@ -60,9 +60,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_read_bytes_from_OutputStream()
+        public async Task OutputStreamSource_must_read_bytes_from_OutputStream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
@@ -80,9 +80,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_block_flush_call_until_send_all_buffer_to_downstream()
+        public async Task OutputStreamSource_must_block_flush_call_until_send_all_buffer_to_downstream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
@@ -111,9 +111,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_not_block_flushes_when_buffer_is_empty()
+        public async Task OutputStreamSource_must_not_block_flushes_when_buffer_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
@@ -146,9 +146,9 @@ namespace Akka.Streams.Tests.IO
         }
         
         [Fact]
-        public void OutputStreamSource_must_block_writes_when_buffer_is_full()
+        public async Task OutputStreamSource_must_block_writes_when_buffer_is_full()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = StreamConverters.AsOutputStream()
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
@@ -180,9 +180,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_throw_error_when_writer_after_stream_is_closed()
+        public async Task OutputStreamSource_must_throw_error_when_writer_after_stream_is_closed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = StreamConverters.AsOutputStream()
                         .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
@@ -199,9 +199,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_use_dedicated_default_blocking_io_dispatcher_by_default()
+        public async Task OutputStreamSource_must_use_dedicated_default_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
                 var materializer = sys.Materializer();
@@ -224,9 +224,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSource_must_throw_IOException_when_writing_to_the_stream_after_the_subscriber_has_cancelled_the_reactive_stream()
+        public async Task OutputStreamSource_must_throw_IOException_when_writing_to_the_stream_after_the_subscriber_has_cancelled_the_reactive_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sourceProbe = CreateTestProbe();
                 var t =

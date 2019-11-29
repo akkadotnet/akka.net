@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -31,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_immediately_completed_publisher()
+        public async Task UnzipWith_must_work_with_immediately_completed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscribers = Setup(TestPublisher.Empty<int>());
                 ValidateSubscriptionAndComplete(subscribers);
@@ -41,9 +42,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_delayed_completed_publisher()
+        public async Task UnzipWith_must_work_with_delayed_completed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscribers = Setup(TestPublisher.LazyEmpty<int>());
                 ValidateSubscriptionAndComplete(subscribers);
@@ -51,9 +52,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_two_immediately_failed_publisher()
+        public async Task UnzipWith_must_work_with_two_immediately_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscribers = Setup(TestPublisher.Error<int>(TestException));
                 ValidateSubscriptionAndError(subscribers);
@@ -61,9 +62,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_two_delayed_failed_publisher()
+        public async Task UnzipWith_must_work_with_two_delayed_failed_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscribers = Setup(TestPublisher.LazyError<int>(TestException));
                 ValidateSubscriptionAndError(subscribers);
@@ -71,9 +72,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_in_the_happy_case()
+        public async Task UnzipWith_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
@@ -127,9 +128,9 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void UnzipWith_must_work_in_the_sad_case()
+        public async Task UnzipWith_must_work_in_the_sad_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var leftProbe = this.CreateManualSubscriberProbe<int>();
                 var rightProbe = this.CreateManualSubscriberProbe<string>();
@@ -174,9 +175,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
+        public async Task UnzipWith_must_unzipWith_expanded_Person_unapply_3_outputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe0 = this.CreateManualSubscriberProbe<string>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();
@@ -214,11 +215,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void UnzipWith_must_work_with_up_to_6_outputs()
+        public async Task UnzipWith_must_work_with_up_to_6_outputs()
         {
             // the jvm version uses 20 outputs but we have only 7 so changed this spec a little bit
 
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe0 = this.CreateManualSubscriberProbe<int>();
                 var probe1 = this.CreateManualSubscriberProbe<string>();

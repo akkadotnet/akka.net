@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -65,9 +66,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Where_must_continue_if_error()
+        public async Task A_Where_must_continue_if_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ex = new TestException("Test");
 

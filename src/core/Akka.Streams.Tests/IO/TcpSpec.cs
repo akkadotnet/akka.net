@@ -34,9 +34,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_work_in_the_happy_case()
+        public async Task Outgoing_TCP_stream_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
 
@@ -105,9 +105,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip="FIXME .net core / linux")]
-        public void Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
+        public async Task Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var task =
@@ -127,9 +127,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
+        public async Task Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
                 var server = new Server(this);
@@ -165,9 +165,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_work_when_remote_closes_write_then_client_closes_write()
+        public async Task Outgoing_TCP_stream_must_work_when_remote_closes_write_then_client_closes_write()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
                 var server = new Server(this);
@@ -201,9 +201,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip = "FIXME: actually this is about half-open connection. No other .NET socket lib supports that")]
-        public void Outgoing_TCP_stream_must_work_when_client_closes_read_then_client_closes_write()
+        public async Task Outgoing_TCP_stream_must_work_when_client_closes_read_then_client_closes_write()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
                 var server = new Server(this);
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.IO
                 tcpWriteProbe.Close();
 
                 // Need a write on the server side to detect the close event
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     serverConnection.Write(testData);
                     serverConnection.ExpectClosed(c => c.IsErrorClosed, TimeSpan.FromMilliseconds(500));
@@ -243,9 +243,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_work_when_client_closes_read_then_server_closes_write_then_client_closes_write()
+        public async Task Outgoing_TCP_stream_must_work_when_client_closes_read_then_server_closes_write_then_client_closes_write()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
                 var server = new Server(this);
@@ -280,9 +280,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_shut_everything_down_if_client_signals_error()
+        public async Task Outgoing_TCP_stream_must_shut_everything_down_if_client_signals_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
                 var server = new Server(this);
@@ -314,9 +314,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_shut_everything_down_if_client_signals_error_after_remote_has_closed_write()
+        public async Task Outgoing_TCP_stream_must_shut_everything_down_if_client_signals_error_after_remote_has_closed_write()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
                 var server = new Server(this);
@@ -349,9 +349,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_shut_down_both_streams_when_connection_is_aborted_remotely()
+        public async Task Outgoing_TCP_stream_must_shut_down_both_streams_when_connection_is_aborted_remotely()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 // Client gets a PeerClosed event and does not know that the write side is also closed
                 var server = new Server(this);
@@ -415,9 +415,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_properly_full_close_if_requested()
+        public async Task Outgoing_TCP_stream_must_properly_full_close_if_requested()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ByteString>(),
@@ -640,9 +640,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip = "FIXME: unexpected ErrorClosed")]
-        public void Tcp_listen_stream_must_not_shut_down_connections_after_the_connection_stream_cancelled()
+        public async Task Tcp_listen_stream_must_not_shut_down_connections_after_the_connection_stream_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var thousandByteStrings = Enumerable.Range(0, 1000)
                     .Select(_ => ByteString.FromBytes(new byte[] { 0 }))
@@ -676,9 +676,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact(Skip="FIXME")]
-        public void Tcp_listen_stream_must_shut_down_properly_even_if_some_accepted_connection_Flows_have_not_been_subscribed_to ()
+        public async Task Tcp_listen_stream_must_shut_down_properly_even_if_some_accepted_connection_Flows_have_not_been_subscribed_to ()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var firstClientConnected = new TaskCompletionSource<NotUsed>();

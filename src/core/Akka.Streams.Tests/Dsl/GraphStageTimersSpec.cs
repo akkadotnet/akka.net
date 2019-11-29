@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private SideChannel SetupIsolatedStage()
+        private async Task<SideChannel> SetupIsolatedStage()
         {
             var channel = new SideChannel();
             var stopPromise =
@@ -41,14 +41,14 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.Ignore<int>())
                     .Run(Materializer);
             channel.StopPromise = stopPromise;
-            AwaitCondition(()=>channel.IsReady);
+            await AwaitConditionAsync(()=>channel.IsReady);
             return channel;
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_receive_single_shot_timer()
+        public async Task GraphStage_timer_support_must_receive_single_shot_timer()
         {
-            var driver = SetupIsolatedStage();
+            var driver = await SetupIsolatedStage();
             Within(TimeSpan.FromSeconds(2), () =>
             {
                 Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
@@ -63,9 +63,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_resubmit_single_shot_timer()
+        public async Task GraphStage_timer_support_must_resubmit_single_shot_timer()
         {
-            var driver = SetupIsolatedStage();
+            var driver = await SetupIsolatedStage();
             Within(TimeSpan.FromSeconds(2.5), () =>
             {
                 Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
@@ -81,9 +81,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_correctly_cancel_a_named_timer()
+        public async Task GraphStage_timer_support_must_correctly_cancel_a_named_timer()
         {
-            var driver = SetupIsolatedStage();
+            var driver = await SetupIsolatedStage();
             driver.Tell(TestCancelTimer.Instance);
             Within(TimeSpan.FromMilliseconds(500), () => ExpectMsg<TestCancelTimerAck>());
             Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () => ExpectMsg(new Tick(1)));
@@ -92,9 +92,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_receive_and_cancel_a_repeated_timer()
+        public async Task GraphStage_timer_support_must_receive_and_cancel_a_repeated_timer()
         {
-            var driver = SetupIsolatedStage();
+            var driver = await SetupIsolatedStage();
             driver.Tell(TestRepeatedTimer.Instance);
             var seq = ReceiveWhile(TimeSpan.FromSeconds(2), o => (Tick)o);
             seq.Should().HaveCount(5);
@@ -103,9 +103,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
+        public async Task GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -125,9 +125,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
+        public async Task GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var exception = new TestException("Expected exception to the rule");
                 var upstream = this.CreatePublisherProbe<int>();

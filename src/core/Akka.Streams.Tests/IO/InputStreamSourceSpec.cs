@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -175,9 +176,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void InputStreamSource_must_read_bytes_from_InputStream()
+        public async Task InputStreamSource_must_read_bytes_from_InputStream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] {"a", "b", "c"}))
                     .RunWith(Sink.First<ByteString>(), _materializer);
@@ -188,9 +189,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void InputStreamSource_must_emit_as_soon_as_read()
+        public async Task InputStreamSource_must_emit_as_soon_as_read()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var latch = new TestLatch(1);
                 var probe = StreamConverters.FromInputStream(() => new EmittedInputStream(latch), chunkSize: 1)

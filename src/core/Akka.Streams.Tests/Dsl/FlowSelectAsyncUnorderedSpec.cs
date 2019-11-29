@@ -39,9 +39,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
@@ -111,9 +111,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -136,9 +136,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var latch = CreateTestLatch();
                 var done = Source.From(Enumerable.Range(1, 5))
@@ -168,9 +168,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_error_from_SelectAsyncUnordered()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_signal_error_from_SelectAsyncUnordered()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -195,11 +195,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_resume_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                this.AssertAllStagesStopped(() =>
+                await this.AssertAllStagesStoppedAsync(() =>
                 {
                     Source.From(Enumerable.Range(1, 5))
                         .SelectAsyncUnordered(4, n => Task.Run(() =>
@@ -218,9 +218,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futures = new[]
                 {
@@ -242,9 +242,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
                     .SelectAsyncUnordered(1, n => Task.Run(() =>
@@ -308,9 +308,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_handle_cancel_properly()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_handle_cancel_properly()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var pub = this.CreateManualPublisherProbe<int>();
                 var sub = this.CreateManualSubscriberProbe<int>();
@@ -329,9 +329,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy on AzureDevOps")]
-        public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
+        public async Task A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();

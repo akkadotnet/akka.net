@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -31,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_InitialDelay_must_work_with_zero_delay()
+        public async Task Flow_InitialDelay_must_work_with_zero_delay()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 10))
                     .InitialDelay(TimeSpan.Zero)
@@ -45,9 +46,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_InitialDelay_must_delay_elements_by_the_specified_time_but_not_more()
+        public async Task Flow_InitialDelay_must_delay_elements_by_the_specified_time_but_not_more()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 10))
                     .InitialDelay(TimeSpan.FromSeconds(2))
@@ -58,9 +59,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_InitialDelay_must_properly_ignore_timer_while_backpressured()
+        public async Task Flow_InitialDelay_must_properly_ignore_timer_while_backpressured()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))

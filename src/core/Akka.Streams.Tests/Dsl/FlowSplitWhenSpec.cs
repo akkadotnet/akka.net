@@ -85,9 +85,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_work_in_the_happy_case()
+        public async Task SplitWhen_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(elementCount: 4, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -119,9 +119,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_not_emit_substreams_if_the_parent_stream_is_empty()
+        public async Task SplitWhen_must_not_emit_substreams_if_the_parent_stream_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task =
                     Source.Empty<int>()
@@ -137,9 +137,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_work_when_first_element_is_split_by()
+        public async Task SplitWhen_must_work_when_first_element_is_split_by()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(1, 3, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -158,9 +158,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_support_cancelling_substreams()
+        public async Task SplitWhen_must_support_cancelling_substreams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(5, 8, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -183,9 +183,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_support_cancelling_both_master_and_substream()
+        public async Task SplitWhen_must_support_cancelling_both_master_and_substream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var inputs = this.CreatePublisherProbe<int>();
 
@@ -253,9 +253,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_support_cancelling_the_master_stream()
+        public async Task SplitWhen_must_support_cancelling_the_master_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(5, 8, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
@@ -274,9 +274,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_fail_stream_when_SplitWhen_function_throws()
+        public async Task SplitWhen_must_fail_stream_when_SplitWhen_function_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
@@ -314,9 +314,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_work_with_single_element_splits()
+        public async Task SplitWhen_must_work_with_single_element_splits()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 100))
                     .SplitWhen(_ => true)
@@ -330,9 +330,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_fail_substream_if_materialized_twice()
+        public async Task SplitWhen_must_fail_substream_if_materialized_twice()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.Single(1).SplitWhen(_ => true).Lift()
                     .SelectAsync(1, source =>
@@ -352,9 +352,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_fail_stream_if_substream_not_materialized_in_time()
+        public async Task SplitWhen_must_fail_stream_if_substream_not_materialized_in_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var tightTimeoutMaterializer = ActorMaterializer.Create(Sys,
                     ActorMaterializerSettings.Create(Sys)
@@ -383,18 +383,18 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Supervision is not supported fully by GraphStages yet")]
-        public void SplitWhen_must_resume_stream_when_splitWhen_function_throws()
+        public async Task SplitWhen_must_resume_stream_when_splitWhen_function_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
 
             }, Materializer);
         }
 
         [Fact]
-        public void SplitWhen_must_pass_along_early_cancellation()
+        public async Task SplitWhen_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var up = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<Source<int, NotUsed>>();
@@ -414,9 +414,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_support_eager_cancellation_of_master_stream_on_cancelling_substreams()
+        public async Task SplitWhen_must_support_eager_cancellation_of_master_stream_on_cancelling_substreams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 WithSubstreamsSupport(5, 8, SubstreamCancelStrategy.Propagate,
                       (masterSubscriber, masterSubscription, expectSubFlow) =>

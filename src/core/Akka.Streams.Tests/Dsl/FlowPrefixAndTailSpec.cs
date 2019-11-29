@@ -40,9 +40,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void PrefixAndTail_must_work_on_empty_input()
+        public async Task PrefixAndTail_must_work_on_empty_input()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.Empty<int>().PrefixAndTail(10).RunWith(futureSink, Materializer);
@@ -55,9 +55,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_work_on_short_inputs()
+        public async Task PrefixAndTail_must_work_on_short_inputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(new [] {1,2,3}).PrefixAndTail(10).RunWith(futureSink, Materializer);
@@ -71,9 +71,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_work_on_longer_inputs()
+        public async Task PrefixAndTail_must_work_on_longer_inputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(5).RunWith(futureSink, Materializer);
@@ -90,9 +90,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_zero_take_count()
+        public async Task PrefixAndTail_must_handle_zero_take_count()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(0).RunWith(futureSink, Materializer);
@@ -108,9 +108,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_negative_take_count()
+        public async Task PrefixAndTail_must_handle_negative_take_count()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(-1).RunWith(futureSink, Materializer);
@@ -126,9 +126,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_work_if_size_of_tak_is_equal_to_stream_size()
+        public async Task PrefixAndTail_must_work_if_size_of_tak_is_equal_to_stream_size()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1,10)).PrefixAndTail(10).RunWith(futureSink, Materializer);
@@ -142,9 +142,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_throw_if_tail_is_attempted_to_be_materialized_twice()
+        public async Task PrefixAndTail_must_throw_if_tail_is_attempted_to_be_materialized_twice()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, Materializer);
@@ -166,9 +166,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_signal_error_if_substream_has_been_not_subscribed_in_time()
+        public async Task PrefixAndTail_must_signal_error_if_substream_has_been_not_subscribed_in_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ms = 300;
 
@@ -195,9 +195,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_not_fail_the_stream_if_substream_has_not_been_subscribed_in_time_and_configured_subscription_timeout_is_noop()
+        public async Task PrefixAndTail_must_not_fail_the_stream_if_substream_has_not_been_subscribed_in_time_and_configured_subscription_timeout_is_noop()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var settings = ActorMaterializerSettings.Create(Sys)
                     .WithSubscriptionTimeoutSettings(
@@ -220,9 +220,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_shut_down_main_stage_if_substream_is_empty_even_when_not_subscribed()
+        public async Task PrefixAndTail_must_shut_down_main_stage_if_substream_is_empty_even_when_not_subscribed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var futureSink = NewHeadSink;
                 var fut = Source.Single(1).PrefixAndTail(1).RunWith(futureSink, Materializer);
@@ -232,9 +232,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_OnError_when_no_substream_is_open()
+        public async Task PrefixAndTail_must_handle_OnError_when_no_substream_is_open()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
@@ -258,9 +258,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_OnError_when_substream_is_open()
+        public async Task PrefixAndTail_must_handle_OnError_when_substream_is_open()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
@@ -292,9 +292,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_master_stream_cancellation()
+        public async Task PrefixAndTail_must_handle_master_stream_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
@@ -318,9 +318,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_substream_cancellation()
+        public async Task PrefixAndTail_must_handle_substream_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
                 var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
@@ -352,9 +352,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_pass_along_early_cancellation()
+        public async Task PrefixAndTail_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var up = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();

@@ -36,9 +36,9 @@ namespace Akka.Streams.Tests.Dsl
         //
 
         [Fact]
-        public void A_restart_with_backoff_source_should_run_normally()
+        public async Task A_restart_with_backoff_source_should_run_normally()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -60,9 +60,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_restart_on_completion()
+        public async Task A_restart_with_backoff_source_should_restart_on_completion()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -84,9 +84,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_restart_on_failure()
+        public async Task A_restart_with_backoff_source_should_restart_on_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -114,9 +114,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_backoff_before_restart()
+        public async Task A_restart_with_backoff_source_should_backoff_before_restart()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -141,9 +141,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        public async Task A_restart_with_backoff_source_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -177,9 +177,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_cancel_the_currently_running_source_when_cancelled()
+        public async Task A_restart_with_backoff_source_should_cancel_the_currently_running_source_when_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tcs = new TaskCompletionSource<Done>();
@@ -206,9 +206,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_not_restart_the_source_when_cancelled_while_backing_off()
+        public async Task A_restart_with_backoff_source_should_not_restart_the_source_when_cancelled_while_backing_off()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -229,9 +229,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_stop_on_completion_if_it_should_only_be_restarted_in_failures()
+        public async Task A_restart_with_backoff_source_should_stop_on_completion_if_it_should_only_be_restarted_in_failures()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.OnFailuresWithBackoff(() =>
@@ -262,9 +262,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_restart_on_failure_when_only_due_to_failures_should_be_restarted()
+        public async Task A_restart_with_backoff_source_should_restart_on_failure_when_only_due_to_failures_should_be_restarted()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.OnFailuresWithBackoff(() =>
@@ -292,9 +292,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
+        public async Task A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -314,9 +314,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_source_should_reset_maxRestarts_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        public async Task A_restart_with_backoff_source_should_reset_maxRestarts_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
@@ -350,9 +350,9 @@ namespace Akka.Streams.Tests.Dsl
         //
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_run_normally()
+        public async Task A_restart_with_backoff_sink_should_run_normally()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tcs = new TaskCompletionSource<IEnumerable<string>>();
@@ -377,9 +377,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_restart_on_cancellation()
+        public async Task A_restart_with_backoff_sink_should_restart_on_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -410,9 +410,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_backoff_before_restart()
+        public async Task A_restart_with_backoff_sink_should_backoff_before_restart()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -443,9 +443,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
+        public async Task A_restart_with_backoff_sink_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -491,9 +491,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_sink_should_not_restart_the_sink_when_completed_while_backing_off()
+        public async Task A_restart_with_backoff_sink_should_not_restart_the_sink_when_completed_while_backing_off()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tuple = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -588,9 +588,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_flow_should_run_normally()
+        public async Task A_restart_with_backoff_flow_should_run_normally()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var created = new AtomicCounter(0);
                 var tuple = this.SourceProbe<string>().ViaMaterialized(RestartFlow.WithBackoff(() =>
@@ -734,9 +734,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_restart_with_backoff_flow_should_continue_running_flow_out_port_after_in_has_been_sent_completion()
+        public async Task A_restart_with_backoff_flow_should_continue_running_flow_out_port_after_in_has_been_sent_completion()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var tuple = SetupFlow(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(40));
                 var created = tuple.Item1;

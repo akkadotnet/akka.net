@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Foreach_must_call_the_procedure_for_each_element()
+        public async Task A_Foreach_must_call_the_procedure_for_each_element()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3)).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(
                     task =>
@@ -47,9 +48,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Foreach_must_complete_the_future_for_an_empty_stream()
+        public async Task A_Foreach_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>().RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(
                     task =>
@@ -62,9 +63,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Foreach_must_yield_the_first_error()
+        public async Task A_Foreach_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(task =>
@@ -80,9 +81,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Foreach_must_complete_future_with_failure_when_function_throws()
+        public async Task A_Foreach_must_complete_future_with_failure_when_function_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var error = new TestException("test");
                 var future = Source.Single(1).RunForeach(_ =>

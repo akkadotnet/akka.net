@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
@@ -84,9 +85,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sliding_must_behave_just_like_collections_sliding_with_step_lower_than_window()
+        public async Task Sliding_must_behave_just_like_collections_sliding_with_step_lower_than_window()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var random = new Random();
                 var gen = Enumerable.Range(1, 1000)
@@ -101,9 +102,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sliding_must_behave_just_like_collections_sliding_with_step_equals_window()
+        public async Task Sliding_must_behave_just_like_collections_sliding_with_step_equals_window()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var random = new Random();
                 var gen = Enumerable.Range(1, 1000)
@@ -118,9 +119,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sliding_must_behave_just_like_collections_sliding_with_step_greater_than_window()
+        public async Task Sliding_must_behave_just_like_collections_sliding_with_step_greater_than_window()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var random = new Random();
                 var gen = Enumerable.Range(1, 1000)
@@ -135,9 +136,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sliding_must_work_with_empty_sources()
+        public async Task Sliding_must_work_with_empty_sources()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>().Sliding(1).RunForeach(ints => TestActor.Tell(ints), Materializer)
                     .ContinueWith(t =>

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SkipWhile_must_skip_while_predicate_is_true()
+        public async Task A_SkipWhile_must_skip_while_predicate_is_true()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 4))
                     .SkipWhile(x => x < 3)
@@ -42,9 +43,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SkipWhile_must_complete_the_future_for_an_empty_stream()
+        public async Task A_SkipWhile_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .SkipWhile(x => x < 2)
@@ -55,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SkipWhile_must_continue_if_error()
+        public async Task A_SkipWhile_must_continue_if_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>
                 {
@@ -73,9 +74,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SkipWhile_must_restart_with_strategy()
+        public async Task A_SkipWhile_must_restart_with_strategy()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>
                 {

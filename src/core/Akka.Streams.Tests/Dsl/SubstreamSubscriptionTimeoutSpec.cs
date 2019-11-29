@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
@@ -40,9 +41,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
+        public async Task GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
                 var publisherProbe = this.CreatePublisherProbe<int>();
@@ -88,9 +89,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_and_SplitWhen_must_timeout_and_stop_groupBy_parent_actor_if_none_of_the_substreams_are_actually_consumed()
+        public async Task GroupBy_and_SplitWhen_must_timeout_and_stop_groupBy_parent_actor_if_none_of_the_substreams_are_actually_consumed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
                 var publisherProbe = this.CreatePublisherProbe<int>();

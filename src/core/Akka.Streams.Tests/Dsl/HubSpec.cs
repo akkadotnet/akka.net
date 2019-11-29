@@ -33,9 +33,9 @@ namespace Akka.Streams.Tests.Dsl
         public ActorMaterializer Materializer { get; }
 
         [Fact]
-        public void MergeHub_must_work_in_the_happy_case()
+        public async Task MergeHub_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(20).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var sink = t.Item1;
@@ -48,9 +48,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_notify_new_producers_if_consumer_cancels_before_first_producer()
+        public async Task MergeHub_must_notify_new_producers_if_consumer_cancels_before_first_producer()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sink = Sink.Cancelled<int>().RunWith(MergeHub.Source<int>(16), Materializer);
                 var upstream = this.CreatePublisherProbe<int>();
@@ -62,9 +62,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_notify_existing_producers_if_consumer_cancels_after_a_few_elements()
+        public async Task MergeHub_must_notify_existing_producers_if_consumer_cancels_after_a_few_elements()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var sink = t.Item1;
@@ -81,9 +81,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_notify_new_producers_if_consumer_cancels_after_a_few_elements()
+        public async Task MergeHub_must_notify_new_producers_if_consumer_cancels_after_a_few_elements()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(5).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var sink = t.Item1;
@@ -104,9 +104,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_respect_the_buffer_size()
+        public async Task MergeHub_must_respect_the_buffer_size()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var downstream = this.CreateManualSubscriberProbe<int>();
                 var sink = Sink.FromSubscriber(downstream).RunWith(MergeHub.Source<int>(3), Materializer);
@@ -162,9 +162,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_work_with_long_streams()
+        public async Task MergeHub_must_work_with_long_streams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(Materializer);
@@ -179,9 +179,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_work_with_long_streams_when_buffer_size_is_1()
+        public async Task MergeHub_must_work_with_long_streams_when_buffer_size_is_1()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(1).Take(20000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(Materializer);
@@ -196,9 +196,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_work_with_long_streams_when_consumer_is_slower()
+        public async Task MergeHub_must_work_with_long_streams_when_consumer_is_slower()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16)
                     .Take(2000)
@@ -217,9 +217,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_work_with_long_streams_if_one_of_the_producers_is_slower()
+        public async Task MergeHub_must_work_with_long_streams_if_one_of_the_producers_is_slower()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(2000).ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(Materializer);
@@ -236,9 +236,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_work_with_different_producers_separated_over_time()
+        public async Task MergeHub_must_work_with_different_producers_separated_over_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var downstream = this.CreateSubscriberProbe<IEnumerable<int>>();
                 var sink = MergeHub.Source<int>(16)
@@ -256,9 +256,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeHub_must_keep_working_even_if_one_of_the_producers_fail()
+        public async Task MergeHub_must_keep_working_even_if_one_of_the_producers_fail()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(Materializer);
                 var sink = t.Item1;
@@ -275,9 +275,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_work_in_the_happy_case()
+        public async Task BroadcastHub_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(Enumerable.Range(1, 10)).RunWith(BroadcastHub.Sink<int>(8), Materializer);
                 source.RunWith(Sink.Seq<int>(), Materializer)
@@ -287,9 +287,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
+        public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -312,9 +312,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
+        public async Task BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -337,9 +337,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_ensure_that_subsequent_consumers_see_subsequent_elements_without_gap()
+        public async Task BroadcastHub_must_ensure_that_subsequent_consumers_see_subsequent_elements_without_gap()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(Enumerable.Range(1, 20)).RunWith(BroadcastHub.Sink<int>(8), Materializer);
                 source.Take(10)
@@ -354,9 +354,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
+        public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -380,9 +380,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
+        public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -406,9 +406,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
+        public async Task BroadcastHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -436,9 +436,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
+        public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
@@ -461,9 +461,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_be_able_to_implement_a_keep_dropping_if_unsubscribed_policy_with_a_simple_SinkIgnore()
+        public async Task BroadcastHub_must_be_able_to_implement_a_keep_dropping_if_unsubscribed_policy_with_a_simple_SinkIgnore()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var killSwitch = KillSwitches.Shared("test-switch");
                 var source = Source.From(Enumerable.Range(1, int.MaxValue))
@@ -514,9 +514,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_properly_signal_error_to_consumers()
+        public async Task BroadcastHub_must_properly_signal_error_to_consumers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var source = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(8), Materializer);
@@ -544,9 +544,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
+        public async Task BroadcastHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.Empty<int>().RunWith(BroadcastHub.Sink<int>(8), Materializer);
                 // Wait enough so the Hub gets the completion. This is racy, but this is fine because both
@@ -558,9 +558,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_properly_signal_error_to_consumers_arriving_after_producer_finished()
+        public async Task BroadcastHub_must_properly_signal_error_to_consumers_arriving_after_producer_finished()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.Failed<int>(new TestException("Fail!"))
                     .RunWith(BroadcastHub.Sink<int>(8), Materializer);
@@ -574,9 +574,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_work_in_the_happy_case_with_one_stream()
+        public async Task PartitionHub_must_work_in_the_happy_case_with_one_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var items = Enumerable.Range(1, 10).ToList();
                 var source = Source.From(items)
@@ -587,9 +587,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_work_in_the_happy_case_with_two_streams()
+        public async Task PartitionHub_must_work_in_the_happy_case_with_two_streams()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(Enumerable.Range(0, 10))
                     .RunWith(PartitionHub.Sink<int>((size, e) => e % size, 2, 8), Materializer);
@@ -603,9 +603,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_be_able_to_use_as_rount_robin_router()
+        public async Task PartitionHub_must_be_able_to_use_as_rount_robin_router()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(Enumerable.Range(0, 10))
                     .RunWith(PartitionHub.StatefulSink<int>(() =>
@@ -625,9 +625,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_be_able_to_use_as__sticky_session_rount_robin_router()
+        public async Task PartitionHub_must_be_able_to_use_as__sticky_session_rount_robin_router()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(new[] { "usr-1", "usr-2", "usr-1", "usr-3" })
                     .RunWith(PartitionHub.StatefulSink<string>(() =>
@@ -652,9 +652,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_be_able_to_use_as_fastest_consumer_router()
+        public async Task PartitionHub_must_be_able_to_use_as_fastest_consumer_router()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var items = Enumerable.Range(0, 999).ToList();
                 var source = Source.From(items)
@@ -670,9 +670,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_route_evenly()
+        public async Task PartitionHub_must_route_evenly()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 8), Keep.Both)
@@ -715,9 +715,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_route_unevenly()
+        public async Task PartitionHub_must_route_unevenly()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => (e % 3) % 2, 2, 8), Keep.Both)
@@ -756,9 +756,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_backpressure()
+        public async Task PartitionHub_must_backpressure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = this.SourceProbe<int>()
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => 0, 2, 4), Keep.Both)
@@ -790,9 +790,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
+        public async Task PartitionHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.Maybe<int>().ConcatMaterialized(Source.From(Enumerable.Range(1, 19)), Keep.Left)
                     .ToMaterialized(PartitionHub.Sink<int>((size, e) => e % size, 2, 1), Keep.Both)
@@ -824,9 +824,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_properly_signal_error_to_consumer()
+        public async Task PartitionHub_must_properly_signal_error_to_consumer()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var source = Source.FromPublisher(upstream)
@@ -857,9 +857,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
+        public async Task PartitionHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.Empty<int>().RunWith(PartitionHub.Sink<int>((s, e) => e % s, 0), Materializer);
                 // Wait enough so the Hub gets the completion. This is racy, but this is fine because both
@@ -871,7 +871,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_remeber_completion_for_materialisations_after_completion()
+        public async Task PartitionHub_must_remeber_completion_for_materialisations_after_completion()
         {
             var t = this.SourceProbe<NotUsed>().ToMaterialized(PartitionHub.Sink<NotUsed>((s, e) => 0, 0), Keep.Both)
                 .Run(Materializer);
@@ -893,9 +893,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PartitionHub_must_properly_signal_error_to_consumer_arriving_after_producer_finished()
+        public async Task PartitionHub_must_properly_signal_error_to_consumer_arriving_after_producer_finished()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var failure = new TestException("Fail!");
                 var source = Source.Failed<int>(failure).RunWith(PartitionHub.Sink<int>((s, e) => 0, 0), Materializer);

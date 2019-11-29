@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_when_stream_is_completed()
+        public async Task A_WatchTermination_must_complete_the_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t =
                     Source.From(Enumerable.Range(1, 4))
@@ -47,9 +48,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
+        public async Task A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t =
                     Source.From(Enumerable.Range(1, 4))
@@ -66,9 +67,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_fail_the_future_when_stream_is_failed()
+        public async Task A_WatchTermination_must_fail_the_future_when_stream_is_failed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ex = new Exception("Stream failed.");
                 var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
@@ -81,9 +82,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_complete_the_future_for_an_empty_stream()
+        public async Task A_WatchTermination_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t =
                     Source.Empty<int>()
@@ -98,9 +99,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "We need a way to combine multiple sources with different materializer types")]
-        public void A_WatchTermination_must_complete_the_future_for_graph()
+        public async Task A_WatchTermination_must_complete_the_future_for_graph()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 //var first = this.SourceProbe<int>().WatchTermination(Keep.Both);
                 //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<NotUsed, (TestPublisher.Probe<int>, Task)>(_ => null));

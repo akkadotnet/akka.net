@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
@@ -164,9 +165,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSink_must_write_bytes_to_void_OutputStream()
+        public async Task OutputStreamSink_must_write_bytes_to_void_OutputStream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateTestProbe();
                 var datas = new List<ByteString>
@@ -187,9 +188,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSink_must_close_underlying_stream_when_error_received()
+        public async Task OutputStreamSink_must_close_underlying_stream_when_error_received()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateTestProbe();
                 Source.Failed<ByteString>(new Exception("Boom!"))
@@ -200,9 +201,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void OutputStreamSink_must_close_underlying_stream_when_completion_received()
+        public async Task OutputStreamSink_must_close_underlying_stream_when_completion_received()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateTestProbe();
                 Source.Empty<ByteString>()

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -26,9 +27,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_on_normal_completion()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_on_normal_completion()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
@@ -45,9 +46,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_yield_the_first_error()
+        public async Task A_Flow_with_OnComplete_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
@@ -64,9 +65,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_for_an_empty_stream()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();
@@ -82,9 +83,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_OnComplete_must_invoke_callback_after_transform_and_foreach_steps()
+        public async Task A_Flow_with_OnComplete_must_invoke_callback_after_transform_and_foreach_steps()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = this.CreateManualPublisherProbe<int>();

@@ -44,9 +44,9 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void Zip_must_work_in_the_happy_case()
+        public async Task Zip_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualSubscriberProbe<(int, string)>();
 
@@ -77,9 +77,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_is_available_but_other_already_completed()
+        public async Task Zip_must_complete_if_one_side_is_available_but_other_already_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
@@ -108,9 +108,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_complete_even_if_no_pending_demand()
+        public async Task Zip_must_complete_even_if_no_pending_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
@@ -142,9 +142,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_complete_if_both_sides_complete_before_requested_with_elements_pending_2()
+        public async Task Zip_must_complete_if_both_sides_complete_before_requested_with_elements_pending_2()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
@@ -175,9 +175,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending()
+        public async Task Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
@@ -209,9 +209,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending_2()
+        public async Task Zip_must_complete_if_one_side_complete_before_requested_with_elements_pending_2()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
@@ -245,9 +245,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndComplete();
@@ -258,9 +258,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndComplete();
@@ -271,9 +271,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
@@ -284,9 +284,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Zip_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+        public async Task Zip_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(SoonToFailPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());

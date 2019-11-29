@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -29,9 +30,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void InitialTimeout_must_pass_through_elements_unmodified()
+        public async Task InitialTimeout_must_pass_through_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
@@ -43,9 +44,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void InitialTimeout_must_pass_through_error_unmodified()
+        public async Task InitialTimeout_must_pass_through_error_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
@@ -59,9 +60,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void InitialTimeout_must_fail_if_no_initial_element_passes_until_timeout()
+        public async Task InitialTimeout_must_fail_if_no_initial_element_passes_until_timeout()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var downstreamProbe = this.CreateSubscriberProbe<int>();
                 Source.Maybe<int>()
@@ -78,9 +79,9 @@ namespace Akka.Streams.Tests.Implementation
 
 
         [Fact]
-        public void CompletionTimeout_must_pass_through_elements_unmodified()
+        public async Task CompletionTimeout_must_pass_through_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
@@ -92,9 +93,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void CompletionTimeout_must_pass_through_error_unmodified()
+        public async Task CompletionTimeout_must_pass_through_error_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
@@ -107,9 +108,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void CompletionTimeout_must_fail_if_not_completed_until_timeout()
+        public async Task CompletionTimeout_must_fail_if_not_completed_until_timeout()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstreamProbe = this.CreatePublisherProbe<int>();
                 var downstreamProbe = this.CreateSubscriberProbe<int>();
@@ -134,9 +135,9 @@ namespace Akka.Streams.Tests.Implementation
 
 
         [Fact]
-        public void IdleTimeout_must_pass_through_elements_unmodified()
+        public async Task IdleTimeout_must_pass_through_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
@@ -148,9 +149,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void IdleTimeout_must_pass_through_error_unmodified()
+        public async Task IdleTimeout_must_pass_through_error_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
@@ -163,9 +164,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void IdleTimeout_must_fail_if_time_between_elements_is_too_large()
+        public async Task IdleTimeout_must_fail_if_time_between_elements_is_too_large()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstreamProbe = this.CreatePublisherProbe<int>();
                 var downstreamProbe = this.CreateSubscriberProbe<int>();
@@ -190,9 +191,9 @@ namespace Akka.Streams.Tests.Implementation
         
 
         [Fact]
-        public void BackpressureTimeout_must_pass_through_elements_unmodified()
+        public async Task BackpressureTimeout_must_pass_through_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 100))
                     .BackpressureTimeout(TimeSpan.FromSeconds(1))
@@ -204,9 +205,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void BackpressureTimeout_must_succeed_if_subscriber_demand_arrives()
+        public async Task BackpressureTimeout_must_succeed_if_subscriber_demand_arrives()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber = this.CreateSubscriberProbe<int>();
 
@@ -226,9 +227,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void BackpressureTimeout_must_not_throw_if_publisher_is_less_frequent_than_timeout()
+        public async Task BackpressureTimeout_must_not_throw_if_publisher_is_less_frequent_than_timeout()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreatePublisherProbe<string>();
                 var subscriber = this.CreateSubscriberProbe<string>();
@@ -252,9 +253,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void BackpressureTimeout_must_not_throw_if_publisher_wont_perform_emission_ever()
+        public async Task BackpressureTimeout_must_not_throw_if_publisher_wont_perform_emission_ever()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreatePublisherProbe<string>();
                 var subscriber = this.CreateSubscriberProbe<string>();
@@ -271,9 +272,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void BackpressureTimeout_must_throw_if_subscriber_wont_generate_demand_on_time()
+        public async Task BackpressureTimeout_must_throw_if_subscriber_wont_generate_demand_on_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreatePublisherProbe<int>();
                 var subscriber = this.CreateSubscriberProbe<int>();
@@ -293,9 +294,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void BackpressureTimeout_must_throw_if_subscriber_never_generate_demand()
+        public async Task BackpressureTimeout_must_throw_if_subscriber_never_generate_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreatePublisherProbe<int>();
                 var subscriber = this.CreateSubscriberProbe<int>();
@@ -313,9 +314,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void BackpressureTimeout_must_not_throw_if_publisher_completes_without_fulfilling_subscribers_demand()
+        public async Task BackpressureTimeout_must_not_throw_if_publisher_completes_without_fulfilling_subscribers_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreatePublisherProbe<int>();
                 var subscriber = this.CreateSubscriberProbe<int>();
@@ -337,9 +338,9 @@ namespace Akka.Streams.Tests.Implementation
 
 
         [Fact]
-        public void IdleTimeoutBidi_must_not_signal_error_in_simple_loopback_case_and_pass_through_elements_unmodified()
+        public async Task IdleTimeoutBidi_must_not_signal_error_in_simple_loopback_case_and_pass_through_elements_unmodified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var timeoutIdentity = BidiFlow.BidirectionalIdleTimeout<int, int>(TimeSpan.FromSeconds(2)).Join(Flow.Create<int>());
 
@@ -353,9 +354,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void IdleTimeoutBidi_must_not_signal_error_if_traffic_is_one_way()
+        public async Task IdleTimeoutBidi_must_not_signal_error_if_traffic_is_one_way()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstreamWriter = this.CreatePublisherProbe<int>();
                 var downstreamWriter = this.CreatePublisherProbe<string>();
@@ -388,9 +389,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
+        public async Task IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upWrite = this.CreatePublisherProbe<string>();
                 var upRead = this.CreateSubscriberProbe<int>();
@@ -443,9 +444,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void IdleTimeoutBidi_must_signal_error_to_all_outputs()
+        public async Task IdleTimeoutBidi_must_signal_error_to_all_outputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upWrite = this.CreatePublisherProbe<string>();
                 var upRead = this.CreateSubscriberProbe<int>();

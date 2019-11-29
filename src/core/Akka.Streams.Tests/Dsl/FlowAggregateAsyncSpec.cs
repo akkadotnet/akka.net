@@ -54,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
                 task.AwaitResult().Should().Be(Expected);
@@ -64,9 +64,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = InputSource.RunWith(AggregateSink, Materializer);
                 task.AwaitResult().Should().Be(Expected);
@@ -74,10 +74,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
         {
             var flowTimeout = TimeSpan.FromMilliseconds(FlowDelayInMs*Input.Count()) + TimeSpan.FromSeconds(3);
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
                 task.AwaitResult(flowTimeout).Should().Be(Expected);
@@ -85,9 +85,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
                 task.AwaitResult().Should().Be(Expected);
@@ -95,9 +95,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_propagate_an_error()
+        public async Task A_AggregateAsync_must_propagate_an_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var error = new TestException("buh");
                 var future = InputSource.Select(x =>
@@ -114,9 +114,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
+        public async Task A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var error = new TestException("buh");
                 var future = InputSource.RunAggregateAsync(0, (x, y) =>
@@ -153,9 +153,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_signal_task_failure()
+        public async Task A_AggregateAsync_must_signal_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync(0, (_, n) => Task.Run(() =>
@@ -172,9 +172,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_signal_error_from_AggregateAsync()
+        public async Task A_AggregateAsync_must_signal_error_from_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
 
@@ -193,9 +193,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_resume_after_task_failure()
+        public async Task A_AggregateAsync_must_resume_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<(int, int)>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
@@ -222,9 +222,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_restart_after_task_failure()
+        public async Task A_AggregateAsync_must_restart_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<(int, int)>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
@@ -251,9 +251,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_resume_after_multiple_failures()
+        public async Task A_AggregateAsync_must_resume_after_multiple_failures()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var tasks = new []
                 {
@@ -281,9 +281,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_finish_after_task_failure()
+        public async Task A_AggregateAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
                     {
@@ -398,9 +398,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_handle_cancel_properly()
+        public async Task A_AggregateAsync_must_handle_cancel_properly()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var pub = this.CreateManualPublisherProbe<int>();
                 var sub = this.CreateSubscriberProbe<int>();
@@ -419,9 +419,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
+        public async Task A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Empty<int>())
                     .RunAggregateAsync(0, (acc, element) => Task.FromResult(acc + element), Materializer);
@@ -430,9 +430,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
+        public async Task A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.Single(100)
                     .RunAggregateAsync(5, (acc, element) => Task.FromResult(acc + element), Materializer);

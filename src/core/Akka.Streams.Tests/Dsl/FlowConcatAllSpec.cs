@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -33,9 +34,9 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly TestException TestException = new TestException("test");
 
         [Fact]
-        public void ConcatAll_must_work_in_the_happy_case()
+        public async Task ConcatAll_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s1 = Source.From(new[] {1, 2});
                 var s2 = Source.From(new int[] {});
@@ -76,9 +77,9 @@ namespace Akka.Streams.Tests.Dsl
             subscriber.ExpectComplete();}
 
         [Fact]
-        public void ConcatAll_must_on_OnError_on_master_stream_cancel_the_current_open_substream_and_signal_error()
+        public async Task ConcatAll_must_on_OnError_on_master_stream_cancel_the_current_open_substream_and_signal_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -104,9 +105,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_on_OnError_on_master_stream_cancel_the_currently_opening_substream_and_signal_error()
+        public async Task ConcatAll_must_on_OnError_on_master_stream_cancel_the_currently_opening_substream_and_signal_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -135,9 +136,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_on_OnError_on_opening_substream_cancel_the_master_stream_and_signal_error()
+        public async Task ConcatAll_must_on_OnError_on_opening_substream_cancel_the_master_stream_and_signal_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -160,9 +161,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_on_OnError_on_open_substream_cancel_the_master_stream_and_signal_error()
+        public async Task ConcatAll_must_on_OnError_on_open_substream_cancel_the_master_stream_and_signal_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -188,9 +189,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_on_cancellation_cancel_the_current_open_substream_and_the_master_stream()
+        public async Task ConcatAll_must_on_cancellation_cancel_the_current_open_substream_and_the_master_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -217,9 +218,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_on_cancellation_cancel_the_currently_opening_substream_and_the_master_stream()
+        public async Task ConcatAll_must_on_cancellation_cancel_the_currently_opening_substream_and_the_master_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var subscriber = this.CreateManualSubscriberProbe<int>();
@@ -248,9 +249,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ConcatAll_must_pass_along_early_cancellation()
+        public async Task ConcatAll_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var up = this.CreateManualPublisherProbe<Source<int, NotUsed>>();
                 var down = this.CreateManualSubscriberProbe<int>();

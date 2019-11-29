@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -29,9 +30,9 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
 
         [Fact]
-        public void A_lazy_source_must_work_like_a_normal_source_happy_path()
+        public async Task A_lazy_source_must_work_like_a_normal_source_happy_path()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 })).RunWith(Sink.Seq<int>(), Materializer);
                 result.AwaitResult().Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
@@ -39,9 +40,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_work_never_construct_the_source_when_there_was_no_demand()
+        public async Task A_lazy_source_must_work_never_construct_the_source_when_there_was_no_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<int>();
                 var constructed = new AtomicBoolean();
@@ -57,9 +58,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_fail_the_materialized_value_when_downstream_cancels_without_ever_consuming_any_element()
+        public async Task A_lazy_source_must_fail_the_materialized_value_when_downstream_cancels_without_ever_consuming_any_element()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 }))
                     .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)
@@ -73,9 +74,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_stop_consuming_when_downstream_has_cancelled()
+        public async Task A_lazy_source_must_stop_consuming_when_downstream_has_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var outProbe = this.CreateSubscriberProbe<int>();
                 var inProbe = this.CreatePublisherProbe<int>();
@@ -92,9 +93,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_materialize_when_the_source_has_been_created()
+        public async Task A_lazy_source_must_materialize_when_the_source_has_been_created()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateSubscriberProbe<int>();
 
@@ -112,9 +113,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_fail_stage_when_upstream_fails()
+        public async Task A_lazy_source_must_fail_stage_when_upstream_fails()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var outProbe = this.CreateSubscriberProbe<int>();
                 var inProbe = this.CreatePublisherProbe<int>();
@@ -133,9 +134,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_propagate_attributes_to_inner_stream()
+        public async Task A_lazy_source_must_propagate_attributes_to_inner_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var attributesSource = Source.FromGraph(new AttibutesSourceStage())
                     .AddAttributes(Attributes.CreateName("inner"));
@@ -154,9 +155,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_lazy_source_must_fail_correctly_when_materialization_of_inner_source_fails()
+        public async Task A_lazy_source_must_fail_correctly_when_materialization_of_inner_source_fails()
         {
-            this.AssertAllStagesStopped(() => 
+            await this.AssertAllStagesStoppedAsync(() => 
             {
                 var matFail = new TestException("fail!");
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -31,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly TestException Ex = new TestException("test");
 
         [Fact]
-        public void A_RecoverWith_must_recover_when_there_is_a_handler()
+        public async Task A_RecoverWith_must_recover_when_there_is_a_handler()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
@@ -59,9 +60,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_cancel_substream_if_parent_is_terminated_when_there_is_a_handler()
+        public async Task A_RecoverWith_must_cancel_substream_if_parent_is_terminated_when_there_is_a_handler()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
@@ -83,9 +84,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_failed_stream_if_handler_is_not_for_such_exception_type()
+        public async Task A_RecoverWith_must_failed_stream_if_handler_is_not_for_such_exception_type()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
@@ -105,9 +106,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_be_able_to_recover_with_the_same_unmaterialized_source_if_configured()
+        public async Task A_RecoverWith_must_be_able_to_recover_with_the_same_unmaterialized_source_if_configured()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var src = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
@@ -134,9 +135,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_not_influence_stream_when_there_is_no_exception()
+        public async Task A_RecoverWith_must_not_influence_stream_when_there_is_no_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
                     .Select(x => x)
@@ -149,9 +150,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_finish_stream_if_it_is_empty()
+        public async Task A_RecoverWith_must_finish_stream_if_it_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .Select(x => x)
@@ -163,9 +164,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_switch_the_second_time_if_alternative_source_throws_exception()
+        public async Task A_RecoverWith_must_switch_the_second_time_if_alternative_source_throws_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
@@ -202,9 +203,9 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void A_RecoverWith_must_terminate_with_exception_if_partial_function_fails_to_match_after_an_alternative_source_failure()
+        public async Task A_RecoverWith_must_terminate_with_exception_if_partial_function_fails_to_match_after_an_alternative_source_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 3))
                     .Select(x =>
@@ -241,9 +242,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_terminate_with_exception_after_set_number_of_retries()
+        public async Task A_RecoverWith_must_terminate_with_exception_after_set_number_of_retries()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 3))
                     .Select(x =>
@@ -270,9 +271,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_throw_ArgumentException_if_number_of_retries_is_less_than_minus_one()
+        public async Task A_RecoverWith_must_throw_ArgumentException_if_number_of_retries_is_less_than_minus_one()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Flow.Create<int>()
                     .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))
@@ -281,9 +282,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RecoverWith_must_fail_correctly_when_materialization_of_recover_source_fails()
+        public async Task A_RecoverWith_must_fail_correctly_when_materialization_of_recover_source_fails()
         {
-            this.AssertAllStagesStopped(() => 
+            await this.AssertAllStagesStoppedAsync(() => 
             {
                 var matFail = new TestException("fail!");
 

@@ -114,9 +114,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_not_fail_when_0_buffer_space_and_demand_is_signalled()
+        public async Task QueueSource_should_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -133,9 +133,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_wait_for_demand_when_buffer_is_0()
+        public async Task QueueSource_should_wait_for_demand_when_buffer_is_0()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -154,9 +154,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_finish_offer_and_complete_futures_when_stream_completed()
+        public async Task QueueSource_should_finish_offer_and_complete_futures_when_stream_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -178,9 +178,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_fail_stream_on_buffer_overflow_in_fail_mode()
+        public async Task QueueSource_should_fail_stream_on_buffer_overflow_in_fail_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -196,9 +196,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_remember_pull_from_downstream_to_send_offered_element_immediately()
+        public async Task QueueSource_should_remember_pull_from_downstream_to_send_offered_element_immediately()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var probe = CreateTestProbe();
@@ -217,9 +217,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_fail_offer_future_if_user_does_not_wait_in_backpressure_mode()
+        public async Task QueueSource_should_fail_offer_future_if_user_does_not_wait_in_backpressure_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var tuple =
                     Source.Queue<int>(5, OverflowStrategy.Backpressure)
@@ -245,9 +245,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_complete_watching_future_with_failure_if_stream_failed()
+        public async Task QueueSource_should_complete_watching_future_with_failure_if_stream_failed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -262,9 +262,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_return_false_when_element_was_not_added_to_buffer()
+        public async Task QueueSource_should_return_false_when_element_was_not_added_to_buffer()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -284,9 +284,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_wait_when_buffer_is_full_and_backpressure_is_on()
+        public async Task QueueSource_should_wait_when_buffer_is_full_and_backpressure_is_on()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
@@ -311,9 +311,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_fail_offer_future_when_stream_is_completed()
+        public async Task QueueSource_should_fail_offer_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var queue =

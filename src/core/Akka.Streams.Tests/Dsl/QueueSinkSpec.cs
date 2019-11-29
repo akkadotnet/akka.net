@@ -39,9 +39,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_send_the_elements_as_result_of_future()
+        public async Task QueueSink_should_send_the_elements_as_result_of_future()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var expected = new List<Option<int>>
                 {
@@ -62,9 +62,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_allow_to_have_only_one_future_waiting_for_result_in_each_point_in_time()
+        public async Task QueueSink_should_allow_to_have_only_one_future_waiting_for_result_in_each_point_in_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -83,9 +83,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_wait_for_next_element_from_upstream()
+        public async Task QueueSink_should_wait_for_next_element_from_upstream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -102,9 +102,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_fail_future_on_stream_failure()
+        public async Task QueueSink_should_fail_future_on_stream_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -120,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_fail_future_when_stream_failed()
+        public async Task QueueSink_should_fail_future_when_stream_failed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -135,9 +135,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_timeout_future_when_stream_cannot_provide_data()
+        public async Task QueueSink_should_timeout_future_when_stream_cannot_provide_data()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -154,9 +154,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_fail_pull_future_when_stream_is_completed()
+        public async Task QueueSink_should_fail_pull_future_when_stream_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
@@ -179,9 +179,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
+        public async Task QueueSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 const int bufferSize = 16;
                 const int streamElementCount = bufferSize + 4;
@@ -207,9 +207,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSink_should_work_with_one_element_buffer()
+        public async Task QueueSink_should_work_with_one_element_buffer()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sink = Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(1, 1));
                 var probe = this.CreateManualPublisherProbe<int>();

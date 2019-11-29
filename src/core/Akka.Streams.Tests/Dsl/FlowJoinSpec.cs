@@ -31,9 +31,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_cycles()
+        public async Task A_Flow_using_Join_must_allow_for_cycles()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 const int end = 47;
                 var t = Enumerable.Range(0, end + 1).GroupBy(i => i%2 == 0).ToList();
@@ -72,9 +72,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_merge_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_merge_cycle()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source =
                     Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
@@ -97,9 +97,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_merge_preferred_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_merge_preferred_cycle()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source =
                     Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
@@ -122,9 +122,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_zip_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_zip_cycle()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.From(new[] {"traveler1", "traveler2"})
                     .MapMaterializedValue<TestSubscriber.Probe<(string, string)>>(_ => null);
@@ -158,9 +158,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_concat_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_concat_cycle()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var flow = Flow.FromGraph(GraphDsl.Create(TestSource.SourceProbe<string>(this), Sink.First<string>(), Keep.Both, (b, source, sink) =>
                 {
@@ -184,9 +184,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_using_Join_must_allow_for_interleave_cycle()
+        public async Task A_Flow_using_Join_must_allow_for_interleave_cycle()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var source = Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
                 var flow = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>

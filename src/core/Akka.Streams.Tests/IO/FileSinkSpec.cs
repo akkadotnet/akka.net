@@ -52,9 +52,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_lines_to_a_file()
+        public async Task SynchronousFileSink_should_write_lines_to_a_file()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -69,9 +69,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_create_new_file_if_not_exists()
+        public async Task SynchronousFileSink_should_create_new_file_if_not_exists()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -85,9 +85,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
+        public async Task SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -115,9 +115,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_by_default_replace_the_existing_file()
+        public async Task SynchronousFileSink_should_by_default_replace_the_existing_file()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -137,9 +137,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_allow_appending_to_file()
+        public async Task SynchronousFileSink_should_allow_appending_to_file()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -171,9 +171,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
+        public async Task SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
         {
-            this.AssertAllStagesStopped(() => 
+            await this.AssertAllStagesStoppedAsync(() => 
             {
                 TargetFile(f => 
                 {
@@ -211,9 +211,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
+        public async Task SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -242,9 +242,9 @@ namespace Akka.Streams.Tests.IO
 
         // FIXME: overriding dispatcher should be made available with dispatcher alias support in materializer (#17929)
         [Fact(Skip = "overriding dispatcher should be made available with dispatcher alias support in materializer")]
-        public void SynchronousFileSink_should_allow_overriding_the_dispatcher_using_Attributes()
+        public async Task SynchronousFileSink_should_allow_overriding_the_dispatcher_using_Attributes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 TargetFile(f =>
                 {
@@ -272,9 +272,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
+        public async Task SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
         {
-            this.AssertAllStagesStopped(() => 
+            await this.AssertAllStagesStoppedAsync(() => 
             {
                 TargetFile(f => 
                 {

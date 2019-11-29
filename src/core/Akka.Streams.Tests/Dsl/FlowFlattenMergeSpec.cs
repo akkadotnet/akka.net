@@ -267,11 +267,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlattenMerge_must_propagate_attributes_to_inner_stream()
+        public async Task A_FlattenMerge_must_propagate_attributes_to_inner_stream()
         {
             var attributesSource = Source.FromGraph(new AttibutesSourceStage());
 
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.Single(attributesSource.AddAttributes(Attributes.CreateName("inner")))
                     .MergeMany(1, x => x)
@@ -291,9 +291,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlattenMerge_must_bubble_up_substream_materialization_exception()
+        public async Task A_FlattenMerge_must_bubble_up_substream_materialization_exception()
         {
-            this.AssertAllStagesStopped(() => {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var matFail = new TestException("fail!");
 
                 var task = Source.Single("whatever")

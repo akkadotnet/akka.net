@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -146,9 +147,9 @@ namespace Akka.Streams.Tests.Dsl
         protected abstract Source<int, NotUsed> CreateSource(int elements);
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -167,9 +168,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_complete_empty()
+        public async Task A_Flow_based_on_an_iterable_must_complete_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(0).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -181,9 +182,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_multiple_subscribers()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_multiple_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = this.CreateManualSubscriberProbe<int>();
@@ -211,9 +212,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_to_later_subscriber()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_to_later_subscriber()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = this.CreateManualSubscriberProbe<int>();
@@ -241,9 +242,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_one_transformation_step()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_one_transformation_step()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(3)
                     .Select(x => x*2)
@@ -262,9 +263,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_produce_elements_with_two_transformation_steps()
+        public async Task A_Flow_based_on_an_iterable_must_produce_elements_with_two_transformation_steps()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(4)
                     .Where(x => x%2 == 0)
@@ -283,9 +284,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_an_iterable_must_not_produce_after_cancel()
+        public async Task A_Flow_based_on_an_iterable_must_not_produce_after_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = this.CreateManualSubscriberProbe<int>();

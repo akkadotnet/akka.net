@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -31,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void KeepAlive_must_not_emit_additional_elements_if_upstream_is_fastEnough()
+        public async Task KeepAlive_must_not_emit_additional_elements_if_upstream_is_fastEnough()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var result = Source.From(Enumerable.Range(1, 10))
                     .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
@@ -46,9 +47,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void KeepAlive_must_emit_elements_periodically_after_silent_periods()
+        public async Task KeepAlive_must_emit_elements_periodically_after_silent_periods()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sourceWithIdleGap = Source.Combine(Source.From(Enumerable.Range(1, 5)),
                     Source.From(Enumerable.Range(6, 5)).InitialDelay(TimeSpan.FromSeconds(2)),

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Pattern;
@@ -282,10 +283,10 @@ my-dispatcher1 {
         }
 
         [Fact]
-        public void ActorPublisher_should_work_together_with_Flow_and_ActorSubscriber()
+        public async Task ActorPublisher_should_work_together_with_Flow_and_ActorSubscriber()
         {
             var materializer = Sys.Materializer();
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
                 var source = Source.ActorPublisher<int>(Sender.Props);
@@ -374,10 +375,10 @@ my-dispatcher1 {
         }
 
         [Fact]
-        public void ActorPublisher_should_be_able_to_define_a_subscription_timeout_after_which_it_should_shut_down()
+        public async Task ActorPublisher_should_be_able_to_define_a_subscription_timeout_after_which_it_should_shut_down()
         {
             var materializer = Sys.Materializer();
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var timeout = TimeSpan.FromMilliseconds(150);
                 var a = ActorOf(TimeoutingPublisher.Props(TestActor, timeout));

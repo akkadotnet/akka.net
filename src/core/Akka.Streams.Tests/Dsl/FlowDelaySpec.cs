@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -74,9 +75,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_deliver_elements_with_delay_for_slow_stream()
+        public async Task A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var p = this.CreateManualPublisherProbe<int>();
@@ -100,9 +101,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
+        public async Task A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropTail)
@@ -118,9 +119,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_drop_head_for_internal_buffer_if_it_is_full_in_DropHead_mode()
+        public async Task A_Delay_must_drop_head_for_internal_buffer_if_it_is_full_in_DropHead_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropHead)
@@ -134,9 +135,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
+        public async Task A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropBuffer)
@@ -150,9 +151,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_pass_elements_with_delay_through_normally_in_backpressured_mode()
+        public async Task A_Delay_must_pass_elements_with_delay_through_normally_in_backpressured_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
                     .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Backpressure)
@@ -169,9 +170,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_fail_on_overflow_in_Fail_mode()
+        public async Task A_Delay_must_fail_on_overflow_in_Fail_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var actualError = Source.From(Enumerable.Range(1, 20))
                     .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Fail)
@@ -186,9 +187,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Delay_must_emit_early_when_buffer_is_full_and_in_EmitEarly_mode()
+        public async Task A_Delay_must_emit_early_when_buffer_is_full_and_in_EmitEarly_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 var p = this.CreateManualPublisherProbe<int>();

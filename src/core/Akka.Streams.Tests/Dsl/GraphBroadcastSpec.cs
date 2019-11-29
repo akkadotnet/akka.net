@@ -31,9 +31,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_broadcast_to_other_subscriber()
+        public async Task A_Broadcast_must_broadcast_to_other_subscriber()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -67,9 +67,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_work_with_one_way_broadcast()
+        public async Task A_Broadcast_must_work_with_one_way_broadcast()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t = Source.FromGraph(GraphDsl.Create(b =>
                 {
@@ -91,9 +91,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_work_with_n_way_broadcast()
+        public async Task A_Broadcast_must_work_with_n_way_broadcast()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var headSink = Sink.First<IEnumerable<int>>();
 
@@ -120,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip="We don't have enough overloads for GraphDsl.Create")]
-        public void A_Broadcast_must_with_22_way_broadcast()
+        public async Task A_Broadcast_must_with_22_way_broadcast()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 //var headSink = Sink.First<IEnumerable<int>>();
 
@@ -167,9 +167,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_produce_to_other_even_though_downstream_cancels()
+        public async Task A_Broadcast_must_produce_to_other_even_though_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -197,9 +197,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_produce_to_downstream_even_though_other_cancels()
+        public async Task A_Broadcast_must_produce_to_downstream_even_though_other_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -227,9 +227,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_cancel_upstream_when_downstreams_cancel()
+        public async Task A_Broadcast_must_cancel_upstream_when_downstreams_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
@@ -268,9 +268,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_pass_along_early_cancellation()
+        public async Task A_Broadcast_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -299,9 +299,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_AltoTo_must_broadcast()
+        public async Task A_Broadcast_must_AltoTo_must_broadcast()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();
@@ -325,9 +325,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_AlsoTo_must_continue_if_sink_cancels()
+        public async Task A_Broadcast_must_AlsoTo_must_continue_if_sink_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = this.SinkProbe<int>();
                 var p2 = this.SinkProbe<int>();

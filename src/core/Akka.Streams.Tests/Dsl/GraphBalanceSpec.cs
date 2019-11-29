@@ -31,9 +31,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_balance_between_subscribers_which_signal_demand()
+        public async Task A_Balance_must_balance_between_subscribers_which_signal_demand()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -62,9 +62,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_support_waiting_for_demand_from_all_downstream_subscriptions()
+        public async Task A_Balance_must_support_waiting_for_demand_from_all_downstream_subscriptions()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
@@ -99,9 +99,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy")]
-        public void A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
+        public async Task A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s1 = this.CreateManualSubscriberProbe<int>();
 
@@ -147,9 +147,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_work_with_1_way_balance()
+        public async Task A_Balance_must_work_with_1_way_balance()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.FromGraph(GraphDsl.Create(b =>
                 {
@@ -170,9 +170,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_work_with_5_way_balance()
+        public async Task A_Balance_must_work_with_5_way_balance()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sink = Sink.First<IEnumerable<int>>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(sink, sink, sink, sink, sink, ValueTuple.Create,
@@ -196,9 +196,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_balance_between_all_three_outputs()
+        public async Task A_Balance_must_balance_between_all_three_outputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 const int numElementsForSink = 10000;
                 var outputs = Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
@@ -225,9 +225,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_fairly_balance_between_three_outputs()
+        public async Task A_Balance_must_fairly_balance_between_three_outputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.SinkProbe<int>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(probe, probe, probe, ValueTuple.Create,
@@ -262,9 +262,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_produce_to_second_even_though_first_cancels()
+        public async Task A_Balance_must_produce_to_second_even_though_first_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -289,9 +289,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_produce_to_first_even_though_second_cancels()
+        public async Task A_Balance_must_produce_to_first_even_though_second_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<int>();
@@ -316,9 +316,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_cancel_upstream_when_downstream_cancel()
+        public async Task A_Balance_must_cancel_upstream_when_downstream_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
@@ -354,9 +354,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Balance_must_not_push_output_twice()
+        public async Task A_Balance_must_not_push_output_twice()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p1 = this.CreateManualPublisherProbe<int>();
                 var c1 = this.CreateManualSubscriberProbe<int>();

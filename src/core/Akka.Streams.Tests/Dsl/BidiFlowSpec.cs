@@ -162,9 +162,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_BidiFlow_must_combine_materialization_values()
+        public async Task A_BidiFlow_must_combine_materialization_values()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var left = Flow.FromGraph(GraphDsl.Create(Sink.First<int>(), (b, sink) =>
                 {

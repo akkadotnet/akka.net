@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -26,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_Finished_when_stream_is_completed()
+        public async Task A_FlowMonitor_must_return_Finished_when_stream_is_completed()
         {
             var t = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
@@ -36,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
             var monitor = t.Item1.Item2;
             var sink = t.Item2;
             source.SendComplete();
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 if(monitor.State != FlowMonitor.Finished.Instance)
                     throw new Exception();
@@ -46,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_Finished_when_stream_is_cancelled_from_downstream()
+        public async Task A_FlowMonitor_must_return_Finished_when_stream_is_cancelled_from_downstream()
         {
             var t = this.SourceProbe<int>()
                 .Monitor(Keep.Right)
@@ -56,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
             var sink = t.Item2;
 
             sink.Cancel();
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 if (monitor.State != FlowMonitor.Finished.Instance)
                     throw new Exception();
@@ -64,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_Failed_when_stream_fails_and_propagate_the_error()
+        public async Task A_FlowMonitor_must_return_Failed_when_stream_fails_and_propagate_the_error()
         {
             var t = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
@@ -75,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
             var sink = t.Item2;
             var ex = new TestException("Source failed");
             source.SendError(ex);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 var state = monitor.State as FlowMonitor.Failed;
                 if(state != null && ReferenceEquals(state.Cause, ex))
@@ -87,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_Initialized_for_an_empty_stream()
+        public async Task A_FlowMonitor_must_return_Initialized_for_an_empty_stream()
         {
             var t = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
@@ -97,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             var monitor = t.Item1.Item2;
             var sink = t.Item2;
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 if (monitor.State != FlowMonitor.Initialized.Instance)
                     throw new Exception();
@@ -107,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_Received_after_receiving_a_message()
+        public async Task A_FlowMonitor_must_return_Received_after_receiving_a_message()
         {
             var t = this.SourceProbe<int>()
                 .Monitor(Keep.Both)
@@ -119,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
             var message = 42;
             source.SendNext(message);
             sink.RequestNext(message);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 var state = monitor.State as FlowMonitor.Received<int>;
                 if (state != null && state.Message == 42)
@@ -132,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
         // Check a stream that processes StreamState messages specifically, to make sure the optimization in FlowMonitorImpl
         // (to avoid allocating an object for each message) doesn't introduce a bug
         [Fact]
-        public void A_FlowMonitor_must_return_Received_after_receiving_a_StreamState_message()
+        public async Task A_FlowMonitor_must_return_Received_after_receiving_a_StreamState_message()
         {
             var t = this.SourceProbe<FlowMonitor.Received<string>>()
                 .Monitor(Keep.Both)
@@ -144,7 +145,7 @@ namespace Akka.Streams.Tests.Dsl
             var message = new FlowMonitor.Received<string>("message");
             source.SendNext(message);
             sink.RequestNext(message);
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 var state = monitor.State as FlowMonitor.Received<FlowMonitor.Received<string>>;
                 if (state != null && state.Message == message)
@@ -155,7 +156,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlowMonitor_must_return_failed_when_stream_is_abruptly_terminated()
+        public async Task A_FlowMonitor_must_return_failed_when_stream_is_abruptly_terminated()
         {
             var materializer = ActorMaterializer.Create(Sys);
 
@@ -163,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
             var monitor = t.Item2;
 
             materializer.Shutdown();
-            AwaitAssert(() => monitor.State.Should().BeOfType<FlowMonitor.Failed>(), RemainingOrDefault);
+            await AwaitAssertAsync(() => monitor.State.Should().BeOfType<FlowMonitor.Failed>(), RemainingOrDefault);
         }
     }
 }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWhile_must_take_while_predicate_is_true()
+        public async Task A_TakeWhile_must_take_while_predicate_is_true()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 4))
                     .TakeWhile(i => i < 3)
@@ -42,9 +43,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWhile_must_complete_the_future_for_an_empty_stream()
+        public async Task A_TakeWhile_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .TakeWhile(i => i < 2)
@@ -55,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWhile_must_continue_if_error()
+        public async Task A_TakeWhile_must_continue_if_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testException = new Exception("test");
 
@@ -76,9 +77,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
+        public async Task A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 10))
                 .TakeWhile(i => i < 3, true)

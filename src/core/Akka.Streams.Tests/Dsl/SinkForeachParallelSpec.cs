@@ -18,6 +18,7 @@ using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -32,9 +33,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ForeachParallel_must_produce_elements_in_the_order_they_are_ready()
+        public async Task A_ForeachParallel_must_produce_elements_in_the_order_they_are_ready()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 4)
@@ -64,9 +65,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "Racy - timing is rather sensitive on Azure DevOps")]
-        public void A_ForeachParallel_must_not_run_more_functions_in_parallel_then_specified()
+        public async Task A_ForeachParallel_must_not_run_more_functions_in_parallel_then_specified()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 5)
@@ -95,9 +96,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ForeachParallel_must_resume_after_function_failure()
+        public async Task A_ForeachParallel_must_resume_after_function_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
                 var latch = new TestLatch(1);
@@ -119,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ForeachParallel_must_finish_after_function_thrown_exception()
+        public async Task A_ForeachParallel_must_finish_after_function_thrown_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
                 var latch = new TestLatch(1);
@@ -149,9 +150,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ForeachParallel_must_handle_empty_source()
+        public async Task A_ForeachParallel_must_handle_empty_source()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = Source.From(new List<int>()).RunWith(Sink.ForEachParallel<int>(3, i => { }), Materializer);
                 p.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();

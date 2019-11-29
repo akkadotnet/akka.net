@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -45,9 +46,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_work_for_the_happy_case()
+        public async Task Throttle_for_single_cost_elements_must_work_for_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, ThrottleMode.Shaping)
@@ -59,9 +60,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_accept_very_high_rates()
+        public async Task Throttle_for_single_cost_elements_must_accept_very_high_rates()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromTicks(1), 0, ThrottleMode.Shaping)
@@ -73,9 +74,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_accept_very_low_rates()
+        public async Task Throttle_for_single_cost_elements_must_accept_very_low_rates()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromDays(100), 1, ThrottleMode.Shaping)
@@ -110,9 +111,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
+        public async Task Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -136,9 +137,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
+        public async Task Throttle_for_single_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -161,9 +162,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_cancel_when_downstream_cancels()
+        public async Task Throttle_for_single_cost_elements_must_cancel_when_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
@@ -174,9 +175,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
+        public async Task Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe =
                     Source.From(Enumerable.Range(1, 10))
@@ -195,9 +196,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
+        public async Task Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ms = TimeSpan.FromMilliseconds(300);
                 var upstream = this.CreatePublisherProbe<int>();
@@ -237,9 +238,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
+        public async Task Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -279,9 +280,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
+        public async Task Throttle_for_single_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t1 =
                     Source.From(Enumerable.Range(1, 5))
@@ -299,9 +300,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_properly_combine_shape_and_throttle_modes()
+        public async Task Throttle_for_single_cost_elements_must_properly_combine_shape_and_throttle_modes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Shaping)
@@ -316,9 +317,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_work_for_the_happy_case()
+        public async Task Throttle_for_various_cost_elements_must_work_for_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, _ => 1, ThrottleMode.Shaping)
@@ -330,9 +331,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
+        public async Task Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var list = Enumerable.Range(1, 4).Select(x => x*2).Select(GenerateByteString).ToList();
 
@@ -352,9 +353,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
+        public async Task Throttle_for_various_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -377,9 +378,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_cancel_when_downstream_cancels()
+        public async Task Throttle_for_various_cost_elements_must_cancel_when_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
@@ -390,9 +391,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
+        public async Task Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe =
                     Source.From(Enumerable.Range(1, 10))
@@ -411,9 +412,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
+        public async Task Throttle_for_various_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -453,9 +454,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
+        public async Task Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -496,9 +497,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
+        public async Task Throttle_for_various_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t1 =
                     Source.From(Enumerable.Range(1, 4))
@@ -516,9 +517,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
+        public async Task Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
@@ -531,9 +532,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_handle_rate_calculation_function_exception()
+        public async Task Throttle_for_various_cost_elements_must_handle_rate_calculation_function_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ex = new Exception();
                 Source.From(Enumerable.Range(1, 5))

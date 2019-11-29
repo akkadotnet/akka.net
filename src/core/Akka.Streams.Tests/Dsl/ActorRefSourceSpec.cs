@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -86,9 +87,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_terminate_when_the_stream_is_cancelled()
+        public async Task A_ActorRefSource_must_terminate_when_the_stream_is_cancelled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.Fail)
@@ -102,9 +103,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_not_fail_when_0_buffer_space_and_demand_is_signalled()
+        public async Task A_ActorRefSource_must_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.DropHead)
@@ -119,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_completes_the_stream_immediately_when_receiving_PoisonPill()
+        public async Task A_ActorRefSource_must_completes_the_stream_immediately_when_receiving_PoisonPill()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
@@ -134,9 +135,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
+        public async Task A_ActorRefSource_must_signal_buffered_elements_and_complete_the_stream_after_receiving_Status_Success()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
@@ -154,9 +155,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_not_buffer_elements_after_receiving_Status_Success()
+        public async Task A_ActorRefSource_must_not_buffer_elements_after_receiving_Status_Success()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
@@ -178,9 +179,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_after_receiving_Status_Success_allow_for_earlier_completion_with_PoisonPill()
+        public async Task A_ActorRefSource_must_after_receiving_Status_Success_allow_for_earlier_completion_with_PoisonPill()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
@@ -199,9 +200,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_fail_the_stream_when_receiving_Status_Failure()
+        public async Task A_ActorRefSource_must_fail_the_stream_when_receiving_Status_Failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
@@ -215,9 +216,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_set_actor_name_equal_to_stage_name()
+        public async Task A_ActorRefSource_must_set_actor_name_equal_to_stage_name()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var s = this.CreateManualSubscriberProbe<int>();
                 const string name = "SomeCustomName";

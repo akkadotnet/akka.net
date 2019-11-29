@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Pattern;
@@ -272,9 +273,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_read_N_and_emit_N_before_completing()
+        public async Task A_GraphStageLogic_must_read_N_and_emit_N_before_completing()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 10))
                 .Via(new ReadNEmitN(2))
@@ -286,9 +287,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_read_N_should_not_emit_if_upstream_completes_before_N_is_sent()
+        public async Task A_GraphStageLogic_must_read_N_should_not_emit_if_upstream_completes_before_N_is_sent()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Via(new ReadNEmitN(6))
@@ -299,9 +300,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_read_N_should_not_emit_if_upstream_fails_before_N_is_sent()
+        public async Task A_GraphStageLogic_must_read_N_should_not_emit_if_upstream_fails_before_N_is_sent()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var error = new ArgumentException("Don't argue like that!");
                 Source.From(Enumerable.Range(1, 5))
@@ -319,9 +320,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_read_N_should_provide_elements_read_if_OnComplete_happens_before_N_elements_have_been_seen()
+        public async Task A_GraphStageLogic_must_read_N_should_provide_elements_read_if_OnComplete_happens_before_N_elements_have_been_seen()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 5))
                     .Via(new ReadNEmitRestOnComplete(6))
@@ -333,9 +334,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_emit_all_things_before_completing()
+        public async Task A_GraphStageLogic_must_emit_all_things_before_completing()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .Via(new Emit1234().Named("testStage"))
@@ -350,9 +351,9 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Fact]
-        public void A_GraphStageLogic_must_emit_all_things_before_completing_with_two_fused_stages()
+        public async Task A_GraphStageLogic_must_emit_all_things_before_completing_with_two_fused_stages()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
@@ -374,9 +375,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_emit_all_things_before_completing_with_three_fused_stages()
+        public async Task A_GraphStageLogic_must_emit_all_things_before_completing_with_three_fused_stages()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var flow = Flow.Create<int>().Via(new Emit1234()).Via(new PassThrough()).Via(new Emit5678());
                 var g = Streams.Implementation.Fusing.Fusing.Aggressive(flow);
@@ -398,9 +399,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_emit_properly_after_empty_iterable()
+        public async Task A_GraphStageLogic_must_emit_properly_after_empty_iterable()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.FromGraph(new EmitEmptyIterable())
                     .RunWith(Sink.Seq<int>(), Materializer)
@@ -424,9 +425,9 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_invoke_livecycle_hooks_in_the_right_order()
+        public async Task A_GraphStageLogic_must_invoke_livecycle_hooks_in_the_right_order()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var g = new LifecycleStage(TestActor);
 

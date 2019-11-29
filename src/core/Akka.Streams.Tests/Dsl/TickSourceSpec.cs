@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_produce_ticks()
+        public async Task A_Flow_based_on_a_tick_publisher_must_produce_ticks()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
                 Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
@@ -68,9 +69,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_reject_multiple_subscribers_but_keep_the_firs()
+        public async Task A_Flow_based_on_a_tick_publisher_must_reject_multiple_subscribers_but_keep_the_firs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                     .RunWith(Sink.AsPublisher<string>(false), Materializer);
@@ -90,9 +91,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_be_usable_with_zip_for_a_simple_form_of_rate_limiting()
+        public async Task A_Flow_based_on_a_tick_publisher_must_be_usable_with_zip_for_a_simple_form_of_rate_limiting()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<int>();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -117,9 +118,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_be_possible_to_cancel()
+        public async Task A_Flow_based_on_a_tick_publisher_must_be_possible_to_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick");
@@ -131,16 +132,16 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 c.ExpectNext("tick");
                 cancelable.Cancel();
-                AwaitCondition(() => cancelable.IsCancellationRequested);
+                await AwaitConditionAsync(() => cancelable.IsCancellationRequested);
                 sub.Request(3);
                 c.ExpectComplete();
             }, Materializer);
         }
         
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_have_IsCancelled_mirror_the_cancellation_state()
+        public async Task A_Flow_based_on_a_tick_publisher_must_have_IsCancelled_mirror_the_cancellation_state()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
@@ -156,9 +157,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_support_being_cancelled_immediately_after_its_materialization()
+        public async Task A_Flow_based_on_a_tick_publisher_must_support_being_cancelled_immediately_after_its_materialization()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");

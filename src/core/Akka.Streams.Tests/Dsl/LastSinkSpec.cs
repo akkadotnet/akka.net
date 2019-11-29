@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
@@ -26,9 +27,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_the_last_value()
+        public async Task A_Flow_with_Sink_Last_must_yield_the_last_value()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1,42)).Select(x=>x).RunWith(Sink.Last<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
@@ -37,9 +38,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_the_first_error()
+        public async Task A_Flow_with_Sink_Last_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.Last<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
@@ -50,9 +51,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_Last_must_yield_NoSuchElementException_for_empty_stream()
+        public async Task A_Flow_with_Sink_Last_must_yield_NoSuchElementException_for_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .Invoking(s => s.RunWith(Sink.Last<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
@@ -64,9 +65,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_the_last_value()
+        public async Task A_Flow_with_Sink_LastOption_must_yield_the_last_value()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 42)).Select(x => x).RunWith(Sink.LastOrDefault<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
@@ -75,9 +76,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_the_first_error()
+        public async Task A_Flow_with_Sink_LastOption_must_yield_the_first_error()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.LastOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
@@ -88,9 +89,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_Sink_LastOption_must_yield_default_for_empty_stream()
+        public async Task A_Flow_with_Sink_LastOption_must_yield_default_for_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var task = Source.Empty<int>().RunWith(Sink.LastOrDefault<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();

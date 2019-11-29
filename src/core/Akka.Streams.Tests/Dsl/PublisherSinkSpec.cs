@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_PublisherSink_must_be_unique_when_created_twice()
+        public async Task A_PublisherSink_must_be_unique_when_created_twice()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var t =
                     RunnableGraph.FromGraph(

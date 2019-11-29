@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Extra;
@@ -88,9 +89,9 @@ namespace Akka.Streams.Tests.Extra
 
 
         [Fact]
-        public void Timed_Flow_must_measure_time_it_takes_between_elements_matching_a_predicate()
+        public async Task Timed_Flow_must_measure_time_it_takes_between_elements_matching_a_predicate()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
 
@@ -113,9 +114,9 @@ namespace Akka.Streams.Tests.Extra
         }
 
         [Fact]
-        public void Timed_Flow_must_measure_time_it_takes_from_start_to_complete_by_wrapping_operations()
+        public async Task Timed_Flow_must_measure_time_it_takes_from_start_to_complete_by_wrapping_operations()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = CreateTestProbe();
 

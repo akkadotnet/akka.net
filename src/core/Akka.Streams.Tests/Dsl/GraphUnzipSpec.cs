@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -28,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_unzip_to_two_subscribers()
+        public async Task A_Unzip_must_unzip_to_two_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
@@ -76,9 +77,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_produce_to_right_downstream_even_though_left_downstream_cancels()
+        public async Task A_Unzip_must_produce_to_right_downstream_even_though_left_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
@@ -112,9 +113,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_produce_to_left_downstream_even_though_right_downstream_cancels()
+        public async Task A_Unzip_must_produce_to_left_downstream_even_though_right_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<int>();
                 var c2 = this.CreateManualSubscriberProbe<string>();
@@ -211,9 +212,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_cancel_upstream_when_downstream_cancel()
+        public async Task A_Unzip_must_cancel_upstream_when_downstream_cancel()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p1 = this.CreateManualPublisherProbe<KeyValuePair<int, string>>();
                 var c1 = this.CreateManualSubscriberProbe<int>();
@@ -251,9 +252,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Unzip_must_work_with_Zip()
+        public async Task A_Unzip_must_work_with_Zip()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var c1 = this.CreateManualSubscriberProbe<(int, string)>();
 

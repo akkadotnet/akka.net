@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
@@ -66,9 +67,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_UnfoldResourceSource_must_read_contents_from_a_file()
+        public async Task A_UnfoldResourceSource_must_read_contents_from_a_file()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
@@ -94,9 +95,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
+        public async Task A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = Source.UnfoldResource(_open, reader =>
                 {
@@ -123,9 +124,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
+        public async Task A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var p = Source.UnfoldResource(_open, reader =>
                 {
@@ -151,9 +152,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_work_with_ByteString_as_well()
+        public async Task A_UnfoldResourceSource_must_work_with_ByteString_as_well()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var chunkSize = 50;
                 var buffer = new char[chunkSize];
@@ -193,9 +194,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_use_dedicated_blocking_io_dispatcher_by_default()
+        public async Task A_UnfoldResourceSource_must_use_dedicated_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
                 var materializer = sys.Materializer();
@@ -227,9 +228,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_fail_when_create_throws_exception()
+        public async Task A_UnfoldResourceSource_must_fail_when_create_throws_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testException = new TestException("");
                 var p = Source.UnfoldResource(() =>
@@ -245,9 +246,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_fail_when_close_throws_exception()
+        public async Task A_UnfoldResourceSource_must_fail_when_close_throws_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var testException = new TestException("");
                 var p = Source.UnfoldResource(_open, Read, reader =>

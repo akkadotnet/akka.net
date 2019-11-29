@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -88,9 +89,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ZipWith_must_work_in_the_happy_case()
+        public async Task ZipWith_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
@@ -124,9 +125,9 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void ZipWith_must_work_in_the_sad_case()
+        public async Task ZipWith_must_work_in_the_sad_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualSubscriberProbe<int>();
 
@@ -154,9 +155,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ZipWith_must_ZipWith_expanded_Person_unapply_3_outputs()
+        public async Task ZipWith_must_ZipWith_expanded_Person_unapply_3_outputs()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualSubscriberProbe<Person>();
 
@@ -185,11 +186,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void ZipWith_must_work_with_up_to_9_inputs()
+        public async Task ZipWith_must_work_with_up_to_9_inputs()
         {
             // the jvm version uses 19 inputs but we have only 9
 
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var probe = this.CreateManualSubscriberProbe<string>();
 

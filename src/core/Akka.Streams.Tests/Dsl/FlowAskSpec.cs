@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_produce_asked_elements() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var replyOnInts =
                 Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"),
@@ -168,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements_for_simple_ask() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_produce_asked_elements_for_simple_ask() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var replyOnInts = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
@@ -188,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_produce_asked_elements_when_response_is_Status_Success() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_produce_asked_elements_when_response_is_Status_Success() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var statusReplier = Sys.ActorOf(Props.Create(() => new StatusReplier()).WithDispatcher("akka.test.stream-dispatcher"), "statusReplier");
             var c = this.CreateManualSubscriberProbe<Reply>();
@@ -226,7 +226,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_with_ask_must_signal_ask_timeout_failure() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_signal_ask_timeout_failure() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var c = this.CreateManualSubscriberProbe<Reply>();
@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact(Skip = "Racy on Azure DevOps")]
-        public void Flow_with_ask_must_signal_ask_failure() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_signal_ask_failure() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var failsOn = ReplierFailOn(1);
             var c = this.CreateManualSubscriberProbe<Reply>();
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_signal_failure_when_target_actor_is_terminated() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_signal_failure_when_target_actor_is_terminated() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var r = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyRandomDelays");
             var done = Source.Maybe<int>()
@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var p = CreateTestProbe();
             var input = new[] { "a", "b", "c", "d", "e", "f" };
@@ -310,7 +310,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_resume_after_ask_failure() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_resume_after_ask_failure() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var c = this.CreateManualSubscriberProbe<Reply>();
             var aref = ReplierFailOn(3);
@@ -332,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_must_resume_after_multiple_failures() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_must_resume_after_multiple_failures() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var aref = ReplierFailAllExceptOn(6);
             var t = Source.From(Enumerable.Range(1, 6))
@@ -345,7 +345,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public void Flow_with_ask_should_handle_cancel_properly() => this.AssertAllStagesStopped(() =>
+        public async Task Flow_with_ask_should_handle_cancel_properly() => await this.AssertAllStagesStoppedAsync(() =>
         {
             var dontReply = Sys.ActorOf(BlackHoleActor.Props.WithDispatcher("akka.test.stream-dispatcher"), "dontReply");
             var pub = this.CreateManualPublisherProbe<int>();

@@ -29,9 +29,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Task_must_produce_one_element_from_already_successful_Future()
+        public async Task A_Flow_based_on_a_Task_must_produce_one_element_from_already_successful_Future()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
             var c = this.CreateManualSubscriberProbe<int>();
             var p = Source.FromTask(Task.FromResult(1)).RunWith(Sink.AsPublisher<int>(true), Materializer);
@@ -45,9 +45,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Task_must_produce_error_from_already_failed_Task()
+        public async Task A_Flow_based_on_a_Task_must_produce_error_from_already_failed_Task()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var ex = new TestException("test");
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -60,9 +60,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Task_must_produce_one_element_when_Task_is_completed()
+        public async Task A_Flow_based_on_a_Task_must_produce_one_element_when_Task_is_completed()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var promise = new TaskCompletionSource<int>();
                 var c = this.CreateManualSubscriberProbe<int>();
@@ -94,9 +94,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Task_must_produce_elements_with_multiple_subscribers()
+        public async Task A_Flow_based_on_a_Task_must_produce_elements_with_multiple_subscribers()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var promise = new TaskCompletionSource<int>();
                 var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);

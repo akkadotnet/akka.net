@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -31,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly TestException Ex = new TestException("test");
 
         [Fact]
-        public void A_Recover_must_recover_when_there_is_a_handler()
+        public async Task A_Recover_must_recover_when_there_is_a_handler()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
@@ -53,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Recover_must_failed_stream_if_handler_is_not_for_such_exception_type()
+        public async Task A_Recover_must_failed_stream_if_handler_is_not_for_such_exception_type()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
@@ -72,9 +73,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Recover_must_not_influence_stream_when_there_is_no_exception()
+        public async Task A_Recover_must_not_influence_stream_when_there_is_no_exception()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
                     .Select(x => x)
@@ -87,9 +88,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Recover_must_finish_stream_if_it_is_empty()
+        public async Task A_Recover_must_finish_stream_if_it_is_empty()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 Source.Empty<int>()
                     .Select(x => x)

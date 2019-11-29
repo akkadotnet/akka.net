@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -35,9 +36,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -51,9 +52,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -69,9 +70,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Select(x => x));
@@ -86,9 +87,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identityBidiFlow = BidiFlow.FromGraph(identityBidi);
@@ -104,9 +105,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var rotatedBidi = new RotatedIdentityBidiGraphStage();
                 var takeAll = Flow.Identity<int>()
@@ -147,13 +148,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_properly_handle_case_where_a_stage_fails_before_subscription_happens()
+        public async Task ActorGraphInterpreter_should_be_able_to_properly_handle_case_where_a_stage_fails_before_subscription_happens()
         {
             // Fuzzing needs to be off, so that the failure can propagate to the output boundary
             // before the ExposedPublisher message.
             var noFuzzMaterializer = ActorMaterializer.Create(Sys,
                 ActorMaterializerSettings.Create(Sys).WithFuzzingMode(false));
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
 
                 var evilLatch = new CountdownEvent(1);
@@ -203,9 +204,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
         
         [Fact]
-        public void ActorGraphInterpreter_should_be_to_handle_Publisher_spec_violations_without_leaking()
+        public async Task ActorGraphInterpreter_should_be_to_handle_Publisher_spec_violations_without_leaking()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -241,9 +242,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_to_handle_Subscriber_spec_violations_without_leaking()
+        public async Task ActorGraphInterpreter_should_be_to_handle_Subscriber_spec_violations_without_leaking()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -263,9 +264,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
+        public async Task ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var materializer = ActorMaterializer.Create(Sys);
                 var gotStop = new TestLatch(1);

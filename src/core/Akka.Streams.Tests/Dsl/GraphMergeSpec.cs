@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -46,9 +47,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_in_the_happy_case()
+        public async Task A_Merge_must_work_in_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 // Different input sizes(4 and 6)
                 var source1 = Source.From(Enumerable.Range(0, 4));
@@ -149,9 +150,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
@@ -166,9 +167,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
                 var subscription1 = subscriber1.ExpectSubscription();
@@ -183,27 +184,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public void A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
 
             }, Materializer);
         }
 
         [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public void A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+        public async Task A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
 
             }, Materializer);
         }
 
         [Fact]
-        public void A_Merge_must_pass_along_early_cancellation()
+        public async Task A_Merge_must_pass_along_early_cancellation()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var up1 = this.CreateManualPublisherProbe<int>();
                 var up2 = this.CreateManualPublisherProbe<int>();

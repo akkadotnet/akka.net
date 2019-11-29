@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Pattern;
@@ -263,9 +264,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_must_be_materializable_several_times_with_fanout_publisher()
+        public async Task A_Flow_must_be_materializable_several_times_with_fanout_publisher()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
                 var flow = Source.From(new[] {1, 2, 3}).Select(i => i.ToString());
                 var p1 = flow.RunWith(Sink.AsPublisher<string>(true), Materializer);
@@ -301,7 +302,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_must_be_covariant()
+        public async Task A_Flow_must_be_covariant()
         {
             Source<IFruit, NotUsed> f1 = Source.From<IFruit>(Apples());
             IPublisher<IFruit> p1 = Source.From<IFruit>(Apples()).RunWith(Sink.AsPublisher<IFruit>(false), Materializer);
