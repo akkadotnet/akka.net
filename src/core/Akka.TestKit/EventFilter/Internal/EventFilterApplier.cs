@@ -185,14 +185,6 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of Expect
         /// </summary>
-        public Task<T> ExpectAsync<T>(int expectedCount, Func<Task<T>> funcAsync)
-        {
-            return InterceptAsync(funcAsync, _actorSystem, null, expectedCount);
-        }
-
-        /// <summary>
-        /// Async version of Expect
-        /// </summary>
         public async Task<T> ExpectAsync<T>(int expectedCount, Func<T> func)
         {
             return await InterceptAsync(func, _actorSystem, null, expectedCount);
