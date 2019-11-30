@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             // sorts the addresses and provides the address of the node with the lowest port number
             // as that node will be the leader
-            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
+            return roles.Select(x => (x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)

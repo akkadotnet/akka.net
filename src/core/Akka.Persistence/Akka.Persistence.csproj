@@ -3,22 +3,21 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence</AssemblyTitle>
     <Description>Persistence actor support for Akka.NET</Description>
-    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="persistence.conf" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.3.0" />
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
   </ItemGroup>
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

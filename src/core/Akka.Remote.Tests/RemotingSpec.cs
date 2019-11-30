@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,6 @@ using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 
 namespace Akka.Remote.Tests
 {
-
     public class RemotingSpec : AkkaSpec
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
@@ -158,7 +157,7 @@ namespace Akka.Remote.Tests
         public void Remoting_must_support_remote_lookups()
         {
             _here.Tell("ping", TestActor);
-            ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
+            ExpectMsg(("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
         [Fact]
@@ -167,7 +166,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await _here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+            var msg = await _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
@@ -178,11 +177,11 @@ namespace Akka.Remote.Tests
             // see https://github.com/akkadotnet/akka.net/issues/2546
 
             // the configure await causes the continuation (== the second ask) to be scheduled on the HELIOS worker thread
-            var msg = await _here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            var msg = await _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
             Assert.Equal("pong", msg.Item1);
 
             // the .Result here blocks the helios worker thread, deadlocking the whole system.
-            var msg2 = _here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).Result;
+            var msg2 = _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5)).Result;
             Assert.Equal("pong", msg2.Item1);
         }
         
@@ -235,12 +234,12 @@ namespace Akka.Remote.Tests
             ExpectMsg(76);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void Remoting_must_lookup_actors_across_node_boundaries()
         {
             Action<IActorDsl> act = dsl =>
             {
-                dsl.Receive<Tuple<Props, string>>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
+                dsl.Receive<(Props, string)>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
                 dsl.Receive<string>((s, ctx) =>
                 {
                     var sender = ctx.Sender;
@@ -251,11 +250,11 @@ namespace Akka.Remote.Tests
             var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
 
             // child is configured to be deployed on remote-sys (remoteSystem)
-            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            l.Tell((Props.Create<Echo1>(), "child"));
             var child = ExpectMsg<IActorRef>();
 
             // grandchild is configured to be deployed on RemotingSpec (Sys)
-            child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
+            child.Tell((Props.Create<Echo1>(), "grandchild"));
             var grandchild = ExpectMsg<IActorRef>();
             grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
             grandchild.Tell(43);
@@ -278,7 +277,7 @@ namespace Akka.Remote.Tests
             child.Tell(PoisonPill.Instance);
             ExpectMsg("postStop");
             ExpectTerminated(child);
-            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            l.Tell((Props.Create<Echo1>(), "child"));
             var child2 = ExpectMsg<IActorRef>();
             child2.Tell(45);
             ExpectMsg(45);
@@ -295,16 +294,16 @@ namespace Akka.Remote.Tests
         {
             Action<IActorDsl> act = dsl =>
             {
-                dsl.Receive<Tuple<Props, string>>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
+                dsl.Receive<(Props, string)>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
                 dsl.Receive<ActorSelReq>((req, ctx) => ctx.Sender.Tell(ctx.ActorSelection(req.S)));
             };
 
             var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
             // child is configured to be deployed on remoteSystem
-            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            l.Tell((Props.Create<Echo1>(), "child"));
             var child = ExpectMsg<IActorRef>();
             // grandchild is configured to be deployed on RemotingSpec (system)
-            child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
+            child.Tell((Props.Create<Echo1>(), "grandchild"));
             var grandchild = ExpectMsg<IActorRef>();
             (grandchild as IActorRefScope).IsLocal.ShouldBeTrue();
             grandchild.Tell(53);
@@ -326,7 +325,7 @@ namespace Akka.Remote.Tests
             ExpectMsg<ActorSelection>().Tell(new Identify(null));
             ExpectMsg<ActorIdentity>().Subject.ShouldBeSame(l);
 
-            grandchild.Tell(Tuple.Create(Props.Create<Echo1>(), "grandgrandchild"));
+            grandchild.Tell((Props.Create<Echo1>(), "grandgrandchild"));
             var grandgrandchild = ExpectMsg<IActorRef>();
 
             Sys.ActorSelection("/user/looker/child").Tell(new Identify("idReq1"));
@@ -374,7 +373,7 @@ namespace Akka.Remote.Tests
             child.Tell(PoisonPill.Instance);
             ExpectMsg("postStop");
             ExpectMsg<Terminated>().ActorRef.ShouldBe(child);
-            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            l.Tell((Props.Create<Echo1>(), "child"));
             var child2 = ExpectMsg<IActorRef>();
             child2.Tell(new Identify("idReq15"));
             ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq15")).Subject.ShouldBe(child2);
@@ -425,7 +424,7 @@ namespace Akka.Remote.Tests
                 var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
                 r.Tell("ping", TestActor);
-                ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
+                ExpectMsg(("pong", TestActor), TimeSpan.FromSeconds(1.5));
             }
             finally
             {
@@ -433,7 +432,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
@@ -442,7 +441,7 @@ namespace Akka.Remote.Tests
             //have one of the routees send the message
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
             _here.Tell("ping", targetRoutee);
-            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            var msg = ExpectMsg<(string, IActorRef)>(TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(targetRoutee, msg.Item2);
         }
@@ -458,7 +457,7 @@ namespace Akka.Remote.Tests
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
             var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
             _here.Tell("ping", reporter);
-            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            var msg = ExpectMsg<(string, IActorRef)>(TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(reporter, msg.Item2);
         }
@@ -497,7 +496,7 @@ namespace Akka.Remote.Tests
 
                 // Hijack associations through the test transport
                 AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
-                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
                 // Force an outbound associate on the real system (which we will hijack)
@@ -579,7 +578,7 @@ namespace Akka.Remote.Tests
 
                 // Hijack associations through the test transport
                 AwaitCondition(() => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
-                var testTransport = registry.TransportFor(rawLocalAddress).Item1;
+                var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
                 // Force an outbound associate on the real system (which we will hijack)
@@ -831,7 +830,7 @@ namespace Akka.Remote.Tests
             protected override void OnReceive(object message)
             {
                 message.Match()
-                    .With<Tuple<Props, string>>(props => Sender.Tell(Context.ActorOf<Echo1>(props.Item2)))
+                    .With<(Props, string)>(props => Sender.Tell(Context.ActorOf<Echo1>(props.Item2)))
                     .With<Exception>(ex => { throw ex; })
                     .With<ActorSelReq>(sel => Sender.Tell(Context.ActorSelection(sel.S)))
                     .Default(x =>
@@ -862,17 +861,17 @@ namespace Akka.Remote.Tests
                 message.Match()
                     .With<string>(str =>
                     {
-                        if (str.Equals("ping")) Sender.Tell(Tuple.Create("pong", Sender));
+                        if (str.Equals("ping")) Sender.Tell(("pong", Sender));
                     })
-                    .With<Tuple<string, IActorRef>>(actorTuple =>
+                    .With<(string, IActorRef)>(actorTuple =>
                     {
                         if (actorTuple.Item1.Equals("ping"))
                         {
-                            Sender.Tell(Tuple.Create("pong", actorTuple.Item2));
+                            Sender.Tell(("pong", actorTuple.Item2));
                         }
                         if (actorTuple.Item1.Equals("pong"))
                         {
-                            actorTuple.Item2.Tell(Tuple.Create("pong", Sender.Path.ToSerializationFormat()));
+                            actorTuple.Item2.Tell(("pong", Sender.Path.ToSerializationFormat()));
                         }
                     })
                     .Default(msg => Sender.Tell(msg));

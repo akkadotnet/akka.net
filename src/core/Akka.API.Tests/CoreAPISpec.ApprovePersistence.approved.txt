@@ -3,7 +3,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Persistence
 {
     public sealed class AsyncHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
@@ -809,6 +809,8 @@ namespace Akka.Persistence.Fsm
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> ForMax(System.TimeSpan timeout) { }
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Replying(object replyValue) { }
             public override string ToString() { }
+            [System.ObsoleteAttribute("Internal API easily to be confused with regular FSM\'s using. Use regular events (" +
+                "`Applying`). Internally, `copy` can be used instead.")]
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Using(TD nextStateData) { }
         }
         public class StateChangeEvent : Akka.Persistence.Serialization.IMessage

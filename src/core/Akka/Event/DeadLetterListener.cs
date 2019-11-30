@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,10 +20,16 @@ namespace Akka.Event
         private int _count;
 
         /// <summary>
-        /// TBD
+        /// Don't re-subscribe, skip call to preStart
         /// </summary>
-        /// <param name="reason">TBD</param>
         protected override void PostRestart(Exception reason)
+        {
+        }
+
+        /// <summary>
+        /// Don't remove subscription, skip call to postStop, no children to stop
+        /// </summary>
+        protected override void PreRestart(Exception reason, object message)
         {
         }
 
@@ -55,7 +61,7 @@ namespace Akka.Event
             var rcp = deadLetter.Recipient;
 
             _count++;
-            
+
             var done = _maxCount != int.MaxValue && _count >= _maxCount;
             var doneMsg = done ? ", no more dead letters will be logged" : "";
 
@@ -65,15 +71,12 @@ namespace Akka.Event
                 var sndPath = snd == ActorRefs.NoSender ? "NoSender" : snd.Path.ToString();
 
                 _eventStream.Publish(new Info(rcpPath, rcp.GetType(),
-                    string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}",
-                        deadLetter.Message.GetType().Name, sndPath, rcpPath, _count, doneMsg)));
+                    $"Message [{deadLetter.Message.GetType().Name}] from {sndPath} to {rcpPath} was not delivered. [{_count}] dead letters encountered {doneMsg}." +
+                    "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
+                    "and 'akka.log-dead-letters-during-shutdown'."));
             }
 
-            if (done)
-            {
-                ((IInternalActorRef) Self).Stop();
-            }
-
+            if (done) Context.Stop(Self);
             return true;
         }
     }

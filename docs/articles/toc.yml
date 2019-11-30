@@ -84,6 +84,8 @@
     href: persistence/custom-serialization.md
   - name: Persistence Query
     href: persistence/persistence-query.md
+  - name: Persistence Testing
+    href: persistence/persistence-testing.md
 - name: Streams
   items: 
   - name: Introduction
@@ -112,6 +114,8 @@
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
+  - name: StreamRefs - Reactive Streams over the network
+    href: streams/streamrefs.md
   - name: Pipelining and Parallelism
     href: streams/pipeliningandparallelism.md
   - name: Testing streams
@@ -166,6 +170,10 @@
     href: clustering/distributed-data.md
   - name: Split Brain Resolver
     href: clustering/split-brain-resolver.md
+- name: Testing
+  items:
+  - name: Multi-Node Testing Distributed Akka.NET Applications
+    href: testing/multi-node-testing.md
 - name: Utilities
   items:
   - name: Event Bus

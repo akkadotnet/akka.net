@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RestartNode2Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,11 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
+    /*
+     * N.B. - Regions are used for targeting by DocFx to include
+     * code inside relevant documentation.
+     */
+    #region MultiNodeSpecConfig
     public class RestartNode2SpecConfig : MultiNodeConfig
     {
         public RoleName Seed1 { get; }
@@ -37,7 +42,9 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
+    #endregion
 
+    #region MultiNodeSpec
     public class RestartNode2Spec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
@@ -156,4 +163,5 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
     }
+    #endregion
 }

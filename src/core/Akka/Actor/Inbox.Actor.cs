@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<TimeSpan, ICancelable> _currentDeadline;
+        private (TimeSpan, ICancelable)? _currentDeadline;
 
         private readonly int _size;
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -189,7 +189,7 @@ namespace Akka.Actor
             {
                 if (_currentDeadline != null)
                 {
-                    _currentDeadline.Item2.Cancel();
+                    _currentDeadline.Value.Item2.Cancel();
                     _currentDeadline = null;
                 }
             }
@@ -200,7 +200,7 @@ namespace Akka.Actor
                 {
                     if (_currentDeadline != null)
                     {
-                        _currentDeadline.Item2.Cancel();
+                        _currentDeadline.Value.Item2.Cancel();
                         _currentDeadline = null;
                     }
 
@@ -209,7 +209,7 @@ namespace Akka.Actor
                     if (delay > TimeSpan.Zero)
                     {
                         var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(delay, Self, new Kick(), Self);
-                        _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                        _currentDeadline = (next.Deadline, cancelable);
                     }
                     else
                     {

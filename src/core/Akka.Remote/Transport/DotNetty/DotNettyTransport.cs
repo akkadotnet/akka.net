@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
-        public override async Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             EndPoint listenAddress;
             IPAddress ip;
@@ -206,7 +206,7 @@ namespace Akka.Remote.Transport.DotNetty
 #pragma warning restore 4014
 
 
-                return Tuple.Create(addr, AssociationListenerPromise);
+                return (addr, AssociationListenerPromise);
             }
             catch (Exception ex)
             {

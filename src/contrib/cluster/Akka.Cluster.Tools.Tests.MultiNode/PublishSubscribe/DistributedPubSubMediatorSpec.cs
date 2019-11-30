@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediatorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,6 +41,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
+                akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
             ").WithFallback(DistributedPubSub.DefaultConfig());
         }
     }

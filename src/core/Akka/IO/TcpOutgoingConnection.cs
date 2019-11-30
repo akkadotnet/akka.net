@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -31,7 +32,8 @@ namespace Akka.IO
                    tcp.Settings.OutgoingSocketForceIpv4
                        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
                        : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   connect.PullMode)
+                   connect.PullMode,
+                   tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
         {
             _commander = commander;
             _connect = connect;

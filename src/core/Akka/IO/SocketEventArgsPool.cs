@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SocketEventArgsPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.IO.Buffers;
@@ -58,6 +60,11 @@ namespace Akka.IO
             try
             {
                 e.SetBuffer(null, 0, 0);
+                if (e.BufferList != null)
+                {
+                    e.BufferList = null;
+                }
+                
                 if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
                 {
                     _pool.Push(e);
@@ -114,6 +121,29 @@ namespace Akka.IO
                     args.SetBuffer(null, 0, 0);
                     args.BufferList = data.Buffers;
                 }
+            }
+        }
+        
+        public static void SetBuffer(this SocketAsyncEventArgs args, IEnumerable<ByteString> dataCollection)
+        {
+            if (RuntimeDetector.IsMono)
+            {
+                // Mono doesn't support BufferList - falback to compacting ByteString
+                var dataList = dataCollection.ToList();
+                var totalSize = dataList.SelectMany(d => d.Buffers).Sum(d => d.Count);
+                var bytes = new byte[totalSize];
+                var position = 0;
+                foreach (var byteString in dataList)
+                {
+                    var copied = byteString.CopyTo(bytes, position, byteString.Count);
+                    position += copied;
+                }
+                args.SetBuffer(bytes, 0, bytes.Length);
+            }
+            else
+            {
+                args.SetBuffer(null, 0, 0);
+                args.BufferList = dataCollection.SelectMany(d => d.Buffers).ToList();
             }
         }
     }

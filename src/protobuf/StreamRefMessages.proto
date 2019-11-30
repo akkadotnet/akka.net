@@ -1,0 +1,58 @@
+/**
+ * Copyright (C) 2009-2017 Lightbend Inc. <http://www.lightbend.com>
+ * Copyright (C) 2017-2018 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = 'proto3';
+package Akka.Streams.Serialization.Proto.Msg;
+option optimize_for = SPEED;
+
+/*************************************************
+  StreamRefs (SourceRef / SinkRef) related formats
+**************************************************/
+
+message EventType {
+  string typeName = 1;
+}
+
+message SinkRef {
+  ActorRef targetRef = 1;
+  EventType eventType = 2;
+}
+
+message SourceRef {
+  ActorRef originRef = 1;
+  EventType eventType = 2;
+}
+
+message ActorRef {
+  string path = 1;
+}
+
+message Payload {
+  bytes enclosedMessage = 1;
+  int32 serializerId = 2;
+  bytes messageManifest = 3;
+}
+
+// stream refs protocol
+
+message OnSubscribeHandshake {
+  ActorRef targetRef = 1;
+}
+message CumulativeDemand {
+  int64 seqNr = 1;
+}
+
+message SequencedOnNext {
+  int64 seqNr = 1;
+  Payload payload = 2;
+}
+
+message RemoteStreamFailure {
+  bytes cause = 1;
+}
+
+message RemoteStreamCompleted {
+  int64 seqNr = 1;
+}

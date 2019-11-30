@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to retrieve a data value for the
-    /// given `key`. The `Replicator` will reply with one of the <see cref="GetResponse"/> messages.
+    /// given `key`. The `Replicator` will reply with one of the <see cref="IGetResponse"/> messages.
     /// 
     /// The optional `request` context is included in the reply messages. This is a convenient
     /// way to pass contextual information (e.g. original sender) without having to use `ask`

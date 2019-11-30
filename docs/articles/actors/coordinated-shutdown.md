@@ -105,7 +105,7 @@ The default phases are defined in a linear order, but in practice the phases are
 
 ## Registering Tasks to a Phase
 
-For instance, if you're using [Akka.Cluster](../clustering/cluster-overview.md) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
+For instance, if you're using [Akka.Cluster](xref:cluster-overview) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
 
 ```
 var coordShutdown = CoordinatedShutdown.Get(myActorSystem);
@@ -124,10 +124,11 @@ There are a few different ways to start the `CoordinatedShutdown` process.
 
 If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
 
-[!code-csharp[CoordinatedShutdownSpecs.cs](../../examples/DocsExamples/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
+[!code-csharp[CoordinatedShutdownSpecs.cs](../../../src/core/Akka.Docs.Tests/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
 
 It's safe to call this method multiple times as the shutdown process will only be run once and will return the same completion task each time. The `Task<Done>` will complete once all phases have run successfully, or a phase with `recover = off` failed.
 
+> [!NOTE] 
 > It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination

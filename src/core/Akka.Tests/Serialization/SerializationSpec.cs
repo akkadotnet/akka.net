@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -97,7 +97,7 @@ namespace Akka.Tests.Serialization
                 }
             }
 
-            public ImmutableMessageWithPrivateCtor(Tuple<string, string> nonConventionalArg)
+            public ImmutableMessageWithPrivateCtor((string, string) nonConventionalArg)
             {
                 Foo = nonConventionalArg.Item1;
                 Bar = nonConventionalArg.Item2;
@@ -135,7 +135,7 @@ namespace Akka.Tests.Serialization
                 }
             }
 
-            public ImmutableMessage(Tuple<string,string> nonConventionalArg)
+            public ImmutableMessage((string,string) nonConventionalArg)
             {
                 Foo = nonConventionalArg.Item1;
                 Bar = nonConventionalArg.Item2;
@@ -241,14 +241,14 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_immutable_messages()
         {
-            var message = new ImmutableMessage(Tuple.Create("aaa", "bbb"));
+            var message = new ImmutableMessage(("aaa", "bbb"));
             AssertEqual(message);        
         }
 
         [Fact]
         public void Can_serialize_immutable_messages_with_private_ctor()
         {
-            var message = new ImmutableMessageWithPrivateCtor(Tuple.Create("aaa", "bbb"));
+            var message = new ImmutableMessageWithPrivateCtor(("aaa", "bbb"));
             AssertEqual(message);
         }
 

@@ -125,7 +125,7 @@ So, to create a custom serializer, all that is needed is a class that inherits f
 ### Creating new Serializers
 A custom `Serializer` has to inherit from `Akka.Serialization.Serializer` and can be defined like this:
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/Serialization/CreateCustomSerializer.cs?range=7-42)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/CreateCustomSerializer.cs?range=7-42)]
 
 The only thing left to do for this class would be to fill in the serialization logic in the ``ToBinary(object)`` method and the deserialization logic in the ``FromBinary(byte[], Type)``. 
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
@@ -142,7 +142,7 @@ The manifest string can also encode a version number that can be used in `FromBi
 If the data was originally serialized with `Serializer`, and in a later version of the system you change to `SerializerWithStringManifest`, the manifest string will be the full class name if you used `IncludeManifest=true`, otherwise it will be the empty string.
 
 This is how a `SerializerWithStringManifest` looks:
-[!code-csharp[Main](../../examples/DocsExamples/Networking/Serialization/MyOwnSerializer2.cs?range=9-66)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/MyOwnSerializer2.cs?range=9-66)]
 
 You must also bind it to a name in your `Configuration` and then list which classes that should be serialized using it.
 

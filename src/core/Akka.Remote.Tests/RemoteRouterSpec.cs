@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,10 +40,10 @@ namespace Akka.Remote.Tests
         {
             protected override void OnReceive(object message)
             {
-                var tuple = message as Tuple<Props, string>;
+                var tuple = message as (Props, string)?;
                 if (tuple != null)
                 {
-                    Sender.Tell(Context.ActorOf(tuple.Item1, tuple.Item2));
+                    Sender.Tell(Context.ActorOf(tuple.Value.Item1, tuple.Value.Item2));
                 }
             }
         }
@@ -343,7 +343,7 @@ namespace Akka.Remote.Tests
             // it's used for the pool of the SimpleDnsManager "/IO-DNS/inet-address"
             var probe = CreateTestProbe(masterSystem);
             var parent = ((ExtendedActorSystem)masterSystem).SystemActorOf(FromConfig.Instance.Props(Props.Create<Parent>()), "sys-parent");
-            parent.Tell(Tuple.Create(FromConfig.Instance.Props(EchoActorProps), "round"), probe);
+            parent.Tell((FromConfig.Instance.Props(EchoActorProps), "round"), probe);
             var router = probe.ExpectMsg<IActorRef>();
             var replies = CollectRouteePaths(probe, router, 10);
             var children = new HashSet<ActorPath>(replies);

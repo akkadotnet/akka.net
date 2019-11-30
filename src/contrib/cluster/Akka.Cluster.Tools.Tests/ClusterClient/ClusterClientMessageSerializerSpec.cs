@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,9 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
     public class ClusterClientMessageSerializerSpec : AkkaSpec
     {
         public ClusterClientMessageSerializerSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster").WithFallback(ClusterClientReceptionist.DefaultConfig()))
+            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.remote.dot-netty.tcp.port = 0")
+            .WithFallback(ClusterClientReceptionist.DefaultConfig()))
         {
         }
 

@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.Streams.Tests.Performance</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
@@ -15,10 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="1.0.1" />
+    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
+    <DotNetCliToolReference Include="dotnet-nbench" Version="$(NBenchVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
   </ItemGroup>

@@ -1,0 +1,664 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <!-- The configuration and platform will be used to determine which assemblies to include from solution and
+                 project documentation sources -->
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0d9f9c2d-762f-4568-89d5-71dc901e7255}</ProjectGuid>
+    <SHFBSchemaVersion>2017.9.26.0</SHFBSchemaVersion>
+    <!-- AssemblyName, Name, and RootNamespace are not used by SHFB but Visual Studio adds them anyway -->
+    <AssemblyName>Documentation</AssemblyName>
+    <RootNamespace>Documentation</RootNamespace>
+    <Name>Documentation</Name>
+    <!-- SHFB properties -->
+    <FrameworkVersion>Cross-platform (.NET Core/.NET Standard)</FrameworkVersion>
+    <OutputPath>bin\doc\</OutputPath>
+    <HtmlHelpName>Documentation</HtmlHelpName>
+    <Language>en-US</Language>
+    <BuildAssemblerVerbosity>OnlyWarningsAndErrors</BuildAssemblerVerbosity>
+    <HelpFileFormat>Website</HelpFileFormat>
+    <IndentHtml>False</IndentHtml>
+    <KeepLogFile>True</KeepLogFile>
+    <DisableCodeBlockComponent>False</DisableCodeBlockComponent>
+    <CppCommentsFixup>False</CppCommentsFixup>
+    <CleanIntermediates>True</CleanIntermediates>
+    <TransformComponentArguments>
+      <Argument Key="logoFile" Value="AkkaNetLogo.Normal.png" xmlns="" />
+      <Argument Key="logoHeight" Value="" xmlns="" />
+      <Argument Key="logoWidth" Value="" xmlns="" />
+      <Argument Key="logoAltText" Value="Akka.NET" xmlns="" />
+      <Argument Key="logoPlacement" Value="left" xmlns="" />
+      <Argument Key="logoAlignment" Value="left" xmlns="" />
+      <Argument Key="maxVersionParts" Value="" xmlns="" />
+      <Argument Key="defaultLanguage" Value="cs" xmlns="" />
+    </TransformComponentArguments>
+    <MaximumGroupParts>2</MaximumGroupParts>
+    <NamespaceGrouping>False</NamespaceGrouping>
+    <SyntaxFilters>C#, F#</SyntaxFilters>
+    <SdkLinkTarget>Blank</SdkLinkTarget>
+    <RootNamespaceContainer>True</RootNamespaceContainer>
+    <PresentationStyle>VS2013</PresentationStyle>
+    <Preliminary>False</Preliminary>
+    <NamingMethod>HashedMemberName</NamingMethod>
+    <HelpTitle>Akka.NET Documentation</HelpTitle>
+    <FooterText>&amp;lt%3ba href=&amp;quot%3bhttp://getakka.net/&amp;quot%3b&amp;gt%3bAkka.NET Home&amp;lt%3b/a&amp;gt%3b | &amp;lt%3ba href=&amp;quot%3bhttp://learnakka.net&amp;quot%3b&amp;gt%3bLearn Akka.NET&amp;lt%3b/a&amp;gt%3b</FooterText>
+    <ContentPlacement>AboveNamespaces</ContentPlacement>
+    <RootNamespaceTitle>API Reference</RootNamespaceTitle>
+    <VisibleItems>InheritedMembers, InheritedFrameworkMembers, Protected, SealedProtected, ProtectedInternalAsProtected, EditorBrowsableNever, NonBrowsable</VisibleItems>
+    <WorkingPath>
+    </WorkingPath>
+    <DocumentationSources>
+      <DocumentationSource sourceFile="..\..\src\core\Akka\bin\Release\netstandard2.0\Akka.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka\bin\Release\netstandard2.0\Akka.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka\Akka.ExternalAnnotations.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Akka.Cluster.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Akka.Cluster.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Cluster.TestKit\bin\Release\netstandard2.0\Akka.Cluster.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Cluster.TestKit\bin\Release\netstandard2.0\Akka.Cluster.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\Akka.FSharp.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\Akka.FSharp.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence\bin\Release\netstandard2.0\Akka.Persistence.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence\bin\Release\netstandard2.0\Akka.Persistence.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.FSharp\bin\Release\netstandard2.0\Akka.Persistence.FSharp.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.FSharp\bin\Release\netstandard2.0\Akka.Persistence.FSharp.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.Query\bin\Release\netstandard2.0\Akka.Persistence.Query.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.Query\bin\Release\netstandard2.0\Akka.Persistence.Query.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.TestKit\bin\Release\netstandard2.0\Akka.Persistence.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Persistence.TestKit\bin\Release\netstandard2.0\Akka.Persistence.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Remote\bin\Release\netstandard2.0\Akka.Remote.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Remote\bin\Release\netstandard2.0\Akka.Remote.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Remote.TestKit\bin\Release\netstandard2.0\Akka.Remote.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Remote.TestKit\bin\Release\netstandard2.0\Akka.Remote.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Streams\bin\Release\netstandard2.0\Akka.Streams.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Streams\bin\Release\netstandard2.0\Akka.Streams.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Streams.TestKit\bin\Release\netstandard2.0\Akka.Streams.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.Streams.TestKit\bin\Release\netstandard2.0\Akka.Streams.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.TestKit\bin\Release\netstandard2.0\Akka.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\core\Akka.TestKit\bin\Release\netstandard2.0\Akka.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\netstandard2.0\Akka.Cluster.Sharding.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\netstandard2.0\Akka.Cluster.Sharding.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\netstandard2.0\Akka.Cluster.Tools.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\netstandard2.0\Akka.Cluster.Tools.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.DistributedData\bin\Release\netstandard2.0\Akka.DistributedData.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\cluster\Akka.DistributedData\bin\Release\netstandard2.0\Akka.DistributedData.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\dependencyinjection\Akka.DI.Core\bin\Release\netstandard2.0\Akka.DI.Core.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\dependencyinjection\Akka.DI.Core\bin\Release\netstandard2.0\Akka.DI.Core.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\dependencyinjection\Akka.DI.TestKit\bin\Release\netstandard2.0\Akka.DI.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\dependencyinjection\Akka.DI.TestKit\bin\Release\netstandard2.0\Akka.DI.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Query.Sql\bin\Release\netstandard2.0\Akka.Persistence.Query.Sql.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Query.Sql\bin\Release\netstandard2.0\Akka.Persistence.Query.Sql.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sql.Common\bin\Release\netstandard2.0\Akka.Persistence.Sql.Common.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sql.Common\bin\Release\netstandard2.0\Akka.Persistence.Sql.Common.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sql.TestKit\bin\Release\netstandard2.0\Akka.Persistence.Sql.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sql.TestKit\bin\Release\netstandard2.0\Akka.Persistence.Sql.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sqlite\bin\Release\netstandard2.0\Akka.Persistence.Sqlite.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\persistence\Akka.Persistence.Sqlite\bin\Release\netstandard2.0\Akka.Persistence.Sqlite.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\serializers\Akka.Serialization.Hyperion\bin\Release\netstandard2.0\Akka.Serialization.Hyperion.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\serializers\Akka.Serialization.Hyperion\bin\Release\netstandard2.0\Akka.Serialization.Hyperion.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\serializers\Akka.Serialization.TestKit\bin\Release\netstandard2.0\Akka.Serialization.TestKit.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\serializers\Akka.Serialization.TestKit\bin\Release\netstandard2.0\Akka.Serialization.TestKit.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\Akka.TestKit.Xunit.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\Akka.TestKit.Xunit.xml" />
+      <DocumentationSource sourceFile="..\..\src\contrib\testkits\Akka.TestKit.Xunit2\bin\Release\netstandard2.0\Akka.TestKit.Xunit2.dll" />
+      <DocumentationSource sourceFile="..\..\src\contrib\testkits\Akka.TestKit.Xunit2\bin\Release\netstandard2.0\Akka.TestKit.Xunit2.xml" />
+    </DocumentationSources>
+    <NamespaceSummaries>
+      <NamespaceSummaryItem name="(global)" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka" isDocumented="True">
+        Akka.NET is an open-source library for building concurrent, fault-tolerant and scalable systems using the actor model.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Actor" isDocumented="True">
+        The Akka.Actor namespace contains classes used to create and manage actors including lifecycle, message receiving and handling.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Actor.Dsl" isDocumented="True">
+        The Akka.Actor.Dsl namespace contains classes used to create and manage an actor using a custom domain specific language.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Actor.Internal" isDocumented="True">
+        The Akka.Actor.Internal namespace contains classes used to create and manage actors within the system. These classes are part
+        of an internal API. As such, these classes may break without warning. Use at your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster" isDocumented="True">
+        The Akka.Cluster namespace contains classes that provide cluster services including membership, gossip protocols and fault-tolerance.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Proto.Msg" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.PubSub.Serializers.Proto" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Routing" isDocumented="True">
+        The Akka.Cluster.Routing namespace contains classes that provide for routing messages within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Sharding" isDocumented="True">
+        The Akka.Cluster.Sharding namespace contains classes that provide for actor sharding functionality within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Sharding.Serialization" isDocumented="True">
+        The Akka.Cluster.Sharding.Serialization namespace contains classes used to (de-)serialize cluster sharding messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.TestKit" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tests.MultiNode" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Client" isDocumented="True">
+        The Akka.Cluster.Tools.Client namespace contains classes that provide an interface for communicating with actors within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Client.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.Client.Serialization namespace contains classes used to (de-)serialize cluster client messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.PublishSubscribe" isDocumented="True">
+        The Akka.Cluster.Tools.PublishSubscribe namespace contains classes that provide for pub/sub functionality within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.PublishSubscribe.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.PublishSubscribe.Serialization namespace contains classes used to (de-)serialize cluster pub/sub messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Singleton" isDocumented="True">
+        The Akka.Cluster.Tools.Singleton namespace contains classes that provide for actor singleton functionality within a cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Singleton.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.Singleton.Serialization namespace contains classes used to (de-)serialize cluster singleton messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Configuration" isDocumented="True">
+        The Akka.Configuration namespace contains classes used to configure the system via a variety of means including configuration
+        files, embedded resources and bare HOCON (Human-Optimized Config Object Notation) strings.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Configuration.Hocon" isDocumented="True">
+        The Akka.Configuration.Hocon namespace contains classes used to interact with configuration values via their internal
+        HOCON (Human-Optimized Config Object Notation) representation.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DI.Core" isDocumented="True">
+        The Akka.DI.Core namespace contains classes used to provide extension points for dependency injection (DI).
+        These classes rely on the different DI libraries to do the heavy lifting.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Dispatch" isDocumented="True">
+        The Akka.Dispatch namespace contains classes used to dispatch messages to the actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Dispatch.MessageQueues" isDocumented="True">
+        The Akka.Dispatch.MessageQueues namespace contains classes used to queue messages for an actor.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Dispatch.SysMsg" isDocumented="True">
+        The Akka.Dispatch.SysMsg namespace contains classes used to dispatch system messages to the actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData.Internal" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData.Local" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Event" isDocumented="True">
+        The Akka.Event namespace contains classes used to publish/subscribe to events in the Event Stream.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.FSharp" isDocumented="True">
+        The Akka.FSharp namespace contains an API used to interact and control the system via F#.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.IO" isDocumented="True">
+        The Akka.IO namespace contains classes and methods used to interact directly with actors via TCP/UDP.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Pattern" isDocumented="True">
+        The Akka.Pattern namespace contains classes containing common usage patterns when interacting with actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence" isDocumented="True">
+        The Akka.Persistence namespace contains classes used to save/restore an actor's state into a persist data store.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Fsm" isDocumented="True">
+        The Akka.Persistence.Fsm namespace contains classes used to interact with actor persistence using a state machine.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Journal" isDocumented="True">
+        The Akka.Persistence.Journal namespace contains classes used to journal sequences of events the actor state.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Query" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Query.Sql" isDocumented="True">
+        The Akka.Persistence.Query.Sql namespace contains classes used to to query ranges of information directly from their underlying persistence stores for more powerful types of reads, aggregations, and more.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Serialization" isDocumented="True">
+        The Akka.Persistence.Serialization namespace contains classes used to (de-)serialize messages and snapshots.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Snapshot" isDocumented="True">
+        The Akka.Persistence.Snapshot namespace contains classes used to snapshot an actor's internal state.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sql.Common" isDocumented="True">
+        The Akka.Persistence.Sql.Common namespace contains common classes used by the various SQL persistence extensions.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Journal" isDocumented="True">
+        The Akka.Persistence.Sql.Common.Journal namespace contains common classes used by the various SQL persistence extensions
+        when journalling.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Queries" isDocumented="True">
+        The Akka.Persistence.Sql.Common.Queries namespace contains common classes used by the various SQL persistence extensions
+        when performing queries.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Snapshot" isDocumented="True">
+        The Akka.Persistence.Sql.Common.snapshot namespace contains common classes used by the various SQL persistence extensions
+        when snapshotting.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sqlite" isDocumented="True">
+        The Akka.Persistence namespace contains classes used to save/restore an actor's state into a Sqlite data store.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sqlite.Journal" isDocumented="True">
+        The Akka.Persistence.Journal namespace contains classes used when interacting with the Sqlite implementation of persistence journalling.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Sqlite.Snapshot" isDocumented="True">
+        The Akka.Persistence.Snapshot namespace contains classes used when interacting with the Sqlite implementation of persistence snapshotting.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.TestKit" isDocumented="True">
+        The Akka.Persistence.TestKit namespace contains classes that provide base testing functionality used to test
+        new persistence extensions.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.TestKit.Journal" isDocumented="True">
+        The Akka.Persistence.TestKit.Journal namespace contains classes that provide base testing functionality used to test
+        journalling in new persistence extensions.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.TestKit.Snapshot" isDocumented="True">
+        The Akka.Persistence.TestKit.Snapshot namespace contains classes that provide base testing functionality used to test
+        snapshotting in new persistence extensions.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote" isDocumented="True">
+        The Akka.Remote namespace contains classes that provide for interacting to remote actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.Routing" isDocumented="True">
+        The Akka.Remote.Routing namespace contains classes that provide for routing messages to remote actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.Serialization" isDocumented="True">
+        The Akka.Remote.Serialization namespace contains classes that provide for serializing messages to and deserializing
+        messages from remote actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.TestKit" isDocumented="True">
+        The Akka.Remote.TestKit namespace contains classes that provide base testing functionality used to test remote actors.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.TestKit.Proto" isDocumented="True">
+        The Akka.Remote.TestKit.Proto namespace contains classes that provide base testing functionality used to test message encoding.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.Transport" isDocumented="True">
+        The Akka.Remote.Transport namespace contains classes that provide for transporting messages over the network via TCP or UDP.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.Transport.AkkaIO" isDocumented="True">
+        The Akka.Remote.Transport namespace contains classes that provide for transporting messages over the network via Akka.IO.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Routing" isDocumented="True">
+        The Akka.Routing namespace contains classes that provide for routing messages within the system.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Serialization" isDocumented="True">
+        The Akka.Serialization namespace contains classes used to (de-)serialize messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams" isDocumented="True">
+        The Akka.Streams namespace contains classes that provide a domain specific language that allows you to compose actors and workflows into streams of events and messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Actors" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Dsl" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Dsl.Internal" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Extra" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation.Fusing" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation.IO" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation.Stages" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.IO" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Stage" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Supervision" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.TestKit" isDocumented="True">
+        The Akka.Streams namespace contains classes that provide base testing functionality used to test event and message streaming.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Util" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit" isDocumented="True">
+        The Akka.TestKit namespace contains classes that provide base testing functionality used by the different testkit extensions.
+        This functionality allows for writing tests in the extension's framework.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Configs" isDocumented="True">
+        The Akka.TestKit.Configs namespace contains common classes used when configuring the different testkit extensions.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Internal" isDocumented="True">
+        The Akka.TestKit.Internal namespace contains classes that provide base testing functionality used by the different testkit extensions.
+        This functionality allows for writing tests in the extension's framework. These classes are part of an internal API.
+        As such, these classes may break without warning. Use at your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Internal.StringMatcher" isDocumented="True">
+        The Akka.TestKit.Internal.StringMatcher namespace contains classes that provide basic string matching functionality used for testing
+        purposes. This functionality allows for writing tests in the extension's framework. These classes are part of an internal API.
+        As such, these classes may break without warning. Use at your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.TestActors" isDocumented="True">
+        The Akka.TestKit.TestActors namespace contains classes that provide basic actors used for testing purposes.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.TestEvent" isDocumented="True">
+        The Akka.TestKit.TestEvent namespace contains classes that provide basic events used for event-filtering testing purposes.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit" isDocumented="True">
+        The Akka.TestKit.Xunit namespace contains classes that provide for writing tests in Xunit.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit.Internals" isDocumented="True">
+        The Akka.TestKit.Xunit.Internals namespace contains classes that provide for writing tests in Xunit.
+        These classes are part of an internal API. As such, these classes may break without warning. Use at
+        your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit2" isDocumented="True">
+        The Akka.TestKit.Xunit2 namespace contains classes that provide for writing tests in Xunit2.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit2.Internals" isDocumented="True">
+        The Akka.TestKit.Xunit2.Internals namespace contains classes that provide for writing tests in Xunit2.
+        These classes are part of an internal API. As such, these classes may break without warning. Use at
+        your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Tools.MatchHandler" isDocumented="True">
+        The Akka.Tools.MatchHandler namespace contains classes that provide for matching messages with their correct actor.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Util" isDocumented="True">
+        The Akka.Util namespace contains classes that provide utilitarian functionality.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Util.Internal" isDocumented="True">
+        The Akka.Util.Internal namespace contains classes that provide utilitarian functionality. These classes are part of an internal API.
+        As such, these classes may break without warning. Use at your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Util.Internal.Collections" isDocumented="True">
+        The Akka.Util.Internal.Collections namespace contains classes that provide collection-based utilitarian functionality.
+        These classes are part of an internal API. As such, these classes may break without warning. Use at your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Util.Reflection" isDocumented="True">
+        The Akka.Util.Reflection namespace contains classes that provide reflection-based utilitarian functionality.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="TCP" isDocumented="True">
+        The TCP namespace contains classes used to interact with Google ProtocolBuffers.
+      </NamespaceSummaryItem>
+    </NamespaceSummaries>
+    <SaveComponentCacheCapacity>100</SaveComponentCacheCapacity>
+    <WarnOnMissingSourceContext>False</WarnOnMissingSourceContext>
+  </PropertyGroup>
+  <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
+             the build.  The others are optional common platform types that may appear. -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|Win32' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|Win32' ">
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="icons\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icons\AkkaNetLogo.Normal.png">
+      <ImageId>AkkaNetLogo.Normal</ImageId>
+      <AlternateText>Akka Net Logo.Normal</AlternateText>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Akka">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\Akka.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Cluster">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Akka.Cluster.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Cluster.Sharding">
+      <HintPath>..\..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\netstandard2.0\Akka.Cluster.Sharding.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Cluster.TestKit">
+      <HintPath>..\..\src\core\Akka.Cluster.TestKit\bin\Release\netstandard2.0\Akka.Cluster.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Cluster.Tools">
+      <HintPath>..\..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\netstandard2.0\Akka.Cluster.Tools.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.DI.Core">
+      <HintPath>..\..\src\contrib\dependencyinjection\Akka.DI.Core\bin\Release\netstandard2.0\Akka.DI.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.DI.TestKit">
+      <HintPath>..\..\src\contrib\dependencyinjection\Akka.DI.TestKit\bin\Release\netstandard2.0\Akka.DI.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.DistributedData">
+      <HintPath>..\..\src\contrib\cluster\Akka.DistributedData\bin\Release\netstandard2.0\Akka.DistributedData.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.FSharp">
+      <HintPath>..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\Akka.FSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence">
+      <HintPath>..\..\src\core\Akka.Persistence\bin\Release\netstandard2.0\Akka.Persistence.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.FSharp">
+      <HintPath>..\..\src\core\Akka.Persistence.FSharp\bin\Release\netstandard2.0\Akka.Persistence.FSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.Query">
+      <HintPath>..\..\src\core\Akka.Persistence.Query\bin\Release\netstandard2.0\Akka.Persistence.Query.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.Query.Sql">
+      <HintPath>..\..\src\contrib\persistence\Akka.Persistence.Query.Sql\bin\Release\netstandard2.0\Akka.Persistence.Query.Sql.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.Sql.Common">
+      <HintPath>..\..\src\contrib\persistence\Akka.Persistence.Sql.Common\bin\Release\netstandard2.0\Akka.Persistence.Sql.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.Sql.TestKit">
+      <HintPath>..\..\src\contrib\persistence\Akka.Persistence.Sql.TestKit\bin\Release\netstandard2.0\Akka.Persistence.Sql.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.Sqlite">
+      <HintPath>..\..\src\contrib\persistence\Akka.Persistence.Sqlite\bin\Release\netstandard2.0\Akka.Persistence.Sqlite.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Persistence.TestKit">
+      <HintPath>..\..\src\core\Akka.Persistence.TestKit\bin\Release\netstandard2.0\Akka.Persistence.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Remote">
+      <HintPath>..\..\src\core\Akka.Remote\bin\Release\netstandard2.0\Akka.Remote.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Remote.TestKit">
+      <HintPath>..\..\src\core\Akka.Remote.TestKit\bin\Release\netstandard2.0\Akka.Remote.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Serialization.Hyperion">
+      <HintPath>..\..\src\contrib\serializers\Akka.Serialization.Hyperion\bin\Release\netstandard2.0\Akka.Serialization.Hyperion.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Serialization.TestKit">
+      <HintPath>..\..\src\contrib\serializers\Akka.Serialization.TestKit\bin\Release\netcoreapp2.1\Akka.Serialization.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Streams">
+      <HintPath>..\..\src\core\Akka.Streams\bin\Release\netstandard2.0\Akka.Streams.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.Streams.TestKit">
+      <HintPath>..\..\src\core\Akka.Streams.TestKit\bin\Release\netstandard2.0\Akka.Streams.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.TestKit">
+      <HintPath>..\..\src\core\Akka.TestKit\bin\Release\netstandard2.0\Akka.TestKit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.TestKit.Xunit">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\Akka.TestKit.Xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="Akka.TestKit.Xunit2">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit2\bin\Release\netstandard2.0\Akka.TestKit.Xunit2.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetty.Buffers">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\DotNetty.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetty.Codecs">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\DotNetty.Codecs.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetty.Common">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\DotNetty.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetty.Handlers">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\DotNetty.Handlers.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetty.Transport">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\DotNetty.Transport.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharp.Core">
+      <HintPath>..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\FSharp.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharp.Quotations.Evaluator">
+      <HintPath>..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\FSharp.Quotations.Evaluator.dll</HintPath>
+    </Reference>
+    <Reference Include="FsPickler">
+      <HintPath>..\..\src\core\Akka.FSharp\bin\Release\netstandard2.0\FsPickler.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\Microsoft.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Microsoft.Extensions.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Reactive.Streams">
+      <HintPath>..\..\src\core\Akka.Streams\bin\Release\netstandard2.0\Reactive.Streams.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Concurrent">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Collections.Concurrent.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.NonGeneric">
+      <HintPath>..\..\src\core\Akka.Cluster.TestKit\bin\Release\netstandard2.0\System.Collections.NonGeneric.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Specialized">
+      <HintPath>..\..\src\core\Akka.Cluster.TestKit\bin\Release\netstandard2.0\System.Collections.Specialized.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.ComponentModel.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Diagnostics.Contracts">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Diagnostics.Contracts.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Diagnostics.StackTrace">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Diagnostics.StackTrace.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Dynamic.Runtime">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Dynamic.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IO.FileSystem.Primitives">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.IO.FileSystem.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Linq">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Linq.Expressions">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Linq.Expressions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ObjectModel">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.ObjectModel.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection.Emit">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Reflection.Emit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection.Emit.ILGeneration">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Reflection.Emit.ILGeneration.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection.Emit.Lightweight">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Reflection.Emit.Lightweight.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection.Metadata">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Reflection.Metadata.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection.TypeExtensions">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Reflection.TypeExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Numerics">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Runtime.Numerics.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization.Primitives">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Runtime.Serialization.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Claims">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Security.Claims.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.OpenSsl">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Security.Cryptography.OpenSsl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Primitives">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Security.Cryptography.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Principal">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Security.Principal.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.RegularExpressions">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Text.RegularExpressions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Threading.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Thread">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Threading.Thread.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.ThreadPool">
+      <HintPath>..\..\src\core\Akka.Cluster\bin\Release\netstandard2.0\System.Threading.ThreadPool.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.ReaderWriter">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Xml.ReaderWriter.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.XDocument">
+      <HintPath>..\..\src\core\Akka\bin\Release\netstandard2.0\System.Xml.XDocument.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.abstractions">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\xunit.abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.assert">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\xunit.assert.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.core">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\xunit.core.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.execution.dotnet">
+      <HintPath>..\..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\netstandard2.0\xunit.execution.dotnet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!-- Import the SHFB build targets -->
+  <Import Project="$(SHFBROOT)\SandcastleHelpFileBuilder.targets" />
+</Project>

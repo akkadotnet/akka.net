@@ -9,7 +9,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace Akka.Cluster
 {
     public sealed class AutoDowning : Akka.Cluster.IDowningProvider
@@ -208,6 +208,7 @@ namespace Akka.Cluster
         public int SchedulerTicksPerWheel { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
+        public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
