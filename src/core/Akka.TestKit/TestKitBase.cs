@@ -135,11 +135,12 @@ namespace Akka.TestKit
 
             var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
-            AwaitConditionAsync(() =>
+            // Calling sync version here, since .Wait() causes deadlock
+            AwaitCondition(() =>
             {
                 var repRef = testActor as IRepointableRef;
                 return repRef == null || repRef.IsStarted;
-            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10)).Wait();
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
             if (!(this is INoImplicitSender))
             {
