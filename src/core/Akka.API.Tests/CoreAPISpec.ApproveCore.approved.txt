@@ -931,6 +931,10 @@ namespace Akka.Actor
     }
     public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
+        [Akka.Annotations.InternalApiAttribute()]
+        public static readonly Akka.Util.Internal.AtomicCounter TotalTicksActual;
+        [Akka.Annotations.InternalApiAttribute()]
+        public static readonly Akka.Util.Internal.AtomicCounter TotalTicksRequiredToWaitStrict;
         public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
