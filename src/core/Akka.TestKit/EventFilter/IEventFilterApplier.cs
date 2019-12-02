@@ -24,7 +24,6 @@ namespace Akka.TestKit
         /// "akka.test.filter-leeway", see <see cref="TestKitSettings.TestEventFilterLeeway"/>.
         /// </summary>
         /// <param name="action">The action.</param>
-        [Obsolete("Use async version instead")]
         void ExpectOne(Action action);
         
         /// <summary>
@@ -55,7 +54,6 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="action"/></param>
         /// <param name="action">The action.</param>
-        [Obsolete("Use async version instead")]
         void ExpectOne(TimeSpan timeout, Action action);
         
         /// <summary>
@@ -77,7 +75,6 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="action">The action.</param>
-        [Obsolete("Use async version instead")]
         void Expect(int expectedCount, Action action);
         
         /// <summary>
@@ -112,7 +109,6 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for log events after executing <paramref name="action"/></param>
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="action">The action.</param>
-        [Obsolete("Use async version instead")]
         void Expect(int expectedCount, TimeSpan timeout, Action action);
         
         /// <summary>
@@ -137,7 +133,6 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         T ExpectOne<T>(Func<T> func);
         
         /// <summary>
@@ -162,7 +157,6 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="func"/></param>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         T ExpectOne<T>(TimeSpan timeout, Func<T> func);
         
         /// <summary>
@@ -175,7 +169,6 @@ namespace Akka.TestKit
         /// <param name="timeout">The time to wait for a log event after executing <paramref name="func"/></param>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         Task<T> ExpectOneAsync<T>(TimeSpan timeout, Func<T> func);
 
         /// <summary>
@@ -189,7 +182,6 @@ namespace Akka.TestKit
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         T Expect<T>(int expectedCount, Func<T> func);
         
         /// <summary>
@@ -217,7 +209,6 @@ namespace Akka.TestKit
         /// <param name="expectedCount">The expected number of events</param>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func);
         
         /// <summary>
@@ -240,7 +231,6 @@ namespace Akka.TestKit
         /// <typeparam name="T">The return value of the function</typeparam>
         /// <param name="func">The function.</param>
         /// <returns>The returned value from <paramref name="func"/>.</returns>
-        [Obsolete("Use async version instead")]
         T Mute<T>(Func<T> func);
         
         /// <summary>
@@ -256,7 +246,6 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="action">The function.</param>
         /// <returns>The returned value from <paramref name="action"/>.</returns>
-        [Obsolete("Use async version instead")]
         void Mute(Action action);
         
         /// <summary>

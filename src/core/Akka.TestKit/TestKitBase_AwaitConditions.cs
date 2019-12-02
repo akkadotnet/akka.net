@@ -31,7 +31,6 @@ namespace Akka.TestKit
         /// </para>
         /// </summary>
         /// <param name="conditionIsFulfilled">The condition that must be fulfilled within the duration.</param>
-        [Obsolete("Use async version instead")]
         public void AwaitCondition(Func<bool> conditionIsFulfilled)
         {
             var maxDur = RemainingOrDefault;
@@ -79,7 +78,6 @@ namespace Akka.TestKit
         /// (if inside a `within` block) or the value specified in config value "akka.test.single-expect-default". 
         /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
         /// specified in config value "akka.test.timefactor".</param>
-        [Obsolete("Use async version instead")]
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max)
         {
             var maxDur = RemainingOrDilated(max);
@@ -133,7 +131,6 @@ namespace Akka.TestKit
         /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
         /// specified in config value "akka.test.timefactor".</param>
         /// <param name="message">The message used if the timeout expires.</param>
-        [Obsolete("Use async version instead")]
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, string message)
         {
             var maxDur = RemainingOrDilated(max);
@@ -196,7 +193,6 @@ namespace Akka.TestKit
         /// instead set it to a relatively small value.</para>
         /// </param>
         /// <param name="message">The message used if the timeout expires.</param>
-        [Obsolete("Use async version instead")]
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, TimeSpan? interval, string message = null)
         {
             var maxDur = RemainingOrDilated(max);
@@ -255,7 +251,6 @@ namespace Akka.TestKit
         /// if the condition is fulfilled. Between calls the thread sleeps. If undefined, 100 ms is used
         /// </param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null)
         {
             var intervalDur = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
@@ -307,7 +302,6 @@ namespace Akka.TestKit
         /// <param name="fail">Action that is called when the timeout expired. 
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail)
         {
             return InternalAwaitCondition(conditionIsFulfilled, max, interval, fail, null);
@@ -354,7 +348,6 @@ namespace Akka.TestKit
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
         /// <param name="logger">If a <see cref="ILoggingAdapter"/> is specified, debug messages will be logged using it. If <c>null</c> nothing will be logged</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger)
         {
             max.EnsureIsPositiveFinite("max");

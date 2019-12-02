@@ -41,7 +41,6 @@ namespace Akka.TestKit.Internal
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
-        [Obsolete("Use async version instead")]
         public void ExpectOne(Action action)
         {
             InternalExpect(action, _actorSystem, 1);
@@ -66,7 +65,6 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="timeout">TBD</param>
         /// <param name="action">TBD</param>
-        [Obsolete("Use async version instead")]
         public void ExpectOne(TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, 1, timeout);
@@ -86,7 +84,6 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="expectedCount">TBD</param>
         /// <param name="action">TBD</param>
-        [Obsolete("Use async version instead")]
         public void Expect(int expectedCount, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, null);
@@ -114,7 +111,6 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="action">TBD</param>
-        [Obsolete("Use async version instead")]
         public void Expect(int expectedCount, TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, timeout);
@@ -134,7 +130,6 @@ namespace Akka.TestKit.Internal
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public T ExpectOne<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, 1);
@@ -155,7 +150,6 @@ namespace Akka.TestKit.Internal
         /// <param name="timeout">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public T ExpectOne<T>(TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, 1);
@@ -176,7 +170,6 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public T Expect<T>(int expectedCount, Func<T> func)
         {
             return Intercept(func, _actorSystem, null, expectedCount);
@@ -198,7 +191,6 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedCount">TBD</param>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, expectedCount);
@@ -218,7 +210,6 @@ namespace Akka.TestKit.Internal
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         public T Mute<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, null);
@@ -236,7 +227,6 @@ namespace Akka.TestKit.Internal
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
-        [Obsolete("Use async version instead")]
         public void Mute(Action action)
         {
             Intercept<object>(() => { action(); return null; }, _actorSystem, null, null);
@@ -281,7 +271,6 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedOccurrences">TBD</param>
         /// <param name="matchedEventHandler">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         protected T Intercept<T>(Func<T> func, ActorSystem system, TimeSpan? timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler = null)
         {
             var leeway = system.HasExtension<TestKitSettings>()
@@ -404,7 +393,6 @@ namespace Akka.TestKit.Internal
         /// <param name="expectedOccurrences">TBD</param>
         /// <param name="matchedEventHandler">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use async version instead")]
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
             if(expectedOccurrences.HasValue)
@@ -440,7 +428,6 @@ namespace Akka.TestKit.Internal
             return number == 1 ? "message" : "messages";
         }
 
-        [Obsolete("Use async version instead")]
         private void InternalExpect(Action action, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
         {
             Intercept<object>(() => { action(); return null; }, actorSystem, timeout, expectedCount);
