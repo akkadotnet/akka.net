@@ -262,17 +262,17 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_strategy_returns_Resume_and_Restart()
+        public async Task A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_strategy_returns_Resume_and_Restart()
         {
             var createAttempt = new AtomicCounter(0);
             var preStartCalled = new AtomicCounter(0);
             var postRestartCalled = new AtomicCounter(0);
 
-            EventFilter.Exception<Failure>()
+            await EventFilter.Exception<Failure>()
                 .And.Exception<InvalidOperationException>("OH NO!")
                 .And.Error(start: "changing Recreate into Create")
                 .And.Error(start: "changing Resume into Create")
-                .Mute(() =>
+                .MuteAsync(() =>
                 {
                     //Create:
                     // failresumer

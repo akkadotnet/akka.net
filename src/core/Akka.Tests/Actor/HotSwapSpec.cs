@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -81,7 +82,8 @@ namespace Akka.Tests.Actor {
         }
 
         [Fact]
-        public void Must_be_able_to_revert_to_initial_state_on_restart() {
+        public async Task Must_be_able_to_revert_to_initial_state_on_restart() 
+        {
             var a = Sys.ActorOf<RevertToInitialState>();
 
             a.Tell("state");
@@ -93,7 +95,7 @@ namespace Akka.Tests.Actor {
             a.Tell("state");
             ExpectMsg("1");
 
-            EventFilter.Exception<Exception>("Crash (expected)!").Expect(1, () => {
+            await EventFilter.Exception<Exception>("Crash (expected)!").ExpectAsync(1, () => {
                 a.Tell("crash");
             });
 

@@ -628,10 +628,10 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Drop_sent_messages_over_payload_size()
+        public async Task Drop_sent_messages_over_payload_size()
         {
             var oversized = ByteStringOfSize(MaxPayloadBytes + 1);
-            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ").ExpectOne(() =>
+            await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ").ExpectOneAsync(() =>
             {
                 VerifySend(oversized, () =>
                 {
@@ -641,9 +641,9 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void Drop_received_messages_over_payload_size()
+        public async Task Drop_received_messages_over_payload_size()
         {
-            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received").ExpectOne(() =>
+            await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received").ExpectOneAsync(() =>
             {
                 VerifySend(MaxPayloadBytes + 1, () =>
                 {
