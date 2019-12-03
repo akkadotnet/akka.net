@@ -160,7 +160,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// TBD
         /// </summary>
-        public string FullSnapshotTableName => string.IsNullOrEmpty(SchemaName) ? SnapshotTableName : SchemaName + "." + SnapshotTableName;
+        public virtual string FullSnapshotTableName => string.IsNullOrEmpty(SchemaName) ? SnapshotTableName : SchemaName + "." + SnapshotTableName;
     }
 
     /// <summary>

@@ -8,6 +8,7 @@
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
@@ -19,6 +20,13 @@ namespace Akka.Persistence.Sqlite.Snapshot
     /// </summary>
     public class SqliteSnapshotQueryExecutor : AbstractQueryExecutor
     {
+        private readonly ConflictNameResolver _conflictNameResolver = new ConflictNameResolver();
+        private string _insertSnapshotSql;
+        private string _createSnapshotTableSql;
+        private string _selectSnapshotSql;
+        private string _deleteSnapshotSql;
+        private string _deleteSnapshotRangeSql;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -26,38 +34,82 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <param name="serialization">TBD</param>
         public SqliteSnapshotQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization) : base(configuration, serialization)
         {
-            CreateSnapshotTableSql = $@"
-                CREATE TABLE IF NOT EXISTS {configuration.FullSnapshotTableName} (
-                    {configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
-                    {configuration.SequenceNrColumnName} INTEGER(8) NOT NULL,
-                    {configuration.TimestampColumnName} INTEGER(8) NOT NULL,
-                    {configuration.ManifestColumnName} VARCHAR(255) NOT NULL,
-                    {configuration.PayloadColumnName} BLOB NOT NULL,
-                    {configuration.SerializerIdColumnName} INTEGER(4),
-                    PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
-                );";
-
-            InsertSnapshotSql = $@"
-                UPDATE {configuration.FullSnapshotTableName}
-                SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest,
-                {configuration.PayloadColumnName} = @Payload, {configuration.SerializerIdColumnName} = @SerializerId
-                WHERE {configuration.PersistenceIdColumnName} = @PersistenceId AND {configuration.SequenceNrColumnName} = @SequenceNr;
-                INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName},
-                    {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName},
-                    {configuration.ManifestColumnName}, {configuration.PayloadColumnName}, {configuration.SerializerIdColumnName})
-                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected override string InsertSnapshotSql { get; }
-        
+        protected override string InsertSnapshotSql => _insertSnapshotSql;
+
         /// <summary>
         /// TBD
         /// </summary>
-        protected override string CreateSnapshotTableSql { get; }
+        protected override string CreateSnapshotTableSql => _createSnapshotTableSql;
 
+        protected override string DeleteSnapshotSql => _deleteSnapshotSql;
+
+        protected override string SelectSnapshotSql => _selectSnapshotSql;
+
+        protected override string DeleteSnapshotRangeSql => _deleteSnapshotRangeSql;
+
+        public void Initialize(SqliteConnection connection)
+        {
+            if (Configuration is SqliteQueryConfiguration configuration)
+            {
+                var hasNameConflict = _conflictNameResolver.Resolve(connection, configuration).Result;
+                if (hasNameConflict)
+                {
+                    Debug.WriteLine($"Found a conflict of snapshot table names. Default table name '{configuration.DefaultSnapshotTableName}' will be used.");
+                }
+            }
+            
+            _createSnapshotTableSql = $@"
+                CREATE TABLE IF NOT EXISTS {Configuration.FullSnapshotTableName} (
+                    {Configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
+                    {Configuration.SequenceNrColumnName} INTEGER(8) NOT NULL,
+                    {Configuration.TimestampColumnName} INTEGER(8) NOT NULL,
+                    {Configuration.ManifestColumnName} VARCHAR(255) NOT NULL,
+                    {Configuration.PayloadColumnName} BLOB NOT NULL,
+                    {Configuration.SerializerIdColumnName} INTEGER(4),
+                    PRIMARY KEY ({Configuration.PersistenceIdColumnName}, {Configuration.SequenceNrColumnName})
+                );";
+
+            _insertSnapshotSql = $@"
+                UPDATE {Configuration.FullSnapshotTableName}
+                SET {Configuration.TimestampColumnName} = @Timestamp, {Configuration.ManifestColumnName} = @Manifest,
+                {Configuration.PayloadColumnName} = @Payload, {Configuration.SerializerIdColumnName} = @SerializerId
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId AND {Configuration.SequenceNrColumnName} = @SequenceNr;
+                INSERT OR IGNORE INTO {Configuration.FullSnapshotTableName} ({Configuration.PersistenceIdColumnName},
+                    {Configuration.SequenceNrColumnName}, {Configuration.TimestampColumnName},
+                    {Configuration.ManifestColumnName}, {Configuration.PayloadColumnName}, {Configuration.SerializerIdColumnName})
+                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
+            
+            _selectSnapshotSql = $@"
+                SELECT {Configuration.PersistenceIdColumnName},
+                    {Configuration.SequenceNrColumnName}, 
+                    {Configuration.TimestampColumnName}, 
+                    {Configuration.ManifestColumnName}, 
+                    {Configuration.PayloadColumnName},
+                    {Configuration.SerializerIdColumnName}
+                FROM {Configuration.FullSnapshotTableName} 
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId 
+                    AND {Configuration.SequenceNrColumnName} <= @SequenceNr
+                    AND {Configuration.TimestampColumnName} <= @Timestamp
+                ORDER BY {Configuration.SequenceNrColumnName} DESC
+                LIMIT 1";
+
+            _deleteSnapshotSql = $@"
+                DELETE FROM {Configuration.FullSnapshotTableName}
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId
+                    AND {Configuration.SequenceNrColumnName} = @SequenceNr";
+
+            _deleteSnapshotRangeSql = $@"
+                DELETE FROM {Configuration.FullSnapshotTableName}
+                WHERE {Configuration.PersistenceIdColumnName} = @PersistenceId
+                    AND {Configuration.SequenceNrColumnName} <= @SequenceNr
+                    AND {Configuration.TimestampColumnName} <= @Timestamp";
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -111,9 +163,9 @@ namespace Akka.Persistence.Sqlite.Snapshot
         public SqliteSnapshotStore(Config snapshotConfig) : base(snapshotConfig)
         {
             var config = snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig);
-            QueryExecutor = new SqliteSnapshotQueryExecutor(new QueryConfiguration(
+            QueryExecutor = new SqliteSnapshotQueryExecutor(new SqliteQueryConfiguration(
                 schemaName: null,
-                snapshotTableName: "snapshot",
+                snapshotTableName: config.GetString("table-name"),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",
@@ -122,7 +174,9 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 serializerIdColumnName: "serializer_id",
                 timeout: config.GetTimeSpan("connection-timeout"),
                 defaultSerializer: config.GetString("serializer"),
-                useSequentialAccess: config.GetBoolean("use-sequential-access")),
+                useSequentialAccess: config.GetBoolean("use-sequential-access"),
+                // https://github.com/akkadotnet/akka.net/issues/4080
+                defaultSnapshotTableName: "snapshot"),
                 Context.System.Serialization);
         }
 
@@ -146,7 +200,8 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// </summary>
         protected override void PreStart()
         {
-            ConnectionContext.Remember(GetConnectionString());
+            var connection = ConnectionContext.Remember(GetConnectionString());
+            ((SqliteSnapshotQueryExecutor)QueryExecutor).Initialize(connection);
             base.PreStart();
         }
 
