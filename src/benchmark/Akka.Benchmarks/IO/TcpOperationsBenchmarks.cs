@@ -31,11 +31,14 @@ namespace Akka.Benchmarks
         private IActorRef _server;
         private IActorRef _clientCoordinator;
 
-        [Params(100, 1000, 10000)]
+        [Params(10000)]
+        // [Params(100, 1000, 10000)]
         public int MessageCount { get; set; }
-        [Params(10, 100)]
+        [Params(10)]
+        // [Params(10, 100)]
         public int MessageLength { get; set; }
-        [Params(1, 3, 5, 7, 10, 20, 30, 40)]
+        [Params(4)]
+        // [Params(1, 3, 5, 7, 10, 20, 30, 40)]
         public int ClientsCount { get; set; }
         
         [GlobalSetup]
