@@ -10,4 +10,6 @@
     <ProjectReference Include="..\ChatMessages\ChatMessages.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\..\netfx.props" />
+
 </Project>

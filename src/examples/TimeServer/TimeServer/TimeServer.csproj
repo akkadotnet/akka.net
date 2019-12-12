@@ -68,4 +68,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+
+  <Import Project="..\..\common.props" />
+  
 </Project>

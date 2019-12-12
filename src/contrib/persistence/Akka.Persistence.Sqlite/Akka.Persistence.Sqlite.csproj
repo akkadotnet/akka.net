@@ -23,4 +23,6 @@
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
 
+  <Import Project="..\..\..\netfx.props" />
+
 </Project>

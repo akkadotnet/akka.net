@@ -76,4 +76,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  
+  <Import Project="..\..\..\..\netfx.props" />
+
 </Project>

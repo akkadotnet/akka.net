@@ -30,4 +30,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.0.1" />
   </ItemGroup>
 
+  <Import Project="..\..\..\netfx.props" />
+
 </Project>

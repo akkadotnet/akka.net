@@ -12,4 +12,6 @@
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\..\netfx.props" />
+
 </Project>

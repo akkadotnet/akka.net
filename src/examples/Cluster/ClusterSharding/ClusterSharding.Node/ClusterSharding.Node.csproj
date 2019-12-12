@@ -12,4 +12,6 @@
     <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\..\..\netfx.props" />
+
 </Project>
