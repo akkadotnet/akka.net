@@ -43,7 +43,7 @@ namespace Akka.Cluster.Sharding.Tests
             scheduledEntities[0].Count.Should().Be(2);
             scheduledEntities[1].Count.Should().Be(2);
             scheduledEntities[2].Count.Should().Be(1);
-            scheduledEntities.SelectMany(s => s).Should().Equal(entities);
+            scheduledEntities.SelectMany(s => s).ToImmutableHashSet().Should().Equal(entities);
 
             var timesMillis = result.Select(pair => pair.Value.TotalMilliseconds).ToArray();
 
