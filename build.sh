@@ -125,6 +125,18 @@ if [ ! -f "$INCREMENTALIST_EXE" ]; then
     fi
 fi
 
+
+###########################################################################
+# WORKAROUND FOR MONO
+###########################################################################
+if [ -d /usr/lib/mono/4.5 ]; then
+    export FrameworkPathOverride=/usr/lib/mono/4.5/
+elif [ -d /usr/local/lib/mono/4.5 ]; then
+    export FrameworkPathOverride=/usr/local/lib/mono/4.5
+elif [ -d /Library/Frameworks/Mono.framework/Versions/Current/lib/mono ]; then
+    export FrameworkPathOverride=/Library/Frameworks/Mono.framework/Versions/Current/lib/mono
+fi
+
 ###########################################################################
 # RUN BUILD SCRIPT
 ###########################################################################
