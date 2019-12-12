@@ -19,6 +19,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="1.6.0" />
   </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
     
   <!-- Mono includes System.ValueTuple out of the box, so this is required to avoid conflicts -->
   <ItemGroup Condition=" '$(TargetIsMono)' != 'true' ">
