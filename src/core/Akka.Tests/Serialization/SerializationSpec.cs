@@ -6,6 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
@@ -13,6 +17,9 @@ using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Util;
+using Akka.Util.Reflection;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Serialization
@@ -552,6 +559,29 @@ namespace Akka.Tests.Serialization
             dummy2.Config.GetString("test-key").ShouldBe("test value");
         }
 
+
+        private static string LegacyTypeQualifiedName(Type type)
+        {
+            string coreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
+            var assemblyName = type.GetTypeInfo().Assembly.GetName().Name;
+            var shortened = assemblyName.Equals(coreAssemblyName)
+                ? type.GetTypeInfo().FullName
+                : $"{type.GetTypeInfo().FullName}, {assemblyName}";
+            return shortened;
+        }
+
+        [Fact]
+        public void Legacy_and_shortened_types_names_are_equivalent()
+        {
+            var targetType = typeof(ParentClass<OtherClassA, OtherClassB, OtherClassC>.ChildClass);
+
+            var legacyTypeManifest = LegacyTypeQualifiedName(targetType);
+            var newTypeManifest = targetType.TypeQualifiedName();
+
+            TypeCache.GetType(legacyTypeManifest).ShouldBeSame(TypeCache.GetType(newTypeManifest));
+            Type.GetType(legacyTypeManifest).ShouldBeSame(Type.GetType(newTypeManifest));
+        }
+
         public SerializationSpec():base(GetConfig())
         {
         }
@@ -636,6 +666,20 @@ namespace Akka.Tests.Serialization
             public override object FromBinary(byte[] bytes, Type type)
             {
                 throw new NotImplementedException();
+            }
+        }
+
+        public sealed class OtherClassA { }
+
+        public sealed class OtherClassB { }
+
+        public sealed class OtherClassC { }
+
+        public sealed class ParentClass<T1, T2, T3>
+        {
+            public sealed class ChildClass
+            {
+                public string Value { get; set; }
             }
         }
     }
