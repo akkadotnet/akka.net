@@ -190,6 +190,7 @@ namespace Akka.Cluster.Sharding.Tests
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
+                throw new Exception("Exception of first node");
                 Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
             }, _config.First);
             EnterBarrier("persistence-started");
