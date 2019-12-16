@@ -48,7 +48,7 @@ jobs:
         inputs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: ${{ parameters.artifactName }}
-    - task: CopyFiles@2
+      - task: CopyFiles@2
         displayName: 'Copy MNTR Failure Logs'
         inputs:
           sourceFolder: ${{ parameters.mntrFailuresDir }}
