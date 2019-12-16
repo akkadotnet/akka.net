@@ -36,6 +36,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             
             Receive<DumpToFile>(dump =>
             {
+                // Verify that directory exists
+                var dir = new DirectoryInfo(Path.GetDirectoryName(dump.FilePath));
+                if (!dir.Exists)
+                    dir.Create();
+                
                 File.AppendAllLines(dump.FilePath, _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => m.ToString()));
                 Sender.Tell(Done.Instance);
             });
