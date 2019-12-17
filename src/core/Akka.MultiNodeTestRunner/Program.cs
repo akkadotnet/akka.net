@@ -378,7 +378,7 @@ namespace Akka.MultiNodeTestRunner
                                 Task.WaitAll(dumpTasks.ToArray());
                             }
                             
-                            FinishSpec(test.Value);
+                            FinishSpec(test.Value, timelineCollector);
                         }
                         Console.WriteLine("Complete");
                         PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
@@ -471,10 +471,11 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
-        private static void FinishSpec(IList<NodeTest> tests)
+        private static void FinishSpec(IList<NodeTest> tests, IActorRef timelineCollector)
         {
             var spec = tests.First();
-            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName));
+            var log = timelineCollector.Ask<SpecLog>(new TimelineLogCollectorActor.GetSpecLog(), TimeSpan.FromMinutes(1)).Result;
+            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName, log));
         }
 
         private static void PublishRunnerMessage(string message)

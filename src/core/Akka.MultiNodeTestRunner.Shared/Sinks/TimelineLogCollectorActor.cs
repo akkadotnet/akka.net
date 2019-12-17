@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.Util.Internal;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
@@ -33,6 +34,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             });
             
             Receive<SendMeAll>(_ => Sender.Tell(_timeline.Values.ToList()));
+
+            Receive<GetSpecLog>(_ =>
+            {
+                var log = new SpecLog()
+                {
+                    AggregatedTimelineLog = _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => m.ToString()).ToList(),
+                    NodeLogs = _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).GroupBy(msg => msg.Node).Select(nodeMessages =>
+                    {
+                        var node = nodeMessages.Key;
+                        return (NodeIndex: node.Index, NodeRole: node.Role, Logs: nodeMessages.Select(m => m.ToString()).ToList());
+                    }).ToList()
+                };
+                
+                Sender.Tell(log);
+            });
             
             Receive<DumpToFile>(dump =>
             {
@@ -117,7 +133,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             }
         }
         
-        public class NodeInfo
+        public class NodeInfo : IEquatable<NodeInfo>
         {
             public NodeInfo(int index, string role, string platform, string testName)
             {
@@ -131,6 +147,29 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             public string Role { get; }
             public string Platform { get; }
             public string TestName { get; set; }
+
+            /// <inheritdoc />
+            public bool Equals(NodeInfo other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Index == other.Index;
+            }
+
+            /// <inheritdoc />
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((NodeInfo)obj);
+            }
+
+            /// <inheritdoc />
+            public override int GetHashCode()
+            {
+                return Index;
+            }
         }
         
         public class LogMessage
@@ -147,7 +186,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         public class SendMeAll { }
         
-        public class PrintToConsole{ }
+        public class PrintToConsole { }
+
+        public class GetSpecLog { }
 
         public class DumpToFile
         {
