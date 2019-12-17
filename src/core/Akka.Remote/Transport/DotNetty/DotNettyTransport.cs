@@ -327,6 +327,8 @@ namespace Akka.Remote.Transport.DotNetty
                     pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(Settings.ByteOrder, 4, 0, false));
                 }
             }
+
+            pipeline.AddLast("BatchWriter", new BatchWriter());
         }
 
         private void SetClientPipeline(IChannel channel, Address remoteAddress)

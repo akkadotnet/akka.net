@@ -8,9 +8,11 @@
 using System;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util;
 using DotNetty.Buffers;
+using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
 using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
@@ -21,33 +23,75 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly int _maxPendingWrites;
         private readonly long _maxPendingMillis;
 
-        public BatchWriter(int maxPendingWrites = 30, long maxPendingMillis)
+        public BatchWriter(int maxPendingWrites = 30, long maxPendingMillis = 40l)
         {
             _maxPendingWrites = maxPendingWrites;
             _maxPendingMillis = maxPendingMillis;
         }
 
         private int _currentPendingWrites = 0;
-        private long _lastFlush = 0;
+
+        public bool HasPendingWrites => _currentPendingWrites > 0;
+
+        public override void HandlerAdded(IChannelHandlerContext context)
+        {
+            ScheduleFlush(context);
+            base.HandlerAdded(context);
+        }
 
         public override Task WriteAsync(IChannelHandlerContext context, object message)
         {
             var write = base.WriteAsync(context, message);
-            if (++_currentPendingWrites == _maxPendingWrites || TimeToFlush())
+            if (++_currentPendingWrites == _maxPendingWrites)
             {
                 context.Flush();
-            }            
+                Reset();
+            }
+
+            return write;
         }
 
-        private bool TimeToFlush()
+        void ScheduleFlush(IChannelHandlerContext context)
         {
-            return MonotonicClock.GetMilliseconds() - _lastFlush >= _maxPendingMillis;
+            // Schedule a recurring flush - only fires when there's writable data
+            var time = TimeSpan.FromMilliseconds(_maxPendingMillis);
+            var task = new FlushTask(context, time, this);
+            context.Executor.Schedule(task, time);
         }
 
-        private void Reset()
+        public void Reset()
         {
-            _lastFlush = MonotonicClock.GetMilliseconds;
             _currentPendingWrites = 0;
+        }
+
+        class FlushTask : IRunnable
+        {
+            private readonly IChannelHandlerContext _context;
+            private readonly TimeSpan _interval;
+            private readonly BatchWriter _writer;
+
+            public FlushTask(IChannelHandlerContext context, TimeSpan interval, BatchWriter writer)
+            {
+                _context = context;
+                _interval = interval;
+                _writer = writer;
+            }
+
+            public void Run()
+            {
+                if (_writer.HasPendingWrites)
+                {
+                    // execute a flush operation
+                    _context.Flush();
+                    _writer.Reset();
+                }                
+
+                // channel is still writing
+                if (_context.Channel.Active)
+                {                    
+                    _context.Executor.Schedule(this, _interval); // reschedule
+                }
+            }
         }
     }
 
