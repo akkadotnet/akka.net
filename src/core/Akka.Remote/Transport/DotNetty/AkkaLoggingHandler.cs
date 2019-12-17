@@ -16,6 +16,41 @@ using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    internal class BatchWriter : ChannelHandlerAdapter
+    {
+        private readonly int _maxPendingWrites;
+        private readonly long _maxPendingMillis;
+
+        public BatchWriter(int maxPendingWrites = 30, long maxPendingMillis)
+        {
+            _maxPendingWrites = maxPendingWrites;
+            _maxPendingMillis = maxPendingMillis;
+        }
+
+        private int _currentPendingWrites = 0;
+        private long _lastFlush = 0;
+
+        public override Task WriteAsync(IChannelHandlerContext context, object message)
+        {
+            var write = base.WriteAsync(context, message);
+            if (++_currentPendingWrites == _maxPendingWrites || TimeToFlush())
+            {
+                context.Flush();
+            }            
+        }
+
+        private bool TimeToFlush()
+        {
+            return MonotonicClock.GetMilliseconds() - _lastFlush >= _maxPendingMillis;
+        }
+
+        private void Reset()
+        {
+            _lastFlush = MonotonicClock.GetMilliseconds;
+            _currentPendingWrites = 0;
+        }
+    }
+
     /// <summary>
     /// INTERNAL API
     /// 

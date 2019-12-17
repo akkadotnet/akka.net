@@ -169,10 +169,10 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override bool Write(ByteString payload)
         {
-            if (_channel.Open && _channel.IsWritable)
+            if (_channel.Open)
             {
                 var data = ToByteBuffer(payload);
-                _channel.WriteAndFlushAsync(data);
+                _channel.WriteAsync(data);
                 return true;
             }
             return false;
