@@ -143,23 +143,33 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         public class TestChatUser : ReceiveActor
         {
+            private bool RegisterToMediator { get; }
+            private IActorRef Mediator { get; }
+
             public TestChatUser(bool registerToMediator)
             {
-                IActorRef mediator = DistributedPubSub.Get(Context.System).Mediator;
-                if (registerToMediator)
-                {
-                    mediator.Tell(new Put(Self));
-                }
-                Receive<Whisper>(w => mediator.Tell(new Send(w.Path, w.Message, true)));
-                Receive<Talk>(t => mediator.Tell(new SendToAll(t.Path, t.Message)));
-                Receive<TalkToOthers>(t => mediator.Tell(new SendToAll(t.Path, t.Message, true)));
-                Receive<Shout>(s => mediator.Tell(new Publish(s.Topic, s.Message)));
-                Receive<ShoutToGroup>(s => mediator.Tell(new Publish(s.Topic, s.Message, true)));
-                Receive<JoinGroup>(j => mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
-                Receive<ExitGroup>(j => mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
+                RegisterToMediator = registerToMediator;
+                Mediator = DistributedPubSub.Get(Context.System).Mediator;
+                
+                Receive<Whisper>(w => Mediator.Tell(new Send(w.Path, w.Message, true)));
+                Receive<Talk>(t => Mediator.Tell(new SendToAll(t.Path, t.Message)));
+                Receive<TalkToOthers>(t => Mediator.Tell(new SendToAll(t.Path, t.Message, true)));
+                Receive<Shout>(s => Mediator.Tell(new Publish(s.Topic, s.Message)));
+                Receive<ShoutToGroup>(s => Mediator.Tell(new Publish(s.Topic, s.Message, true)));
+                Receive<JoinGroup>(j => Mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
+                Receive<ExitGroup>(j => Mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
 
                 var testActor = DistributedPubSubMediatorSpec.Current.TestActor;
                 ReceiveAny(msg => testActor.Tell(msg));
+            }
+
+            public override void AroundPreStart()
+            {
+                if (RegisterToMediator)
+                {
+                    Mediator.Tell(new Put(Self));
+                }
+                base.AroundPreStart();
             }
         }
 
