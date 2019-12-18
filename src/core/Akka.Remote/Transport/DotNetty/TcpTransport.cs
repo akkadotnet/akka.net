@@ -8,6 +8,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -172,20 +173,18 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (_channel.Open)
             {
-                var data = ToByteBuffer(payload);
+                var data = ToByteBuffer(_channel, payload);
                 _channel.WriteAsync(data);
                 return true;
             }
             return false;
         }
 
-        private IByteBuffer ToByteBuffer(ByteString payload)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
         {
             //TODO: optimize DotNetty byte buffer usage 
             // (maybe custom IByteBuffer working directly on ByteString?)
-            //var buffer = _channel.Allocator.Buffer(payload.Length);
-            //payload.CopyTo(buffer.Array, buffer.ArrayOffset);
-            //buffer.SetWriterIndex(payload.Length).MarkWriterIndex();
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
