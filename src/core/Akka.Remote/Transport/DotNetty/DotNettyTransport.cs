@@ -330,7 +330,7 @@ namespace Akka.Remote.Transport.DotNetty
                 }
             }
 
-            pipeline.AddLast("BatchWriter", new BatchWriter());
+            pipeline.AddLast("BatchWriter", new BatchWriter(maxPendingBytes:Settings.MaxFrameSize));
         }
 
         private void SetClientPipeline(IChannel channel, Address remoteAddress)
