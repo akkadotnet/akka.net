@@ -147,6 +147,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
+
         }
 
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
@@ -182,12 +183,16 @@ namespace Akka.Remote.Transport.DotNetty
         {
             //TODO: optimize DotNetty byte buffer usage 
             // (maybe custom IByteBuffer working directly on ByteString?)
+            //var buffer = _channel.Allocator.Buffer(payload.Length);
+            //payload.CopyTo(buffer.Array, buffer.ArrayOffset);
+            //buffer.SetWriterIndex(payload.Length).MarkWriterIndex();
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
 
         public override void Disassociate()
         {
+            _channel.Flush(); // flush before we close
             _channel.CloseAsync();
         }
     }

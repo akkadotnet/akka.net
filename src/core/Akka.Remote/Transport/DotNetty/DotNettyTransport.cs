@@ -240,6 +240,8 @@ namespace Akka.Remote.Transport.DotNetty
                 var tasks = new List<Task>();
                 foreach (var channel in ConnectionGroup)
                 {
+                    // flush any pending writes first
+                    channel.Flush();
                     tasks.Add(channel.CloseAsync());
                 }
                 var all = Task.WhenAll(tasks);
