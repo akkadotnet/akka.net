@@ -214,13 +214,6 @@ namespace Akka.Actor
 
         private bool _isDisposed; //Automatically initialized to false;
 
-        //Destructor:
-        //~ActorSystem() 
-        //{
-        //    // Finalizer calls Dispose(false)
-        //    Dispose(false);
-        //}
-
         /// <inheritdoc/>
         public void Dispose()
         {
@@ -244,7 +237,7 @@ namespace Akka.Actor
                     if (disposing)
                     {
                         Log.Debug("Disposing system");
-                        Terminate();
+                        Terminate().Wait(); // System needs to be disposed before method returns
                     }
                     //Clean up unmanaged resources
                 }
