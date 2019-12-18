@@ -44,6 +44,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override Task WriteAsync(IChannelHandlerContext context, object message)
         {
+            var write = base.WriteAsync(context, message);
             _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
             _currentPendingWrites++;
             if (_currentPendingWrites >= _maxPendingWrites
@@ -53,7 +54,7 @@ namespace Akka.Remote.Transport.DotNetty
                 Reset();
             }
 
-            return base.WriteAsync(context, message);
+            return write;
         }
 
         void ScheduleFlush(IChannelHandlerContext context)
