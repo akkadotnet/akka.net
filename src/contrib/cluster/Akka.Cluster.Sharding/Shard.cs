@@ -579,11 +579,13 @@ namespace Akka.Cluster.Sharding
             {
                 shard.Log.Debug("HandOff shard [{0}]", shard.ShardId);
 
-                if (shard.State.Entries.Count != 0)
+                if (!shard.IdByRef.IsEmpty)
                 {
                     var entityHandOffTimeout = (shard.Settings.TunningParameters.HandOffTimeout - TimeSpan.FromSeconds(5));
                     if (entityHandOffTimeout < TimeSpan.FromSeconds(1))
                         entityHandOffTimeout = TimeSpan.FromSeconds(1);
+                    shard.Log.Debug("Starting HandOffStopper for shard [{0}] to terminate [{1}] entities.",
+                        shard.ShardId, shard.IdByRef.Keys.Count());
                     shard.HandOffStopper = shard.Context.Watch(shard.Context.ActorOf(
                         ShardRegion.HandOffStopper.Props(shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage, entityHandOffTimeout)));
 

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -134,6 +135,7 @@ namespace Akka.TestKit
 
             var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
+            // Calling sync version here, since .Wait() causes deadlock
             AwaitCondition(() =>
             {
                 var repRef = testActor as IRepointableRef;

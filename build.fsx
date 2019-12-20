@@ -23,6 +23,7 @@ let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
+let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
@@ -292,6 +293,7 @@ Target "MultiNodeTests" (fun _ ->
                     |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                    |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                     |> toText
 
@@ -331,6 +333,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                         |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                         |> append "-Dmultinode.platform=netcore"
                         |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                         |> toText
@@ -549,10 +552,13 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
-    // build the project with samples
-    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
-    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
-    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
+    // build the projects with samples
+    let docsTestsProject = "./src/core/Akka.Docs.Tests/Akka.Docs.Tests.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTestsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTestsProject; Configuration = configuration })
+    let docsTutorialsProject = "./src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTutorialsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTutorialsProject; Configuration = configuration })
 
     // install MSDN references
     NugetInstall (fun p -> 

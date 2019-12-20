@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Util;
 
 namespace Akka.Streams
 {
@@ -45,7 +46,7 @@ namespace Akka.Streams
     /// For additional configuration see `reference.conf` as well as <see cref="StreamRefAttributes"/>.
     /// </summary>
     /// <seealso cref="ISinkRef{TIn}"/>
-    public interface ISourceRef<TOut>
+    public interface ISourceRef<TOut> : ISurrogated
     {
         Source<TOut, NotUsed> Source { get; }
     }
