@@ -29,12 +29,7 @@
           <Version>4.5.0</Version>
       </PackageReference>
   </ItemGroup>
-
-  <!-- Mono includes System.ValueTuple out of the box, so this is required to avoid conflicts -->
-  <ItemGroup Condition=" '$(TargetIsMono)' != 'true' ">
-    <!-- <PackageReference Include="System.ValueTuple" Version="4.5.0" />-->
-  </ItemGroup>
-
+  
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
