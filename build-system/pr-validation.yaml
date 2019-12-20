@@ -87,7 +87,7 @@ jobs:
       scriptArgs: MultiNodeTestsNetCore incremental
       outputDirectory: 'TestResults'
       artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
-      mntrFailuresDir: 'TestResults\\multinode\\FAILED_SPECS_LOGS'
+      mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: 'net_core_mntr_FAILED_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.mntr-template.yaml
@@ -99,7 +99,7 @@ jobs:
       scriptArgs: MultiNodeTests incremental
       outputDirectory: 'TestResults'
       artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
-      mntrFailuresDir: 'TestResults\\multinode\\FAILED_SPECS_LOGS'
+      mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: 'net_fx_mntr_FAILED_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml

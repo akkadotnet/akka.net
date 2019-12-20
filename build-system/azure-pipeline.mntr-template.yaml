@@ -52,7 +52,7 @@ jobs:
         displayName: 'Copy MNTR Failure Logs'
         inputs:
           sourceFolder: ${{ parameters.mntrFailuresDir }}
-          contents: '**\*'
+          contents: 'FAILED_SPECS_LOGS\*'
           cleanTargetFolder: true
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
