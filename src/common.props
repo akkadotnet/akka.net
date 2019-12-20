@@ -16,8 +16,9 @@
     <NBenchVersion>1.2.2</NBenchVersion>
     <ProtobufVersion>3.10.1</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
-    <NetFrameworkTestVersion>net472</NetFrameworkTestVersion>
+    <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
     <FsCheckVersion>2.9.0</FsCheckVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
