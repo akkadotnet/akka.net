@@ -23,6 +23,7 @@ let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
+let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
@@ -292,6 +293,7 @@ Target "MultiNodeTests" (fun _ ->
                     |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                    |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                     |> toText
 
@@ -331,6 +333,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                         |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                         |> append "-Dmultinode.platform=netcore"
                         |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                         |> toText

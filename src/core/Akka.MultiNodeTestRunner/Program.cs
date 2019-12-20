@@ -24,6 +24,7 @@ using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
@@ -45,7 +46,7 @@ namespace Akka.MultiNodeTestRunner
             "net",
             "netcore"
         };
-
+        
         protected static ActorSystem TestRunSystem;
         protected static IActorRef SinkCoordinator;
 
@@ -53,6 +54,10 @@ namespace Akka.MultiNodeTestRunner
         /// file output directory
         /// </summary>
         protected static string OutputDirectory;
+        /// <summary>
+        /// Subdirectory to store failed specs logs
+        /// </summary>
+        protected static string FailedSpecsDirectory;
 
         protected static bool TeamCityFormattingOn;
         protected static bool MultiPlatform;
@@ -119,6 +124,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
+            FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
@@ -240,6 +246,7 @@ namespace Akka.MultiNodeTestRunner
 #endif
                             var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
                             string testOutputDir = null;
+                            string runningSpecName = null;
                             
                             foreach (var nodeTest in test.Value)
                             {
@@ -312,6 +319,7 @@ namespace Akka.MultiNodeTestRunner
                                 var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
                                 testOutputDir = testOutputDir ?? folder.FullName;
                                 var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
+                                runningSpecName = nodeTest.TestName;
                                 var nodeInfo = new TimelineLogCollectorActor.NodeInfo(nodeIndex, nodeRole, platform, nodeTest.TestName);
                                 var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                                 process.OutputDataReceived += (sender, eventArgs) =>
@@ -340,10 +348,11 @@ namespace Akka.MultiNodeTestRunner
                                 PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
                             }
 
+                            var specFailed = false;
                             foreach (var process in processes)
                             {
                                 process.WaitForExit();
-                                var exitCode = process.ExitCode;
+                                specFailed = specFailed || process.ExitCode > 0;
                                 process.Dispose();
                             }
 
@@ -352,12 +361,24 @@ namespace Akka.MultiNodeTestRunner
                             
                             if (testOutputDir != null)
                             {
-                                var dumpTask = timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt")));
-                                var printTask = timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole());
-                                Task.WaitAll(dumpTask, printTask);
+                                var dumpTasks = new List<Task>()
+                                {
+                                    // Dump aggregated timeline to file for this test
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
+                                    // Print aggregated timeline into the console
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole())
+                                };
+
+                                if (specFailed)
+                                {
+                                    var dumpFailureArtifactTask = timelineCollector.Ask<Done>(
+                                        new TimelineLogCollectorActor.DumpToFile(Path.Combine(Path.GetFullPath(OutputDirectory), FailedSpecsDirectory, $"{runningSpecName}.txt")));
+                                    dumpTasks.Add(dumpFailureArtifactTask);
+                                }
+                                Task.WaitAll(dumpTasks.ToArray());
                             }
                             
-                            FinishSpec(test.Value);
+                            FinishSpec(test.Value, timelineCollector);
                         }
                         Console.WriteLine("Complete");
                         PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
@@ -450,10 +471,11 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
-        private static void FinishSpec(IList<NodeTest> tests)
+        private static void FinishSpec(IList<NodeTest> tests, IActorRef timelineCollector)
         {
             var spec = tests.First();
-            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName));
+            var log = timelineCollector.Ask<SpecLog>(new TimelineLogCollectorActor.GetSpecLog(), TimeSpan.FromMinutes(1)).Result;
+            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName, log));
         }
 
         private static void PublishRunnerMessage(string message)
