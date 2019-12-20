@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\..\common.props" />
+
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Cluster.Metrics</AssemblyTitle>
+        <Description>
+            The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes 
+            and to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
+        </Description>
+        <VersionSuffix>beta</VersionSuffix>
+        <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
+        <Reference Include="System.Core" />
+        <Reference Include="System.Xml.Linq" />
+        <Reference Include="System.Data.DataSetExtensions" />
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
+        <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+        <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
+
+</Project>
