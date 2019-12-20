@@ -2001,8 +2001,8 @@ namespace Akka.Remote
                 {
                     UpdateSavedState(key, _receiveBuffers[key]);
                 }
-            } else if (!_receiveBuffers.TryUpdate(key, expectedState,
-                Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState)))
+            } else if (!_receiveBuffers.TryUpdate(key,
+                Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
             {
                 UpdateSavedState(key, _receiveBuffers[key]);
             }

@@ -67,70 +67,75 @@ namespace Akka.Persistence
             var timeout = Extension.JournalConfigFor(JournalPluginId).GetTimeSpan("recovery-event-timeout", null, false);
             var timeoutCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new RecoveryTick(true), Self);
 
-            Receive recoveryBehavior = message =>
+            bool RecoveryBehavior(object message)
             {
                 Receive receiveRecover = ReceiveRecover;
-                if (message is IPersistentRepresentation && IsRecovering)
-                    return receiveRecover((message as IPersistentRepresentation).Payload);
-                else if (message is SnapshotOffer)
-                    return receiveRecover((SnapshotOffer)message);
-                else if (message is RecoveryCompleted)
-                    return receiveRecover(RecoveryCompleted.Instance);
-                else return false;
-            };
+                switch (message)
+                {
+                    case IPersistentRepresentation representation when IsRecovering:
+                        return receiveRecover(representation.Payload);
+                    case SnapshotOffer offer:
+                        return receiveRecover(offer);
+                    case RecoveryCompleted _:
+                        return receiveRecover(RecoveryCompleted.Instance);
+                    default:
+                        return false;
+                }
+            }
 
             return new EventsourcedState("recovery started - replay max: " + maxReplays, () => true, (receive, message) =>
             {
                 try
                 {
-                    if (message is LoadSnapshotResult res)
+                    switch (message)
                     {
-                        timeoutCancelable.Cancel();
-                        if (res.Snapshot != null)
+                        case LoadSnapshotResult res:
                         {
-                            var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
-                            var seqNr = LastSequenceNr;
-                            LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
-                            if (!base.AroundReceive(recoveryBehavior, offer))
+                            timeoutCancelable.Cancel();
+                            if (res.Snapshot != null)
                             {
-                                LastSequenceNr = seqNr;
-                                Unhandled(offer);
+                                var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
+                                var seqNr = LastSequenceNr;
+                                LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
+                                if (!base.AroundReceive(RecoveryBehavior, offer))
+                                {
+                                    LastSequenceNr = seqNr;
+                                    Unhandled(offer);
+                                }
                             }
-                        }
 
-                        ChangeState(Recovering(recoveryBehavior, timeout));
-                        Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
-                    }
-                    else if (message is LoadSnapshotFailed failed)
-                    {
-                        timeoutCancelable.Cancel();
-                        try
-                        {
-                            OnRecoveryFailure(failed.Cause);
+                            ChangeState(Recovering(RecoveryBehavior, timeout));
+                            Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                            break;
                         }
-                        finally
-                        {
-                            Context.Stop(Self);
-                        }
-                        ReturnRecoveryPermit();
-                    }
-                    else if (message is RecoveryTick tick && tick.Snapshot)
-                    {
-                        try
-                        {
-                            OnRecoveryFailure(
-                                new RecoveryTimedOutException(
-                                    $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
-                        }
-                        finally
-                        {
-                            Context.Stop(Self);
-                        }
-                        ReturnRecoveryPermit();
-                    }
-                    else
-                    {
-                        StashInternally(message);
+                        case LoadSnapshotFailed failed:
+                            timeoutCancelable.Cancel();
+                            try
+                            {
+                                OnRecoveryFailure(failed.Cause);
+                            }
+                            finally
+                            {
+                                Context.Stop(Self);
+                            }
+                            ReturnRecoveryPermit();
+                            break;
+                        case RecoveryTick tick when tick.Snapshot:
+                            try
+                            {
+                                OnRecoveryFailure(
+                                    new RecoveryTimedOutException(
+                                        $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
+                            }
+                            finally
+                            {
+                                Context.Stop(Self);
+                            }
+                            ReturnRecoveryPermit();
+                            break;
+                        default:
+                            StashInternally(message);
+                            break;
                     }
                 }
                 catch (Exception)
@@ -367,87 +372,93 @@ namespace Akka.Persistence
 
         private bool CommonProcessingStateBehavior(object message, Action<bool> onWriteMessageComplete)
         {
-            // _instanceId mismatch can happen for persistAsync and defer in case of actor restart
-            // while message is in flight, in that case we ignore the call to the handler
-            if (message is WriteMessageSuccess)
+            switch (message)
             {
-                var m = (WriteMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
+                // _instanceId mismatch can happen for persistAsync and defer in case of actor restart
+                // while message is in flight, in that case we ignore the call to the handler
+                case WriteMessageSuccess m1:
                 {
-                    UpdateLastSequenceNr(m.Persistent);
-                    try
+                    if (m1.ActorInstanceId == _instanceId)
                     {
-                        PeekApplyHandler(m.Persistent.Payload);
+                        UpdateLastSequenceNr(m1.Persistent);
+                        try
+                        {
+                            PeekApplyHandler(m1.Persistent.Payload);
+                            onWriteMessageComplete(false);
+                        }
+                        catch
+                        {
+                            onWriteMessageComplete(true);
+                            throw;
+                        }
+                    }
+
+                    break;
+                }
+                case WriteMessageRejected m2:
+                {
+                    if (m2.ActorInstanceId == _instanceId)
+                    {
+                        var p = m2.Persistent;
+                        UpdateLastSequenceNr(p);
                         onWriteMessageComplete(false);
+                        OnPersistRejected(m2.Cause, p.Payload, p.SequenceNr);
                     }
-                    catch
-                    {
-                        onWriteMessageComplete(true);
-                        throw;
-                    }
+
+                    break;
                 }
-            }
-            else if (message is WriteMessageRejected)
-            {
-                var m = (WriteMessageRejected)message;
-                if (m.ActorInstanceId == _instanceId)
+                case WriteMessageFailure m3:
                 {
-                    var p = m.Persistent;
-                    UpdateLastSequenceNr(p);
-                    onWriteMessageComplete(false);
-                    OnPersistRejected(m.Cause, p.Payload, p.SequenceNr);
-                }
-            }
-            else if (message is WriteMessageFailure)
-            {
-                var m = (WriteMessageFailure)message;
-                if (m.ActorInstanceId == _instanceId)
-                {
-                    var p = m.Persistent;
-                    onWriteMessageComplete(false);
-                    try
+                    if (m3.ActorInstanceId == _instanceId)
                     {
-                        OnPersistFailure(m.Cause, p.Payload, p.SequenceNr);
-                    }
-                    finally
-                    {
-                        Context.Stop(Self);
-                    }
-                }
-            }
-            else if (message is LoopMessageSuccess)
-            {
-                var m = (LoopMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
-                {
-                    try
-                    {
-                        PeekApplyHandler(m.Message);
+                        var p = m3.Persistent;
                         onWriteMessageComplete(false);
+                        try
+                        {
+                            OnPersistFailure(m3.Cause, p.Payload, p.SequenceNr);
+                        }
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
                     }
-                    catch (Exception)
-                    {
-                        onWriteMessageComplete(true);
-                        throw;
-                    }
+
+                    break;
                 }
+                case LoopMessageSuccess m:
+                {
+                    if (m.ActorInstanceId == _instanceId)
+                    {
+                        try
+                        {
+                            PeekApplyHandler(m.Message);
+                            onWriteMessageComplete(false);
+                        }
+                        catch (Exception)
+                        {
+                            onWriteMessageComplete(true);
+                            throw;
+                        }
+                    }
+
+                    break;
+                }
+                case WriteMessagesSuccessful _:
+                    _isWriteInProgress = false;
+                    FlushJournalBatch();
+                    break;
+                case WriteMessagesFailed _:
+                    _isWriteInProgress = false;
+                    // it will be stopped by the first WriteMessageFailure message
+                    break;
+                case RecoveryTick _:
+                    // we may have one of these in the mailbox before the scheduled timeout
+                    // is cancelled when recovery has completed, just consume it so the concrete actor never sees it
+                    break;
+                default:
+                    return false;
             }
-            else if (message is WriteMessagesSuccessful)
-            {
-                _isWriteInProgress = false;
-                FlushJournalBatch();
-            }
-            else if (message is WriteMessagesFailed)
-            {
-                _isWriteInProgress = false;
-                // it will be stopped by the first WriteMessageFailure message
-            }
-            else if (message is RecoveryTick)
-            {
-                // we may have one of these in the mailbox before the scheduled timeout
-                // is cancelled when recovery has completed, just consume it so the concrete actor never sees it
-            }
-            else return false;
+
             return true;
         }
     }

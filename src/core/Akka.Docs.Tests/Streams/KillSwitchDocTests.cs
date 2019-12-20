@@ -39,8 +39,7 @@ namespace DocsExamples.Streams
 
             killSwitch.Shutdown();
 
-            last.Wait(1.Seconds());
-            last.Result.Should().Be(2);
+            AwaitCondition(() => last.IsCompleted);
             #endregion
         }
 
@@ -59,8 +58,8 @@ namespace DocsExamples.Streams
             var error = new Exception("boom");
             killSwitch.Abort(error);
 
-            last.Wait(1.Seconds());
-            last.Exception.Should().Be(error);
+            last.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            last.Exception.GetBaseException().Should().Be(error);
             #endregion
         }
 
@@ -85,11 +84,8 @@ namespace DocsExamples.Streams
 
             sharedKillSwitch.Shutdown();
 
-            last.Wait(1.Seconds());
-            last.Result.Should().Be(2);
-
-            delayedLast.Wait(1.Seconds());
-            delayedLast.Result.Should().Be(1);
+            AwaitCondition(() => last.IsCompleted);
+            AwaitCondition(() => delayedLast.IsCompleted);
             #endregion
         }
 
@@ -107,11 +103,11 @@ namespace DocsExamples.Streams
             var error = new Exception("boom");
             sharedKillSwitch.Abort(error);
 
-            last1.Wait(1.Seconds());
-            last1.Exception.Should().Be(error);
+            last1.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            last1.Exception.GetBaseException().Should().Be(error);
 
-            last2.Wait(1.Seconds());
-            last2.Exception.Should().Be(error);
+            last2.ContinueWith(t => { /* Ignore exception */ }).Wait(1.Seconds());
+            last2.Exception.GetBaseException().Should().Be(error);
             #endregion
         }
     }

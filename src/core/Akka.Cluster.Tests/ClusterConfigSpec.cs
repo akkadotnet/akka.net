@@ -11,9 +11,8 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
-using Xunit;
-using Assert = Xunit.Assert;
 using FluentAssertions;
+using Xunit;
 
 namespace Akka.Cluster.Tests
 {
@@ -30,14 +29,16 @@ namespace Akka.Cluster.Tests
             settings.SeedNodes.Should().BeEquivalentTo(ImmutableList.Create<Address>());
             settings.SeedNodeTimeout.Should().Be(5.Seconds());
             settings.RetryUnsuccessfulJoinAfter.Should().Be(10.Seconds());
+            settings.ShutdownAfterUnsuccessfulJoinSeedNodes .Should().Be(null);
             settings.PeriodicTasksInitialDelay.Should().Be(1.Seconds());
             settings.GossipInterval.Should().Be(1.Seconds());
             settings.GossipTimeToLive.Should().Be(2.Seconds());
             settings.HeartbeatInterval.Should().Be(1.Seconds());
-            settings.MonitoredByNrOfMembers.Should().Be(5);
+            settings.MonitoredByNrOfMembers.Should().Be(9);
             settings.HeartbeatExpectedResponseAfter.Should().Be(1.Seconds());
             settings.LeaderActionsInterval.Should().Be(1.Seconds());
             settings.UnreachableNodesReaperInterval.Should().Be(1.Seconds());
+            settings.AllowWeaklyUpMembers.Should().BeTrue();
             settings.PublishStatsInterval.Should().NotHaveValue();
             settings.AutoDownUnreachableAfter.Should().NotHaveValue();
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
@@ -54,7 +55,7 @@ namespace Akka.Cluster.Tests
             settings.FailureDetectorConfig.GetInt("max-sample-size").Should().Be(1000);
             settings.FailureDetectorConfig.GetTimeSpan("min-std-deviation").Should().Be(100.Milliseconds());
             settings.FailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause").Should().Be(3.Seconds());
-            settings.FailureDetectorConfig.GetInt("monitored-by-nr-of-members").Should().Be(5);
+            settings.FailureDetectorConfig.GetInt("monitored-by-nr-of-members").Should().Be(9);
             settings.FailureDetectorConfig.GetTimeSpan("expected-response-after").Should().Be(1.Seconds());
 
             settings.SchedulerTickDuration.Should().Be(33.Milliseconds());

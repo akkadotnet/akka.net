@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor

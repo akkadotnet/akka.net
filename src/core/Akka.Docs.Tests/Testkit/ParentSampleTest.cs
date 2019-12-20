@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Runtime.Remoting.Messaging;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit.Xunit2;
-using Akka.Actor.Dsl;
 using Xunit;
 
 namespace DocsExamples.Testkit
