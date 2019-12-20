@@ -4,7 +4,7 @@ trigger:
   branches:
     include:
       - dev
-      - test-dev
+      - v1.*
       - master
 
 pr:
