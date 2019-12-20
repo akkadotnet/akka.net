@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -43,14 +44,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             MethodName = null;
         }
 
-        public EndSpec(string className, string methodName)
+        public EndSpec(string className, string methodName, SpecLog log)
         {
             ClassName = className;
             MethodName = methodName;
+            Log = log;
         }
         
-        public string ClassName { get; private set; }
-        public string MethodName { get; private set; }
+        public string ClassName { get; }
+        public string MethodName { get; }
+        public SpecLog Log { get; }
     }
 
     /// <summary>
