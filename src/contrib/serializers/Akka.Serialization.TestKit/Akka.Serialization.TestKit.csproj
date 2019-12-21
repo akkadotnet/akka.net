@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Serialization.TestKit</AssemblyTitle>
     <Description>Serialization TestKit for Akka.NET</Description>
     <VersionSuffix>beta</VersionSuffix>
-    <TargetFrameworks>net452;$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -13,13 +13,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
 </Project>
