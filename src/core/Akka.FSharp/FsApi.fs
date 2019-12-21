@@ -12,7 +12,6 @@ open System
 open Microsoft.FSharp.Quotations
 open FSharp.Quotations.Evaluator
 
-
 module Serialization = 
     open MBrace.FsPickler
     open Akka.Serialization
