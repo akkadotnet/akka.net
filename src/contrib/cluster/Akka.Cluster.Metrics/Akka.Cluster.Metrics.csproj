@@ -12,6 +12,10 @@
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Google.Protobuf" Version="3.11.2" />
+    </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
         <Reference Include="System.Core" />
