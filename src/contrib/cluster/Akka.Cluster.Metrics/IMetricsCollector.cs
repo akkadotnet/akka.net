@@ -9,8 +9,17 @@ using System;
 
 namespace Akka.Cluster.Metrics
 {
+    /// <summary>
+    /// Metrics sampler.
+    ///
+    /// Implementations of cluster system metrics collectors extend this interface.
+    /// </summary>
     public interface IMetricsCollector : IDisposable
     {
-        
+        /// <summary>
+        /// Samples and collects new data points.
+        /// This method is invoked periodically and should return current metrics for this node.
+        /// </summary>
+        NodeMetrics Sample();
     }
 }

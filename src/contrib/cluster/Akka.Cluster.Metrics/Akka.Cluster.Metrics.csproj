@@ -23,6 +23,10 @@
         <Reference Include="System.Data.DataSetExtensions" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+    </ItemGroup>
+
     <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
         <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
     </PropertyGroup>
