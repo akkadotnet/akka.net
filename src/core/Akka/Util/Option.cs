@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.Util
@@ -77,5 +78,15 @@ namespace Akka.Util
 
         /// <inheritdoc/>
         public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
+
+        /// <summary>
+        /// Applies specified action to this option, if there is a value
+        /// </summary>
+        /// <param name="action"></param>
+        public void ForEach(Action<T> action)
+        {
+            if (HasValue)
+                action(Value);
+        }
     }
 }

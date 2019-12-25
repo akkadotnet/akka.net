@@ -39,7 +39,7 @@ namespace Akka.Cluster.Metrics
             Try<IMetricsCollector> Create(string provider)
             {
                 log.Debug("Trying {0}", provider);
-                return Activator.CreateInstance(Type.GetType(provider)) as Try<IMetricsCollector>;
+                return DynamicAccess.CreateInstanceFor<IMetricsCollector>(provider);
             }
 
             Try<IMetricsCollector> collector;

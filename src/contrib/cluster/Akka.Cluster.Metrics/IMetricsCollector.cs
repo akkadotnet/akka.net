@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using Akka.Cluster.Metrics.Serialization;
 
 namespace Akka.Cluster.Metrics
 {

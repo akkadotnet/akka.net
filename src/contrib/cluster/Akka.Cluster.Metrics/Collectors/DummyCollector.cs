@@ -5,6 +5,8 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using Akka.Cluster.Metrics.Serialization;
+
 namespace Akka.Cluster.Metrics.Collectors
 {
     internal class DummyCollector : IMetricsCollector

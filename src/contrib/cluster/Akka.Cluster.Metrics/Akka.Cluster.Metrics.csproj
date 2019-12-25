@@ -24,6 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
       <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
     </ItemGroup>
 

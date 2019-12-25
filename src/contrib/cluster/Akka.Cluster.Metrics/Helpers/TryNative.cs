@@ -35,7 +35,7 @@ namespace Akka.Cluster.Metrics.Helpers
     /// Represents either success or failure of some operation
     /// </summary>
     /// <typeparam name="T">Success type</typeparam>
-    internal class Try<T>
+    public class Try<T>
     {
         public Try(T success)
         {
@@ -51,6 +51,11 @@ namespace Akka.Cluster.Metrics.Helpers
         {
             return new Try<T>(value);
         }
+
+        /// <summary>
+        /// Shows if this is Success
+        /// </summary>
+        public bool IsSuccess => Success.HasValue;
         
         /// <summary>
         /// If set, contains successfull execution result
@@ -93,6 +98,24 @@ namespace Akka.Cluster.Metrics.Helpers
                 return this;
             else
                 return @default;
+        }
+        
+        /// <summary>
+        /// Returns this Try if it's a Success or tries execute given fallback if this is a Failure.
+        /// </summary>
+        public Try<T> GetOrElse(Func<T> fallback)
+        {
+            if (Success.HasValue)
+                return Success.Value;
+
+            try
+            {
+                return fallback();
+            }
+            catch (Exception ex)
+            {
+                return new Try<T>(ex);
+            }
         }
 
         /// <summary>
