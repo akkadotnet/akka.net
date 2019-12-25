@@ -29,9 +29,8 @@ namespace Akka.Cluster.Metrics
     public class ClusterMetricsCollector : ActorBase
     {
         private readonly Cluster _cluster;
-        private readonly ClusterMetrics _metrics;
 
-        private ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         
         /// <summary>
         /// Metrics tick internal message
@@ -49,30 +48,31 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// The latest metric values with their statistical data.
         /// </summary>
-        private MetricsGossip _latestGossip = new MetricsGossip();
+        private MetricsGossip _latestGossip = MetricsGossip.Empty;
         /// <summary>
         /// The metrics collector that samples data on the node.
         /// </summary>
-        private IMetricsCollector _collector;
+        private readonly IMetricsCollector _collector;
 
-        private ICancelable _gossipTask;
-        private ICancelable _sampleTask;
+        private readonly ICancelable _gossipTask;
+        private readonly ICancelable _sampleTask;
         
         public ClusterMetricsCollector()
         {
             _cluster = Cluster.Get(Context.System);
-            _metrics = ClusterMetrics.Get(Context.System);
             _collector = new MetricsCollectorBuilder().Build(Context.System);
             
+            var metrics = ClusterMetrics.Get(Context.System);
+            
             // Start periodic gossip to random nodes in cluster
-            var gossipInitialDelay = _metrics.Settings.PeriodicTasksInitialDelay.Max(_metrics.Settings.CollectorGossipInterval);
+            var gossipInitialDelay = metrics.Settings.PeriodicTasksInitialDelay.Max(metrics.Settings.CollectorGossipInterval);
             _gossipTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                gossipInitialDelay, _metrics.Settings.CollectorGossipInterval, Self, new GossipTick(), Self);
+                gossipInitialDelay, metrics.Settings.CollectorGossipInterval, Self, new GossipTick(), Self);
             
             // Start periodic metrics collection
-            var sampleInitialDelay = _metrics.Settings.PeriodicTasksInitialDelay.Max(_metrics.Settings.CollectorSampleInterval);
+            var sampleInitialDelay = metrics.Settings.PeriodicTasksInitialDelay.Max(metrics.Settings.CollectorSampleInterval);
             _sampleTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                sampleInitialDelay, _metrics.Settings.CollectorSampleInterval, Self, new MetricsTick(), Self);
+                sampleInitialDelay, metrics.Settings.CollectorSampleInterval, Self, new MetricsTick(), Self);
         }
 
         /// <inheritdoc />
@@ -154,7 +154,7 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         private void Sample()
         {
-            _latestGossip.NodeMetrics.Add(_collector.Sample());
+            _latestGossip.Append(_collector.Sample());
             Publish();
         }
 
@@ -166,17 +166,8 @@ namespace Akka.Cluster.Metrics
         {
             // remote node might not have same view of member nodes, this side should only care
             // about nodes that are known here, otherwise removed nodes can come back
-            var knownIndexes = envelope.Gossip.AllAddresses.Select((a, i) => i);
-            var allAddresses = envelope.Gossip.AllAddresses.Where((a, i) => knownIndexes.Contains(i));
-            var nodeMetrics = envelope.Gossip.NodeMetrics.Where(m => knownIndexes.Contains(m.AddressIndex));
-            var otherGossip = new MetricsGossip()
-            {
-                AllAddresses = { allAddresses },
-                NodeMetrics = { nodeMetrics },
-                AllMetricNames = { envelope.Gossip.AllMetricNames }
-            };
-
-            _latestGossip.MergeFrom(otherGossip);
+            var otherGossip = envelope.Gossip.Filter(_nodes.Select(n => n.ToProto()).ToImmutableHashSet());
+            _latestGossip = _latestGossip.Merge(otherGossip);
             
             // changes will be published in the period collect task
             if (!envelope.Reply)
