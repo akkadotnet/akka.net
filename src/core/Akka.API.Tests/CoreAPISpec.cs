@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Persistence;
@@ -19,6 +20,8 @@ using ApprovalTests;
 using Mono.Cecil;
 using Xunit;
 using Akka.Persistence.Query;
+using PublicApiGenerator;
+using static PublicApiGenerator.ApiGenerator;
 
 namespace Akka.API.Tests
 {
@@ -28,9 +31,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveCore()
         {
-            var assemblyPath = Path.GetFullPath(typeof(PatternMatch).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(ActorSystem).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -38,9 +39,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveRemote()
         {
-            var assemblyPath = Path.GetFullPath(typeof(RemoteSettings).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(RemoteSettings).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -48,9 +47,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApprovePersistence()
         {
-            var assemblyPath = Path.GetFullPath(typeof(Persistent).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(Persistent).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -58,9 +55,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApprovePersistenceQuery()
         {
-            var assemblyPath = Path.GetFullPath(typeof(PersistenceQuery).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(PersistenceQuery).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -68,9 +63,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveCluster()
         {
-            var assemblyPath = Path.GetFullPath(typeof(ClusterSettings).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(ClusterSettings).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -78,9 +71,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveClusterTools()
         {
-            var assemblyPath = Path.GetFullPath(typeof(ClusterSingletonManager).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(ClusterSingletonManager).Assembly));
             Approvals.Verify(publicApi);
         }
 
@@ -88,9 +79,7 @@ namespace Akka.API.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveStreams()
         {
-            var assemblyPath = Path.GetFullPath(typeof(Source).Assembly.Location);
-            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
-            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            var publicApi = Filter(GeneratePublicApi(typeof(Source).Assembly));
             Approvals.Verify(publicApi);
         }
 

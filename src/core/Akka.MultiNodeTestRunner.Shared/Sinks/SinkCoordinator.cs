@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -157,7 +158,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             });
             Receive<NodeCompletedSpecWithSuccess>(s => PublishToChildren(s));
             Receive<IList<NodeTest>>(tests => BeginSpec(tests));
-            Receive<EndSpec>(spec => EndSpec(spec.ClassName, spec.MethodName));
+            Receive<EndSpec>(spec => EndSpec(spec.ClassName, spec.MethodName, spec.Log));
             Receive<RunnerMessage>(runner => PublishToChildren(runner));
         }
 
@@ -168,10 +169,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
 
-        private void EndSpec(string testName, string methodName)
+        private void EndSpec(string testName, string methodName, SpecLog specLog)
         {
             foreach (var sink in Sinks)
-                sink.EndTest(testName, methodName);
+                sink.EndTest(testName, methodName, specLog);
         }
 
         private void BeginSpec(IList<NodeTest> tests)

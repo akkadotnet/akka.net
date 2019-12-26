@@ -175,31 +175,18 @@ namespace Akka.Streams.Tests.Dsl
             stageRef.Tell(PoisonPill.Instance);
             var warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
 
-#if CORECLR
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
                     "<PoisonPill> message sent to StageActor\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-#else
-            warn.Message.ToString()
-                .Should()
-                .MatchRegex(
-                    "<PoisonPill> message sent to StageActor\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-#endif
+
             stageRef.Tell(Kill.Instance);
             warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
 
-#if CORECLR
- warn.Message.ToString()
-                .Should()
-                .MatchRegex(
-                    "<Kill> message sent to StageActor\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-#else
             warn.Message.ToString()
-                .Should()
-                .MatchRegex(
-                    "<Kill> message sent to StageActor\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
-#endif
+                           .Should()
+                           .MatchRegex(
+                               "<Kill> message sent to StageActor\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/\\$\\$[a-z]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 
             source.SetResult(2);
 
