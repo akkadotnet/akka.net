@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Dispatch.SysMsg;
 using Akka.Util;
@@ -24,20 +25,22 @@ namespace Akka.Cluster.Metrics.Serialization
             public sealed partial class Metric
             {
                 private readonly Option<EWMA> _average;
+                
+                public string Name { get; }
 
                 /// <summary>
                 /// Creates a new Metric instance if the value is valid, otherwise None
                 /// is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(int nameIndex, Number value, Option<decimal> decayFactor)
-                    => decayFactor.HasValue ? new Metric(nameIndex, value, CreateEWMA(value.Value64, decayFactor)) : Option<Metric>.None;
+                public static Option<Metric> Create(string name, Number value, Option<decimal> decayFactor)
+                    => decayFactor.HasValue ? new Metric(name, value, CreateEWMA(value.DecimalValue, decayFactor)) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates a new Metric instance if the Try is successful and the value is valid,
                 /// otherwise None is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(int nameIndex, Try<Number> value, Option<decimal> decayFactor)
-                    => value.IsSuccess ? Create(nameIndex, value.Success.Value, decayFactor) : Option<Metric>.None;
+                public static Option<Metric> Create(string name, Try<Number> value, Option<decimal> decayFactor)
+                    => value.IsSuccess ? Create(name, value.Success.Value, decayFactor) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates <see cref="EWMA"/> if decat factor is set, otherwise None is returned
@@ -48,7 +51,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <summary>
                 /// Metrics key/value.
                 /// </summary>
-                /// <param name="nameIndex">The metric name index</param>
+                /// <param name="name">The metric name</param>
                 /// <param name="number">
                 /// The metric value, which must be a valid numerical value,
                 /// a valid value is neither negative nor NaN/Infinite.
@@ -57,12 +60,13 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// The data stream of the metric value, for trending over time. Metrics that are already
                 /// averages (e.g. system load average) or finite (e.g. as number of processors), are not trended.
                 /// </param>
-                public Metric(int nameIndex, Number number, Option<EWMA> average)
+                public Metric(string name, Number number, Option<EWMA> average)
                 {
                     if (!Defined(number))
-                        throw new ArgumentException(nameof(number), $"Invalid metric #{nameIndex} value {number}");
+                        throw new ArgumentException(nameof(number), $"Invalid metric {name} value {number}");
+                        
+                    Name = name;
                     _average = average;
-                    nameIndex_ = nameIndex;
                     number_ = number;
                     ewma_ = average.HasValue ? average.Value : default(EWMA);
                 }
@@ -81,7 +85,7 @@ namespace Akka.Cluster.Metrics.Serialization
                         return new Metric(this)
                         {
                             number_ = latest.number_,
-                            ewma_ = _average.Value + latest.number_.Value64
+                            ewma_ = _average.Value + latest.number_.DecimalValue
                         };
                     }
                     else if (latest._average.HasValue)
@@ -104,7 +108,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <summary>
                 /// The numerical value of the average, if defined, otherwise the latest value
                 /// </summary>
-                public double SmoothValue => _average.HasValue ? _average.Value.Value : Number.Value64;
+                public decimal SmoothValue => _average.HasValue ? (decimal)_average.Value.Value : Number.DecimalValue;
 
                 /// <summary>
                 /// Returns true if this value is smoothed
@@ -114,21 +118,35 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <summary>
                 /// Returns true if <code>that</code> is tracking the same metric as this.
                 /// </summary>
-                public bool SameAs(Metric that) => NameIndex == that.NameIndex;
+                public bool SameAs(Metric that) => Name == that.Name;
 
-                private bool Defined(Number value)
+                private bool Defined(Number value) => value.DecimalValue >= 0;
+            }
+
+            public sealed partial class Number
+            {
+                /// <summary>
+                /// Gets number decimal value
+                /// </summary>
+                public decimal DecimalValue
                 {
-                    switch (value.Type)
+                    get
                     {
-                        case NumberType.Long:
-                        case NumberType.Integer:
-                        case NumberType.Serialized:
-                            return true;
-                        case NumberType.Double:
-                        case NumberType.Float:
-                            return (float)value.Value64 >= 0;
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        switch (Type)
+                        {
+                            case NumberType.Long:
+                                return BitConverter.ToInt64(Serialized.ToByteArray(), 0);
+                            case NumberType.Integer:
+                                return BitConverter.ToInt32(Serialized.ToByteArray(), 0);
+                            case NumberType.Serialized:
+                                throw new ArgumentException($"Not a number {value64_} of type {Type}");
+                            case NumberType.Double:
+                                return (decimal)BitConverter.ToDouble(Serialized.ToByteArray(), 0);
+                            case NumberType.Float:
+                                return (decimal)BitConverter.ToSingle(Serialized.ToByteArray(), 0);
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                     }
                 }
             }

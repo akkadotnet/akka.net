@@ -253,21 +253,18 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// For backwards compatibility reasons, nr-of-instances
+        /// has the same purpose as max-total-nr-of-instances for cluster
+        /// aware routers and nr-of-instances (if defined by user) takes
+        /// precedence over max-total-nr-of-instances.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
-        internal static int GetMaxTotalNrOfInstances(Config config)
+        public static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances");
             if (number == 0 || number == 1)
-            {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");
-            }
-            else
-            {
-                return number; ;
-            }
+
+            return number;
         }
     }
 

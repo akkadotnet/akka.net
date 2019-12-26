@@ -21,6 +21,8 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     public sealed partial class NodeMetrics
     {
+        public Address Address { get; }
+
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>
         /// </summary>
@@ -30,6 +32,13 @@ namespace Akka.Cluster.Metrics.Serialization
         public NodeMetrics(int addressIndex, long timestamp, RepeatedField<Types.Metric> metrics)
         {
             addressIndex_ = addressIndex;
+            timestamp_ = timestamp;
+            metrics_ = metrics;
+        }
+        
+        public NodeMetrics(Address address, long timestamp, RepeatedField<Types.Metric> metrics)
+        {
+            Address = address;
             timestamp_ = timestamp;
             metrics_ = metrics;
         }
@@ -85,7 +94,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <summary>
         /// Gets metric by key
         /// </summary>
-        public Option<Types.Metric> Metric(int key) => Metrics.FirstOrDefault(m => m.NameIndex == key) ?? Option<Types.Metric>.None;
+        public Option<Types.Metric> Metric(string name) => Metrics.FirstOrDefault(m => m.Name == name) ?? Option<Types.Metric>.None;
 
         /// <summary>
         /// Returns true if <code>that</code> address is the same as this
