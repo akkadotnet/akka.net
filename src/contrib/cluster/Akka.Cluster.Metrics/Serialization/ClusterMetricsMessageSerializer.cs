@@ -6,8 +6,12 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.Metrics.Extensions;
 using Akka.Serialization;
+using Google.Protobuf;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -29,13 +33,10 @@ namespace Akka.Cluster.Metrics.Serialization
         
         #endregion
         
-        private readonly ExtendedActorSystem _system;
-
         /// <inheritdoc />
         public ClusterMetricsMessageSerializer(ExtendedActorSystem system) 
             : base(system)
         {
-            _system = system;
         }
         
         /// <inheritdoc />
@@ -43,12 +44,12 @@ namespace Akka.Cluster.Metrics.Serialization
         {
             switch (obj)
             {
-                case MetricsGossipEnvelope m: return Compress(MetricsGossipEnvelopeToProto(m));
-                case AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
-                case MixMetricsSelector mms: return MixMetricSelectorToBinary(mms);
-                /*case CpuMetricsSelector               => Array.emptyByteArray
-                case HeapMetricsSelector              => Array.emptyByteArray
-                case SystemLoadAverageMetricsSelector => Array.emptyByteArray*/
+                case MetricsGossipEnvelope m: return m.ToProto().ToByteArray();
+                case Metrics.AdaptiveLoadBalancingPool alb: return alb.ToProto(Manifest).ToByteArray();
+                case Metrics.MixMetricsSelector mms: return mms.ToProto(Manifest).ToByteArray();
+                case CpuMetricsSelector _: return new byte[0];
+                case HeapMetricsSelector _: return new byte[0];
+                case SystemLoadAverageMetricsSelector _: return new byte[0];
                 default:
                     throw new ArgumentException($"Can't serialize object of type ${obj.GetType().Name} in [${GetType().Name}]");
             }
@@ -59,12 +60,12 @@ namespace Akka.Cluster.Metrics.Serialization
         {
             switch (manifest)
             {
-                case MetricsGossipEnvelopeManifest: return MetricsGossipEnvelopeFromBinary(bytes);
-                case AdaptiveLoadBalancingPoolManifest: return AdaptiveLoadBalancingPoolFromBinary(bytes);
-                case MixMetricsSelectorManifest: return MixMetricSelectorFromBinary(bytes) ;
-                /*case CpuMetricsSelectorManifest               => CpuMetricsSelector
-                case HeapMetricsSelectorManifest              => HeapMetricsSelector
-                case SystemLoadAverageMetricsSelectorManifest => SystemLoadAverageMetricsSelector*/
+                case MetricsGossipEnvelopeManifest: return MetricsGossipEnvelope.Parser.ParseFrom(bytes).FromProto(); 
+                case AdaptiveLoadBalancingPoolManifest: return AdaptiveLoadBalancingPool.Parser.ParseFrom(bytes).FromProto();
+                case MixMetricsSelectorManifest: return Serialization.MixMetricsSelector.Parser.ParseFrom(bytes).FromProto();
+                case CpuMetricsSelectorManifest: return CpuMetricsSelector.Instance;
+                case HeapMetricsSelectorManifest: return HeapMetricsSelector.Instance;
+                case SystemLoadAverageMetricsSelectorManifest: return SystemLoadAverageMetricsSelector.Instance;
                 default:
                     throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${GetType().Name}");
             }
@@ -78,17 +79,12 @@ namespace Akka.Cluster.Metrics.Serialization
                 case MetricsGossipEnvelope _: return MetricsGossipEnvelopeManifest;
                 case AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
                 case MixMetricsSelector _: return MixMetricsSelectorManifest;
-                /*case CpuMetricsSelector               => CpuMetricsSelectorManifest
-                case HeapMetricsSelector              => HeapMetricsSelectorManifest
-                case SystemLoadAverageMetricsSelector => SystemLoadAverageMetricsSelectorManifest*/
+                case CpuMetricsSelector _: return CpuMetricsSelectorManifest;
+                case HeapMetricsSelector _: return HeapMetricsSelectorManifest;
+                case SystemLoadAverageMetricsSelector _: return SystemLoadAverageMetricsSelectorManifest;
                 default:
                     throw new ArgumentException($"Can't serialize object of type {o.GetType().Name} in [${GetType().Name}]");
             }
-        }
-
-        private MixMetricsSelector MixMetricSelectorFromBinary(byte[] bytes)
-        {
-            var mm = MixMetricsSelector.Parser.ParseFrom(bytes);
         }
     }
 }

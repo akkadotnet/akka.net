@@ -136,7 +136,10 @@ namespace Akka.Cluster.Metrics
     /// </summary>
     public sealed class AdaptiveLoadBalancingPool : Pool
     {
-        private readonly IMetricsSelector _metricsSelector;
+        /// <summary>
+        /// Metrics selector
+        /// </summary>
+        public IMetricsSelector MetricsSelector { get; }
 
         /// <summary>
         /// Creates instance of <see cref="AdaptiveLoadBalancingPool"/>
@@ -152,7 +155,7 @@ namespace Akka.Cluster.Metrics
                                          string routerDispatcher = null, bool usePoolDispatcher = false) 
             : base(nrOfInstances, null, supervisorStrategy ?? DefaultSupervisorStrategy, routerDispatcher ?? Dispatchers.DefaultDispatcherId, usePoolDispatcher)
         {
-            _metricsSelector =  metricsSelector ?? MixMetricsSelector.Instance;
+            MetricsSelector =  metricsSelector ?? MixMetricsSelector.Instance;
         }
 
         /// <summary>
@@ -168,7 +171,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new AdaptiveLoadBalancingRoutingLogic(system, _metricsSelector));
+            return new Router(new AdaptiveLoadBalancingRoutingLogic(system, MetricsSelector));
         }
 
         /// <inheritdoc />
@@ -182,7 +185,7 @@ namespace Akka.Cluster.Metrics
         {
             return new AdaptiveLoadBalancingPoolSurrogate()
             {
-                MetricsSelector = _metricsSelector,
+                MetricsSelector = MetricsSelector,
                 RouterDispatcher = RouterDispatcher,
                 SupervisorStrategy = SupervisorStrategy,
                 NrOfInstances = NrOfInstances,
@@ -201,7 +204,7 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         public AdaptiveLoadBalancingPool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
-            return new AdaptiveLoadBalancingPool(_metricsSelector, NrOfInstances, strategy, RouterDispatcher, UsePoolDispatcher);
+            return new AdaptiveLoadBalancingPool(MetricsSelector, NrOfInstances, strategy, RouterDispatcher, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -210,7 +213,7 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         public AdaptiveLoadBalancingPool WithDispatcher(string dispatcherId)
         {
-            return new AdaptiveLoadBalancingPool(_metricsSelector, NrOfInstances, SupervisorStrategy, dispatcherId, UsePoolDispatcher);
+            return new AdaptiveLoadBalancingPool(MetricsSelector, NrOfInstances, SupervisorStrategy, dispatcherId, UsePoolDispatcher);
         }
 
         /// <inheritdoc />

@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     public sealed partial class NodeMetrics
     {
-        public Address Address { get; }
+        public Address Address { get; internal set; }
 
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>
