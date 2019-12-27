@@ -8,7 +8,7 @@
             and to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
         </Description>
         <VersionSuffix>beta</VersionSuffix>
-        <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
