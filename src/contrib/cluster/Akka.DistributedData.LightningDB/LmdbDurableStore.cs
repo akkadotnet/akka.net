@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;

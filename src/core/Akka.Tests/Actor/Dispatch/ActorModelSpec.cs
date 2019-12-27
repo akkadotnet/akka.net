@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;

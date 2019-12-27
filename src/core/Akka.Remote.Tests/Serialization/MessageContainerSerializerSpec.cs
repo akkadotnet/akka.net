@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.TestKit;

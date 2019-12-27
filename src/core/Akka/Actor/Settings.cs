@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Routing;
 

@@ -7,7 +7,7 @@
 
 using System;
 using System.Linq;
-using Akka.Configuration;
+using Hocon;
 using Akka.Configuration.Hocon;
 using Akka.TestKit;
 using Xunit;

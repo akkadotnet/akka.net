@@ -7,7 +7,7 @@
 
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Routing;
 using Akka.Routing;
 using Akka.Util.Internal;

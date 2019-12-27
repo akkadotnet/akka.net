@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using FluentAssertions;

@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Persistence.Query.Sql
 {

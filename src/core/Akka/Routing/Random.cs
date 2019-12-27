@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Util;
 

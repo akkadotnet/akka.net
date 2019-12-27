@@ -8,7 +8,7 @@
 using System;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal

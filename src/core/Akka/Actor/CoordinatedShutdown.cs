@@ -12,10 +12,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
+using Hocon;
 using static Akka.Pattern.FutureTimeoutSupport;
 using static Akka.Util.Internal.TaskEx;
 

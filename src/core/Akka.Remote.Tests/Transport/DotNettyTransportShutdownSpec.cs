@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Transport;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;

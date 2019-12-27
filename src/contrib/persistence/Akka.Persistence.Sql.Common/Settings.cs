@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common

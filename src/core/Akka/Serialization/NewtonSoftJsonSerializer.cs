@@ -12,7 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;

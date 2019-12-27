@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;

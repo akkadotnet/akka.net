@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Benchmarks.Configurations;
-using Akka.Configuration;
+using Hocon;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Hocon

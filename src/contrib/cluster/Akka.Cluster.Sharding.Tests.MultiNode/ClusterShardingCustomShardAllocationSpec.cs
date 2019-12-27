@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.Threading.Tasks;

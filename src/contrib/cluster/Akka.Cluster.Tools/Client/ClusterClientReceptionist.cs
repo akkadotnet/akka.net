@@ -7,7 +7,7 @@
 
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 
 namespace Akka.Cluster.Tools.Client

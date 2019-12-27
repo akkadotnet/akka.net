@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Tests.Journal

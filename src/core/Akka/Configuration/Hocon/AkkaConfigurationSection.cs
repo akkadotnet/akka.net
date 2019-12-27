@@ -7,6 +7,7 @@
 
 #if CONFIGURATION
 using System.Configuration;
+using Hocon;
 
 namespace Akka.Configuration.Hocon
 {
@@ -26,7 +27,7 @@ namespace Akka.Configuration.Hocon
     /// ]]>
     /// </code>
     /// </summary>
-    public class AkkaConfigurationSection : ConfigurationSection
+    public class AkkaConfigurationSection : HoconConfigurationSection
     {
         private const string ConfigurationPropertyName = "hocon";
         private Config _akkaConfig;

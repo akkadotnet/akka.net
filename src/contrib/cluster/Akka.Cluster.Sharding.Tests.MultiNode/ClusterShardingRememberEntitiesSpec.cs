@@ -11,7 +11,7 @@ using System.IO;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 using Akka.Util;
 using FluentAssertions;

@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;

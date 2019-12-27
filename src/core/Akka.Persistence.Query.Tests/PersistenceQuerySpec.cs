@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon;
 using Xunit;
 using Xunit.Abstractions;
 

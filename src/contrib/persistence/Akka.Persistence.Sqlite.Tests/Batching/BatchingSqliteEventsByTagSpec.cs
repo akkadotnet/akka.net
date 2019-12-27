@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;

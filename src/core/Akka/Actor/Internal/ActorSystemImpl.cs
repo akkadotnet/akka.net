@@ -11,14 +11,14 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
-
+using Hocon;
 
 namespace Akka.Actor.Internal
 {
@@ -53,7 +53,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Load())
+            : this(name, ConfigurationFactory.Default())
         {
         }
 

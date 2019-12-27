@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Configuration;
+using Hocon;
 using Akka.TestKit;
 using Xunit;
 

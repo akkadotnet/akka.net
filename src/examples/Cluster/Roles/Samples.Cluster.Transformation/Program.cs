@@ -8,7 +8,7 @@
 using System;
 using System.Configuration;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 

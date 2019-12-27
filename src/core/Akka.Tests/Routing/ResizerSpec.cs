@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;

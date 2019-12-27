@@ -15,7 +15,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;

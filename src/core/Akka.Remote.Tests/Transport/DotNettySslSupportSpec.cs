@@ -8,7 +8,7 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;

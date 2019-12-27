@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.TCK.Snapshot;
 using Akka.Persistence.TestKit.Tests;
 using Xunit;

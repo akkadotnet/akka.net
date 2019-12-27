@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence;
 using Akka.Remote.TestKit;
 using Akka.Actor;

@@ -9,10 +9,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
+using Hocon;
 
 namespace Akka.Actor
 {
@@ -109,7 +110,7 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name, ConfigurationFactory.Load());
+            return CreateAndStartSystem(name, ConfigurationFactory.Default());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)

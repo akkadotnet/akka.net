@@ -11,7 +11,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;

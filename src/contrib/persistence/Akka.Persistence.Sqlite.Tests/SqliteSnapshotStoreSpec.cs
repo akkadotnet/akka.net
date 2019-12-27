@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.TCK.Snapshot;
 using Akka.Util.Internal;
 using Xunit.Abstractions;

@@ -11,7 +11,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;

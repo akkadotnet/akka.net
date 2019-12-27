@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using FluentAssertions.Execution;

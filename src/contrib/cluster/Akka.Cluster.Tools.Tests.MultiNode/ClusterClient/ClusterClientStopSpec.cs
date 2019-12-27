@@ -12,7 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 

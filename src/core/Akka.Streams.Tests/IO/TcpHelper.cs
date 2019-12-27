@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;

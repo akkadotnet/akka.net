@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
@@ -34,7 +34,7 @@ namespace Akka.Remote.TestKit
         // allows us to avoid NullReferenceExceptions if we make this empty rather than null
         // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
         // it will remain safe by defaut
-        Config _commonConf = Akka.Configuration.Config.Empty;
+        Config _commonConf = ConfigurationFactory.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();

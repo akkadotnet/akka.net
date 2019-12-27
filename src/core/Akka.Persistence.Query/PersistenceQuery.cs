@@ -9,7 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 
 namespace Akka.Persistence.Query
