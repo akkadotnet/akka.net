@@ -131,7 +131,7 @@ namespace Akka.Cluster.Metrics
         private void RemoveMember(Member member)
         {
             _nodes = _nodes.Remove(member.Address);
-            _latestGossip = _latestGossip.Remove(member.Address.ToProto());
+            _latestGossip = _latestGossip.Remove(member.Address);
             Publish();
         }
 
@@ -154,7 +154,7 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         private void Sample()
         {
-            _latestGossip.Append(_collector.Sample());
+            _latestGossip += _collector.Sample();
             Publish();
         }
 
@@ -166,12 +166,12 @@ namespace Akka.Cluster.Metrics
         {
             // remote node might not have same view of member nodes, this side should only care
             // about nodes that are known here, otherwise removed nodes can come back
-            var otherGossip = envelope.Gossip.Filter(_nodes.Select(n => n.ToProto()).ToImmutableHashSet());
+            var otherGossip = envelope.Gossip.Filter(_nodes.Select(n => n).ToImmutableHashSet());
             _latestGossip = _latestGossip.Merge(otherGossip);
             
             // changes will be published in the period collect task
             if (!envelope.Reply)
-                ReplyGossipTo(envelope.From.FromProto());
+                ReplyGossipTo(envelope.FromAddress);
         }
 
         /// <summary>
@@ -181,12 +181,12 @@ namespace Akka.Cluster.Metrics
         
         private void GossipTo(Akka.Actor.Address address)
         {
-            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress.ToProto(), _latestGossip, reply: false));
+            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress, _latestGossip, reply: false));
         }
 
         private void ReplyGossipTo(Akka.Actor.Address address)
         {
-            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress.ToProto(), _latestGossip, reply: true));
+            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress, _latestGossip, reply: true));
         }
 
         private void SendGossip(Akka.Actor.Address address, MetricsGossipEnvelope envelope)

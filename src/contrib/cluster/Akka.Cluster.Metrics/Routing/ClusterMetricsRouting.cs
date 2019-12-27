@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Cluster.Metrics.Events;
@@ -64,7 +63,7 @@ namespace Akka.Cluster.Metrics
             var routees = oldValue.Item1;
             var weightedRoutees = new WeightedRoutees(routees, 
                 _cluster.SelfAddress,
-                _metricsSelector.Weights(@event.NodeMetrics).ToImmutableDictionary(pair => pair.Key.FromProto(), pair => pair.Value));
+                _metricsSelector.Weights(@event.NodeMetrics).ToImmutableDictionary(pair => pair.Key, pair => pair.Value));
             
             // retry when CAS failure
             if (!_weightedRouteesRef.CompareAndSet(oldValue, Tuple.Create(routees, @event.NodeMetrics, weightedRoutees.AsOption())))
@@ -86,7 +85,7 @@ namespace Akka.Cluster.Metrics
                     return oldWeightedRoutees;
                 
                 var weightedRoutees = new WeightedRoutees(routees.ToImmutableArray(), _cluster.SelfAddress, 
-                    _metricsSelector.Weights(oldMetrics).ToImmutableDictionary(pair => pair.Key.FromProto(), pair => pair.Value));
+                    _metricsSelector.Weights(oldMetrics).ToImmutableDictionary(pair => pair.Key, pair => pair.Value));
                 
                 // ignore, don't update, in case of CAS failure
                 _weightedRouteesRef.CompareAndSet(oldValue, Tuple.Create(routees.ToImmutableArray(), oldMetrics, weightedRoutees.AsOption()));

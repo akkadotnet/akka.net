@@ -44,9 +44,9 @@ namespace Akka.Cluster.Metrics.Serialization
         public sealed class HeapMemory
         {
             /// <summary>
-            /// Address index of the node the metrics are gathered at
+            /// Address of the node the metrics are gathered at
             /// </summary>
-            public int AddressIndex { get; }
+            public Actor.Address Address { get; }
             /// <summary>
             /// The time of sampling, in milliseconds since midnight, January 1, 1970 UTC
             /// </summary>
@@ -70,14 +70,14 @@ namespace Akka.Cluster.Metrics.Serialization
             /// Given a NodeMetrics it returns the HeapMemory data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the HeapMemory constructor parameters</returns>
-            public static Option<(Address Address, long Timestamp, decimal UsedSmoothValue, decimal CommittedSmoothValue, Option<decimal> HeapMemoryMaxValue)> 
+            public static Option<(Actor.Address Address, long Timestamp, decimal UsedSmoothValue, decimal CommittedSmoothValue, Option<decimal> HeapMemoryMaxValue)> 
                 Unapply(NodeMetrics nodeMetrics)
             {
                 var used = nodeMetrics.Metric(HeapMemoryUsed);
                 var committed = nodeMetrics.Metric(HeapMemoryCommitted);
                 
                 if (!used.HasValue || !committed.HasValue)
-                    return Option<(Address, long, decimal, decimal, Option<decimal>)>.None;
+                    return Option<(Actor.Address, long, decimal, decimal, Option<decimal>)>.None;
 
                 return (
                     nodeMetrics.Address,
@@ -91,7 +91,7 @@ namespace Akka.Cluster.Metrics.Serialization
             /// <summary>
             /// Creates instance of <see cref="StandardMetrics.HeapMemoryUsed"/>
             /// </summary>
-            /// <param name="addressIndex">Address index of the node the metrics are gathered at</param>
+            /// <param name="address">Address index of the node the metrics are gathered at</param>
             /// <param name="timestamp">The time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
             /// <param name="used">The current sum of heap memory used from all heap memory pools (in bytes)</param>
             /// <param name="committed">
@@ -102,14 +102,14 @@ namespace Akka.Cluster.Metrics.Serialization
             /// The maximum amount of memory (in bytes) that can be used for runtime memory management.
             /// Can be undefined on some OS.
             /// </param>
-            public HeapMemory(int addressIndex, long timestamp, decimal used, decimal committed, Option<decimal> max)
+            public HeapMemory(Actor.Address address, long timestamp, decimal used, decimal committed, Option<decimal> max)
             {
                 if (committed <= 0)
                     throw new ArgumentException(nameof(committed), "committed heap expected to be > 0 bytes");
                 if (max.HasValue && max.Value <= 0)
                     throw new ArgumentException(nameof(committed), "max heap expected to be > 0 bytes");
                     
-                AddressIndex = addressIndex;
+                Address = address;
                 Timestamp = timestamp;
                 Used = used;
                 Committed = committed;
@@ -123,9 +123,9 @@ namespace Akka.Cluster.Metrics.Serialization
         public sealed class Cpu
         {
             /// <summary>
-            /// Address index of the node the metrics are gathered at
+            /// Address of the node the metrics are gathered at
             /// </summary>
-            public int AddressIndex { get; }
+            public Actor.Address Address { get; }
             /// <summary>
             /// The time of sampling, in milliseconds since midnight, January 1, 1970 UTC
             /// </summary>
@@ -154,13 +154,13 @@ namespace Akka.Cluster.Metrics.Serialization
             /// Given a NodeMetrics it returns the Cpu data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the Cpu constructor parameters</returns>
-            public static Option<(Address Address, long Timestamp, Option<decimal> SystemLoadAverage, Option<decimal> CpuCombined, Option<decimal> CpuStolen, int Processors)> 
+            public static Option<(Actor.Address Address, long Timestamp, Option<decimal> SystemLoadAverage, Option<decimal> CpuCombined, Option<decimal> CpuStolen, int Processors)> 
                 Unapply(NodeMetrics nodeMetrics)
             {
                 var processors = nodeMetrics.Metric(Processors);
                 
                 if (!processors.HasValue)
-                    return Option<(Address, long, Option<decimal>, Option<decimal>, Option<decimal>, int)>.None;
+                    return Option<(Actor.Address, long, Option<decimal>, Option<decimal>, Option<decimal>, int)>.None;
 
                 return (
                     nodeMetrics.Address,
@@ -175,7 +175,7 @@ namespace Akka.Cluster.Metrics.Serialization
             /// <summary>
             /// Creates new instance of <see cref="Cpu"/>
             /// </summary>
-            /// <param name="addressIndex">Address index of the node the metrics are gathered at</param>
+            /// <param name="address">Address of the node the metrics are gathered at</param>
             /// <param name="timestamp">The time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
             /// <param name="systemLoadAverage">OS-specific average load on the CPUs in the system, for the past 1 minute,
             /// The system is possibly nearing a bottleneck if the system load average is nearing number of cpus/cores.</param>
@@ -184,7 +184,7 @@ namespace Akka.Cluster.Metrics.Serialization
             /// much more it could theoretically.</param>
             /// <param name="cpuStolen">Stolen CPU time, in percentage ([0.0 - 1.0].</param>
             /// <param name="processorsNumber">The number of available processors</param>
-            public Cpu(int addressIndex, long timestamp, Option<decimal> systemLoadAverage, Option<decimal> cpuCombined,
+            public Cpu(Actor.Address address, long timestamp, Option<decimal> systemLoadAverage, Option<decimal> cpuCombined,
                        Option<decimal> cpuStolen, int processorsNumber)
             {
                 if (cpuCombined.HasValue && (cpuCombined.Value < 0 || cpuCombined.Value > 1))
@@ -192,7 +192,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 if (cpuStolen.HasValue && (cpuStolen.Value < 0 || cpuStolen.Value > 1))
                     throw new ArgumentException(nameof(cpuCombined), $"cpuStolen must be between [0.0 - 1.0], was {cpuStolen.Value}" );
                 
-                AddressIndex = addressIndex;
+                Address = address;
                 Timestamp = timestamp;
                 SystemLoadAverage = systemLoadAverage;
                 CpuCombined = cpuCombined;

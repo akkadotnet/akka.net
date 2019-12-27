@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
@@ -21,26 +22,27 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     public sealed partial class NodeMetrics
     {
-        public Address Address { get; internal set; }
+        public Actor.Address Address { get; internal set; }
 
-        /// <summary>
-        /// Creates new instance of <see cref="NodeMetrics"/>
-        /// </summary>
-        /// <param name="addressIndex">Index of the address of the node the metrics are gathered at</param>
-        /// <param name="timestamp">the time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
-        /// <param name="metrics">The set of sampled <see cref="Types.Metric"/></param>
-        public NodeMetrics(int addressIndex, long timestamp, RepeatedField<Types.Metric> metrics)
+        /*public NodeMetrics(int addressIndex, long timestamp, RepeatedField<Types.Metric> metrics)
         {
             addressIndex_ = addressIndex;
             timestamp_ = timestamp;
             metrics_ = metrics;
-        }
+        }*/
         
-        public NodeMetrics(Address address, long timestamp, RepeatedField<Types.Metric> metrics)
+        /// <summary>
+        /// Creates new instance of <see cref="NodeMetrics"/>
+        /// </summary>
+        /// <param name="address">Address of the node the metrics are gathered at</param>
+        /// <param name="timestamp">the time of sampling, in milliseconds since midnight, January 1, 1970 UTC</param>
+        /// <param name="metrics">The set of sampled <see cref="Types.Metric"/></param>
+        public NodeMetrics(Actor.Address address, long timestamp, IEnumerable<Types.Metric> metrics)
         {
             Address = address;
             timestamp_ = timestamp;
-            metrics_ = metrics;
+            metrics_ = new RepeatedField<Types.Metric>();
+            metrics_.AddRange(metrics);
         }
 
         /// <summary>
@@ -48,8 +50,8 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public NodeMetrics Merge(NodeMetrics that)
         {
-            if (AddressIndex != that.AddressIndex)
-                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {AddressIndex} != {that.AddressIndex}");
+            if (!Address.Equals(that.Address))
+                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {Address} != {that.Address}");
 
             if (Timestamp >= that.Timestamp)
                 return this; // that is order
@@ -66,8 +68,8 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public NodeMetrics Update(NodeMetrics that)
         {
-            if (AddressIndex != that.AddressIndex)
-                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {AddressIndex} != {that.AddressIndex}");
+            if (!Address.Equals(that.Address))
+                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {Address} != {that.Address}");
             
             // Apply sample ordering
             var (latestNode, currentNode) = Timestamp >= that.Timestamp ? (this, that) : (that, this);
@@ -99,6 +101,6 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <summary>
         /// Returns true if <code>that</code> address is the same as this
         /// </summary>
-        public bool SameAs(NodeMetrics that) => addressIndex_ == that.addressIndex_;
+        public bool SameAs(NodeMetrics that) => Address.Equals(that.Address);
     }
 }

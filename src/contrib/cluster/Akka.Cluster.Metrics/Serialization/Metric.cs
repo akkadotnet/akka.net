@@ -24,22 +24,25 @@ namespace Akka.Cluster.Metrics.Serialization
             /// </summary>
             public sealed partial class Metric
             {
-                private readonly Option<EWMA> _average;
-                
+                /// <summary>
+                /// Metric average value
+                /// </summary>
+                public Option<EWMA> Average { get; }
+                public decimal DecimalNumber { get; }
                 public string Name { get; }
 
                 /// <summary>
                 /// Creates a new Metric instance if the value is valid, otherwise None
                 /// is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(string name, Number value, Option<decimal> decayFactor)
-                    => decayFactor.HasValue ? new Metric(name, value, CreateEWMA(value.DecimalValue, decayFactor)) : Option<Metric>.None;
+                public static Option<Metric> Create(string name, decimal value, Option<decimal> decayFactor)
+                    => decayFactor.HasValue ? new Metric(name, value, CreateEWMA(value, decayFactor)) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates a new Metric instance if the Try is successful and the value is valid,
                 /// otherwise None is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(string name, Try<Number> value, Option<decimal> decayFactor)
+                public static Option<Metric> Create(string name, Try<decimal> value, Option<decimal> decayFactor)
                     => value.IsSuccess ? Create(name, value.Success.Value, decayFactor) : Option<Metric>.None;
 
                 /// <summary>
@@ -52,7 +55,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// Metrics key/value.
                 /// </summary>
                 /// <param name="name">The metric name</param>
-                /// <param name="number">
+                /// <param name="decimalNumber">
                 /// The metric value, which must be a valid numerical value,
                 /// a valid value is neither negative nor NaN/Infinite.
                 /// </param>
@@ -60,14 +63,14 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// The data stream of the metric value, for trending over time. Metrics that are already
                 /// averages (e.g. system load average) or finite (e.g. as number of processors), are not trended.
                 /// </param>
-                public Metric(string name, Number number, Option<EWMA> average)
+                public Metric(string name, decimal decimalNumber, Option<EWMA> average)
                 {
-                    if (!Defined(number))
-                        throw new ArgumentException(nameof(number), $"Invalid metric {name} value {number}");
+                    if (!Defined(decimalNumber))
+                        throw new ArgumentException(nameof(decimalNumber), $"Invalid metric {name} value {decimalNumber}");
                         
                     Name = name;
-                    _average = average;
-                    number_ = number;
+                    DecimalNumber = decimalNumber;
+                    Average = average;
                     ewma_ = average.HasValue ? average.Value : default(EWMA);
                 }
 
@@ -80,20 +83,20 @@ namespace Akka.Cluster.Metrics.Serialization
                     if (!latest.SameAs(this))
                         return this;
 
-                    if (_average.HasValue)
+                    if (Average.HasValue)
                     {
                         return new Metric(this)
                         {
                             number_ = latest.number_,
-                            ewma_ = _average.Value + latest.number_.DecimalValue
+                            ewma_ = Average.Value + latest.DecimalNumber
                         };
                     }
-                    else if (latest._average.HasValue)
+                    else if (latest.Average.HasValue)
                     {
                         return new Metric(this)
                         {
                             number_ = latest.number_,
-                            ewma_ = latest._average.Value
+                            ewma_ = latest.Average.Value
                         };
                     }
                     else
@@ -108,19 +111,19 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <summary>
                 /// The numerical value of the average, if defined, otherwise the latest value
                 /// </summary>
-                public decimal SmoothValue => _average.HasValue ? (decimal)_average.Value.Value : Number.DecimalValue;
+                public decimal SmoothValue => Average.HasValue ? (decimal)Average.Value.Value : Number.DecimalValue;
 
                 /// <summary>
                 /// Returns true if this value is smoothed
                 /// </summary>
-                public bool IsSmooth => _average.HasValue;
+                public bool IsSmooth => Average.HasValue;
 
                 /// <summary>
                 /// Returns true if <code>that</code> is tracking the same metric as this.
                 /// </summary>
                 public bool SameAs(Metric that) => Name == that.Name;
 
-                private bool Defined(Number value) => value.DecimalValue >= 0;
+                private bool Defined(decimal value) => value >= 0;
             }
 
             public sealed partial class Number

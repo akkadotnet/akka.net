@@ -21,6 +21,8 @@ namespace Akka.Cluster.Metrics.Serialization
     [InternalApi]
     public sealed partial class MetricsGossip
     {
+        public IImmutableSet<NodeMetrics> Nodes { get; private set; }
+
         /// <summary>
         /// Empty metrics gossip
         /// </summary>
@@ -28,31 +30,31 @@ namespace Akka.Cluster.Metrics.Serialization
         {
             nodeMetrics_ = { new NodeMetrics[0] }
         };
+
+        public MetricsGossip(IImmutableSet<NodeMetrics> nodes)
+        {
+            Nodes = nodes;
+        }
         
         /// <summary>
         /// Removes nodes if their correlating node ring members are not <see cref="MemberStatus"/> `Up`.
         /// </summary>
-        public MetricsGossip Remove(Address node)
+        public MetricsGossip Remove(Actor.Address node)
         {
-            var indexToRemove = AllAddresses.IndexOf(node);
-            if (indexToRemove < 0)
-                return this;
-            
             return new MetricsGossip(this)
             {
-                nodeMetrics_ = { this.nodeMetrics_.Where(n => n.AddressIndex != indexToRemove) }
+                Nodes = Nodes.Where(n => !n.Address.Equals(node)).ToImmutableHashSet()
             };
         }
 
         /// <summary>
         /// Only the nodes that are in the `includeNodes` Set.
         /// </summary>
-        public MetricsGossip Filter(IImmutableSet<Address> includeNodes)
+        public MetricsGossip Filter(IImmutableSet<Actor.Address> includeNodes)
         {
-            var indexesToInclude = includeNodes.Select(node => AllAddresses.IndexOf(node));
             return new MetricsGossip(this)
             {
-                nodeMetrics_ = { this.nodeMetrics_.Where(n => indexesToInclude.Contains(n.AddressIndex)) }
+                Nodes = Nodes.Where(n => includeNodes.Contains(n.Address)).ToImmutableHashSet()
             };
         }
 
@@ -61,37 +63,35 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public MetricsGossip Merge(MetricsGossip otherGossip)
         {
-            return otherGossip.NodeMetrics.Aggregate(this, (gossip, metrics) => gossip.Append(metrics));
+            return otherGossip.Nodes.Aggregate(this, (gossip, node) => gossip + node);
         }
 
         /// <summary>
         /// Adds new local <see cref="NodeMetrics"/>, or merges an existing.
         /// </summary>
-        public MetricsGossip Append(NodeMetrics newNodeMetrics)
+        public static MetricsGossip operator +(MetricsGossip gossip, NodeMetrics newNodeMetrics)
         {
-            var existingMetrics = NodeMetricsFor(newNodeMetrics.AddressIndex);
+            var existingMetrics = gossip.NodeMetricsFor(newNodeMetrics.Address);
             if (existingMetrics.HasValue)
             {
-                return new MetricsGossip(this)
+                return new MetricsGossip(gossip)
                 {
-                    nodeMetrics_ = { this.nodeMetrics_.Where(m => !m.Equals(existingMetrics.Value)).Concat(existingMetrics.Value.Update(newNodeMetrics)) }
+                    Nodes = gossip.Nodes.Remove(existingMetrics.Value).Add(existingMetrics.Value.Update(newNodeMetrics))
                 };
             }
             else
             {
-                var newMetrics = this.nodeMetrics_.ToList();
-                newMetrics.Add(newNodeMetrics);
-                return new MetricsGossip(this)
+                return new MetricsGossip(gossip)
                 {
-                    nodeMetrics_ = { newMetrics }
+                    Nodes = gossip.Nodes.Add(newNodeMetrics)
                 };
             }
         }
 
-        private Option<NodeMetrics> NodeMetricsFor(int addressIndex)
+        private Option<NodeMetrics> NodeMetricsFor(Actor.Address address)
         {
-            var metrics = NodeMetrics.FirstOrDefault(m => m.AddressIndex == addressIndex);
-            return metrics ?? Option<NodeMetrics>.None;
+            var node = Nodes.FirstOrDefault(m => m.Address.Equals(address));
+            return node ?? Option<NodeMetrics>.None;
         }
     }
 }

@@ -22,7 +22,7 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// The weights per address, based on the nodeMetrics.
         /// </summary>
-        IImmutableDictionary<Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics);
+        IImmutableDictionary<Actor.Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics);
     }
 
     /// <summary>
@@ -63,17 +63,17 @@ namespace Akka.Cluster.Metrics
         /// Remaining capacity for each node. The value is between 0.0 and 1.0, where 0.0 means no remaining capacity
         /// (full utilization) and 1.0 means full remaining capacity (zero utilization).
         /// </summary>
-        public abstract IImmutableDictionary<Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics);
+        public abstract IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics);
 
         /// <summary>
         /// Converts the capacity values to weights. The node with lowest capacity gets weight 1
         /// (lowest usable capacity is 1%) and other nodes gets weights proportional to their capacity compared to
         /// the node with lowest capacity.
         /// </summary>
-        public IImmutableDictionary<Address, int> Weights(IImmutableDictionary<Address, decimal> capacity)
+        public IImmutableDictionary<Actor.Address, int> Weights(IImmutableDictionary<Actor.Address, decimal> capacity)
         {
             if (capacity.Count == 0)
-                return ImmutableDictionary<Address, int>.Empty;
+                return ImmutableDictionary<Actor.Address, int>.Empty;
 
             var min = capacity.Min(c => c.Value);
             // lowest usable capacity is 1% (>= 0.5% will be rounded to weight 1), also avoids div by zero
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Metrics
         }
         
         /// <inheritdoc />
-        public IImmutableDictionary<Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics)
+        public IImmutableDictionary<Actor.Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return Weights(Capacity(nodeMetrics));
         }
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Metrics
         public static readonly HeapMetricsSelector Instance = new HeapMetricsSelector();
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.HeapMemory.Unapply)
@@ -140,7 +140,7 @@ namespace Akka.Cluster.Metrics
         }
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.Cpu.Unapply)
@@ -170,7 +170,7 @@ namespace Akka.Cluster.Metrics
         public static readonly SystemLoadAverageMetricsSelector Instance = new SystemLoadAverageMetricsSelector();
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.Cpu.Unapply)
@@ -199,11 +199,11 @@ namespace Akka.Cluster.Metrics
         }
 
         /// <inheritdoc />
-        public override IImmutableDictionary<Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             var combined = Selectors.SelectMany(s => Capacity(nodeMetrics)).ToImmutableArray();
             // aggregated average of the capacities by address
-            var init = ImmutableDictionary<Address, (decimal Sum, int Count)>.Empty;
+            var init = ImmutableDictionary<Actor.Address, (decimal Sum, int Count)>.Empty;
             return combined.Aggregate(init, (acc, pair) =>
             {
                 var (address, capacity) = (pair.Key, pair.Value);

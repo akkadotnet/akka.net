@@ -28,11 +28,16 @@ namespace Akka.Cluster.Metrics.Serialization
     public sealed partial class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
     {
         /// <summary>
+        /// Akka's actor address
+        /// </summary>
+        public Actor.Address FromAddress { get; }
+
+        /// <summary>
         /// Creates new instance of <see cref="MetricsGossipEnvelope"/>
         /// </summary>
-        public MetricsGossipEnvelope(Address from, MetricsGossip gossip, bool reply)
+        public MetricsGossipEnvelope(Actor.Address fromAddress, MetricsGossip gossip, bool reply)
         {
-            From = @from;
+            FromAddress = fromAddress;
             Gossip = gossip;
             Reply = reply;
         }
