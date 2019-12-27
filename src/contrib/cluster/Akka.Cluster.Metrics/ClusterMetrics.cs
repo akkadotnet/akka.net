@@ -12,6 +12,7 @@ using Akka.Cluster.Metrics.Configuration;
 using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
+using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
@@ -38,13 +39,24 @@ namespace Akka.Cluster.Metrics
         public ClusterMetricsSettings Settings { get; }
 
         /// <summary>
+        /// Default HOCON settings for cluster sharding.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public static Config DefaultConfig()
+        {
+            return ConfigurationFactory.FromResource<ClusterMetrics>("Akka.Cluster.Metrics.reference.conf");
+        }
+
+        /// <summary>
         /// Creates new <see cref="ClusterMetrics"/> for given actor system
         /// </summary>
         /// <param name="system"></param>
         public ClusterMetrics(ExtendedActorSystem  system)
         {
             _system = system;
-            Settings = ClusterMetricsSettings.Create(system.Settings.Config);
+            _system.Settings.InjectTopLevelFallback(DefaultConfig());
+            
+            Settings = ClusterMetricsSettings.Create(_system.Settings.Config);
             
             Supervisor = _system.SystemActorOf(
                 Props.Create<ClusterMetricsSupervisor>().WithDispatcher(Settings.MetricsDispatcher).WithDeploy(Deploy.Local), 

@@ -17,7 +17,10 @@ namespace Akka.Cluster.Metrics.Configuration
     {
         private readonly Config _config;
         
-        private ClusterMetricsSettings(Config config)
+        /// <summary>
+        /// Creates instance of <see cref="ClusterMetricsSettings"/>
+        /// </summary>
+        public ClusterMetricsSettings(Config config)
         {
             _config = config.GetConfig("akka.cluster.metrics");
         }
@@ -33,7 +36,6 @@ namespace Akka.Cluster.Metrics.Configuration
         // Extension.
         public string MetricsDispatcher => _config.GetString("dispatcher");
         public TimeSpan PeriodicTasksInitialDelay => _config.GetTimeSpan("periodic-tasks-initial-delay");
-        public string NativeLibraryExtractFolder => _config.GetString("native-library-extract-folder");
 
         // Supervisor.
         public string SupervisorName => _config.GetString("supervisor.name");
