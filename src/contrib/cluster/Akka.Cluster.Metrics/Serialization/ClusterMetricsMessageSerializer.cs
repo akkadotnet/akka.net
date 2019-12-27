@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Cluster.Metrics.Extensions;
 using Akka.Dispatch;
 using Akka.Serialization;
 using Akka.Util;
@@ -51,7 +50,7 @@ namespace Akka.Cluster.Metrics.Serialization
         {
             switch (obj)
             {
-                case MetricsGossipEnvelope m: return MetricsGossipEnvelopeToProto(m).ToByteArray(); // TODO: Add compression here
+                case MetricsGossipEnvelope m: return Compress(MetricsGossipEnvelopeToProto(m)); // TODO: Add compression here
                 case Metrics.AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
                 case Metrics.MixMetricsSelector mms: return MixMetricsSelectorToBinary(mms);
                 case CpuMetricsSelector _: return new byte[0];
@@ -60,6 +59,43 @@ namespace Akka.Cluster.Metrics.Serialization
                 default:
                     throw new ArgumentException($"Can't serialize object of type ${obj.GetType().Name} in [${GetType().Name}]");
             }
+        }
+
+        private byte[] Compress(IMessage msg)
+        {
+            // TODO: Port this part for MetricsGossipEnvelope bytes compression and decompression
+            // Probably should use this: https://docs.microsoft.com/ru-ru/dotnet/api/system.io.compression.gzipstream?view=netframework-4.8
+            /*def compress(msg: MessageLite): Array[Byte] = {
+                val bos = new ByteArrayOutputStream(BufferSize)
+                val zip = new GZIPOutputStream(bos)
+                try msg.writeTo(zip)
+                    finally zip.close()
+                bos.toByteArray
+            }*/
+            return msg.ToByteArray();
+        }
+
+        private byte[] Decompress(byte[] bytes)
+        {
+            // TODO: Port this part for MetricsGossipEnvelope bytes compression and decompression
+            // Probably should use this: https://docs.microsoft.com/ru-ru/dotnet/api/system.io.compression.gzipstream?view=netframework-4.8
+            /*def decompress(bytes: Array[Byte]): Array[Byte] = {
+                val in = new GZIPInputStream(new ByteArrayInputStream(bytes))
+                val out = new ByteArrayOutputStream()
+                val buffer = new Array[Byte](BufferSize)
+
+                @tailrec def readChunk(): Unit = in.read(buffer) match {
+                    case -1 => ()
+                    case n =>
+                        out.write(buffer, 0, n)
+                    readChunk()
+                }
+
+                try readChunk()
+                    finally in.close()
+                    out.toByteArray
+            }*/
+            return bytes;
         }
 
         /// <inheritdoc />
@@ -166,7 +202,7 @@ namespace Akka.Cluster.Metrics.Serialization
 
         private MetricsGossipEnvelope MetricsGossipEnvelopeFromBinary(byte[] bytes)
         {
-            return MetricsGossipEnvelopeFromProto(MetricsGossipEnvelope.Parser.ParseFrom(bytes));
+            return MetricsGossipEnvelopeFromProto(MetricsGossipEnvelope.Parser.ParseFrom(Decompress(bytes)));
         }
 
         private MetricsGossipEnvelope MetricsGossipEnvelopeToProto(MetricsGossipEnvelope envelope)

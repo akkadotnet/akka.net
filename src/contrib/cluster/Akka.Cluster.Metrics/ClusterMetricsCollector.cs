@@ -11,7 +11,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Cluster.Metrics.Events;
-using Akka.Cluster.Metrics.Extensions;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Event;
 using Akka.Util;
