@@ -94,7 +94,7 @@ namespace Akka.Util
         /// Applies specified action to this option, if there is a value
         /// </summary>
         /// <param name="action"></param>
-        public void ForEach(Action<T> action)
+        public void OnSuccess(Action<T> action)
         {
             if (HasValue)
                 action(Value);

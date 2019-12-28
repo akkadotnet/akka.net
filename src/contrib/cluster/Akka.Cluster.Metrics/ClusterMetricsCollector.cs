@@ -185,7 +185,7 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Gossip to peer nodes.
         /// </summary>
-        private void Gossip() => SelectRandomNode(_nodes.Remove(_cluster.SelfAddress).ToImmutableArray()).ForEach(GossipTo);
+        private void Gossip() => SelectRandomNode(_nodes.Remove(_cluster.SelfAddress).ToImmutableArray()).OnSuccess(GossipTo);
         
         private void GossipTo(Akka.Actor.Address address)
         {
