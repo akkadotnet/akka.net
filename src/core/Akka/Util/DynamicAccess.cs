@@ -22,7 +22,14 @@ namespace Akka.Util
         /// </remarks>
         public static Try<TResult> CreateInstanceFor<TResult>(string typeName, params object[] args) where TResult : class
         {
-            return Activator.CreateInstance(Type.GetType(typeName), args) as Try<TResult>;
+            try
+            {
+                return Activator.CreateInstance(Type.GetType(typeName), args) as TResult;
+            }
+            catch (Exception ex)
+            {
+                return new Try<TResult>(ex);
+            }
         }
     }
 }
