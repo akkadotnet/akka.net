@@ -63,21 +63,21 @@ namespace Akka.Cluster.Metrics
         /// Remaining capacity for each node. The value is between 0.0 and 1.0, where 0.0 means no remaining capacity
         /// (full utilization) and 1.0 means full remaining capacity (zero utilization).
         /// </summary>
-        public abstract IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics);
+        public abstract IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics);
 
         /// <summary>
         /// Converts the capacity values to weights. The node with lowest capacity gets weight 1
         /// (lowest usable capacity is 1%) and other nodes gets weights proportional to their capacity compared to
         /// the node with lowest capacity.
         /// </summary>
-        public IImmutableDictionary<Actor.Address, int> Weights(IImmutableDictionary<Actor.Address, decimal> capacity)
+        public IImmutableDictionary<Actor.Address, int> Weights(IImmutableDictionary<Actor.Address, double> capacity)
         {
             if (capacity.Count == 0)
                 return ImmutableDictionary<Actor.Address, int>.Empty;
 
             var min = capacity.Min(c => c.Value);
             // lowest usable capacity is 1% (>= 0.5% will be rounded to weight 1), also avoids div by zero
-            var divisor = Math.Max(0.01M, min);
+            var divisor = Math.Max(0.01, min);
             return capacity.ToImmutableDictionary(pair => pair.Key, pair => (int)Math.Round(pair.Value / divisor));
         }
         
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Metrics
         public static readonly HeapMetricsSelector Instance = new HeapMetricsSelector();
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.HeapMemory.Unapply)
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Metrics
     public class CpuMetricsSelector : CapacityMetricsSelector
     {
         // TODO: Read factor from reference.conf
-        private readonly decimal _factor = 0.3M;
+        private readonly double _factor = 0.3;
         
         /// <summary>
         /// Singleton instance
@@ -140,7 +140,7 @@ namespace Akka.Cluster.Metrics
         }
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.Cpu.Unapply)
@@ -170,14 +170,14 @@ namespace Akka.Cluster.Metrics
         public static readonly SystemLoadAverageMetricsSelector Instance = new SystemLoadAverageMetricsSelector();
         
         /// <inheritdoc />
-        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.Cpu.Unapply)
                 .Where(m => m.HasValue && m.Value.SystemLoadAverage.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
-                    var capacity = 1.0M - Math.Min(1.0M, m.Value.SystemLoadAverage.Value / m.Value.Processors);
+                    var capacity = 1.0 - Math.Min(1.0, m.Value.SystemLoadAverage.Value / m.Value.Processors);
                     return capacity;
                 });
         }
@@ -199,11 +199,11 @@ namespace Akka.Cluster.Metrics
         }
 
         /// <inheritdoc />
-        public override IImmutableDictionary<Actor.Address, decimal> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
+        public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             var combined = Selectors.SelectMany(s => Capacity(nodeMetrics)).ToImmutableArray();
             // aggregated average of the capacities by address
-            var init = ImmutableDictionary<Actor.Address, (decimal Sum, int Count)>.Empty;
+            var init = ImmutableDictionary<Actor.Address, (double Sum, int Count)>.Empty;
             return combined.Aggregate(init, (acc, pair) =>
             {
                 var (address, capacity) = (pair.Key, pair.Value);
@@ -229,11 +229,11 @@ namespace Akka.Cluster.Metrics
         /// Singleton instance of the default MixMetricsSelector, which uses <see cref="HeapMetricsSelector"/>,
         /// <see cref="CpuMetricsSelector"/>, and <see cref="SystemLoadAverageMetricsSelector"/>
         /// </summary>
-        public static readonly MixMetricsSelector Instance = new MixMetricsSelector(new ImmutableArray<CapacityMetricsSelector>()
-        {
-            HeapMetricsSelector.Instance,
-            CpuMetricsSelector.Instance,
-            SystemLoadAverageMetricsSelector.Instance
-        });
+        public static readonly MixMetricsSelector Instance = new MixMetricsSelector(
+            ImmutableArray.Create<CapacityMetricsSelector>(
+                HeapMetricsSelector.Instance,
+                CpuMetricsSelector.Instance,
+                SystemLoadAverageMetricsSelector.Instance)
+        );
     }
 }

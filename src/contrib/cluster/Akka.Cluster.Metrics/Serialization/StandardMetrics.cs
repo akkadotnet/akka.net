@@ -70,14 +70,14 @@ namespace Akka.Cluster.Metrics.Serialization
             /// Given a NodeMetrics it returns the HeapMemory data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the HeapMemory constructor parameters</returns>
-            public static Option<(Actor.Address Address, long Timestamp, decimal UsedSmoothValue, decimal CommittedSmoothValue, Option<decimal> HeapMemoryMaxValue)> 
+            public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double CommittedSmoothValue, Option<double> HeapMemoryMaxValue)> 
                 Unapply(NodeMetrics nodeMetrics)
             {
                 var used = nodeMetrics.Metric(HeapMemoryUsed);
                 var committed = nodeMetrics.Metric(HeapMemoryCommitted);
                 
                 if (!used.HasValue || !committed.HasValue)
-                    return Option<(Actor.Address, long, decimal, decimal, Option<decimal>)>.None;
+                    return Option<(Actor.Address, long, double, double, Option<double>)>.None;
 
                 return (
                     nodeMetrics.Address,
@@ -154,13 +154,13 @@ namespace Akka.Cluster.Metrics.Serialization
             /// Given a NodeMetrics it returns the Cpu data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the Cpu constructor parameters</returns>
-            public static Option<(Actor.Address Address, long Timestamp, Option<decimal> SystemLoadAverage, Option<decimal> CpuCombined, Option<decimal> CpuStolen, int Processors)> 
+            public static Option<(Actor.Address Address, long Timestamp, Option<double> SystemLoadAverage, Option<double> CpuCombined, Option<double> CpuStolen, int Processors)> 
                 Unapply(NodeMetrics nodeMetrics)
             {
                 var processors = nodeMetrics.Metric(Processors);
                 
                 if (!processors.HasValue)
-                    return Option<(Actor.Address, long, Option<decimal>, Option<decimal>, Option<decimal>, int)>.None;
+                    return Option<(Actor.Address, long, Option<double>, Option<double>, Option<double>, int)>.None;
 
                 return (
                     nodeMetrics.Address,

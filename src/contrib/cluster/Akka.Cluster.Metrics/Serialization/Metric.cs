@@ -28,28 +28,28 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// Metric average value
                 /// </summary>
                 public Option<EWMA> Average { get; }
-                public decimal DecimalNumber { get; }
+                public AnyNumber Value { get; }
                 public string Name { get; }
 
                 /// <summary>
                 /// Creates a new Metric instance if the value is valid, otherwise None
                 /// is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(string name, decimal value, Option<decimal> decayFactor)
+                public static Option<Metric> Create(string name, AnyNumber value, Option<double> decayFactor)
                     => decayFactor.HasValue ? new Metric(name, value, CreateEWMA(value, decayFactor)) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates a new Metric instance if the Try is successful and the value is valid,
                 /// otherwise None is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
-                public static Option<Metric> Create(string name, Try<decimal> value, Option<decimal> decayFactor)
+                public static Option<Metric> Create(string name, Try<AnyNumber> value, Option<double> decayFactor)
                     => value.IsSuccess ? Create(name, value.Success.Value, decayFactor) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates <see cref="EWMA"/> if decat factor is set, otherwise None is returned
                 /// </summary>
-                public static Option<EWMA> CreateEWMA(decimal value, Option<decimal> decayFactor)
-                    => decayFactor.HasValue ? new EWMA(value, decayFactor.Value) : Option<EWMA>.None;
+                public static Option<EWMA> CreateEWMA(AnyNumber value, Option<double> decayFactor)
+                    => decayFactor.HasValue ? new EWMA(value.DoubleValue, decayFactor.Value) : Option<EWMA>.None;
 
                 /// <summary>
                 /// Metrics key/value.
@@ -63,13 +63,13 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// The data stream of the metric value, for trending over time. Metrics that are already
                 /// averages (e.g. system load average) or finite (e.g. as number of processors), are not trended.
                 /// </param>
-                public Metric(string name, decimal decimalNumber, Option<EWMA> average)
+                public Metric(string name, AnyNumber value, Option<EWMA> average)
                 {
-                    if (!Defined(decimalNumber))
-                        throw new ArgumentException(nameof(decimalNumber), $"Invalid metric {name} value {decimalNumber}");
+                    if (!Defined(value))
+                        throw new ArgumentException(nameof(value), $"Invalid metric {name} value {value}");
                         
                     Name = name;
-                    DecimalNumber = decimalNumber;
+                    Value = value;
                     Average = average;
                     ewma_ = average.HasValue ? average.Value : default(EWMA);
                 }
@@ -88,7 +88,7 @@ namespace Akka.Cluster.Metrics.Serialization
                         return new Metric(this)
                         {
                             number_ = latest.number_,
-                            ewma_ = Average.Value + latest.DecimalNumber
+                            ewma_ = Average.Value + latest.Value.DoubleValue
                         };
                     }
                     else if (latest.Average.HasValue)
@@ -111,7 +111,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <summary>
                 /// The numerical value of the average, if defined, otherwise the latest value
                 /// </summary>
-                public decimal SmoothValue => Average.HasValue ? (decimal)Average.Value.Value : Number.DecimalValue;
+                public double SmoothValue => Average.HasValue ? Average.Value.Value : Value.DoubleValue;
 
                 /// <summary>
                 /// Returns true if this value is smoothed
@@ -123,7 +123,36 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// </summary>
                 public bool SameAs(Metric that) => Name == that.Name;
 
-                private bool Defined(decimal value) => value >= 0;
+                private bool Defined(AnyNumber value)
+                {
+                    var n = ConvertNumber(Value);
+                    if (n is Left<long, double> left)
+                    {
+                        return left.Value >= 0;
+                    }
+                    else if (n is Right<long, double> right)
+                    {
+                        return right.Value >= 0;
+                    }
+                    else return false;
+                }
+
+                private Either<long, double> ConvertNumber(AnyNumber number)
+                {
+                    switch (number.Type)
+                    {
+                        case AnyNumber.NumberType.Int:
+                            return new Left<long, double>(Convert.ToInt32(number.DoubleValue));
+                        case AnyNumber.NumberType.Long:
+                            return new Left<long, double>(Convert.ToInt64(number.DoubleValue));
+                        case AnyNumber.NumberType.Float:
+                            return new Right<long, double>(Convert.ToSingle(number.DoubleValue));
+                        case AnyNumber.NumberType.Double:
+                            return new Right<long, double>(number.DoubleValue);
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
             }
 
             public sealed partial class Number

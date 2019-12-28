@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.Metrics.Helpers;
 using Akka.Dispatch;
 using Akka.Serialization;
 using Akka.Util;
@@ -120,13 +121,13 @@ namespace Akka.Cluster.Metrics.Serialization
             switch (o)
             {
                 case MetricsGossipEnvelope _: return MetricsGossipEnvelopeManifest;
-                case AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
-                case MixMetricsSelector _: return MixMetricsSelectorManifest;
+                case Metrics.AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
+                case Metrics.MixMetricsSelector _: return MixMetricsSelectorManifest;
                 case CpuMetricsSelector _: return CpuMetricsSelectorManifest;
                 case HeapMetricsSelector _: return HeapMetricsSelectorManifest;
                 case SystemLoadAverageMetricsSelector _: return SystemLoadAverageMetricsSelectorManifest;
                 default:
-                    throw new ArgumentException($"Can't serialize object of type {o.GetType().Name} in [${GetType().Name}]");
+                    throw new ArgumentException($"Can't serialize object of type {o.GetType().Name} in [{GetType().Name}]");
             }
         }
 
@@ -219,17 +220,34 @@ namespace Akka.Cluster.Metrics.Serialization
             int MapName(string name) => MapWithErrorMessage(metricNamesMapping, name, "metric name");
 
             Option<NodeMetrics.Types.EWMA> EwmaToProto(Option<NodeMetrics.Types.EWMA> ewma)
-                => ewma.Select(e => new NodeMetrics.Types.EWMA((decimal)e.Value, (decimal)e.Alpha));
+                => ewma.Select(e => new NodeMetrics.Types.EWMA(e.Value, e.Alpha));
 
-            NodeMetrics.Types.Number NumberToProto(decimal number)
+            NodeMetrics.Types.Number NumberToProto(AnyNumber number)
             {
-                // Since we do not have Number type in .NET and using decimal instead, 
-                // just always use double as a Protobuf serialization type
-                return new NodeMetrics.Types.Number()
+                var proto = new NodeMetrics.Types.Number();
+                switch (number.Type)
                 {
-                    Type = NodeMetrics.Types.NumberType.Double,
-                    Value64 = (ulong)BitConverter.DoubleToInt64Bits((double)number)
-                };
+                    case AnyNumber.NumberType.Int:
+                        proto.Type = NodeMetrics.Types.NumberType.Integer;
+                        proto.Value32 = Convert.ToUInt32(number.LongValue);
+                        break;
+                    case AnyNumber.NumberType.Long:
+                        proto.Type = NodeMetrics.Types.NumberType.Long;
+                        proto.Value64 = Convert.ToUInt64(number.LongValue);
+                        break;
+                    case AnyNumber.NumberType.Float:
+                        proto.Type = NodeMetrics.Types.NumberType.Float;
+                        proto.Value32 = (uint)BitConverter.ToInt32(BitConverter.GetBytes((float)number.DoubleValue), 0);
+                        break;
+                    case AnyNumber.NumberType.Double:
+                        proto.Type = NodeMetrics.Types.NumberType.Double;
+                        proto.Value64 = (ulong)BitConverter.DoubleToInt64Bits(number.DoubleValue);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                return proto;
             }
 
             NodeMetrics.Types.Metric MetricToProto(NodeMetrics.Types.Metric m)
@@ -237,7 +255,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 var metric = new NodeMetrics.Types.Metric()
                 {
                      NameIndex = MapName(m.Name),
-                     Number = NumberToProto(m.DecimalNumber),
+                     Number = NumberToProto(m.Value),
                 };
 
                 var ewma = EwmaToProto(m.Average);
@@ -279,22 +297,22 @@ namespace Akka.Cluster.Metrics.Serialization
             var metricNameMapping = gossip.AllMetricNames.ToImmutableArray();
             
             Option<NodeMetrics.Types.EWMA> EwmaFromProto(NodeMetrics.Types.EWMA ewma) 
-                => new NodeMetrics.Types.EWMA((decimal)ewma.Value, (decimal)ewma.Alpha);
+                => new NodeMetrics.Types.EWMA(ewma.Value, ewma.Alpha);
 
-            decimal NumberFromProto(NodeMetrics.Types.Number number)
+            AnyNumber NumberFromProto(NodeMetrics.Types.Number number)
             {
                 switch (number.Type)
                 {
                     case NodeMetrics.Types.NumberType.Double:
-                        return (decimal)BitConverter.Int64BitsToDouble((long)number.Value64);
+                        return BitConverter.Int64BitsToDouble((long)number.Value64);
                     case NodeMetrics.Types.NumberType.Float:
-                        return (decimal)BitConverter.ToSingle(BitConverter.GetBytes(number.Value32), 0);
+                        return BitConverter.ToSingle(BitConverter.GetBytes((int)number.Value32), 0);
                     case NodeMetrics.Types.NumberType.Integer:
-                        return number.Value32;
+                        return Convert.ToInt32(number.Value32);
                     case NodeMetrics.Types.NumberType.Long:
-                        return number.Value64;
+                        return Convert.ToInt64(number.Value64);
                     case NodeMetrics.Types.NumberType.Serialized:
-                        // TODO: This is what that have in scala (but .NET is missing Number class):
+                        // TODO: Should we somehow port this?
                         /*val in = new ClassLoaderObjectInputStream(
                             system.dynamicAccess.classLoader,
                             new ByteArrayInputStream(number.getSerialized.toByteArray))
@@ -347,7 +365,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 metricsSelector: selector, 
                 nrOfInstances: (int)proto.NrOfInstances, 
                 supervisorStrategy: null, 
-                routerDispatcher: proto.RouterDispatcher ?? Dispatchers.DefaultDispatcherId, 
+                routerDispatcher: !string.IsNullOrEmpty(proto.RouterDispatcher) ? proto.RouterDispatcher : Dispatchers.DefaultDispatcherId, 
                 usePoolDispatcher: proto.UsePoolDispatcher);
         }
 

@@ -33,8 +33,8 @@ namespace Akka.Cluster.Metrics.Serialization
             /// </summary>
             public sealed partial class EWMA 
             {
-                private readonly decimal _value;
-                private readonly decimal _alpha;
+                private readonly double _value;
+                private readonly double _alpha;
 
                 /// <summary>
                 /// Creates new instance of <see cref="EWMA"/>
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// Decay factor, sets how quickly the exponential weighting decays for past data compared to new data,
                 /// see http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
                 /// </param>
-                public EWMA(decimal value, decimal alpha)
+                public EWMA(double value, double alpha)
                 {
                     if (alpha < 0 || alpha > 1)
                         throw new ArgumentException(nameof(alpha), "alpha must be between 0.0 and 1.0");
@@ -62,10 +62,10 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <param name="current">Current EWMA value</param>
                 /// <param name="xn">The new data point</param>
                 /// <returns>A new EWMA with the updated value</returns>
-                public static EWMA operator +(EWMA current, decimal xn)
+                public static EWMA operator +(EWMA current, double xn)
                 {
                     var newValue = (current._alpha * xn) + (1 - current._alpha) * current._value;
-                    if (newValue == current._value)
+                    if (newValue.Equals(current._value))
                         return current;
                     
                     return new EWMA(newValue, current._alpha);
