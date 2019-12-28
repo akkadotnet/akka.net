@@ -12,10 +12,6 @@
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
-    
-    <ItemGroup>
-        <PackageReference Include="Google.Protobuf" Version="3.11.2" />
-    </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
         <Reference Include="System.Core" />
@@ -25,20 +21,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
-      <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Include="reference.conf" />
     </ItemGroup>
-
-    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-        <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
-    </PropertyGroup>
-
-    <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-        <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
-    </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

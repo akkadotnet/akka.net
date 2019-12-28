@@ -30,15 +30,24 @@ namespace Akka.Cluster.Metrics
         private readonly Cluster _cluster;
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        
+
         /// <summary>
         /// Metrics tick internal message
         /// </summary>
-        sealed class MetricsTick { }
+        sealed class MetricsTick
+        { 
+            private MetricsTick() { }
+            public static readonly MetricsTick Instance = new MetricsTick();
+        }
+
         /// <summary>
         /// Gossip tick internal message
         /// </summary>
-        sealed class GossipTick { }
+        sealed class GossipTick
+        {
+            private GossipTick() { }
+            public static readonly GossipTick Instance = new GossipTick();
+        }
         
         /// <summary>
         /// The node ring gossipped that contains only members that are Up.
@@ -66,12 +75,12 @@ namespace Akka.Cluster.Metrics
             // Start periodic gossip to random nodes in cluster
             var gossipInitialDelay = metrics.Settings.PeriodicTasksInitialDelay.Max(metrics.Settings.CollectorGossipInterval);
             _gossipTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                gossipInitialDelay, metrics.Settings.CollectorGossipInterval, Self, new GossipTick(), Self);
+                gossipInitialDelay, metrics.Settings.CollectorGossipInterval, Self, GossipTick.Instance, Self);
             
             // Start periodic metrics collection
             var sampleInitialDelay = metrics.Settings.PeriodicTasksInitialDelay.Max(metrics.Settings.CollectorSampleInterval);
             _sampleTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                sampleInitialDelay, metrics.Settings.CollectorSampleInterval, Self, new MetricsTick(), Self);
+                sampleInitialDelay, metrics.Settings.CollectorSampleInterval, Self, MetricsTick.Instance, Self);
         }
 
         /// <inheritdoc />

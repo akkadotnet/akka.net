@@ -1,47 +1,31 @@
 // //-----------------------------------------------------------------------
-// // <copyright file="TryNative.cs" company="Akka.NET Project">
+// // <copyright file="Try.cs" company="Akka.NET Project">
 // //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 // //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // // </copyright>
 // //-----------------------------------------------------------------------
 
 using System;
-using Akka.Util;
 
-namespace Akka.Cluster.Metrics.Helpers
+namespace Akka.Util
 {
-    /// <summary>
-    /// Wraps possible exceptions into <see cref="Try{T}"/> result
-    /// </summary>
-    internal static class TryNative
-    {
-        /// <summary>
-        /// Gets <see cref="Try{T}"/> result from function execution
-        /// </summary>
-        public static Try<T> Apply<T>(Func<T> func)
-        {
-            try
-            {
-                return new Try<T>(func());
-            }
-            catch (Exception ex)
-            {
-                return new Try<T>(ex);
-            }
-        }
-    }
-
     /// <summary>
     /// Represents either success or failure of some operation
     /// </summary>
     /// <typeparam name="T">Success type</typeparam>
     public class Try<T>
     {
+        /// <summary>
+        /// Creates <see cref="Try{T}"/> with success result 
+        /// </summary>
         public Try(T success)
         {
             Success = success;
         }
 
+        /// <summary>
+        /// Creates <see cref="Try{T}"/> with failure
+        /// </summary>
         public Try(Exception failure)
         {
             Failure = failure;

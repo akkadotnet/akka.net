@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Cluster.Metrics
 {
@@ -103,7 +104,7 @@ namespace Akka.Cluster.Metrics
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
-                .Select(StandardMetrics.HeapMemory.Unapply)
+                .Select(StandardMetrics.HeapMemory.Decompose)
                 .Where(m => m.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
@@ -143,7 +144,7 @@ namespace Akka.Cluster.Metrics
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
-                .Select(StandardMetrics.Cpu.Unapply)
+                .Select(StandardMetrics.Cpu.Decompose)
                 .Where(m => m.HasValue && m.Value.CpuCombined.HasValue && m.Value.CpuStolen.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
@@ -173,7 +174,7 @@ namespace Akka.Cluster.Metrics
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
-                .Select(StandardMetrics.Cpu.Unapply)
+                .Select(StandardMetrics.Cpu.Decompose)
                 .Where(m => m.HasValue && m.Value.SystemLoadAverage.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {

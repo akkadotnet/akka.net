@@ -7,16 +7,19 @@
 
 using System;
 
-namespace Akka.Cluster.Metrics.Helpers
+namespace Akka.Util
 {
     /// <summary>
     /// DynamicAccess
     /// </summary>
-    internal static class DynamicAccess
+    public static class DynamicAccess
     {
         /// <summary>
         /// Creates instance of specified type name using reflection
         /// </summary>
+        /// <remarks>
+        /// Does mostly the same thing as <see cref="Activator"/> class, but makes conversion and error handling simpler
+        /// </remarks>
         public static Try<TResult> CreateInstanceFor<TResult>(string typeName, params object[] args) where TResult : class
         {
             return Activator.CreateInstance(Type.GetType(typeName), args) as Try<TResult>;

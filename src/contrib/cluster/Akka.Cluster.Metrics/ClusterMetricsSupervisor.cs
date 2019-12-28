@@ -60,7 +60,7 @@ namespace Akka.Cluster.Metrics
                 case ClusterMetricsSupervisorMetadata.CollectionStartMessage start:
                     Context.GetChildren().ForEach(child => Context.Stop(child));
                     _collectorInstance++;
-                    Context.ActorOf(Props.Create<ClusterMetricsSupervisor>(), CollectorName);
+                    Context.ActorOf(Props.Create<ClusterMetricsCollector>(), CollectorName);
                     _log.Debug("Collection started");
                     return true;
                 case ClusterMetricsSupervisorMetadata.CollectionStopMessage stop:
@@ -74,8 +74,11 @@ namespace Akka.Cluster.Metrics
     }
 
     /// <summary>
+    /// INTERNAL API.
+    /// 
     /// ClusterMetricsSupervisorMetadata
     /// </summary>
+    [InternalApi]
     public static class ClusterMetricsSupervisorMetadata
     {
         /// <summary>

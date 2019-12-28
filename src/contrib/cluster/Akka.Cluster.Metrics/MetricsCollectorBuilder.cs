@@ -12,6 +12,7 @@ using Akka.Cluster.Metrics.Configuration;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Cluster.Metrics
 {

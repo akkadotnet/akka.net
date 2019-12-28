@@ -13,6 +13,7 @@ using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Cluster.Metrics
 {
@@ -51,7 +52,7 @@ namespace Akka.Cluster.Metrics
         /// Creates new <see cref="ClusterMetrics"/> for given actor system
         /// </summary>
         /// <param name="system"></param>
-        public ClusterMetrics(ExtendedActorSystem  system)
+        internal ClusterMetrics(ExtendedActorSystem  system)
         {
             _system = system;
             _system.Settings.InjectTopLevelFallback(DefaultConfig());

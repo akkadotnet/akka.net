@@ -71,7 +71,7 @@ namespace Akka.Cluster.Metrics.Serialization
             /// </summary>
             /// <returns>If possible a tuple matching the HeapMemory constructor parameters</returns>
             public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double CommittedSmoothValue, Option<double> HeapMemoryMaxValue)> 
-                Unapply(NodeMetrics nodeMetrics)
+                Decompose(NodeMetrics nodeMetrics)
             {
                 var used = nodeMetrics.Metric(HeapMemoryUsed);
                 var committed = nodeMetrics.Metric(HeapMemoryCommitted);
@@ -155,7 +155,7 @@ namespace Akka.Cluster.Metrics.Serialization
             /// </summary>
             /// <returns>If possible a tuple matching the Cpu constructor parameters</returns>
             public static Option<(Actor.Address Address, long Timestamp, Option<double> SystemLoadAverage, Option<double> CpuCombined, Option<double> CpuStolen, int Processors)> 
-                Unapply(NodeMetrics nodeMetrics)
+                Decompose(NodeMetrics nodeMetrics)
             {
                 var processors = nodeMetrics.Metric(Processors);
                 
