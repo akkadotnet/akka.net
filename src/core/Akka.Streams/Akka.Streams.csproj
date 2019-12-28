@@ -12,7 +12,7 @@
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.6.0" />
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="CodeGen\Dsl\GraphApply.tt">
