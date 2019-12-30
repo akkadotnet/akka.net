@@ -22,14 +22,7 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     public sealed partial class NodeMetrics
     {
-        public Actor.Address Address { get; internal set; }
-
-        /*public NodeMetrics(int addressIndex, long timestamp, RepeatedField<Types.Metric> metrics)
-        {
-            addressIndex_ = addressIndex;
-            timestamp_ = timestamp;
-            metrics_ = metrics;
-        }*/
+        public Actor.Address Address { get; private set; }
         
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>
@@ -104,5 +97,39 @@ namespace Akka.Cluster.Metrics.Serialization
         /// Returns true if <code>that</code> address is the same as this
         /// </summary>
         public bool SameAs(NodeMetrics that) => Address.Equals(that.Address);
+        
+        /*
+         * Two methods below, Equals and GetHashCode, should be used instead of generated in ClusterMetrics.Messages.g.cs
+         * file. Since we do not have an option to not generate those methods for this particular class,
+         * just stip them from generated code and paste here, with adding Address property check
+         */
+        
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        public bool Equals(NodeMetrics other) {
+            if (ReferenceEquals(other, null)) {
+                return false;
+            }
+            if (ReferenceEquals(other, this)) {
+                return true;
+            }
+            if (AddressIndex != other.AddressIndex) return false;
+            if (Timestamp != other.Timestamp) return false;
+            if (!Address.Equals(other.Address)) return false;
+            if(!metrics_.Equals(other.metrics_)) return false;
+            return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        public override int GetHashCode() {
+            int hash = 1;
+            if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
+            if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
+            if (Address != null) hash ^= Address.GetHashCode();
+            hash ^= metrics_.GetHashCode();
+            if (_unknownFields != null) {
+                hash ^= _unknownFields.GetHashCode();
+            }
+            return hash;
+        }
     }
 }

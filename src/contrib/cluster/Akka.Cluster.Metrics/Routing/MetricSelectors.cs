@@ -79,7 +79,7 @@ namespace Akka.Cluster.Metrics
             var min = capacity.Min(c => c.Value);
             // lowest usable capacity is 1% (>= 0.5% will be rounded to weight 1), also avoids div by zero
             var divisor = Math.Max(0.01, min);
-            return capacity.ToImmutableDictionary(pair => pair.Key, pair => (int)Math.Round(pair.Value / divisor));
+            return capacity.ToImmutableDictionary(pair => pair.Key, pair => (int)Math.Round(pair.Value / divisor, MidpointRounding.AwayFromZero));
         }
         
         /// <inheritdoc />
@@ -126,8 +126,10 @@ namespace Akka.Cluster.Metrics
     /// </summary>
     public class CpuMetricsSelector : CapacityMetricsSelector
     {
-        // TODO: Read factor from reference.conf
-        private readonly double _factor = 0.3;
+        /// <summary>
+        /// How much extra weight to give to the stolen time.
+        /// </summary>
+        private readonly double _factor = 0.3; // TODO: Read factor from reference.conf
         
         /// <summary>
         /// Singleton instance
@@ -139,6 +141,13 @@ namespace Akka.Cluster.Metrics
             if (_factor < 0)
                 throw new ArgumentException(nameof(_factor), $"factor must be non negative: {_factor}");
         }
+        
+        // Notes from reading around:
+        // In modern Linux kernels: CpuCombined + CpuStolen + CpuIdle = 1.0  or 100%. More convoluted for other o/s.
+        // We could use CpuIdle as the only capacity measure: http://axibase.com/news/ec2-monitoring-the-case-of-stolen-cpu/
+        // But not all "idle time"s are created equal: https://docs.newrelic.com/docs/servers/new-relic-servers-linux/maintenance/servers-linux-faq
+        // Example: assume that combined+stolen=70%, idle=30%. Then 50/20/30 system will be more responsive then 20/50/30 system (combined/stolen/idle ratio).
+        // Current approach: "The more stolen resources there are, the less active the virtual machine needs to be to generate a high load rating."
         
         /// <inheritdoc />
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
@@ -202,14 +211,15 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
-            var combined = Selectors.SelectMany(s => Capacity(nodeMetrics)).ToImmutableArray();
+            var combined = Selectors.SelectMany(s => s.Capacity(nodeMetrics)).ToImmutableArray();
             // aggregated average of the capacities by address
             var init = ImmutableDictionary<Actor.Address, (double Sum, int Count)>.Empty;
             return combined.Aggregate(init, (acc, pair) =>
             {
                 var (address, capacity) = (pair.Key, pair.Value);
-                var (sum, count) = acc[address];
-                return acc.Add(address, (Sum: sum + capacity, Count: count + 1));
+                var (sum, count) = acc.GetValueOrDefault(address, (0.0, 0));
+                var elem = (Sum: sum + capacity, Count: count + 1);
+                return acc.ContainsKey(address) ? acc.SetItem(address, elem) : acc.Add(address, elem);
             }).ToImmutableDictionary(pair => pair.Key, pair => pair.Value.Sum / pair.Value.Count);
         }
     }

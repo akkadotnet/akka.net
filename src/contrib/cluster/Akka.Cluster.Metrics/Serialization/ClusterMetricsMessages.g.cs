@@ -510,32 +510,6 @@ namespace Akka.Cluster.Metrics.Serialization {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(NodeMetrics other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (AddressIndex != other.AddressIndex) return false;
-      if (Timestamp != other.Timestamp) return false;
-      if(!metrics_.Equals(other.metrics_)) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
-      if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
-      hash ^= metrics_.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override string ToString() {
       return pb::JsonFormatter.ToDiagnosticString(this);
     }

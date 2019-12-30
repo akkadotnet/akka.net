@@ -154,34 +154,6 @@ namespace Akka.Cluster.Metrics.Serialization
                     }
                 }
             }
-
-            public sealed partial class Number
-            {
-                /// <summary>
-                /// Gets number decimal value
-                /// </summary>
-                public decimal DecimalValue
-                {
-                    get
-                    {
-                        switch (Type)
-                        {
-                            case NumberType.Long:
-                                return BitConverter.ToInt64(Serialized.ToByteArray(), 0);
-                            case NumberType.Integer:
-                                return BitConverter.ToInt32(Serialized.ToByteArray(), 0);
-                            case NumberType.Serialized:
-                                throw new ArgumentException($"Not a number {value64_} of type {Type}");
-                            case NumberType.Double:
-                                return (decimal)BitConverter.ToDouble(Serialized.ToByteArray(), 0);
-                            case NumberType.Float:
-                                return (decimal)BitConverter.ToSingle(Serialized.ToByteArray(), 0);
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-                    }
-                }
-            }
         }
     }
     

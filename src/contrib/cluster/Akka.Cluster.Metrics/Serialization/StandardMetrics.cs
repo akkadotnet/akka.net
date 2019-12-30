@@ -168,7 +168,7 @@ namespace Akka.Cluster.Metrics.Serialization
                     nodeMetrics.Metric(SystemLoadAverageName).Select(v => v.SmoothValue),
                     nodeMetrics.Metric(CpuCombinedName).Select(v => v.SmoothValue),
                     nodeMetrics.Metric(CpuStolenName).Select(v => v.SmoothValue),
-                    (int)processors.Value.Number.DecimalValue
+                    (int)processors.Value.Value.LongValue
                 );
             }
 

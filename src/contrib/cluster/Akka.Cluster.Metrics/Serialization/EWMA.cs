@@ -33,9 +33,6 @@ namespace Akka.Cluster.Metrics.Serialization
             /// </summary>
             public sealed partial class EWMA 
             {
-                private readonly double _value;
-                private readonly double _alpha;
-
                 /// <summary>
                 /// Creates new instance of <see cref="EWMA"/>
                 /// </summary>
@@ -52,8 +49,8 @@ namespace Akka.Cluster.Metrics.Serialization
                     if (alpha < 0 || alpha > 1)
                         throw new ArgumentException(nameof(alpha), "alpha must be between 0.0 and 1.0");
                     
-                    _value = value;
-                    _alpha = alpha;
+                    value_ = value;
+                    alpha_ = alpha;
                 }
 
                 /// <summary>
@@ -64,11 +61,11 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <returns>A new EWMA with the updated value</returns>
                 public static EWMA operator +(EWMA current, double xn)
                 {
-                    var newValue = (current._alpha * xn) + (1 - current._alpha) * current._value;
-                    if (newValue.Equals(current._value))
+                    var newValue = (current.alpha_ * xn) + (1 - current.alpha_) * current.value_;
+                    if (newValue.Equals(current.value_))
                         return current;
                     
-                    return new EWMA(newValue, current._alpha);
+                    return new EWMA(newValue, current.alpha_);
                 }
 
                 /// <summary>
