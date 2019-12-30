@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
 
 namespace Akka.Cluster.Metrics
@@ -22,5 +23,27 @@ namespace Akka.Cluster.Metrics
         /// This method is invoked periodically and should return current metrics for this node.
         /// </summary>
         NodeMetrics Sample();
+    }
+
+    /// <summary>
+    /// Base class that implements <see cref="IMetricsCollector"/> and requires valid constructor
+    /// </summary>
+    public abstract class MetricsCollectorBase : IMetricsCollector
+    {
+        /// <summary>
+        /// Assigned actor system
+        /// </summary>
+        protected ActorSystem System { get; }
+
+        public MetricsCollectorBase(ActorSystem system)
+        {
+            System = system;
+        }
+        
+        /// <inheritdoc />
+        public abstract void Dispose();
+
+        /// <inheritdoc />
+        public abstract NodeMetrics Sample();
     }
 }

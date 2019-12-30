@@ -5,11 +5,13 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
 using Akka.Util;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -21,15 +23,12 @@ namespace Akka.Cluster.Metrics.Serialization
     [InternalApi]
     public sealed partial class MetricsGossip
     {
-        public IImmutableSet<NodeMetrics> Nodes { get; private set; }
+        public IImmutableSet<NodeMetrics> Nodes { get; private set; } = ImmutableHashSet<NodeMetrics>.Empty;
 
         /// <summary>
         /// Empty metrics gossip
         /// </summary>
-        public static readonly MetricsGossip Empty = new MetricsGossip()
-        {
-            nodeMetrics_ = { new NodeMetrics[0] }
-        };
+        public static readonly MetricsGossip Empty = new MetricsGossip(ImmutableHashSet<NodeMetrics>.Empty);
 
         public MetricsGossip(IImmutableSet<NodeMetrics> nodes)
         {
@@ -81,6 +80,7 @@ namespace Akka.Cluster.Metrics.Serialization
             }
             else
             {
+                
                 return new MetricsGossip(gossip)
                 {
                     Nodes = gossip.Nodes.Add(newNodeMetrics)

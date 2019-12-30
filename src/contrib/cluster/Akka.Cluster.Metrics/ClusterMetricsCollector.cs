@@ -5,8 +5,10 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
@@ -212,7 +214,7 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         private void Publish()
         {
-            Context.System.EventStream.Publish(new ClusterMetricsChanged(_latestGossip.NodeMetrics.ToImmutableHashSet()));
+            Context.System.EventStream.Publish(new ClusterMetricsChanged(_latestGossip.Nodes.ToImmutableHashSet()));
         }
     }
 }

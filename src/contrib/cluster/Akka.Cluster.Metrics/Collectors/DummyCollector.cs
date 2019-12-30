@@ -5,20 +5,26 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
 
 namespace Akka.Cluster.Metrics.Collectors
 {
-    internal class DummyCollector : IMetricsCollector
+    internal class DummyCollector : MetricsCollectorBase
     {
         /// <inheritdoc />
-        public void Dispose()
+        public DummyCollector(ActorSystem system) : base(system)
+        {
+        }
+        
+        /// <inheritdoc />
+        public override void Dispose()
         {
             throw new System.NotImplementedException();
         }
 
         /// <inheritdoc />
-        public NodeMetrics Sample()
+        public override NodeMetrics Sample()
         {
             throw new System.NotImplementedException();
         }

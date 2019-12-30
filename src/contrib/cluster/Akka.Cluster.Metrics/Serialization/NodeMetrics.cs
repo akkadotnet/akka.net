@@ -59,7 +59,8 @@ namespace Akka.Cluster.Metrics.Serialization
             return new NodeMetrics(this)
             {
                 metrics_ = { that.metrics_.Union(metrics_.Except(that.metrics_)) },
-                timestamp_ = that.timestamp_
+                timestamp_ = that.timestamp_,
+                Address = Address
             };
         }
 
@@ -89,7 +90,8 @@ namespace Akka.Cluster.Metrics.Serialization
             return new NodeMetrics(this)
             {
                 metrics_ = { merged },
-                timestamp_ = latestNode.timestamp_
+                timestamp_ = latestNode.timestamp_,
+                Address = Address
             };
         }
 

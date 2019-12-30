@@ -43,7 +43,7 @@ namespace Akka.Cluster.Metrics
 
             if (_metrics.Settings.CollectorEnabled)
             {
-                Self.Tell(new ClusterMetricsSupervisorMetadata.CollectionStartMessage());
+                Self.Tell(ClusterMetricsSupervisorMetadata.CollectionStartMessage.Instance);
             }
             else
             {
@@ -89,11 +89,25 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Command for <see cref="ClusterMetricsSupervisor"/> to start metrics collection.
         /// </summary>
-        public sealed class CollectionStartMessage : ICollectionControlMessage { }
-        
+        public sealed class CollectionStartMessage : ICollectionControlMessage
+        {
+            private CollectionStartMessage(){ }
+            /// <summary>
+            /// Singleton instance for 
+            /// </summary>
+            public static readonly CollectionStartMessage Instance = new CollectionStartMessage();
+        }
+
         /// <summary>
         /// Command for <see cref="ClusterMetricsSupervisor"/> to stop metrics collection.
         /// </summary>
-        public sealed class CollectionStopMessage : ICollectionControlMessage { }
+        public sealed class CollectionStopMessage : ICollectionControlMessage
+        {
+            private CollectionStopMessage(){ }
+            /// <summary>
+            /// Singleton instance for 
+            /// </summary>
+            public static readonly CollectionStopMessage Instance = new CollectionStopMessage();
+        }
     }
 }
