@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Routing;
 
@@ -25,7 +26,8 @@ namespace Akka.Cluster.Metrics
     ///
     /// Pick routee based on its weight. Higher weight, higher probability.
     /// </summary>
-    internal class WeightedRoutees
+    [InternalApi]
+    public class WeightedRoutees
     {
         private readonly ImmutableArray<Routee> _routees;
         private readonly Actor.Address _selfAddress;
@@ -60,12 +62,15 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Pick the routee matching a value, from 1 to total.
         /// </summary>
-        public Routee Apply(int value)
+        public Routee this[int value]
         {
-            if (value < 1 || value > Total)
-                throw new ArgumentException(nameof(value), $"value must be between [1 - {Total}]");
+            get
+            {
+                if (value < 1 || value > Total)
+                    throw new ArgumentException(nameof(value), $"value must be between [1 - {Total}]");
 
-            return _routees[GetIndex(Array.IndexOf(_buckets, value))];
+                return _routees[GetIndex(Array.BinarySearch(_buckets, value))];
+            }
         }
 
         /// <summary>

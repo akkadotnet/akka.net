@@ -98,7 +98,7 @@ namespace Akka.Cluster.Metrics
                 if (weighted.IsEmpty)
                     return Routee.NoRoutee;
 
-                return weighted.Apply(ThreadLocalRandom.Current.Next(weighted.Total) + 1);
+                return weighted[ThreadLocalRandom.Current.Next(weighted.Total) + 1];
             }
             else
             {
