@@ -221,8 +221,8 @@ namespace Akka.Cluster.Metrics.Tests
             var m2Updated = new NodeMetrics(m2.Address, m2.Timestamp + 1000, NewSample(m2.Metrics));
             var g2 = g1 + m2Updated; // merge peers
             g2.Nodes.Should().HaveCount(2);
-            g2.NodeMetricsFor(m1.Address).Value.Metrics.ShouldBeEquivalentTo(m1.Metrics);
-            g2.NodeMetricsFor(m2.Address).Value.Metrics.ShouldBeEquivalentTo(m2Updated.Metrics);
+            g2.NodeMetricsFor(m1.Address).Value.Metrics.Should().BeEquivalentTo(m1.Metrics);
+            g2.NodeMetricsFor(m2.Address).Value.Metrics.Should().BeEquivalentTo(m2Updated.Metrics);
             g2.Nodes.Where(p => p.Address.Equals(m2.Address)).ForEach(p => p.Timestamp.Should().Be(m2Updated.Timestamp));
         }
 
@@ -242,9 +242,9 @@ namespace Akka.Cluster.Metrics.Tests
             // should contain nodes 1,3, and the most recent version of 2
             var mergedGossip = g1.Merge(g2);
             mergedGossip.Nodes.Select(n => n.Address).Should().BeEquivalentTo(m1.Address, m2.Address, m3.Address);
-            mergedGossip.NodeMetricsFor(m1.Address).Value.Metrics.ShouldBeEquivalentTo(m1.Metrics);
-            mergedGossip.NodeMetricsFor(m2.Address).Value.Metrics.ShouldBeEquivalentTo(m2Updated.Metrics);
-            mergedGossip.NodeMetricsFor(m3.Address).Value.Metrics.ShouldBeEquivalentTo(m3.Metrics);
+            mergedGossip.NodeMetricsFor(m1.Address).Value.Metrics.Should().BeEquivalentTo(m1.Metrics);
+            mergedGossip.NodeMetricsFor(m2.Address).Value.Metrics.Should().BeEquivalentTo(m2Updated.Metrics);
+            mergedGossip.NodeMetricsFor(m3.Address).Value.Metrics.Should().BeEquivalentTo(m3.Metrics);
             mergedGossip.Nodes.ForEach(n => n.Metrics.Count.Should().BeGreaterThan(3));
             mergedGossip.NodeMetricsFor(m2.Address).Value.Timestamp.Should().Be(m2Updated.Timestamp);
         }
@@ -267,7 +267,7 @@ namespace Akka.Cluster.Metrics.Tests
             g1.Nodes.Should().HaveCount(2);
             var g2 = g1.Remove(m1.Address);
             g2.Nodes.Should().HaveCount(1);
-            g2.Nodes.Should().NotContain(n => m1.Address.Equals(m1.Address));
+            g2.Nodes.Should().NotContain(n => n.Address.Equals(m1.Address));
             g2.NodeMetricsFor(m1.Address).Should().Be(Option<NodeMetrics>.None);
             g2.NodeMetricsFor(m2.Address).Value.Metrics.ShouldBeEquivalentTo(m2.Metrics);
         }
@@ -294,7 +294,7 @@ namespace Akka.Cluster.Metrics.Tests
         private IEnumerable<NodeMetrics.Types.Metric> NewSample(ICollection<NodeMetrics.Types.Metric> previousSample)
         {
             // Metric.Equals is based on name equality
-            return _collector.Sample().Metrics.Where(previousSample.Contains).Concat(previousSample);
+            return _collector.Sample().Metrics.Where(previousSample.Contains).Concat(previousSample).Distinct();
         }
     }
 

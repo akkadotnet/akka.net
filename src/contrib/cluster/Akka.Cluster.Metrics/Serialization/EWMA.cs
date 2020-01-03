@@ -61,11 +61,11 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// <returns>A new EWMA with the updated value</returns>
                 public static EWMA operator +(EWMA current, double xn)
                 {
-                    var newValue = (current.alpha_ * xn) + (1 - current.alpha_) * current.value_;
-                    if (newValue.Equals(current.value_))
+                    var newValue = (current.Alpha * xn) + (1 - current.Alpha) * current.Value;
+                    if (newValue.Equals(current.Value))
                         return current;
                     
-                    return new EWMA(newValue, current.alpha_);
+                    return new EWMA(newValue, current.Alpha);
                 }
 
                 /// <summary>

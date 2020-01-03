@@ -66,20 +66,9 @@ namespace Akka.Cluster.Metrics.Serialization
         {
             var existingMetrics = gossip.NodeMetricsFor(newNodeMetrics.Address);
             if (existingMetrics.HasValue)
-            {
-                return new MetricsGossip(gossip)
-                {
-                    Nodes = gossip.Nodes.Remove(existingMetrics.Value).Add(existingMetrics.Value.Update(newNodeMetrics))
-                };
-            }
-            else
-            {
-                
-                return new MetricsGossip(gossip)
-                {
-                    Nodes = gossip.Nodes.Add(newNodeMetrics)
-                };
-            }
+                return new MetricsGossip(gossip.Nodes.Remove(existingMetrics.Value).Add(existingMetrics.Value.Update(newNodeMetrics)));
+
+            return new MetricsGossip(gossip.Nodes.Add(newNodeMetrics));
         }
 
         /// <summary>

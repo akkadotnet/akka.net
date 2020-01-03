@@ -18,9 +18,12 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
     /// </summary>
     public class MetricsCollectorMock : MetricsCollectorBase
     {
+        private Random _random;
+        
         /// <inheritdoc />
         public MetricsCollectorMock(ActorSystem system) : base(system)
         {
+            _random = new Random();
         }
 
         /// <inheritdoc />
@@ -28,10 +31,10 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
         {
             return new NodeMetrics(new Address("akka", System.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
             {
-                new NodeMetrics.Types.Metric("metric1", 10, new NodeMetrics.Types.EWMA(5, 0.5)) ,
-                new NodeMetrics.Types.Metric("metric2", 10, new NodeMetrics.Types.EWMA(5, 0.2)), 
-                new NodeMetrics.Types.Metric("metric3", 10, new NodeMetrics.Types.EWMA(5, 0.3)),
-                new NodeMetrics.Types.Metric("metric4", 10, new NodeMetrics.Types.EWMA(5, 0.7))
+                new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)) ,
+                new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)), 
+                new NodeMetrics.Types.Metric("metric3", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.3)),
+                new NodeMetrics.Types.Metric("metric4", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.7))
             });
         }
         

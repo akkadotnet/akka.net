@@ -217,7 +217,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            var config = base.WithFallback(routerConfig);
+            routerConfig = base.WithFallback(routerConfig);
 
             if (!SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 return this;
