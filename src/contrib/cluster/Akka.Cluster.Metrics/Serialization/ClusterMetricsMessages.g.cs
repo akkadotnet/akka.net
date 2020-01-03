@@ -506,7 +506,7 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as NodeMetrics);
+        return ReferenceEquals(this, other) || other is NodeMetrics o && Equals(o);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1038,34 +1038,10 @@ namespace Akka.Cluster.Metrics.Serialization {
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public override bool Equals(object other) {
-          return Equals(other as Metric);
+            return ReferenceEquals(this, other) || other is Metric o && Equals(o);
         }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public bool Equals(Metric other) {
-          if (ReferenceEquals(other, null)) {
-            return false;
-          }
-          if (ReferenceEquals(other, this)) {
-            return true;
-          }
-          if (NameIndex != other.NameIndex) return false;
-          if (!object.Equals(Number, other.Number)) return false;
-          if (!object.Equals(Ewma, other.Ewma)) return false;
-          return Equals(_unknownFields, other._unknownFields);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public override int GetHashCode() {
-          int hash = 1;
-          if (NameIndex != 0) hash ^= NameIndex.GetHashCode();
-          if (number_ != null) hash ^= Number.GetHashCode();
-          if (ewma_ != null) hash ^= Ewma.GetHashCode();
-          if (_unknownFields != null) {
-            hash ^= _unknownFields.GetHashCode();
-          }
-          return hash;
-        }
+        
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public override string ToString() {

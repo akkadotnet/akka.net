@@ -49,12 +49,7 @@ namespace Akka.Cluster.Metrics.Serialization
             if (Timestamp >= that.Timestamp)
                 return this; // that is order
             
-            return new NodeMetrics(this)
-            {
-                metrics_ = { that.metrics_.Union(metrics_.Except(that.metrics_)) },
-                timestamp_ = that.timestamp_,
-                Address = Address
-            };
+            return new NodeMetrics(Address, that.Timestamp, that.Metrics.Union(Metrics));
         }
 
         /// <summary>
@@ -69,23 +64,17 @@ namespace Akka.Cluster.Metrics.Serialization
             var (latestNode, currentNode) = Timestamp >= that.Timestamp ? (this, that) : (that, this);
             
             // Average metrics present in both latest and current.
-            var updated = latestNode.metrics_
-                .SelectMany(latest => currentNode.metrics_.Select(current => (Latest: latest, Current: current)))
+            var updated = latestNode.Metrics
+                .SelectMany(latest => currentNode.Metrics.Select(current => (Latest: latest, Current: current)))
                 .Where(pair => pair.Latest.SameAs(pair.Current))
-                .Select(pair => pair.Current.Add(pair.Latest))
+                .Select(pair => pair.Current + pair.Latest)
                 .ToList();
             
             // Append metrics missing from either latest or current.
-            // Equality is based on the metric's name index
-            var merged = updated.Union(latestNode.metrics_.Except(updated))
-                .Union(currentNode.metrics_.Except(updated).Except(latestNode.metrics_));
+            // Equality is based on the metric's name
+            var merged = updated.Union(latestNode.Metrics).Union(currentNode.Metrics);
             
-            return new NodeMetrics(this)
-            {
-                metrics_ = { merged },
-                timestamp_ = latestNode.timestamp_,
-                Address = Address
-            };
+            return new NodeMetrics(Address, latestNode.Timestamp, merged);
         }
 
         /// <summary>
@@ -103,33 +92,20 @@ namespace Akka.Cluster.Metrics.Serialization
          * file. Since we do not have an option to not generate those methods for this particular class,
          * just stip them from generated code and paste here, with adding Address property check
          */
-        
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public bool Equals(NodeMetrics other) {
-            if (ReferenceEquals(other, null)) {
-                return false;
-            }
-            if (ReferenceEquals(other, this)) {
-                return true;
-            }
-            if (AddressIndex != other.AddressIndex) return false;
-            if (Timestamp != other.Timestamp) return false;
-            if (!Address.Equals(other.Address)) return false;
-            if(!metrics_.Equals(other.metrics_)) return false;
-            return Equals(_unknownFields, other._unknownFields);
+
+
+        /// <inheritdoc />
+        public bool Equals(NodeMetrics other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Address, other.Address);
         }
 
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public override int GetHashCode() {
-            int hash = 1;
-            if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
-            if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
-            if (Address != null) hash ^= Address.GetHashCode();
-            hash ^= metrics_.GetHashCode();
-            if (_unknownFields != null) {
-                hash ^= _unknownFields.GetHashCode();
-            }
-            return hash;
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            return (Address != null ? Address.GetHashCode() : 0);
         }
     }
 }

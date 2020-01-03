@@ -18,23 +18,6 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
     /// </summary>
     public class MetricsCollectorMock : MetricsCollectorBase
     {
-        /// <summary>
-        /// Test in cluster, with manual collection activation, collector mock, fast.
-        /// </summary>
-        public const string MockConfiguration = @"
-            akka.cluster.metrics {
-                  periodic-tasks-initial-delay = 100ms
-                  collector {
-                    enabled = off
-                    sample-interval = 200ms
-                    gossip-interval = 200ms
-                    provider = ""Akka.Cluster.Metrics.Tests.Helpers.MetricsCollectorMock, Akka.Cluster.Metrics.Tests""
-                    fallback = false
-                }
-            }
-            akka.actor.provider = ""cluster""
-        ";
-        
         /// <inheritdoc />
         public MetricsCollectorMock(ActorSystem system) : base(system)
         {
@@ -43,9 +26,12 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
         /// <inheritdoc />
         public override NodeMetrics Sample()
         {
-            return new NodeMetrics(new Address("akka", System.Name), DateTime.UtcNow.ToTimestamp().Seconds, new NodeMetrics.Types.Metric[]
+            return new NodeMetrics(new Address("akka", System.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
             {
-                new NodeMetrics.Types.Metric("metric", 10, new NodeMetrics.Types.EWMA(5, 0.5)) 
+                new NodeMetrics.Types.Metric("metric1", 10, new NodeMetrics.Types.EWMA(5, 0.5)) ,
+                new NodeMetrics.Types.Metric("metric2", 10, new NodeMetrics.Types.EWMA(5, 0.2)), 
+                new NodeMetrics.Types.Metric("metric3", 10, new NodeMetrics.Types.EWMA(5, 0.3)),
+                new NodeMetrics.Types.Metric("metric4", 10, new NodeMetrics.Types.EWMA(5, 0.7))
             });
         }
         

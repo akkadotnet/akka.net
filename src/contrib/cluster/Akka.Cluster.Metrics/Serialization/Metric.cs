@@ -7,6 +7,7 @@
 
 using System;
 using System.ComponentModel;
+using Akka.Annotations;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Dispatch.SysMsg;
 using Akka.Util;
@@ -36,7 +37,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// is returned. Invalid numeric values are negative and NaN/Infinite.
                 /// </summary>
                 public static Option<Metric> Create(string name, AnyNumber value, Option<double> decayFactor)
-                    => decayFactor.HasValue ? new Metric(name, value, CreateEWMA(value, decayFactor)) : Option<Metric>.None;
+                    => Defined(value) ? new Metric(name, value, CreateEWMA(value, decayFactor)) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates a new Metric instance if the Try is successful and the value is valid,
@@ -78,34 +79,27 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// Updates the data point, and if defined, updates the data stream (average).
                 /// Returns the updated metric.
                 /// </summary>
+                public static Metric operator +(Metric m1, Metric m2)
+                {
+                    return m1.Add(m2);
+                }
+
+                /// <summary>
+                /// Updates the data point, and if defined, updates the data stream (average).
+                /// Returns the updated metric.
+                /// </summary>
                 public Metric Add(Metric latest)
                 {
-                    if (!latest.SameAs(this))
+                    if (!SameAs(latest))
                         return this;
 
                     if (Average.HasValue)
-                    {
-                        return new Metric(this)
-                        {
-                            number_ = latest.number_,
-                            ewma_ = Average.Value + latest.Value.DoubleValue
-                        };
-                    }
-                    else if (latest.Average.HasValue)
-                    {
-                        return new Metric(this)
-                        {
-                            number_ = latest.number_,
-                            ewma_ = latest.Average.Value
-                        };
-                    }
-                    else
-                    {
-                        return new Metric(this)
-                        {
-                            number_ = latest.number_,
-                        };
-                    }
+                       return new Metric(Name, latest.Value, Average.Value + latest.Value.DoubleValue);
+
+                    if (latest.Average.HasValue)
+                        return new Metric(Name, latest.Value, latest.Average);
+
+                    return new Metric(Name, latest.Value, Average);
                 }
                 
                 /// <summary>
@@ -123,9 +117,13 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// </summary>
                 public bool SameAs(Metric that) => Name == that.Name;
 
-                private bool Defined(AnyNumber value)
+                /// <summary>
+                /// Internal usage
+                /// </summary>
+                [InternalApi]
+                public static bool Defined(AnyNumber value)
                 {
-                    var n = ConvertNumber(Value);
+                    var n = ConvertNumber(value);
                     if (n is Left<long, double> left)
                     {
                         return left.Value >= 0;
@@ -136,15 +134,19 @@ namespace Akka.Cluster.Metrics.Serialization
                     }
                     else return false;
                 }
-
-                private Either<long, double> ConvertNumber(AnyNumber number)
+                
+                /// <summary>
+                /// Internal usage
+                /// </summary>
+                [InternalApi]
+                public static Either<long, double> ConvertNumber(AnyNumber number)
                 {
                     switch (number.Type)
                     {
                         case AnyNumber.NumberType.Int:
-                            return new Left<long, double>(Convert.ToInt32(number.DoubleValue));
+                            return new Left<long, double>(Convert.ToInt32(number.LongValue));
                         case AnyNumber.NumberType.Long:
-                            return new Left<long, double>(Convert.ToInt64(number.DoubleValue));
+                            return new Left<long, double>(number.LongValue);
                         case AnyNumber.NumberType.Float:
                             return new Right<long, double>(Convert.ToSingle(number.DoubleValue));
                         case AnyNumber.NumberType.Double:
@@ -152,6 +154,27 @@ namespace Akka.Cluster.Metrics.Serialization
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+                }
+                
+                /*
+                 * Two methods below, Equals and GetHashCode, should be used instead of generated in ClusterMetrics.Messages.g.cs
+                 * file. Since we do not have an option to not generate those methods for this particular class,
+                 * just stip them from generated code and paste here, with adding Address property check
+                 */
+
+
+                /// <inheritdoc />
+                public bool Equals(Metric other)
+                {
+                    if (ReferenceEquals(null, other)) return false;
+                    if (ReferenceEquals(this, other)) return true;
+                    return Name == other.Name;
+                }
+
+                /// <inheritdoc />
+                public override int GetHashCode()
+                {
+                    return (Name != null ? Name.GetHashCode() : 0);
                 }
             }
         }

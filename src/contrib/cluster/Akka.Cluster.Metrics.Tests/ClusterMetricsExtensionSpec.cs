@@ -39,7 +39,7 @@ namespace Akka.Cluster.Metrics.Tests
         private const double Epsilon = 0.001;
         
         public ClusterMetricsExtensionSpec(ITestOutputHelper output)
-            : base(MetricsCollectorMock.MockConfiguration, output)
+            : base(ClusterMetricsTestConfig.ClusterConfiguration, output)
         {
             var cluster = Cluster.Get(Sys);
             _extension = ClusterMetrics.Get(Sys);
