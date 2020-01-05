@@ -24,26 +24,4 @@ namespace Akka.Cluster.Metrics
         /// </summary>
         NodeMetrics Sample();
     }
-
-    /// <summary>
-    /// Base class that implements <see cref="IMetricsCollector"/> and requires valid constructor
-    /// </summary>
-    public abstract class MetricsCollectorBase : IMetricsCollector
-    {
-        /// <summary>
-        /// Assigned actor system
-        /// </summary>
-        protected ActorSystem System { get; }
-
-        public MetricsCollectorBase(ActorSystem system)
-        {
-            System = system;
-        }
-        
-        /// <inheritdoc />
-        public abstract void Dispose();
-
-        /// <inheritdoc />
-        public abstract NodeMetrics Sample();
-    }
 }

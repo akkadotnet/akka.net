@@ -16,22 +16,23 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
     /// <summary>
     /// Metrics collector mock implementation
     /// </summary>
-    public class MetricsCollectorMock : MetricsCollectorBase
+    public class MetricsCollectorMock : IMetricsCollector
     {
-        private Random _random;
+        private readonly ActorSystem _system;
+        private readonly Random _random;
         
-        /// <inheritdoc />
-        public MetricsCollectorMock(ActorSystem system) : base(system)
+        public MetricsCollectorMock(ActorSystem system)
         {
+            _system = system;
             _random = new Random();
         }
 
         /// <inheritdoc />
-        public override NodeMetrics Sample()
+        public NodeMetrics Sample()
         {
-            return new NodeMetrics(new Address("akka", System.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
+            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp().Seconds, new []
             {
-                new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)) ,
+                new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)),
                 new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)), 
                 new NodeMetrics.Types.Metric("metric3", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.3)),
                 new NodeMetrics.Types.Metric("metric4", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.7))
@@ -39,7 +40,7 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
         }
         
         /// <inheritdoc />
-        public override void Dispose()
+        public void Dispose()
         {
         }
     }

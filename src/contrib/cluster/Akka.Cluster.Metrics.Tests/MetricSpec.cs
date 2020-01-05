@@ -11,13 +11,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
+using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Google.Protobuf.Collections;
-using Google.Protobuf.WellKnownTypes;
 using Xunit;
 using Address = Akka.Actor.Address;
 
@@ -37,8 +37,8 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void New_metric_creation_should_work()
         {
-            var metric = NodeMetrics.Types.Metric.Create(StandardMetrics.HeapMemoryUsed, 256L, decayFactor: 0.18).Value;
-            metric.Name.Should().Be(StandardMetrics.HeapMemoryUsed);
+            var metric = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, 256L, decayFactor: 0.18).Value;
+            metric.Name.Should().Be(StandardMetrics.MemoryUsed);
             metric.Value.LongValue.Should().Be(256L);
             metric.IsSmooth.Should().BeTrue();
             metric.SmoothValue.Should().BeApproximately(256, 0.0001);
@@ -179,22 +179,19 @@ namespace Akka.Cluster.Metrics.Tests
         }
     }
 
-    public class MetricGossipSpec : AkkaSpec
+    public class MetricGossipSpec : AkkaSpecWithCollector
     {
-        private readonly IMetricsCollector _collector;
-        private long NewTimestamp => DateTime.UtcNow.ToTimestamp().Seconds;
+        private long NewTimestamp => DateTime.UtcNow.ToTimestamp();
 
         public MetricGossipSpec() : base(ClusterMetricsTestConfig.DefaultEnabled)
         {
-            // TODO: Ideally use real collector here, once implemented
-            _collector = new MetricsCollectorMock(Sys);
         }
 
         [Fact]
         public void MetricGossip_should_add_new_nodeMetrics()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
-            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, Collector.Sample().Metrics);
 
             m1.Metrics.Count.Should().BeGreaterThan(3);
             m2.Metrics.Count.Should().BeGreaterThan(3);
@@ -212,8 +209,8 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void MetricGossip_should_merge_peer_metrics()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
-            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, Collector.Sample().Metrics);
 
             var g1 = MetricsGossip.Empty + m1 + m2;
             g1.Nodes.Should().HaveCount(2);
@@ -229,9 +226,9 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void MetricGossip_Should_merge_an_existing_metric_set_for_a_node_and_update_node_ring()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
-            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, _collector.Sample().Metrics);
-            var m3 = new NodeMetrics(new Address("akka", "sys", "a", 2556), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, Collector.Sample().Metrics);
+            var m3 = new NodeMetrics(new Address("akka", "sys", "a", 2556), NewTimestamp, Collector.Sample().Metrics);
             var m2Updated = new NodeMetrics(m2.Address, m2.Timestamp + 1000, NewSample(m2.Metrics));
 
             var g1 = MetricsGossip.Empty + m1 + m2;
@@ -252,7 +249,7 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void MetricGossip_should_get_the_current_NodeMetrics_if_it_exists_in_the_local_nodes()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
             var g1 = MetricsGossip.Empty + m1;
             g1.NodeMetricsFor(m1.Address).Value.Metrics.ShouldBeEquivalentTo(m1.Metrics);
         }
@@ -260,8 +257,8 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void MetricGossip_should_remove_a_node_if_it_is_no_longer_up()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
-            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, Collector.Sample().Metrics);
 
             var g1 = MetricsGossip.Empty + m1 + m2;
             g1.Nodes.Should().HaveCount(2);
@@ -275,8 +272,8 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void MetricGossip_should_filter_nodes()
         {
-            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, _collector.Sample().Metrics);
-            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, _collector.Sample().Metrics);
+            var m1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), NewTimestamp, Collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), NewTimestamp, Collector.Sample().Metrics);
 
             var g1 = MetricsGossip.Empty + m1 + m2;
             g1.Nodes.Should().HaveCount(2);
@@ -294,29 +291,25 @@ namespace Akka.Cluster.Metrics.Tests
         private IEnumerable<NodeMetrics.Types.Metric> NewSample(ICollection<NodeMetrics.Types.Metric> previousSample)
         {
             // Metric.Equals is based on name equality
-            return _collector.Sample().Metrics.Where(previousSample.Contains).Concat(previousSample).Distinct();
+            return Collector.Sample().Metrics.Where(previousSample.Contains).Concat(previousSample).Distinct();
         }
     }
 
-    public class MetricValuesSpec : AkkaSpec
+    public class MetricValuesSpec : AkkaSpecWithCollector
     {
-        private readonly IMetricsCollector _collector;
-        private NodeMetrics _node1;
-        private NodeMetrics _node2;
-        private IImmutableList<NodeMetrics> _nodes;
+        private readonly NodeMetrics _node1;
+        private readonly NodeMetrics _node2;
+        private readonly IImmutableList<NodeMetrics> _nodes;
         
         public MetricValuesSpec() : base(ClusterMetricsTestConfig.DefaultEnabled)
         {
-            // TODO: Ideally use real collector here, once implemented
-            _collector = new MetricsCollectorMock(Sys);
-            
-            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, _collector.Sample().Metrics);
-            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, _collector.Sample().Metrics);
-            _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create<NodeMetrics>(_node1, _node2), (nodes, _) =>
+            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, Collector.Sample().Metrics);
+            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, Collector.Sample().Metrics);
+            _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2), (nodes, _) =>
             {
                 return nodes.Select(n =>
                 {
-                    return new NodeMetrics(n.Address, n.Timestamp, metrics: _collector.Sample().Metrics.SelectMany(latest =>
+                    return new NodeMetrics(n.Address, n.Timestamp, metrics: Collector.Sample().Metrics.SelectMany(latest =>
                     {
                         return n.Metrics.Where(latest.SameAs).Select(streaming => streaming + latest);
                     }));
@@ -327,23 +320,21 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public void NodeMetrics_MetricValues_should_extract_expected_metrics_for_load_balancing()
         {
-            // This will be meaningfull once _collector will use real collector implementation
-            var stream1 = _node2.Metric(StandardMetrics.HeapMemoryCommitted).Value.Value.LongValue;
-            var stream2 = _node1.Metric(StandardMetrics.HeapMemoryUsed).Value.Value.LongValue;
+            var stream1 = _node2.Metric(StandardMetrics.MemoryAvailable).Value.Value.LongValue;
+            var stream2 = _node1.Metric(StandardMetrics.MemoryUsed).Value.Value.LongValue;
             stream1.Should().BeGreaterOrEqualTo(stream2);
         }
 
         [Fact]
         public void NodeMetrics_MetricValues_should_extract_expected_MetricValue_types_for_load_balancing()
         {
-            // This will be meaningfull once _collector will use real collector implementation
             foreach (var node in _nodes)
             {
-                var heapMemory = StandardMetrics.HeapMemory.Decompose(node);
+                var heapMemory = StandardMetrics.Memory.Decompose(node);
                 if (heapMemory.HasValue)
                 {
                     heapMemory.Value.UsedSmoothValue.Should().BeGreaterThan(0);
-                    heapMemory.Value.CommittedSmoothValue.Should().BeGreaterOrEqualTo(heapMemory.Value.UsedSmoothValue);
+                    heapMemory.Value.AvailableSmoothValue.Should().BeGreaterOrEqualTo(heapMemory.Value.UsedSmoothValue);
                 }
             }
             
@@ -354,14 +345,8 @@ namespace Akka.Cluster.Metrics.Tests
                 {
                     cpu.Value.Processors.Should().BeGreaterThan(0);
                     
-                    if (cpu.Value.SystemLoadAverage.HasValue)
-                        cpu.Value.SystemLoadAverage.Value.Should().BeGreaterOrEqualTo(0);
-
-                    if (cpu.Value.CpuCombined.HasValue)
-                        cpu.Value.CpuCombined.Value.Should().BeInRange(0, 1);
-                    
-                    if (cpu.Value.CpuStolen.HasValue)
-                        cpu.Value.CpuStolen.Value.Should().BeInRange(0, 1);
+                    cpu.Value.CpuProcessUsage.Should().BeInRange(0, 1);
+                    cpu.Value.CpuTotalUsage.Should().BeInRange(0, 1);
                 }
             }
         }

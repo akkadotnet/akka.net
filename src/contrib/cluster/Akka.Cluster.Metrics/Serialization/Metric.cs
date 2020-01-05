@@ -31,6 +31,13 @@ namespace Akka.Cluster.Metrics.Serialization
                 public Option<EWMA> Average { get; }
                 public AnyNumber Value { get; }
                 public string Name { get; }
+                
+                /// <summary>
+                /// Creates a new Metric instance if the value is valid, otherwise None
+                /// is returned. Invalid numeric values are negative and NaN/Infinite.
+                /// </summary>
+                public static Option<Metric> Create(string name, AnyNumber value)
+                    => Defined(value) ? new Metric(name, value, CreateEWMA(value, Option<double>.None)) : Option<Metric>.None;
 
                 /// <summary>
                 /// Creates a new Metric instance if the value is valid, otherwise None
@@ -56,7 +63,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// Metrics key/value.
                 /// </summary>
                 /// <param name="name">The metric name</param>
-                /// <param name="decimalNumber">
+                /// <param name="value">
                 /// The metric value, which must be a valid numerical value,
                 /// a valid value is neither negative nor NaN/Infinite.
                 /// </param>

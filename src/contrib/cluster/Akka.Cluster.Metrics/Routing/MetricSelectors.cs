@@ -40,10 +40,9 @@ namespace Akka.Cluster.Metrics
             var selectorTypeName = config.GetString("metrics-selector");
             switch (selectorTypeName)
             {
-                case "min": return MixMetricsSelector.Instance;
-                case "heap": return HeapMetricsSelector.Instance;
+                case "mix": return MixMetricsSelector.Instance;
+                case "heap": return MemoryMetricsSelector.Instance;
                 case "cpu": return CpuMetricsSelector.Instance;
-                case "load": return SystemLoadAverageMetricsSelector.Instance;
                 default:
                     return DynamicAccess.CreateInstanceFor<IMetricsSelector>(selectorTypeName, config)
                         .Recover(ex => throw new ArgumentException($"Cannot instantiate metrics-selector [{selectorTypeName}]," +
@@ -90,47 +89,38 @@ namespace Akka.Cluster.Metrics
     }
 
     /// <summary>
-    /// MetricsSelector that uses the heap metrics.
-    /// Low heap capacity => small weight.
+    /// MetricsSelector that uses the memory metrics.
+    /// Less memory available => small weight.
     /// </summary>
-    public class HeapMetricsSelector : CapacityMetricsSelector
+    public class MemoryMetricsSelector : CapacityMetricsSelector
     {
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static readonly HeapMetricsSelector Instance = new HeapMetricsSelector();
+        public static readonly MemoryMetricsSelector Instance = new MemoryMetricsSelector();
         
         /// <inheritdoc />
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
-                .Select(StandardMetrics.HeapMemory.Decompose)
+                .Select(StandardMetrics.Memory.Decompose)
                 .Where(m => m.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
-                    var capacity = m.Value.HeapMemoryMaxValue.HasValue 
-                        ? (m.Value.HeapMemoryMaxValue.Value - m.Value.UsedSmoothValue) / m.Value.HeapMemoryMaxValue.Value
-                        : (m.Value.CommittedSmoothValue - m.Value.UsedSmoothValue) / m.Value.CommittedSmoothValue;
+                    var capacity = m.Value.MaxSmoothValue.HasValue
+                        ? (m.Value.MaxSmoothValue.Value - m.Value.UsedSmoothValue) / m.Value.MaxSmoothValue.Value
+                        : (m.Value.AvailableSmoothValue - m.Value.UsedSmoothValue) / m.Value.AvailableSmoothValue;
                     return capacity;
                 });
         }
     }
 
     /// <summary>
-    /// MetricsSelector that uses the combined CPU time metrics and stolen CPU time metrics.
-    /// In modern Linux kernels: CpuCombined + CpuStolen + CpuIdle = 1.0  or 100%.
-    /// Combined CPU is sum of User + Sys + Nice + Wait times, as percentage.
-    /// Stolen CPU is the amount of CPU taken away from this virtual machine by the hypervisor, as percentage.
-    ///
+    /// MetricsSelector that uses the CPU usage metrics.
     /// Low CPU capacity => small node weight.
     /// </summary>
     public class CpuMetricsSelector : CapacityMetricsSelector
     {
-        /// <summary>
-        /// How much extra weight to give to the stolen time.
-        /// </summary>
-        private readonly double _factor = 0.3; // TODO: Read factor from reference.conf
-        
         /// <summary>
         /// Singleton instance
         /// </summary>
@@ -138,56 +128,18 @@ namespace Akka.Cluster.Metrics
 
         public CpuMetricsSelector()
         {
-            if (_factor < 0)
-                throw new ArgumentException(nameof(_factor), $"factor must be non negative: {_factor}");
         }
-        
-        // Notes from reading around:
-        // In modern Linux kernels: CpuCombined + CpuStolen + CpuIdle = 1.0  or 100%. More convoluted for other o/s.
-        // We could use CpuIdle as the only capacity measure: http://axibase.com/news/ec2-monitoring-the-case-of-stolen-cpu/
-        // But not all "idle time"s are created equal: https://docs.newrelic.com/docs/servers/new-relic-servers-linux/maintenance/servers-linux-faq
-        // Example: assume that combined+stolen=70%, idle=30%. Then 50/20/30 system will be more responsive then 20/50/30 system (combined/stolen/idle ratio).
-        // Current approach: "The more stolen resources there are, the less active the virtual machine needs to be to generate a high load rating."
         
         /// <inheritdoc />
         public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
         {
             return nodeMetrics
                 .Select(StandardMetrics.Cpu.Decompose)
-                .Where(m => m.HasValue && m.Value.CpuCombined.HasValue && m.Value.CpuStolen.HasValue)
+                .Where(m => m.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
-                    // Arbitrary load rating function which skews in favor of stolen time.
-                    var load = m.Value.CpuCombined.Value + m.Value.CpuStolen.Value * (1 + _factor);
+                    var load = m.Value.CpuTotalUsage;
                     var capacity = load >= 1 ? 0 : 1 - load;
-                    return capacity;
-                });
-        }
-    }
-
-    /// <summary>
-    /// MetricsSelector that uses the system load average metrics.
-    /// System load average is OS-specific average load on the CPUs in the system,
-    /// for the past 1 minute. The system is possibly nearing a bottleneck if the
-    /// system load average is nearing number of cpus/cores.
-    /// Low load average capacity => small weight.
-    /// </summary>
-    public class SystemLoadAverageMetricsSelector : CapacityMetricsSelector
-    {
-        /// <summary>
-        /// Singleton instance
-        /// </summary>
-        public static readonly SystemLoadAverageMetricsSelector Instance = new SystemLoadAverageMetricsSelector();
-        
-        /// <inheritdoc />
-        public override IImmutableDictionary<Actor.Address, double> Capacity(IImmutableSet<NodeMetrics> nodeMetrics)
-        {
-            return nodeMetrics
-                .Select(StandardMetrics.Cpu.Decompose)
-                .Where(m => m.HasValue && m.Value.SystemLoadAverage.HasValue)
-                .ToImmutableDictionary(m => m.Value.Address, m =>
-                {
-                    var capacity = 1.0 - Math.Min(1.0, m.Value.SystemLoadAverage.Value / m.Value.Processors);
                     return capacity;
                 });
         }
@@ -226,8 +178,8 @@ namespace Akka.Cluster.Metrics
 
     /// <summary>
     /// MetricsSelector that combines other selectors and aggregates their capacity
-    /// values. By default it uses <see cref="HeapMetricsSelector"/>,
-    /// <see cref="CpuMetricsSelector"/>, and <see cref="SystemLoadAverageMetricsSelector"/>
+    /// values. By default it uses <see cref="MemoryMetricsSelector"/> and
+    /// <see cref="CpuMetricsSelector"/>
     /// </summary>
     public class MixMetricsSelector : MixMetricsSelectorBase
     {
@@ -237,14 +189,13 @@ namespace Akka.Cluster.Metrics
         }
         
         /// <summary>
-        /// Singleton instance of the default MixMetricsSelector, which uses <see cref="HeapMetricsSelector"/>,
-        /// <see cref="CpuMetricsSelector"/>, and <see cref="SystemLoadAverageMetricsSelector"/>
+        /// Singleton instance of the default MixMetricsSelector, which uses <see cref="MemoryMetricsSelector"/> and
+        /// <see cref="CpuMetricsSelector"/>
         /// </summary>
         public static readonly MixMetricsSelector Instance = new MixMetricsSelector(
             ImmutableArray.Create<CapacityMetricsSelector>(
-                HeapMetricsSelector.Instance,
-                CpuMetricsSelector.Instance,
-                SystemLoadAverageMetricsSelector.Instance)
+                MemoryMetricsSelector.Instance,
+                CpuMetricsSelector.Instance)
         );
     }
 }

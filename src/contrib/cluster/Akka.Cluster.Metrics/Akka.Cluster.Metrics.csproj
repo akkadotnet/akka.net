@@ -27,6 +27,10 @@
       <EmbeddedResource Include="reference.conf" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
+    </ItemGroup>
+
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
     </PropertyGroup>

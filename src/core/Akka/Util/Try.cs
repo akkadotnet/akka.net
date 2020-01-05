@@ -72,6 +72,21 @@ namespace Akka.Util
                 return this;
             }
         }
+        
+        /// <summary>
+        /// Gets <see cref="Try{T}"/> result from function execution
+        /// </summary>
+        public static Try<T> From(Func<T> func)
+        {
+            try
+            {
+                return new Try<T>(func());
+            }
+            catch (Exception ex)
+            {
+                return new Try<T>(ex);
+            }
+        }
 
         /// <summary>
         /// Returns this Try if it's a Success or the given default argument if this is a Failure.

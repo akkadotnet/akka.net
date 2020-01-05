@@ -23,8 +23,8 @@ namespace Akka.Cluster.Metrics.Tests
     {
         private readonly ClusterMetricsMessageSerializer _serializer;
         
-        private Member _a1 = TestMember.Create(new Address("akka", "sys", "a", 2552), MemberStatus.Joining, ImmutableHashSet<string>.Empty);
-        private Member _b1 = TestMember.Create(new Address("akka", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty.Add("r1"));
+        private readonly Member _a1 = TestMember.Create(new Address("akka", "sys", "a", 2552), MemberStatus.Joining, ImmutableHashSet<string>.Empty);
+        private readonly Member _b1 = TestMember.Create(new Address("akka", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty.Add("r1"));
         private Member _c1 = TestMember.Create(new Address("akka", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet<string>.Empty.Add("r2"));
         private Member _d1 = TestMember.Create(new Address("akka", "sys", "d", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("r1").Add("r2"));
         private Member _e1 = TestMember.Create(new Address("akka", "sys", "e", 2552), MemberStatus.Down, ImmutableHashSet<string>.Empty.Add("r3"));
@@ -68,8 +68,7 @@ namespace Akka.Cluster.Metrics.Tests
                 metricsSelector: new MixMetricsSelector(new CapacityMetricsSelector[]
                 {
                     CpuMetricsSelector.Instance, 
-                    HeapMetricsSelector.Instance, 
-                    SystemLoadAverageMetricsSelector.Instance
+                    MemoryMetricsSelector.Instance, 
                 }.ToImmutableArray()),
                 nrOfInstances: 7,
                 routerDispatcher:"my-dispatcher",

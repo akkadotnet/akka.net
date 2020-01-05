@@ -55,8 +55,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 case Metrics.AdaptiveLoadBalancingPool alb: return AdaptiveLoadBalancingPoolToBinary(alb);
                 case Metrics.MixMetricsSelector mms: return MixMetricsSelectorToBinary(mms);
                 case CpuMetricsSelector _: return new byte[0];
-                case HeapMetricsSelector _: return new byte[0];
-                case SystemLoadAverageMetricsSelector _: return new byte[0];
+                case MemoryMetricsSelector _: return new byte[0];
                 default:
                     throw new ArgumentException($"Can't serialize object of type ${obj.GetType().Name} in [${GetType().Name}]");
             }
@@ -108,8 +107,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 case AdaptiveLoadBalancingPoolManifest: return AdaptiveLoadBalancingPoolFromBinary(bytes);
                 case MixMetricsSelectorManifest: return MixMetricSelectorFromBinary(bytes);
                 case CpuMetricsSelectorManifest: return CpuMetricsSelector.Instance;
-                case HeapMetricsSelectorManifest: return HeapMetricsSelector.Instance;
-                case SystemLoadAverageMetricsSelectorManifest: return SystemLoadAverageMetricsSelector.Instance;
+                case HeapMetricsSelectorManifest: return MemoryMetricsSelector.Instance;
                 default:
                     throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${GetType().Name}");
             }
@@ -124,8 +122,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 case Metrics.AdaptiveLoadBalancingPool _: return AdaptiveLoadBalancingPoolManifest;
                 case Metrics.MixMetricsSelector _: return MixMetricsSelectorManifest;
                 case CpuMetricsSelector _: return CpuMetricsSelectorManifest;
-                case HeapMetricsSelector _: return HeapMetricsSelectorManifest;
-                case SystemLoadAverageMetricsSelector _: return SystemLoadAverageMetricsSelectorManifest;
+                case MemoryMetricsSelector _: return HeapMetricsSelectorManifest;
                 default:
                     throw new ArgumentException($"Can't serialize object of type {o.GetType().Name} in [{GetType().Name}]");
             }
