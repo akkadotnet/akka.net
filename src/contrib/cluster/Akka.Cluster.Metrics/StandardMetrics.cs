@@ -76,7 +76,7 @@ namespace Akka.Cluster.Metrics
             /// Given a NodeMetrics it returns the HeapMemory data if the nodeMetrics contains necessary heap metrics.
             /// </summary>
             /// <returns>If possible a tuple matching the HeapMemory constructor parameters</returns>
-            public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double AvailableSmoothValue, Option<double> MaxSmoothValue)> 
+            public static Option<(Actor.Address Address, long Timestamp, double UsedSmoothValue, double AvailableSmoothValue, Option<double> MaxRecommendedSmoothValue)> 
                 Decompose(NodeMetrics nodeMetrics)
             {
                 var used = nodeMetrics.Metric(MemoryUsed);

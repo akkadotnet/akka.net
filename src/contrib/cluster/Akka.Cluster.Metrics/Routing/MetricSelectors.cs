@@ -107,10 +107,13 @@ namespace Akka.Cluster.Metrics
                 .Where(m => m.HasValue)
                 .ToImmutableDictionary(m => m.Value.Address, m =>
                 {
-                    var capacity = m.Value.MaxSmoothValue.HasValue
-                        ? (m.Value.MaxSmoothValue.Value - m.Value.UsedSmoothValue) / m.Value.MaxSmoothValue.Value
-                        : (m.Value.AvailableSmoothValue - m.Value.UsedSmoothValue) / m.Value.AvailableSmoothValue;
-                    return capacity;
+                    if (m.Value.MaxRecommendedSmoothValue.HasValue &&
+                        m.Value.MaxRecommendedSmoothValue.Value > m.Value.AvailableSmoothValue)
+                    {
+                        return (m.Value.MaxRecommendedSmoothValue.Value - m.Value.UsedSmoothValue) / m.Value.MaxRecommendedSmoothValue.Value;
+                    }
+
+                    return (m.Value.AvailableSmoothValue - m.Value.UsedSmoothValue) / m.Value.AvailableSmoothValue;
                 });
         }
     }
