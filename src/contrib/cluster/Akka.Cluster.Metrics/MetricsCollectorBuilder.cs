@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics
     ///
     /// Metrics collector instantiation priority order:
     /// 1. Provided custom collector
-    /// 2. Internal <see cref="DummyCollector"/>
+    /// 2. Internal <see cref="DefaultCollector"/>
     /// </summary>
     public class MetricsCollectorBuilder
     {
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Metrics
             var settings = ClusterMetricsSettings.Create(system.Settings.Config);
 
             var collectorCustom = settings.CollectorProvider;
-            var collector1 = typeof(DefaultCollector).FullName;
+            var defaultCollector = typeof(DefaultCollector).FullName;
 
             var useCustom = !settings.CollectorFallback;
             var useInternal = settings.CollectorFallback && string.IsNullOrEmpty(settings.CollectorProvider);
@@ -46,9 +46,9 @@ namespace Akka.Cluster.Metrics
             if (useCustom)
                 collector = Create(collectorCustom);
             else if (useInternal)
-                collector = Create(collector1);
+                collector = Create(defaultCollector);
             else // Use complete fall back chain.
-                collector = Create(collectorCustom).OrElse(Create(collector1));
+                collector = Create(collectorCustom).OrElse(Create(defaultCollector));
 
             return collector.Recover(ex => throw new ConfigurationException($"Could not create metrics collector: {ex}")).Get();
         }
