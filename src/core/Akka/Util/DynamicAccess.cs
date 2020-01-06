@@ -6,12 +6,16 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
     /// <summary>
+    /// INTERNAL USAGE
+    /// 
     /// DynamicAccess
     /// </summary>
+    [InternalApi]
     public static class DynamicAccess
     {
         /// <summary>
