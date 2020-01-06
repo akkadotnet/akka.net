@@ -91,6 +91,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             Node3 = Role("node-3");
         
             CommonConfig = DebugConfig(on: false)
+                .WithFallback(ClusterMetrics.DefaultConfig())
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     # Enable metrics extension in akka-cluster-metrics.
                     akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
@@ -130,6 +131,8 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
     public class TestCustomMetricsSelector : IMetricsSelector
     {
+        public TestCustomMetricsSelector(Config unused) { }
+        
         /// <inheritdoc />
         public IImmutableDictionary<Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics)
             => ImmutableDictionary<Address, int>.Empty;
