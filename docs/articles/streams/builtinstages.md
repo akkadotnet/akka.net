@@ -1273,6 +1273,20 @@ Fan-out the stream to several streams. Each upstream element is emitted to the f
 **completes** when upstream completes
 
 
+#### Partition
+
+Fan-out the stream to several streams. emitting an incoming upstream element to one downstream consumer according
+to the partitioner function applied to the element
+
+**emits** when an element is available from the input and the chosen output has demand
+
+**backpressures** when the currently chosen output back-pressures
+
+**completes** when upstream completes and no output is pending
+
+**cancels** when when all downstreams cancel
+
+
 # Watching status stages
 
 #### WatchTermination
