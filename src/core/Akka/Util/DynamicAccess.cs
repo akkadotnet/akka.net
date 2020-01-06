@@ -19,11 +19,14 @@ namespace Akka.Util
     public static class DynamicAccess
     {
         /// <summary>
+        /// INTERNAL API
+        /// 
         /// Creates instance of specified type name using reflection
         /// </summary>
         /// <remarks>
         /// Does mostly the same thing as <see cref="Activator"/> class, but makes conversion and error handling simpler
         /// </remarks>
+        [InternalApi]
         public static Try<TResult> CreateInstanceFor<TResult>(string typeName, params object[] args) where TResult : class
         {
             try
