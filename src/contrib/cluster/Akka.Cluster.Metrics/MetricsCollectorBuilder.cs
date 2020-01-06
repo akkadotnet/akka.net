@@ -31,7 +31,7 @@ namespace Akka.Cluster.Metrics
             var settings = ClusterMetricsSettings.Create(system.Settings.Config);
 
             var collectorCustom = settings.CollectorProvider;
-            var defaultCollector = typeof(DefaultCollector).FullName;
+            var defaultCollector = typeof(DefaultCollector).AssemblyQualifiedName;
 
             var useCustom = !settings.CollectorFallback;
             var useInternal = settings.CollectorFallback && string.IsNullOrEmpty(settings.CollectorProvider);

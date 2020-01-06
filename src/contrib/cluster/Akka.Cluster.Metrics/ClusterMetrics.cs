@@ -82,7 +82,7 @@ namespace Akka.Cluster.Metrics
         {
             get
             {
-                return DynamicAccess.CreateInstanceFor<ClusterMetricsStrategy>(Settings.SupervisorStrategyProvider)
+                return DynamicAccess.CreateInstanceFor<ClusterMetricsStrategy>(Settings.SupervisorStrategyProvider, Settings.SupervisorStrategyConfiguration)
                     .GetOrElse(() =>
                     {
                         _system.Log.Error(

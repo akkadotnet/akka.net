@@ -35,7 +35,7 @@ namespace Akka.Cluster.Metrics.Serialization
         private const string HeapMetricsSelectorManifest = "e";
         private const string SystemLoadAverageMetricsSelectorManifest = "f";
 
-        private Akka.Serialization.Serialization _serialization; 
+        private readonly Lazy<Akka.Serialization.Serialization> _serialization; 
         
         #endregion
         
@@ -43,7 +43,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public ClusterMetricsMessageSerializer(ExtendedActorSystem system) 
             : base(system)
         {
-            _serialization = new Akka.Serialization.Serialization(system);
+            _serialization = new Lazy<Akka.Serialization.Serialization>(() => new Akka.Serialization.Serialization(system));
         }
         
         /// <inheritdoc />
@@ -147,7 +147,7 @@ namespace Akka.Cluster.Metrics.Serialization
 
         private MetricsSelector MetricsSelectorToProto(IMetricsSelector selector)
         {
-            var serializer = _serialization.FindSerializerFor(selector);
+            var serializer = _serialization.Value.FindSerializerFor(selector);
             
             return new MetricsSelector()
             {
@@ -351,7 +351,7 @@ namespace Akka.Cluster.Metrics.Serialization
             if (proto.MetricsSelector != null)
             {
                 var s = proto.MetricsSelector;
-                selector = _serialization.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector;
+                selector = _serialization.Value.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector;
             }
             else
             {
@@ -378,7 +378,7 @@ namespace Akka.Cluster.Metrics.Serialization
 
         private IMetricsSelector MetricSelectorFromProto(Serialization.MetricsSelector selector)
         {
-            return _serialization.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector;
+            return _serialization.Value.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector;
         }
         
     }
