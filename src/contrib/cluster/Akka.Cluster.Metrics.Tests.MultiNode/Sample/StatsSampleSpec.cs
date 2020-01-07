@@ -74,22 +74,6 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         /// <inheritdoc />
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
-        /// <inheritdoc />
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            
-            MultiNodeSpecBeforeAll();
-        }
-
-        /// <inheritdoc />
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            
-            MultiNodeSpecAfterAll();
-        }
-
         [MultiNodeFact]
         public async Task Stats_sample_should_illustrate_how_to_startup_cluster()
         {
