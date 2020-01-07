@@ -82,7 +82,13 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public async Task ClusterMetrics_Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring()
+        public async Task ClusterMetrics_Should_work_when_enabled()
+        {
+            await Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring();
+            await Should_reflect_the_correct_number_or_node_metrics_in_cluster_view();
+        }
+
+        private async Task Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring()
         {
             await WithinAsync(60.Seconds(), async () =>
             {
@@ -101,8 +107,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             });
         }
 
-        [MultiNodeFact]
-        public async Task ClusterMetrics_Should_reflect_the_correct_number_or_node_metrics_in_cluster_view()
+        private async Task Should_reflect_the_correct_number_or_node_metrics_in_cluster_view()
         {
             await WithinAsync(30.Seconds(), async () =>
             {
