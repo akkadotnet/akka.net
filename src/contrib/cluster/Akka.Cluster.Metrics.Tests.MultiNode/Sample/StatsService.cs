@@ -23,7 +23,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             // This router is used both with lookup and deploy of routees. If you
             // have a router with only lookup of routees you can use Props.empty
             // instead of Props.Create<StatsWorker>
-            _workerRouter = Context.ActorOf(FromConfig.Instance.Props(Props.Create<StatsWorker>()), "worderRouter");
+            _workerRouter = Context.ActorOf(FromConfig.Instance.Props(Props.Create<StatsWorker>()), "workerRouter");
         }
         
         /// <inheritdoc />

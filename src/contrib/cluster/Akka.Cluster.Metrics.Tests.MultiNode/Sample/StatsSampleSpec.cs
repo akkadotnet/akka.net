@@ -96,7 +96,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 
                 cluster.Join(firstAddress);
 
-                Sys.ActorOf(Props.Create<StatsWorker>(), "statsWorder");
+                Sys.ActorOf(Props.Create<StatsWorker>(), "statsWorker");
                 Sys.ActorOf(Props.Create<StatsService>(), "statsService");
 
                 ReceiveN(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct()
