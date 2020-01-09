@@ -21,11 +21,11 @@ namespace Akka.Cluster.Metrics
     public static class StandardMetrics
     {
         /// <summary>
-        /// Total memory allocated to the currently running process (<see cref="Process.WorkingSet64"/>)
+        /// Total memory allocated to the currently running process (<see cref="Process.PrivateMemorySize64"/>)
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
-        /// Memory, available for the process
+        /// Memory, available for the process (<see cref="Process.VirtualMemorySize64"/>)
         /// </summary>
         public const string MemoryAvailable = "MemoryAvailable";
         /// <summary>
@@ -60,11 +60,11 @@ namespace Akka.Cluster.Metrics
             /// </summary>
             public long Timestamp { get; }
             /// <summary>
-            /// The current process allocated memory (in bytes) (<see cref="Process.WorkingSet64"/>)
+            /// The current process allocated memory (in bytes) (<see cref="Process.PrivateMemorySize64"/>)
             /// </summary>
             public double Used { get; }
             /// <summary>
-            /// Memory available for current process (in bytes)
+            /// Memory available for current process (in bytes) (<see cref="Process.VirtualMemorySize64"/>)
             /// </summary>
             public double Available { get; }
             /// <summary>

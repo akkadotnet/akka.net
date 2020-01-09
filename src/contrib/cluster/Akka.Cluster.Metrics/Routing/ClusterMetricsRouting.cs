@@ -30,7 +30,7 @@ namespace Akka.Cluster.Metrics
     {
         private readonly ActorSystem _system;
         private readonly IMetricsSelector _metricsSelector;
-        private Cluster _cluster;
+        private readonly Cluster _cluster;
         private readonly AtomicReference<Tuple<ImmutableArray<Routee>, IImmutableSet<NodeMetrics>, Option<WeightedRoutees>>> _weightedRouteesRef;
 
         /// <summary>
@@ -319,7 +319,7 @@ namespace Akka.Cluster.Metrics
             : this(MetricsSelectorBuilder.BuildFromConfig(config), paths: config.GetStringList("routees.paths"))
         {
         }
-
+        
         /// <inheritdoc />
         public override Router CreateRouter(ActorSystem system)
         {

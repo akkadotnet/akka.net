@@ -57,6 +57,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public class MemoryAllocator : ActorBase
         {
             private int[,] _usedMemory = new int[0, 0];
+            private readonly ILoggingAdapter _log = Context.GetLogger();
             
             /// <inheritdoc />
             protected override bool Receive(object message)
@@ -64,18 +65,44 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 if (!(message is AllocateMemory))
                     return false;
 
-                var available = Process.GetCurrentProcess().VirtualMemorySize64;
-                var used = Process.GetCurrentProcess().WorkingSet64;
-                var max = Process.GetCurrentProcess().MaxWorkingSet.ToInt64();
-                max = Math.Max(available, max);
-                Context.GetLogger().Info($"Used memory before: [{used}] bytes, of max [{max}]");
-                // allocate 70% of free space
-                var allocateBytes = (int)(0.7 * (max - used));
-                var numberOfArrays = allocateBytes / 1024;
-                _usedMemory = new int[numberOfArrays, 248]; // each 248 element Int array will use ~ 1 kB
-                Context.GetLogger().Info($"Used memory after: [{Process.GetCurrentProcess().WorkingSet64}] bytes");
+                using (var process = Process.GetCurrentProcess())
+                {
+                    var available = process.VirtualMemorySize64;
+                    var used = process.PrivateMemorySize64;
+                    var max = process.MaxWorkingSet.ToInt64();
+                    max = Math.Max(available, max);
+                    _log.Info($"Used memory before: [{used}] bytes, of max [{max}]");
+                    // allocate 70% of free space
+                    var allocateBytes = (long)(0.7 * (max - used));
+                    _usedMemory = Allocate(allocateBytes);
+                    process.Refresh();
+                    _log.Info($"Used memory after: [{process.PrivateMemorySize64}] bytes");
+                }
+                
                 Sender.Tell("done");
                 return true;
+            }
+
+            private int[,] Allocate(long requestedBytes)
+            {
+                const double reduceFactor = 0.8;
+                // Trying to allocate given portion of memory, or at least something close to it
+                while (true)
+                {
+                    _log.Info($"Trying to allocate {requestedBytes} bytes");
+                    try
+                    {
+                        var numberOfArrays = requestedBytes / 1024;
+                        return new int[numberOfArrays, 248]; // each 248 element Int array will use ~ 1 kB
+                    }
+                    catch (OutOfMemoryException)
+                    {
+                        _log.Info($"Allocation of {requestedBytes} bytes failed, reducing by {reduceFactor}");
+                        requestedBytes = (long)(requestedBytes * reduceFactor);
+                        if (requestedBytes < 2) // Should not be possible, but just to not have infinite loop
+                            return new int[0, 0];
+                    }
+                }
             }
         }
         
@@ -91,7 +118,6 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             Node3 = Role("node-3");
         
             CommonConfig = DebugConfig(on: false)
-                .WithFallback(ClusterMetrics.DefaultConfig())
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     # Enable metrics extension in akka-cluster-metrics.
                     akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
@@ -125,6 +151,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                         }
                     }
                 "))
+                .WithFallback(ClusterMetrics.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
@@ -267,7 +294,8 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                     r.Count().Should().Be(6);
                 });
                 var routees = await GetCurrentRoutees(router4);
-                routees.Select(r => FullAddress((r as ActorRefRoutee).Actor)).Distinct()
+                routees
+                    .Select(r => FullAddress((r as ActorRefRoutee).Actor)).Distinct()
                     .Should()
                     .BeEquivalentTo(Node(_config.Node1).Address, Node(_config.Node2).Address, Node(_config.Node3).Address);
             }, _config.Node1);
