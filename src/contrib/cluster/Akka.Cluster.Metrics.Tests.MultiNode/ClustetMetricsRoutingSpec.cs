@@ -316,7 +316,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             await AwaitAssertAsync(async () =>
             {
                 var r = await GetCurrentRoutees(router);
-                r.Count().Should().Be(Roles.Count);
+                r.Count.Should().Be(Roles.Count);
             });
 
             var routees = await GetCurrentRoutees(router);
@@ -340,13 +340,13 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             var zero = ImmutableDictionary<Address, int>.Empty.AddRange(Roles.ToDictionary(r => Node(r).Address, r => 0));
             return ReceiveWhile(5.Seconds(), msg => (msg as AdaptiveLoadBalancingRouterConfig.Reply)?.Address, expectedReplies)
-                .Aggregate(zero, (replyDict, address) => replyDict.Add(address, replyDict[address] + 1));
+                .Aggregate(zero, (replyDict, address) => replyDict.SetItem(address, replyDict[address] + 1));
         }
 
-        private async Task<IEnumerable<Routee>> GetCurrentRoutees(IActorRef router)
+        private async Task<List<Routee>> GetCurrentRoutees(IActorRef router)
         {
             var reply = await router.Ask<Routees>(GetRoutees.Instance);
-            return reply.Members;
+            return reply.Members.ToList();
         }
     }
 }
