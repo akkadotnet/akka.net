@@ -11,6 +11,7 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Dispatch;
 using Akka.TestKit;
+using Akka.Util;
 using Xunit;
 using FluentAssertions;
 using FsCheck;
@@ -32,7 +33,7 @@ namespace Akka.Cluster.Metrics.Tests
             
             // Supervisor.
             settings.SupervisorName.Should().Be("cluster-metrics");
-            settings.SupervisorStrategyProvider.Should().BeEquivalentTo(typeof(ClusterMetricsStrategy).FullName);
+            settings.SupervisorStrategyProvider.Should().BeEquivalentTo(typeof(ClusterMetricsStrategy).TypeQualifiedName());
             settings.SupervisorStrategyConfiguration.ToString().ShouldBeEquivalentTo(
                 ConfigurationFactory.ParseString("loggingEnabled=true,withinTimeRange=3s,maxNrOfRetries=3").ToString());
             
