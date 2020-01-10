@@ -175,7 +175,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override Props RoutingLogicController(RoutingLogic routingLogic)
         {
-            return new Props(typeof(AdaptiveLoadBalancingMetricsListener), new object[] { routingLogic as AdaptiveLoadBalancingRoutingLogic });
+            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener(routingLogic as AdaptiveLoadBalancingRoutingLogic));
         }
         
         /// <inheritdoc />
@@ -329,7 +329,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override Props RoutingLogicController(RoutingLogic routingLogic)
         {
-            return new Props(typeof(AdaptiveLoadBalancingMetricsListener), new object[] { routingLogic as AdaptiveLoadBalancingRoutingLogic });
+            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener(routingLogic as AdaptiveLoadBalancingRoutingLogic));
         }
 
         /// <inheritdoc />
