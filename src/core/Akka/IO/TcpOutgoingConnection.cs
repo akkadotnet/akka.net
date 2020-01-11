@@ -56,7 +56,7 @@ namespace Akka.IO
         {
             if (_connectArgs != null)
             {
-                Tcp.SocketEventArgsPool.Release(_connectArgs);
+                ReleaseSocketEventArgs(_connectArgs);
                 _connectArgs = null;
             }
         }
@@ -151,7 +151,7 @@ namespace Akka.IO
             {
                 Log.Debug("Attempting connection to [{0}]", address);
 
-                _connectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+                _connectArgs = CreateSocketEventArgs(Self);
                 _connectArgs.RemoteEndPoint = address;
                 // we don't setup buffer here, it shouldn't be necessary just for connection
                 if (!Socket.ConnectAsync(_connectArgs))
