@@ -377,6 +377,7 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; }
         public int TotalInstances { get; }
         public string UseRole { get; }
+        public static int GetMaxTotalNrOfInstances(Akka.Configuration.Config config) { }
     }
 }
 namespace Akka.Cluster.Serialization
