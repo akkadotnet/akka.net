@@ -52,57 +52,67 @@ namespace Akka.Cluster.Metrics.Collectors
         /// <inheritdoc />
         public NodeMetrics Sample()
         {
-            var process = Process.GetCurrentProcess();
-            
-            var metrics = new List<NodeMetrics.Types.Metric>()
+            using (var process = Process.GetCurrentProcess())
             {
-                // Memory
-                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, process.PrivateMemorySize64).Value,
-                // VirtualMemorySize64 is not best idea here...
-                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
-                // CPU
-                NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
-            };
+                var metrics = new List<NodeMetrics.Types.Metric>()
+                {
+                    // Memory
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, process.PrivateMemorySize64).Value,
+                    // VirtualMemorySize64 is not best idea here...
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
+                    // CPU Processors
+                    NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
+                };
 
-            if (process.MaxWorkingSet != IntPtr.Zero)
-                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64()).Value);
+                if (process.MaxWorkingSet != IntPtr.Zero)
+                    metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64()).Value);
 
-            var (processCpuUsage, totalCpuUsage) = GetCpuUsages(process);
-            metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage).Value);
-            metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage).Value);
+                var (processCpuUsage, totalCpuUsage) = GetCpuUsages(process.Id);
+                // CPU % by process
+                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage).Value);
+                // CPU % by all processes that are used for overall CPU capacity calculation
+                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage).Value);
             
-            return new NodeMetrics(_address, DateTime.UtcNow.ToTimestamp(), metrics);
+                return new NodeMetrics(_address, DateTime.UtcNow.ToTimestamp(), metrics);
+            }
         }
         
-        private (double ProcessUsage, double TotalUsage) GetCpuUsages(Process currentProcess)
+        private (double ProcessUsage, double TotalUsage) GetCpuUsages(int currentProcessId)
         {
             var processes = GetProcesses();
 
-            // If this is first time we get timings, have to wait for some time to collect initial values
-            if (_lastCpuMeasure == TimeSpan.Zero)
+            try
             {
-                _lastCpuMeasure = _cpuWatch.Elapsed;
-                _lastCpuTimings = GetTotalProcessorTimes(processes);
-                Thread.Sleep(500);
-                processes.ForEach(p => p.Refresh());
-            }
-            
-            var endTime = _cpuWatch.Elapsed;
-            var endCpuUsages = GetTotalProcessorTimes(processes);
-            
-            var totalMsPassed = (endTime - _lastCpuMeasure).TotalMilliseconds;
-            var cpuUsagePercentages = endCpuUsages
-                .Where(u => _lastCpuTimings.ContainsKey(u.Key))
-                .ToImmutableDictionary(u => u.Key, u =>
+                // If this is first time we get timings, have to wait for some time to collect initial values
+                if (_lastCpuMeasure == TimeSpan.Zero)
                 {
-                    var timeForProcess = (u.Value - _lastCpuTimings[u.Key]).TotalMilliseconds;
-                    return  timeForProcess / (Environment.ProcessorCount * totalMsPassed);
-                });
+                    _lastCpuMeasure = _cpuWatch.Elapsed;
+                    _lastCpuTimings = GetTotalProcessorTimes(processes);
+                    Thread.Sleep(500);
+                    processes.ForEach(p => p.Refresh());
+                }
 
-            _lastCpuMeasure = endTime;
-            _lastCpuTimings = endCpuUsages;
+                var endTime = _cpuWatch.Elapsed;
+                var currentCpuTimings = GetTotalProcessorTimes(processes);
+                
+                var totalMsPassed = (endTime - _lastCpuMeasure).TotalMilliseconds;
+                var cpuUsagePercentages = currentCpuTimings
+                    .Where(u => _lastCpuTimings.ContainsKey(u.Key))
+                    .ToImmutableDictionary(u => u.Key, u =>
+                    {
+                        var timeForProcess = (u.Value - _lastCpuTimings[u.Key]).TotalMilliseconds;
+                        return  timeForProcess / (Environment.ProcessorCount * totalMsPassed);
+                    });
+
+                _lastCpuMeasure = endTime;
+                _lastCpuTimings = currentCpuTimings;
             
-            return (cpuUsagePercentages.GetValueOrDefault(currentProcess.Id, 0), cpuUsagePercentages.Values.DefaultIfEmpty().Sum());
+                return (cpuUsagePercentages.GetValueOrDefault(currentProcessId, 0), cpuUsagePercentages.Values.DefaultIfEmpty().Sum());
+            }
+            finally
+            {
+                processes.ForEach(p => p.Dispose());
+            }
         }
 
         private Process[] GetProcesses()

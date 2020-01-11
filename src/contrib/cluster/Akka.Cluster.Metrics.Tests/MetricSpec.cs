@@ -345,8 +345,8 @@ namespace Akka.Cluster.Metrics.Tests
                 {
                     cpu.Value.Processors.Should().BeGreaterThan(0);
                     
-                    cpu.Value.CpuProcessUsage.Should().BeInRange(0, 1);
-                    cpu.Value.CpuTotalUsage.Should().BeInRange(0, 1);
+                    cpu.Value.CpuProcessUsage.Should().BeInRange(0, 1, "CPU process usage should be between 0% and 100%");
+                    cpu.Value.CpuTotalUsage.Should().BeInRange(0, 1, "Total tracked CPU usage should be between 0% and 100%");
                 }
             }
         }
