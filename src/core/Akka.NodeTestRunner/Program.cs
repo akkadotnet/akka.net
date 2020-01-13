@@ -161,9 +161,24 @@ namespace Akka.NodeTestRunner
 
     class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
     {
+        private IActorRef _connection;
+        
         public RunnerTcpClient()
         {
             Become(WaitingForConnection);
+        }
+
+        /// <inheritdoc />
+        protected override void PostStop()
+        {
+            // Close connection property to avoid exception logged at TcpConnection actor once this actor is terminated
+            try
+            {
+                _connection.Ask<Tcp.Closed>(Tcp.Close.Instance, TimeSpan.FromSeconds(1)).Wait();
+            }
+            catch { /* well... at least we have tried */ }
+            
+            base.PostStop();
         }
 
         private void WaitingForConnection()
@@ -171,6 +186,7 @@ namespace Akka.NodeTestRunner
             Receive<Tcp.Connected>(connected =>
             {
                 Sender.Tell(new Tcp.Register(Self));
+                _connection = Sender;
                 Become(Connected(Sender));
             });
             Receive<string>(_ => Stash.Stash());
