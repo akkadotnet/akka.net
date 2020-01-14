@@ -2,7 +2,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("5cf8a8be-b634-473f-bb01-eba878746bd4")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Cluster.Tools.Client
 {
     public sealed class ClusterClient : Akka.Actor.ActorBase
@@ -48,11 +48,6 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionistExtensionProvider() { }
         public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
-    public sealed class ClusterClients
-    {
-        public ClusterClients(System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> clusterClientsList) { }
-        public System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
-    }
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
@@ -82,6 +77,11 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientUp(Akka.Actor.IActorRef clusterClient) { }
         public Akka.Actor.IActorRef ClusterClient { get; }
     }
+    public sealed class ClusterClients
+    {
+        public ClusterClients(System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> clusterClientsList) { }
+        public System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
+    }
     public sealed class ClusterReceptionist : Akka.Actor.ActorBase
     {
         public ClusterReceptionist(Akka.Actor.IActorRef pubSubMediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
@@ -103,9 +103,9 @@ namespace Akka.Cluster.Tools.Client
         public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithHeartbeat(System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan failureDetectionInterval) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts) { }
-        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(System.TimeSpan responseTunnelReceiveTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
     }
     public sealed class ContactPointAdded : Akka.Cluster.Tools.Client.IContactPointChange
     {
@@ -339,7 +339,6 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonManagerIsStuckException : Akka.Actor.AkkaException
     {
         public ClusterSingletonManagerIsStuckException(string message) { }
-        public ClusterSingletonManagerIsStuckException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
