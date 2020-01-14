@@ -632,7 +632,8 @@ namespace Akka.IO
             {
                 var buffer = new ByteBuffer(ReceiveArgs.Buffer, ReceiveArgs.Offset, ReceiveArgs.Count);
                 ReleaseSocketEventArgs(ReceiveArgs);
-                //TODO: there is potential risk, that socket was working while released. In that case releasing buffer may not be safe.
+                // TODO: When using DirectBufferPool as a pool impelementation, there is potential risk,
+                // that socket was working while released. In that case releasing buffer may not be safe.
                 Tcp.BufferPool.Release(buffer);
                 ReceiveArgs = null;
             }
