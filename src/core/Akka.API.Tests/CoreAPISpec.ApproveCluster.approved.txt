@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
@@ -377,7 +378,6 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; }
         public int TotalInstances { get; }
         public string UseRole { get; }
-        public static int GetMaxTotalNrOfInstances(Akka.Configuration.Config config) { }
     }
 }
 namespace Akka.Cluster.Serialization
