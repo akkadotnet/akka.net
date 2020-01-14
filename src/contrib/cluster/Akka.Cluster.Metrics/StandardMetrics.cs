@@ -36,15 +36,15 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Number of available processors
         /// </summary>
-        public const string Processors = "processors";
+        public const string Processors = "Processors";
         /// <summary>
         /// Contains CPU usage by current process
         /// </summary>
-        public const string CpuProcessUsage = "cpu-process";
+        public const string CpuProcessUsage = "CpuProcessUsage";
         /// <summary>
         /// Contains CPU usage by all processes
         /// </summary>
-        public const string CpuTotalUsage = "cpu-total";
+        public const string CpuTotalUsage = "CpuTotalUsage";
 
         /// <summary>
         /// Allocated memory metric

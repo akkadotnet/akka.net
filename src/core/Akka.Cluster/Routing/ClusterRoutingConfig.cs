@@ -258,7 +258,7 @@ namespace Akka.Cluster.Routing
         /// aware routers and nr-of-instances (if defined by user) takes
         /// precedence over max-total-nr-of-instances.
         /// </summary>
-        public static int GetMaxTotalNrOfInstances(Config config)
+        internal static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances");
             if (number == 0 || number == 1)

@@ -104,7 +104,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 
                 cluster.Unsubscribe(TestActor);
                 
-                TestConductor.Enter("all-up");
+                EnterBarrier("all-up");
             });
         }
 
@@ -112,14 +112,14 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             await RunOnAsync(AssertServiceOk, _config.Second);
             
-            TestConductor.Enter("done-2");
+            EnterBarrier("done-2");
         }
         
         private async Task Should_show_usage_of_the_stats_service_from_all_nodes()
         {
             await AssertServiceOk();
             
-            TestConductor.Enter("done-3");
+            EnterBarrier("done-3");
         }
 
         private async Task AssertServiceOk()
