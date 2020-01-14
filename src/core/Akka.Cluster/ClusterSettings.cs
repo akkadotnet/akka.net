@@ -66,8 +66,8 @@ namespace Akka.Cluster
             SchedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
             SchedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
 
-            MinNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
-                .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
+            MinNrOfMembersOfRole = cc.GetObject("role")
+                .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetField("min-nr-of-members").Value.GetInt());
 
             VerboseHeartbeatLogging = cc.GetBoolean("debug.verbose-heartbeat-logging");
             VerboseGossipReceivedLogging = cc.GetBoolean("debug.verbose-receive-gossip-logging");

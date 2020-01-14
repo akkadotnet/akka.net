@@ -131,10 +131,9 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="config">TBD</param>
-        public CachingConfig(Config config)
+        public CachingConfig(Config config) : base(null)
         {
-            var cachingConfig = config as CachingConfig;
-            if (cachingConfig != null)
+            if (config is CachingConfig cachingConfig)
             {
                 _config = cachingConfig._config;
                 _entryMap = cachingConfig._entryMap;
@@ -159,10 +158,10 @@ namespace Akka.Dispatch
                             var configValue = _config.GetValue(path);
                             if (configValue == null) //empty
                                 pathEntry = EmptyPathEntry;
-                            else if (configValue.IsString()) //is a string value
-                                pathEntry = new StringPathEntry(true, true, configValue.AtKey("cached"), configValue.GetString());
+                            else if (configValue.Type == HoconType.String) //is a string value
+                                pathEntry = new StringPathEntry(true, true, new Config(configValue.AtKey("cached")), configValue.GetString());
                             else //some other type of HOCON value
-                                pathEntry = new ValuePathEntry(true, true, configValue.AtKey("cached"));
+                                pathEntry = new ValuePathEntry(true, true, new Config(configValue.AtKey("cached")));
                         }
                         catch (Exception)
                         {
@@ -228,7 +227,7 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public override IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        public override IEnumerable<KeyValuePair<string, HoconField>> AsEnumerable()
         {
             return _config.AsEnumerable();
         }

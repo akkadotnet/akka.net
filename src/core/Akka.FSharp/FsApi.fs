@@ -388,13 +388,13 @@ module Linq =
 module Configuration = 
 
     /// Parses provided HOCON string into a valid Akka configuration object.
-    let parse = Akka.Configuration.ConfigurationFactory.ParseString
+    let parse = Hocon.ConfigurationFactory.ParseString
 
     /// Returns default Akka configuration.
-    let defaultConfig = Akka.Configuration.ConfigurationFactory.Default
+    let defaultConfig = Hocon.ConfigurationFactory.Default
 
     /// Loads Akka configuration from the project's .config file.
-    let load = Akka.Configuration.ConfigurationFactory.Load
+    let load = Hocon.ConfigurationFactory.Load
     
 module internal OptionHelper =
     
@@ -475,7 +475,7 @@ type Strategy =
         
 module System = 
     /// Creates an actor system with remote deployment serialization enabled.
-    let create (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
+    let create (name : string) (config : Hocon.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
         Serialization.exprSerializationSupport system
         system

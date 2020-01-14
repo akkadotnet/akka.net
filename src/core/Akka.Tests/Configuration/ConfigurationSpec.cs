@@ -16,6 +16,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Tests.Configuration
 {
@@ -75,23 +76,23 @@ namespace Akka.Tests.Configuration
         }
 #endif
 
-        [Fact]
-        public void Can_create_config_from_source_object()
-        {
-            var source = new MyObjectConfig
-            {
-                StringProperty = "aaa",
-                BoolProperty = true,
-                IntegerArray = new[] {1, 2, 3, 4}
-            };
+        //[Fact]
+        //public void Can_create_config_from_source_object()
+        //{
+        //    var source = new MyObjectConfig
+        //    {
+        //        StringProperty = "aaa",
+        //        BoolProperty = true,
+        //        IntegerArray = new[] {1, 2, 3, 4}
+        //    };
 
-            var config = ConfigurationFactory.FromObject(source);
+        //    var config = ConfigurationFactory.FromObject(source);
 
-            Assert.Equal("aaa", config.GetString("StringProperty"));
-            Assert.True(config.GetBoolean("BoolProperty"));
+        //    Assert.Equal("aaa", config.GetString("StringProperty"));
+        //    Assert.True(config.GetBoolean("BoolProperty"));
 
-            Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntegerArray").ToArray());
-        }
+        //    Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntegerArray").ToArray());
+        //}
 
         [Fact]
         public void Can_merge_objects()
@@ -176,7 +177,7 @@ a {
         public void Parsing_empty_string_should_produce_empty_hocon_root()
         {
             var value = Parser.Parse(string.Empty, null).Value;
-            value.IsEmpty.ShouldBeTrue();
+            value.Type.Should().Be(HoconType.Empty);
         }
 
         [Fact]
