@@ -110,7 +110,7 @@ namespace Akka.Cluster.Metrics.Serialization {
     public const int FromFieldNumber = 1;
     private global::Akka.Remote.Serialization.Proto.Msg.AddressData from_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
+    internal global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
       get { return from_; }
       set {
         from_ = value;
@@ -313,7 +313,7 @@ namespace Akka.Cluster.Metrics.Serialization {
         = pb::FieldCodec.ForMessage(10, global::Akka.Remote.Serialization.Proto.Msg.AddressData.Parser);
     private readonly pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> allAddresses_ = new pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> AllAddresses {
+    internal pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> AllAddresses {
       get { return allAddresses_; }
     }
 
