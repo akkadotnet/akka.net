@@ -16,13 +16,14 @@ namespace Akka.Actor
 {
     /// <summary>
     /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
-    /// access to the <see cref="Akka.Configuration.Config"/> object. For more detailed information about the
+    /// access to the <see cref="Hocon.Config"/> object. For more detailed information about the
     /// different possible configuration options, look in the Akka.NET Documentation under Configuration
     /// (http://getakka.net/docs/concepts/configuration).
     /// </summary>
     public class Settings
     {
         private readonly Config _userConfig;
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
         private Config _fallbackConfig;
 
         private void RebuildConfig()
@@ -57,7 +58,7 @@ namespace Akka.Actor
         public Settings(ActorSystem system, Config config)
         {
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();
+            _fallbackConfig = ConfigurationFactory.Default().WithFallback(AkkaDllConfig);
             RebuildConfig();
 
             System = system;
