@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Xml.Linq;
 using static Akka.MultiNodeTestRunner.TrxReporter.Models.XmlHelper;
 
 namespace Akka.MultiNodeTestRunner.TrxReporter.Models

@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 
+using System;
+
 namespace Akka.MultiNodeTestRunner.Shared.AzureDevOps
 {
     public class SpecEvent<T>

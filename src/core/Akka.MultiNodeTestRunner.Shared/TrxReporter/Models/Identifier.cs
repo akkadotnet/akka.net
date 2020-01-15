@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 
+using System;
+
 namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
     public struct Identifier
