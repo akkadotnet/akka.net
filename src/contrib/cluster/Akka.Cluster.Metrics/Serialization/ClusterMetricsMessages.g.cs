@@ -24,39 +24,39 @@ namespace Akka.Cluster.Metrics.Serialization {
     static ClusterMetricsMessagesReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChxDbHVzdGVyTWV0cmljc01lc3NhZ2VzLnByb3RvIl4KFU1ldHJpY3NHb3Nz",
-            "aXBFbnZlbG9wZRIWCgRmcm9tGAEgASgLMgguQWRkcmVzcxIeCgZnb3NzaXAY",
-            "AiABKAsyDi5NZXRyaWNzR29zc2lwEg0KBXJlcGx5GAMgASgIImoKDU1ldHJp",
-            "Y3NHb3NzaXASHgoMYWxsQWRkcmVzc2VzGAEgAygLMgguQWRkcmVzcxIWCg5h",
-            "bGxNZXRyaWNOYW1lcxgCIAMoCRIhCgtub2RlTWV0cmljcxgDIAMoCzIMLk5v",
-            "ZGVNZXRyaWNzIpgDCgtOb2RlTWV0cmljcxIUCgxhZGRyZXNzSW5kZXgYASAB",
-            "KAUSEQoJdGltZXN0YW1wGAIgASgDEiQKB21ldHJpY3MYAyADKAsyEy5Ob2Rl",
-            "TWV0cmljcy5NZXRyaWMaZQoGTnVtYmVyEiUKBHR5cGUYASABKA4yFy5Ob2Rl",
-            "TWV0cmljcy5OdW1iZXJUeXBlEg8KB3ZhbHVlMzIYAiABKA0SDwoHdmFsdWU2",
-            "NBgDIAEoBBISCgpzZXJpYWxpemVkGAQgASgMGiQKBEVXTUESDQoFdmFsdWUY",
-            "ASABKAESDQoFYWxwaGEYAiABKAEaYQoGTWV0cmljEhEKCW5hbWVJbmRleBgB",
-            "IAEoBRIjCgZudW1iZXIYAiABKAsyEy5Ob2RlTWV0cmljcy5OdW1iZXISHwoE",
-            "ZXdtYRgDIAEoCzIRLk5vZGVNZXRyaWNzLkVXTUEiSgoKTnVtYmVyVHlwZRIO",
-            "CgpTZXJpYWxpemVkEAASCgoGRG91YmxlEAESCQoFRmxvYXQQAhILCgdJbnRl",
-            "Z2VyEAMSCAoETG9uZxAEIksKB0FkZHJlc3MSDgoGc3lzdGVtGAEgASgJEhAK",
-            "CGhvc3RuYW1lGAIgASgJEgwKBHBvcnQYAyABKA0SEAoIcHJvdG9jb2wYBCAB",
-            "KAkikgEKGUFkYXB0aXZlTG9hZEJhbGFuY2luZ1Bvb2wSKQoPbWV0cmljc1Nl",
-            "bGVjdG9yGAEgASgLMhAuTWV0cmljc1NlbGVjdG9yEhUKDW5yT2ZJbnN0YW5j",
-            "ZXMYAiABKA0SGAoQcm91dGVyRGlzcGF0Y2hlchgDIAEoCRIZChF1c2VQb29s",
-            "RGlzcGF0Y2hlchgEIAEoCCJHCg9NZXRyaWNzU2VsZWN0b3ISFAoMc2VyaWFs",
-            "aXplcklkGAEgASgNEhAKCG1hbmlmZXN0GAIgASgJEgwKBGRhdGEYAyABKAwi",
-            "OQoSTWl4TWV0cmljc1NlbGVjdG9yEiMKCXNlbGVjdG9ycxgBIAMoCzIQLk1l",
-            "dHJpY3NTZWxlY3RvckInSAGqAiJBa2thLkNsdXN0ZXIuTWV0cmljcy5TZXJp",
-            "YWxpemF0aW9uYgZwcm90bzM="));
+            "ChxDbHVzdGVyTWV0cmljc01lc3NhZ2VzLnByb3RvGh9wcm90b2J1Zi9Db250",
+            "YWluZXJGb3JtYXRzLnByb3RvIoYBChVNZXRyaWNzR29zc2lwRW52ZWxvcGUS",
+            "PgoEZnJvbRgBIAEoCzIwLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLkFkZHJlc3NEYXRhEh4KBmdvc3NpcBgCIAEoCzIOLk1ldHJpY3NH",
+            "b3NzaXASDQoFcmVwbHkYAyABKAgikgEKDU1ldHJpY3NHb3NzaXASRgoMYWxs",
+            "QWRkcmVzc2VzGAEgAygLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuQWRkcmVzc0RhdGESFgoOYWxsTWV0cmljTmFtZXMYAiADKAkS",
+            "IQoLbm9kZU1ldHJpY3MYAyADKAsyDC5Ob2RlTWV0cmljcyKYAwoLTm9kZU1l",
+            "dHJpY3MSFAoMYWRkcmVzc0luZGV4GAEgASgFEhEKCXRpbWVzdGFtcBgCIAEo",
+            "AxIkCgdtZXRyaWNzGAMgAygLMhMuTm9kZU1ldHJpY3MuTWV0cmljGmUKBk51",
+            "bWJlchIlCgR0eXBlGAEgASgOMhcuTm9kZU1ldHJpY3MuTnVtYmVyVHlwZRIP",
+            "Cgd2YWx1ZTMyGAIgASgNEg8KB3ZhbHVlNjQYAyABKAQSEgoKc2VyaWFsaXpl",
+            "ZBgEIAEoDBokCgRFV01BEg0KBXZhbHVlGAEgASgBEg0KBWFscGhhGAIgASgB",
+            "GmEKBk1ldHJpYxIRCgluYW1lSW5kZXgYASABKAUSIwoGbnVtYmVyGAIgASgL",
+            "MhMuTm9kZU1ldHJpY3MuTnVtYmVyEh8KBGV3bWEYAyABKAsyES5Ob2RlTWV0",
+            "cmljcy5FV01BIkoKCk51bWJlclR5cGUSDgoKU2VyaWFsaXplZBAAEgoKBkRv",
+            "dWJsZRABEgkKBUZsb2F0EAISCwoHSW50ZWdlchADEggKBExvbmcQBCKSAQoZ",
+            "QWRhcHRpdmVMb2FkQmFsYW5jaW5nUG9vbBIpCg9tZXRyaWNzU2VsZWN0b3IY",
+            "ASABKAsyEC5NZXRyaWNzU2VsZWN0b3ISFQoNbnJPZkluc3RhbmNlcxgCIAEo",
+            "DRIYChByb3V0ZXJEaXNwYXRjaGVyGAMgASgJEhkKEXVzZVBvb2xEaXNwYXRj",
+            "aGVyGAQgASgIIkcKD01ldHJpY3NTZWxlY3RvchIUCgxzZXJpYWxpemVySWQY",
+            "ASABKA0SEAoIbWFuaWZlc3QYAiABKAkSDAoEZGF0YRgDIAEoDCI5ChJNaXhN",
+            "ZXRyaWNzU2VsZWN0b3ISIwoJc2VsZWN0b3JzGAEgAygLMhAuTWV0cmljc1Nl",
+            "bGVjdG9yQidIAaoCIkFra2EuQ2x1c3Rlci5NZXRyaWNzLlNlcmlhbGl6YXRp",
+            "b25iBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { },
+          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope), global::Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope.Parser, new[]{ "From", "Gossip", "Reply" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.MetricsGossip), global::Akka.Cluster.Metrics.Serialization.MetricsGossip.Parser, new[]{ "AllAddresses", "AllMetricNames", "NodeMetrics" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.NodeMetrics), global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Parser, new[]{ "AddressIndex", "Timestamp", "Metrics" }, null, new[]{ typeof(global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.NumberType) }, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number), global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number.Parser, new[]{ "Type", "Value32", "Value64", "Serialized" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA), global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA.Parser, new[]{ "Value", "Alpha" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric), global::Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric.Parser, new[]{ "NameIndex", "Number", "Ewma" }, null, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.Address), global::Akka.Cluster.Metrics.Serialization.Address.Parser, new[]{ "System", "Hostname", "Port", "Protocol" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool), global::Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool.Parser, new[]{ "MetricsSelector", "NrOfInstances", "RouterDispatcher", "UsePoolDispatcher" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.MetricsSelector), global::Akka.Cluster.Metrics.Serialization.MetricsSelector.Parser, new[]{ "SerializerId", "Manifest", "Data" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Metrics.Serialization.MixMetricsSelector), global::Akka.Cluster.Metrics.Serialization.MixMetricsSelector.Parser, new[]{ "Selectors" }, null, null, null, null)
@@ -108,9 +108,9 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     /// <summary>Field number for the "from" field.</summary>
     public const int FromFieldNumber = 1;
-    private global::Akka.Cluster.Metrics.Serialization.Address from_;
+    private global::Akka.Remote.Serialization.Proto.Msg.AddressData from_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Metrics.Serialization.Address From {
+    internal global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
       get { return from_; }
       set {
         from_ = value;
@@ -219,7 +219,7 @@ namespace Akka.Cluster.Metrics.Serialization {
       }
       if (other.from_ != null) {
         if (from_ == null) {
-          From = new global::Akka.Cluster.Metrics.Serialization.Address();
+          From = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
         }
         From.MergeFrom(other.From);
       }
@@ -245,7 +245,7 @@ namespace Akka.Cluster.Metrics.Serialization {
             break;
           case 10: {
             if (from_ == null) {
-              From = new global::Akka.Cluster.Metrics.Serialization.Address();
+              From = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
             }
             input.ReadMessage(From);
             break;
@@ -309,11 +309,11 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     /// <summary>Field number for the "allAddresses" field.</summary>
     public const int AllAddressesFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Metrics.Serialization.Address> _repeated_allAddresses_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Metrics.Serialization.Address.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Metrics.Serialization.Address> allAddresses_ = new pbc::RepeatedField<global::Akka.Cluster.Metrics.Serialization.Address>();
+    private static readonly pb::FieldCodec<global::Akka.Remote.Serialization.Proto.Msg.AddressData> _repeated_allAddresses_codec
+        = pb::FieldCodec.ForMessage(10, global::Akka.Remote.Serialization.Proto.Msg.AddressData.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> allAddresses_ = new pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Cluster.Metrics.Serialization.Address> AllAddresses {
+    internal pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> AllAddresses {
       get { return allAddresses_; }
     }
 
@@ -1145,223 +1145,6 @@ namespace Akka.Cluster.Metrics.Serialization {
 
   }
 
-  /// <summary>
-  ///*
-  /// Defines a remote address.
-  /// </summary>
-  public sealed partial class Address : pb::IMessage<Address> {
-    private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Address> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[3]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address(Address other) : this() {
-      system_ = other.system_;
-      hostname_ = other.hostname_;
-      port_ = other.port_;
-      protocol_ = other.protocol_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address Clone() {
-      return new Address(this);
-    }
-
-    /// <summary>Field number for the "system" field.</summary>
-    public const int SystemFieldNumber = 1;
-    private string system_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string System {
-      get { return system_; }
-      set {
-        system_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "hostname" field.</summary>
-    public const int HostnameFieldNumber = 2;
-    private string hostname_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Hostname {
-      get { return hostname_; }
-      set {
-        hostname_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "port" field.</summary>
-    public const int PortFieldNumber = 3;
-    private uint port_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint Port {
-      get { return port_; }
-      set {
-        port_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "protocol" field.</summary>
-    public const int ProtocolFieldNumber = 4;
-    private string protocol_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Protocol {
-      get { return protocol_; }
-      set {
-        protocol_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as Address);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Address other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (System != other.System) return false;
-      if (Hostname != other.Hostname) return false;
-      if (Port != other.Port) return false;
-      if (Protocol != other.Protocol) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (System.Length != 0) hash ^= System.GetHashCode();
-      if (Hostname.Length != 0) hash ^= Hostname.GetHashCode();
-      if (Port != 0) hash ^= Port.GetHashCode();
-      if (Protocol.Length != 0) hash ^= Protocol.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (System.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(System);
-      }
-      if (Hostname.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Hostname);
-      }
-      if (Port != 0) {
-        output.WriteRawTag(24);
-        output.WriteUInt32(Port);
-      }
-      if (Protocol.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(Protocol);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (System.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(System);
-      }
-      if (Hostname.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Hostname);
-      }
-      if (Port != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(Port);
-      }
-      if (Protocol.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Protocol);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Address other) {
-      if (other == null) {
-        return;
-      }
-      if (other.System.Length != 0) {
-        System = other.System;
-      }
-      if (other.Hostname.Length != 0) {
-        Hostname = other.Hostname;
-      }
-      if (other.Port != 0) {
-        Port = other.Port;
-      }
-      if (other.Protocol.Length != 0) {
-        Protocol = other.Protocol;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            System = input.ReadString();
-            break;
-          }
-          case 18: {
-            Hostname = input.ReadString();
-            break;
-          }
-          case 24: {
-            Port = input.ReadUInt32();
-            break;
-          }
-          case 34: {
-            Protocol = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-
-  }
-
   public sealed partial class AdaptiveLoadBalancingPool : pb::IMessage<AdaptiveLoadBalancingPool> {
     private static readonly pb::MessageParser<AdaptiveLoadBalancingPool> _parser = new pb::MessageParser<AdaptiveLoadBalancingPool>(() => new AdaptiveLoadBalancingPool());
     private pb::UnknownFieldSet _unknownFields;
@@ -1370,7 +1153,7 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1598,7 +1381,7 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1783,7 +1566,7 @@ namespace Akka.Cluster.Metrics.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagesReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
