@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashingRouterSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -101,6 +101,7 @@ namespace Akka.Tests.Routing
                 router = consistent-hashing-group
                 routees.paths = [""/user/A"",""/user/B"",""/user/C"", ]
               }
+            }
         ")
         {
             _router1 = Sys.ActorOf(Props.Create<Echo>().WithRouter(FromConfig.Instance), "router1");
