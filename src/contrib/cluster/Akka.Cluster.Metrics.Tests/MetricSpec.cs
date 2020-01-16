@@ -333,13 +333,10 @@ namespace Akka.Cluster.Metrics.Tests
                 var heapMemory = StandardMetrics.Memory.Decompose(node);
                 if (heapMemory.HasValue)
                 {
-                    heapMemory.Value.UsedSmoothValue.Should().BeGreaterThan(0);
-                    heapMemory.Value.AvailableSmoothValue.Should().BeGreaterOrEqualTo(heapMemory.Value.UsedSmoothValue);
+                    heapMemory.Value.UsedSmoothValue.Should().BeGreaterThan(0, "Memory actual usage should be collected");
+                    heapMemory.Value.AvailableSmoothValue.Should().BeGreaterOrEqualTo(0, "Available memory should be collected");
                 }
-            }
-            
-            foreach (var node in _nodes)
-            {
+
                 var cpu = StandardMetrics.Cpu.Decompose(node);
                 if (cpu.HasValue)
                 {

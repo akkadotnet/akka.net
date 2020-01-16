@@ -106,7 +106,7 @@ namespace Akka.Cluster.Metrics.Serialization
                     if (latest.Average.HasValue)
                         return new Metric(Name, latest.Value, latest.Average);
 
-                    return new Metric(Name, latest.Value, Average);
+                    return new Metric(Name, latest.Value, Option<EWMA>.None);
                 }
                 
                 /// <summary>
