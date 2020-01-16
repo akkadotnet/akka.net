@@ -28,6 +28,7 @@ namespace Akka.Tests.Actor.Dispatch
                /some-ui-actor{
                 dispatcher = akka.actor.synchronized-dispatcher
                }
+            }
         ");
 
         public CurrentSynchronizationContextDispatcherSpecs() : base(_config) { }
