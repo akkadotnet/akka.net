@@ -68,7 +68,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 using (var process = Process.GetCurrentProcess())
                 {
                     var available = process.VirtualMemorySize64;
-                    var used = process.PrivateMemorySize64;
+                    var used = GC.GetTotalMemory(true);
                     var max = process.MaxWorkingSet.ToInt64();
                     max = Math.Max(available, max);
                     _log.Info($"Used memory before: [{used}] bytes, of max [{max}]");
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                     var allocateBytes = (long)(0.7 * (max - used));
                     _usedMemory = Allocate(allocateBytes);
                     process.Refresh();
-                    _log.Info($"Used memory after: [{process.PrivateMemorySize64}] bytes");
+                    _log.Info($"Used memory after: [{GC.GetTotalMemory(true)}] bytes");
                 }
                 
                 Sender.Tell("done");
