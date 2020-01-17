@@ -80,21 +80,31 @@ namespace Akka.Cluster.Metrics.Collectors
         
         private (double ProcessUsage, double TotalUsage) GetCpuUsages(int currentProcessId)
         {
-            var processes = GetProcesses();
-
+            Process[] processes = null;
+            
             try
             {
+                TimeSpan endTime;
+                ImmutableDictionary<int, TimeSpan> currentCpuTimings;
+                
                 // If this is first time we get timings, have to wait for some time to collect initial values
                 if (_lastCpuMeasure == TimeSpan.Zero)
                 {
-                    _lastCpuMeasure = _cpuWatch.Elapsed;
+                    _lastCpuMeasure = _cpuWatch.Elapsed; // Start capturing process timings
+                    processes = GetProcesses();
                     _lastCpuTimings = GetTotalProcessorTimes(processes);
                     Thread.Sleep(500);
                     processes.ForEach(p => p.Refresh());
+                    endTime = _cpuWatch.Elapsed; // Stop capturing process timings
+                    currentCpuTimings = GetTotalProcessorTimes(processes);
                 }
-
-                var endTime = _cpuWatch.Elapsed;
-                var currentCpuTimings = GetTotalProcessorTimes(processes);
+                else
+                {
+                    processes = GetProcesses();
+                    endTime = _cpuWatch.Elapsed;
+                    currentCpuTimings = GetTotalProcessorTimes(processes);
+                }
+                
                 
                 var totalMsPassed = (endTime - _lastCpuMeasure).TotalMilliseconds;
                 var cpuUsagePercentages = currentCpuTimings
@@ -112,7 +122,7 @@ namespace Akka.Cluster.Metrics.Collectors
             }
             finally
             {
-                processes.ForEach(p => p.Dispose());
+                processes?.ForEach(p => p.Dispose());
             }
         }
 
