@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.TestKit
 {
@@ -117,6 +118,54 @@ namespace Akka.TestKit
             /// TBD
             /// </summary>
             public AutoPilot AutoPilot { get { return _autoPilot; } }
+        }
+
+        /// <summary>
+        /// Message which is intended to allow TestKit to spawn a child actor
+        /// </summary>
+        public class Spawn : INoSerializationVerificationNeeded
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly Props _props;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly Option<string> _name;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly Option<SupervisorStrategy> _supervisorStrategy;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="props">TBD</param>
+            /// <param name="name">TBD</param>
+            /// <param name="supervisorStrategy">TBD</param>
+            public Spawn(Props props, Option<string> name, Option<SupervisorStrategy> supervisorStrategy)
+            {
+                _props = props;
+                _name = name;
+                _supervisorStrategy = supervisorStrategy;
+            }
+
+            /// <summary>
+            /// Using the given context, create an actor of the given _props, and optionally naming it with _name
+            /// </summary>
+            /// <param name="context">TBD</param>
+            /// <returns></returns>
+            public IActorRef Apply(IActorRefFactory context)
+            {
+                if (_name.HasValue)
+                {
+                    return context.ActorOf(_props, _name.Value);
+                }
+                return context.ActorOf(_props);
+            }
         }
     }
 }

@@ -55,6 +55,16 @@ namespace DocsExamples.Testkit
         }
 
         [Fact]
+        public void Test_Probe_Parent_Test()
+        {
+            var parent = CreateTestProbe();
+            var child = parent.ChildActorOf(Props.Create<Child>());
+
+            parent.Send(child, "ping");
+            parent.ExpectMsg("pong");
+        }
+
+        [Fact]
         public void Fabricated_Parent_Should_Test_Child_Responses()
         {
             var proxy = CreateTestProbe();
