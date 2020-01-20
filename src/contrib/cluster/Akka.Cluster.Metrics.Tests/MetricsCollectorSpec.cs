@@ -90,7 +90,7 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public async Task MetricsCollector_should_collect_50_node_metrics_samples_in_an_acceptable_duration()
         {
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 for (var i = 0; i < 50; ++i)
                 {
