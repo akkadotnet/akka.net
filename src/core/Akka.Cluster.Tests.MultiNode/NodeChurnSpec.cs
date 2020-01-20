@@ -157,7 +157,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         var cluster = Cluster.Get(s);
                         cluster.State.Members.Count.Should().Be(numberOfMembers);
-                        cluster.State.Members.All(c => c.Status == MemberStatus.Up).Should().BeTrue();
+                        cluster.State.Members.All(c => c.Status == MemberStatus.Up).Should().BeTrue("All members should be up.");
                     });
                 });
             });
