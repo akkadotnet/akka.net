@@ -93,8 +93,8 @@ namespace Akka.Remote.Transport.DotNetty
                     _writer.Reset();
                 }
 
-                // channel is still writing
-                if (_context.Channel.Active)
+                // channel is still open
+                if (_context.Channel.Open)
                 {
                     _context.Executor.Schedule(this, _interval); // reschedule
                 }
