@@ -44,6 +44,14 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override Task WriteAsync(IChannelHandlerContext context, object message)
         {
+            /*
+             * Need to add the write to the rest of the pipeline first before we
+             * include it in the formula for determining whether or not we flush
+             * right now. The reason being is that if we did this the other way around,
+             * we could flush first before the write was in the "flushable" buffer and
+             * this can lead to "dangling writes" that never actually get transmitted
+             * across the network.
+             */
             var write = base.WriteAsync(context, message);
             _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
             _currentPendingWrites++;
