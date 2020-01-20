@@ -29,13 +29,14 @@ namespace Akka.Cluster.Metrics.Collectors
         private readonly Address _address;
         
         private readonly Stopwatch _cpuWatch;
-        private TimeSpan _lastCpuMeasure = TimeSpan.Zero;
+        private TimeSpan _lastCpuMeasure;
+        private bool _firstSample = true;
         private ImmutableDictionary<int, TimeSpan> _lastCpuTimings = ImmutableDictionary<int, TimeSpan>.Empty;
 
         public DefaultCollector(Address address)
         {
             _address = address;
-            _cpuWatch = Stopwatch.StartNew();
+            _cpuWatch = new Stopwatch();
         }
         
         public DefaultCollector(ActorSystem system) 
@@ -84,29 +85,38 @@ namespace Akka.Cluster.Metrics.Collectors
             
             try
             {
-                TimeSpan endTime;
+                TimeSpan measureStartTime;
+                TimeSpan measureEndTime;
                 ImmutableDictionary<int, TimeSpan> currentCpuTimings;
                 
                 // If this is first time we get timings, have to wait for some time to collect initial values
-                if (_lastCpuMeasure == TimeSpan.Zero)
+                if (_firstSample)
                 {
-                    _lastCpuMeasure = _cpuWatch.Elapsed; // Start capturing process timings
+                    _firstSample = false;
+                    _cpuWatch.Start();
                     processes = GetProcesses();
                     _lastCpuTimings = GetTotalProcessorTimes(processes);
                     Thread.Sleep(500);
+                    // Sample iteration time: start next sample time BEFORE we collect "old" metric
+                    _lastCpuMeasure = _cpuWatch.Elapsed;
                     processes.ForEach(p => p.Refresh());
-                    endTime = _cpuWatch.Elapsed; // Stop capturing process timings
+                    // Sample iteration time: stop current sample time AFTER we collect "new" metric
+                    measureEndTime = _cpuWatch.Elapsed;
                     currentCpuTimings = GetTotalProcessorTimes(processes);
                 }
                 else
                 {
+                    // Now start is before we collected metric last time
+                    measureStartTime = _lastCpuMeasure; 
+                    // Sample iteration time: start next sample time BEFORE we collect "old" metric
+                    _lastCpuMeasure = _cpuWatch.Elapsed;
                     processes = GetProcesses();
-                    endTime = _cpuWatch.Elapsed;
+                    // Sample iteration time: stop current sample time AFTER we collect "new" metric
+                    measureEndTime = _cpuWatch.Elapsed;
                     currentCpuTimings = GetTotalProcessorTimes(processes);
                 }
                 
-                
-                var totalMsPassed = (endTime - _lastCpuMeasure).TotalMilliseconds;
+                var totalMsPassed = (measureEndTime - measureStartTime).TotalMilliseconds;
                 var cpuUsagePercentages = currentCpuTimings
                     .Where(u => _lastCpuTimings.ContainsKey(u.Key))
                     .ToImmutableDictionary(u => u.Key, u =>
@@ -115,7 +125,6 @@ namespace Akka.Cluster.Metrics.Collectors
                         return  timeForProcess / (Environment.ProcessorCount * totalMsPassed);
                     });
 
-                _lastCpuMeasure = endTime;
                 _lastCpuTimings = currentCpuTimings;
             
                 return (cpuUsagePercentages.GetValueOrDefault(currentProcessId, 0), cpuUsagePercentages.Values.DefaultIfEmpty().Sum());
