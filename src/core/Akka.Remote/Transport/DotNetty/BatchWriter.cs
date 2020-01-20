@@ -65,6 +65,13 @@ namespace Akka.Remote.Transport.DotNetty
             return write;
         }
 
+        public override Task CloseAsync(IChannelHandlerContext context)
+        {
+            // flush any pending writes first
+            context.Flush();
+            return base.CloseAsync(context);
+        }
+
         void ScheduleFlush(IChannelHandlerContext context)
         {
             // Schedule a recurring flush - only fires when there's writable data
