@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_succeed_with_timer()
         {
-            var writer = new BatchWriter();
+            var writer = new BatchWriter(new BatchWriterSettings());
             var ch = new EmbeddedChannel(Flush, writer);
 
             await Flush.Activated;
@@ -104,7 +104,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_flush_messages_during_shutdown()
         {
-            var writer = new BatchWriter();
+            var writer = new BatchWriter(new BatchWriterSettings());
             var ch = new EmbeddedChannel(Flush, writer);
 
             await Flush.Activated;

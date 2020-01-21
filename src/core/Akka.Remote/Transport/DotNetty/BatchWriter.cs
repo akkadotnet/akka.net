@@ -22,19 +22,19 @@ namespace Akka.Remote.Transport.DotNetty
     internal class BatchWriterSettings
     {
         public const int DefaultMaxPendingWrites = 30;
-        public const int DefaultMaxPendingBytes = 16000;
+        public const long DefaultMaxPendingBytes = 16 * 1024L;
         public static readonly TimeSpan DefaultFlushInterval = TimeSpan.FromMilliseconds(40);
 
         public BatchWriterSettings(Config hocon)
         {
             EnableBatching = hocon.GetBoolean("enabled", true);
             MaxPendingWrites = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
-            MaxPendingBytes = hocon.GetInt("max-pending-bytes", DefaultMaxPendingBytes);
+            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes") ?? DefaultMaxPendingBytes;
             FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
         }
 
         public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true, 
-            int maxPendingWrites = DefaultMaxPendingWrites, int maxPendingBytes = DefaultMaxPendingBytes)
+            int maxPendingWrites = DefaultMaxPendingWrites, long maxPendingBytes = DefaultMaxPendingBytes)
         {
             EnableBatching = enableBatching;
             MaxPendingWrites = maxPendingWrites;
@@ -72,7 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// <remarks>
         /// Defaults to 16kb.
         /// </remarks>
-        public int MaxPendingBytes { get; }
+        public long MaxPendingBytes { get; }
     }
 
     /// <summary>
