@@ -69,6 +69,8 @@ namespace Akka.Remote.Transport.DotNetty
                 default: throw new ArgumentException($"Unknown byte-order option [{byteOrderString}]. Supported options are: big-endian, little-endian.");
             }
 
+            var batchWriterSettings = new BatchWriterSettings(config.GetConfig("batching"));
+
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
                 enableSsl: config.GetBoolean("enable-ssl", false),
@@ -94,7 +96,8 @@ namespace Akka.Remote.Transport.DotNetty
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
                 logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
                 byteOrder: order,
-                enableBufferPooling: config.GetBoolean("enable-pooling", true));
+                enableBufferPooling: config.GetBoolean("enable-pooling", true),
+                batchWriterSettings: batchWriterSettings);
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
@@ -230,10 +233,16 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool EnableBufferPooling;
 
+        /// <summary>
+        /// Used for performance-tuning the DotNetty channels to maximize I/O performance.
+        /// </summary>
+        public readonly BatchWriterSettings BatchWriterSettings;
+
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, bool enableBufferPooling)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, 
+            bool enableBufferPooling, BatchWriterSettings batchWriterSettings)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -262,6 +271,7 @@ namespace Akka.Remote.Transport.DotNetty
             LogTransport = logTransport;
             ByteOrder = byteOrder;
             EnableBufferPooling = enableBufferPooling;
+            BatchWriterSettings = batchWriterSettings;
         }
     }
     internal enum TransportMode
