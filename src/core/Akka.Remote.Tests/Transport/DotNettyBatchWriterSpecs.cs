@@ -52,7 +52,7 @@ namespace Akka.Remote.Tests.Transport
 
         public FlushLogger Flush { get; }
 
-        public DotNettyBatchWriterSpecs(ITestOutputHelper helper) : base(output: helper, null)
+        public DotNettyBatchWriterSpecs(ITestOutputHelper helper) : base(helper)
         {
             Flush = new FlushLogger(helper);
         }
@@ -70,10 +70,53 @@ namespace Akka.Remote.Tests.Transport
 
             await Flush.Activated;
 
-            var ints = Enumerable.Range(0, 4).ToArray();
-            foreach(var i in ints)
+            /*
+             * Run multiple iterations to ensure that the batching mechanism doesn't become stale
+             */
+            foreach (var n in Enumerable.Repeat(0, 3))
             {
-                ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
+                var ints = Enumerable.Range(0, 4).ToArray();
+                foreach (var i in ints)
+                {
+                    _ = ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
+                }
+
+                // force write tasks to run
+                ch.RunPendingTasks();
+
+                ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(ints.Length * 4);
+                ch.OutboundMessages.Count.Should().Be(0);
+
+                await AwaitAssertAsync(() =>
+                {
+                    ch.RunPendingTasks(); // force scheduled task to run
+                    ch.OutboundMessages.Count.Should().Be(ints.Length);
+                }, interval: 100.Milliseconds());
+
+                // reset the outbound queue
+                ch.OutboundMessages.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Stay below the write / count and write / byte threshold. Rely on the timer.
+        /// </summary>
+        [Fact]
+        public async Task BatchWriter_should_flush_messages_during_shutdown()
+        {
+            var writer = new BatchWriter();
+            var ch = new EmbeddedChannel(Flush, writer);
+
+            await Flush.Activated;
+
+            /*
+             * Run multiple iterations to ensure that the batching mechanism doesn't become stale
+             */
+
+            var ints = Enumerable.Range(0, 10).ToArray();
+            foreach (var i in ints)
+            {
+                _ = ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
             }
 
             // force write tasks to run
@@ -82,11 +125,15 @@ namespace Akka.Remote.Tests.Transport
             ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(ints.Length * 4);
             ch.OutboundMessages.Count.Should().Be(0);
 
+            // close channels
+            _ = ch.CloseAsync();
+
             await AwaitAssertAsync(() =>
             {
                 ch.RunPendingTasks(); // force scheduled task to run
                 ch.OutboundMessages.Count.Should().Be(ints.Length);
-            }, interval:100.Milliseconds());
+            }, interval: 100.Milliseconds());
+
 
         }
     }
