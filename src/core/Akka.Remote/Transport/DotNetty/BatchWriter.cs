@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Configuration;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
@@ -15,23 +16,79 @@ namespace Akka.Remote.Transport.DotNetty
 {
     /// <summary>
     /// INTERNAL API.
+    ///
+    /// Configuration object for <see cref="BatchWriter"/>
+    /// </summary>
+    internal class BatchWriterSettings
+    {
+        public const int DefaultMaxPendingWrites = 30;
+        public const int DefaultMaxPendingBytes = 16000;
+        public static readonly TimeSpan DefaultFlushInterval = TimeSpan.FromMilliseconds(40);
+
+        public BatchWriterSettings(Config hocon)
+        {
+            EnableBatching = hocon.GetBoolean("enabled", true);
+            MaxPendingWrites = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
+            MaxPendingBytes = hocon.GetInt("max-pending-bytes", DefaultMaxPendingBytes);
+            FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
+        }
+
+        public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true, 
+            int maxPendingWrites = DefaultMaxPendingWrites, int maxPendingBytes = DefaultMaxPendingBytes)
+        {
+            EnableBatching = enableBatching;
+            MaxPendingWrites = maxPendingWrites;
+            FlushInterval = maxDuration ?? DefaultFlushInterval;
+            MaxPendingBytes = maxPendingBytes;
+        }
+
+        /// <summary>
+        /// Toggle for turning this feature on or off.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>true</c>.
+        /// </remarks>
+        public bool EnableBatching { get; }
+
+        /// <summary>
+        /// The maximum amount of buffered writes that can be buffered before flushing I/O.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to 30.
+        /// </remarks>
+        public int MaxPendingWrites { get; }
+
+        /// <summary>
+        /// In the event of low-traffic channels, the maximum amount of time we'll wait before flushing writes.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to 40 milliseconds.
+        /// </remarks>
+        public TimeSpan FlushInterval { get; }
+
+        /// <summary>
+        /// The maximum number of outstanding bytes that can be written prior to a flush.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to 16kb.
+        /// </remarks>
+        public int MaxPendingBytes { get; }
+    }
+
+    /// <summary>
+    /// INTERNAL API.
     /// 
     /// Responsible for batching socket writes together into fewer sys calls to the socket.
     /// </summary>
     internal class BatchWriter : ChannelHandlerAdapter
     {
-        // Made internal for testing purposes
-        internal readonly int MaxPendingWrites;
-        internal readonly int MaxPendingMillis;
-        internal readonly int MaxPendingBytes;
+        public readonly BatchWriterSettings Settings;
 
         internal bool CanSchedule { get; private set; } = true;
 
-        public BatchWriter(int maxPendingWrites = 20, int maxPendingMillis = 40, int maxPendingBytes = 128000)
+        public BatchWriter(BatchWriterSettings settings)
         {
-            MaxPendingWrites = maxPendingWrites;
-            MaxPendingMillis = maxPendingMillis;
-            MaxPendingBytes = maxPendingBytes;
+            Settings = settings;
         }
 
         private int _currentPendingWrites = 0;
@@ -41,7 +98,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override void HandlerAdded(IChannelHandlerContext context)
         {
-            ScheduleFlush(context);
+            if(Settings.EnableBatching)
+                ScheduleFlush(context); // only schedule flush operations when batching is enabled
             base.HandlerAdded(context);
         }
 
@@ -56,14 +114,22 @@ namespace Akka.Remote.Transport.DotNetty
              * across the network.
              */
             var write = base.WriteAsync(context, message);
-            _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
-            _currentPendingWrites++;
-            if (_currentPendingWrites >= MaxPendingWrites
-                || _currentPendingBytes >= MaxPendingBytes)
+            if (Settings.EnableBatching)
+            {
+                _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
+                _currentPendingWrites++;
+                if (_currentPendingWrites >= Settings.MaxPendingWrites
+                    || _currentPendingBytes >= Settings.MaxPendingBytes)
+                {
+                    context.Flush();
+                    Reset();
+                }
+            }
+            else
             {
                 context.Flush();
-                Reset();
             }
+           
 
             return write;
         }
@@ -76,12 +142,11 @@ namespace Akka.Remote.Transport.DotNetty
             return base.CloseAsync(context);
         }
 
-        void ScheduleFlush(IChannelHandlerContext context)
+        private void ScheduleFlush(IChannelHandlerContext context)
         {
             // Schedule a recurring flush - only fires when there's writable data
-            var time = TimeSpan.FromMilliseconds(MaxPendingMillis);
-            var task = new FlushTask(context, time, this);
-            context.Executor.Schedule(task, time);
+            var task = new FlushTask(context, Settings.FlushInterval, this);
+            context.Executor.Schedule(task, Settings.FlushInterval);
         }
 
         public void Reset()
