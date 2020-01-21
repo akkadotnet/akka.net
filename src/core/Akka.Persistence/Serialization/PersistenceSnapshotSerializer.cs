@@ -37,7 +37,7 @@ namespace Akka.Persistence.Serialization
                 var payload = new PersistentPayload();
 
                 var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
-                if (string.IsNullOrEmpty(manifest))
+                if (!string.IsNullOrEmpty(manifest))
                 {
                     payload.PayloadManifest = ByteString.CopyFromUtf8(manifest);
                 }

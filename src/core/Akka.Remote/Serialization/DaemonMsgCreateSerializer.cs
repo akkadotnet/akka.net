@@ -207,7 +207,7 @@ namespace Akka.Remote.Serialization
             var serializer = system.Serialization.FindSerializerFor(obj);
 
             var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, obj);
-            var hasManifest = string.IsNullOrEmpty(manifest);
+            var hasManifest = !string.IsNullOrEmpty(manifest);
 
             return (serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
         }
