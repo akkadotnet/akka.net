@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(false);
+            CommonConfig = DebugConfig(true);
         }
 
         public RoleName First { get; }
