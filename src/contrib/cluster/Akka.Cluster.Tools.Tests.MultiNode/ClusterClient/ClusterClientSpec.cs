@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
@@ -609,10 +610,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     }
 
                     // shutdown all but the one that the client is connected to
-                    _remainingServerRoleNames.Where(r => !r.Equals(receptionistRoleName)).ForEach(r =>
+                    var exitTasks = _remainingServerRoleNames.Where(r => !r.Equals(receptionistRoleName)).Select(r =>
                     {
-                        TestConductor.Exit(r, 0).Wait();
+                        TestConductor.Exit(r, 0);
                     });
+                    Task.WaitAll(exitTasks.ToArray());
                     _remainingServerRoleNames = ImmutableHashSet.Create(receptionistRoleName);
 
                     // network partition between client and server
