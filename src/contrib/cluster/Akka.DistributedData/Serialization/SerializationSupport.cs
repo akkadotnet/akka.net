@@ -5,10 +5,12 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using Akka.Actor;
-using Akka.Cluster;
+using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
+using Address = Akka.Actor.Address;
 using MemoryStream = System.IO.MemoryStream;
+using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData.Serialization
 {
@@ -158,6 +160,13 @@ namespace Akka.DistributedData.Serialization
         public IActorRef ResolveActorRef(string path)
         {
             return System.Provider.ResolveActorRef(path);
+        }
+
+        public Proto.Msg.OtherMessage OtherMessageToProto(object msg)
+        {
+            var m = new OtherMessage();
+            var msgSerializer = Serialization.FindSerializerFor(msg);
+            m.SerializerId = msgSerializer.Identifier;
         }
     }
 }
