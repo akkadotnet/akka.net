@@ -10,47 +10,47 @@ package Akka.DistributedData.Serialization.Proto.Msg;
 option optimize_for = SPEED;
 
 message Get {
-  required OtherMessage key = 1;
-  required sint32 consistency = 2;
-  required uint32 timeout = 3;
-  optional OtherMessage request = 4;
+   OtherMessage key = 1;
+   sint32 consistency = 2;
+   uint32 timeout = 3;
+   OtherMessage request = 4;
 }
 
 message GetSuccess {
-  required OtherMessage key = 1;
-  required OtherMessage data = 2;
-  optional OtherMessage request = 4;
+   OtherMessage key = 1;
+   OtherMessage data = 2;
+   OtherMessage request = 4;
 }
 
 message NotFound {
-  required OtherMessage key = 1;
-  optional OtherMessage request = 2;
+   OtherMessage key = 1;
+   OtherMessage request = 2;
 }
 
 message GetFailure {
-  required OtherMessage key = 1;
-  optional OtherMessage request = 2;
+   OtherMessage key = 1;
+   OtherMessage request = 2;
 }
 
 message Subscribe {
-  required OtherMessage key = 1;
-  required string ref = 2;
+   OtherMessage key = 1;
+   string ref = 2;
 }
 
 message Unsubscribe {
-  required OtherMessage key = 1;
-  required string ref = 2;
+   OtherMessage key = 1;
+   string ref = 2;
 }
 
 message Changed {
-  required OtherMessage key = 1;
-  required OtherMessage data = 2;
+   OtherMessage key = 1;
+   OtherMessage data = 2;
 }
 
 message Write {
-  required string key = 1;
-  required DataEnvelope envelope = 2;
-  optional UniqueAddress fromNode = 3;
+   string key = 1;
+   DataEnvelope envelope = 2;
+   UniqueAddress fromNode = 3;
 }
 
 // message WriteAck, via Empty
@@ -59,90 +59,90 @@ message Empty {
 }
 
 message Read {
-  required string key = 1;
-  optional UniqueAddress fromNode = 2;
+   string key = 1;
+   UniqueAddress fromNode = 2;
 }
 
 message ReadResult {
-  optional DataEnvelope envelope = 1;
+   DataEnvelope envelope = 1;
 }
 
 message DataEnvelope {
   message PruningEntry {
-    required UniqueAddress removedAddress = 1;
-    required UniqueAddress ownerAddress = 2;
-    required bool performed = 3;
+     UniqueAddress removedAddress = 1;
+     UniqueAddress ownerAddress = 2;
+     bool performed = 3;
     repeated Address seen = 4;
-    optional sint64 obsoleteTime = 5;
+     sint64 obsoleteTime = 5;
   } 
   
-  required OtherMessage data = 1;
+   OtherMessage data = 1;
   repeated PruningEntry pruning = 2;
-  optional VersionVector deltaVersions = 3;
+   VersionVector deltaVersions = 3;
 }
 
 message Status {
   message Entry {
-    required string key = 1;
-    required bytes digest = 2;
+     string key = 1;
+     bytes digest = 2;
   }
   
-  required uint32 chunk = 1;
-  required uint32 totChunks = 2;
+   uint32 chunk = 1;
+   uint32 totChunks = 2;
   repeated Entry entries = 3;
-  optional sfixed64 toSystemUid = 4;
-  optional sfixed64 fromSystemUid = 5;
+   sfixed64 toSystemUid = 4;
+   sfixed64 fromSystemUid = 5;
 }
 
 message Gossip {
   message Entry {
-    required string key = 1;
-    required DataEnvelope envelope = 2;
+     string key = 1;
+     DataEnvelope envelope = 2;
   }
   
-  required bool sendBack = 1;
+   bool sendBack = 1;
   repeated Entry entries = 2;
-  optional sfixed64 toSystemUid = 3;
-  optional sfixed64 fromSystemUid = 4;
+   sfixed64 toSystemUid = 3;
+   sfixed64 fromSystemUid = 4;
 }
 
 message DeltaPropagation {
   message Entry {
-    required string key = 1;
-    required DataEnvelope envelope = 2;
-    required int64 fromSeqNr = 3;
-    optional int64 toSeqNr = 4; // if not set then same as fromSequenceNr
+     string key = 1;
+     DataEnvelope envelope = 2;
+     int64 fromSeqNr = 3;
+     int64 toSeqNr = 4; // if not set then same as fromSequenceNr
   }
   
-  required UniqueAddress fromNode = 1;
+   UniqueAddress fromNode = 1;
   repeated Entry entries = 2;
-  optional bool reply = 3; // no reply if not set
+   bool reply = 3; // no reply if not set
 }
 
 message UniqueAddress {
-  required Address address = 1;
-  required sfixed32 uid = 2;
+   Address address = 1;
+   sfixed32 uid = 2;
   // 64 bit uids but with backward wire compatibility
-  optional sfixed32 uid2 = 3;
+   sfixed32 uid2 = 3;
 }
 
 message Address {
-  required string hostname = 1;
-  required uint32 port = 2;
+   string hostname = 1;
+   uint32 port = 2;
 }
 
 message VersionVector {
   message Entry {
-    required UniqueAddress node = 1;
-    required int64 version = 2;
+     UniqueAddress node = 1;
+     int64 version = 2;
   }
   repeated Entry entries = 1;
 }
 
 message OtherMessage {
-  required bytes enclosedMessage = 1;
-  required int32 serializerId = 2;
-  optional bytes messageManifest = 4;
+   bytes enclosedMessage = 1;
+   int32 serializerId = 2;
+   bytes messageManifest = 4;
 }
 
 message StringGSet {
@@ -150,6 +150,6 @@ message StringGSet {
 }
 
 message DurableDataEnvelope {
-  required OtherMessage data = 1;
+   OtherMessage data = 1;
   repeated DataEnvelope.PruningEntry pruning = 2;
 }
