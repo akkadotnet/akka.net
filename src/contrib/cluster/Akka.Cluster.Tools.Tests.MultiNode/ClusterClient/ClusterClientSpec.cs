@@ -610,10 +610,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     }
 
                     // shutdown all but the one that the client is connected to
-                    var exitTasks = _remainingServerRoleNames.Where(r => !r.Equals(receptionistRoleName)).Select(r =>
-                    {
-                        TestConductor.Exit(r, 0);
-                    });
+                    var exitTasks = _remainingServerRoleNames.Where(r => !r.Equals(receptionistRoleName)).Select(r => TestConductor.Exit(r, 0));
+
+                    // ReSharper disable once CoVariantArrayConversion
                     Task.WaitAll(exitTasks.ToArray());
                     _remainingServerRoleNames = ImmutableHashSet.Create(receptionistRoleName);
 
