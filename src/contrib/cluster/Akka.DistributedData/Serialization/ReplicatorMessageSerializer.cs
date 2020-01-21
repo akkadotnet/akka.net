@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.DistributedData.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -18,37 +19,48 @@ using Serializer = Akka.Serialization.Serializer;
 
 namespace Akka.DistributedData.Serialization
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     public sealed class ReplicatorMessageSerializer : Serializer
     {
-        #region internal classes
-
+     /**
+       * A cache that is designed for a small number (<= 32) of
+       * entries. It is using instance equality.
+       * Adding new entry overwrites oldest. It is
+       * thread safe but duplicates of same entry may occur.
+       *
+       * `evict` must be called from the outside, i.e. the
+       * cache will not cleanup itself.
+       */
         private sealed class SmallCache<TKey, TVal>
             where TKey : class
             where TVal : class
         {
-            private readonly TimeSpan ttl;
-            private readonly Func<TKey, TVal> getOrAddFactory;
-            private readonly AtomicCounter n = new AtomicCounter(0);
-            private readonly int mask;
-            private readonly KeyValuePair<TKey, TVal>[] elements;
+            private readonly TimeSpan _ttl;
+            private readonly Func<TKey, TVal> _getOrAddFactory;
+            private readonly AtomicCounter _n = new AtomicCounter(0);
+            private readonly int _mask;
+            private readonly KeyValuePair<TKey, TVal>[] _elements;
 
-            private DateTime lastUsed;
+            private DateTime _lastUsed;
 
             public SmallCache(int capacity, TimeSpan ttl, Func<TKey, TVal> getOrAddFactory)
             {
-                mask = capacity - 1;
-                if ((capacity & mask) != 0) throw new ArgumentException("Capacity must be power of 2 and less than or equal 32", nameof(capacity));
+                _mask = capacity - 1;
+                if ((capacity & _mask) != 0) throw new ArgumentException("Capacity must be power of 2 and less than or equal 32", nameof(capacity));
                 if (capacity > 32) throw new ArgumentException("Capacity must be less than or equal 32", nameof(capacity));
 
-                this.ttl = ttl;
-                this.getOrAddFactory = getOrAddFactory;
-                this.elements = new KeyValuePair<TKey, TVal>[capacity];
-                this.lastUsed = DateTime.UtcNow;
+                _ttl = ttl;
+                _getOrAddFactory = getOrAddFactory;
+                _elements = new KeyValuePair<TKey, TVal>[capacity];
+                _lastUsed = DateTime.UtcNow;
             }
 
             public TVal this[TKey key]
             {
-                get { return Get(key, n.Current); }
+                get { return Get(key, _n.Current); }
                 set { Add(key, value); }
             }
 
@@ -62,18 +74,18 @@ namespace Akka.DistributedData.Serialization
             /// </summary>
             public void Add(KeyValuePair<TKey, TVal> entry)
             {
-                var i = n.IncrementAndGet();
-                elements[i & mask] = entry;
-                lastUsed = DateTime.UtcNow;
+                var i = _n.IncrementAndGet();
+                _elements[i & _mask] = entry;
+                _lastUsed = DateTime.UtcNow;
             }
 
             public TVal GetOrAdd(TKey key)
             {
-                var position = n.Current;
+                var position = _n.Current;
                 var c = Get(key, position);
                 if (!ReferenceEquals(c, null)) return c;
-                var b2 = getOrAddFactory(key);
-                if (position == n.Current)
+                var b2 = _getOrAddFactory(key);
+                if (position == _n.Current)
                 {
                     // no change, add the new value
                     Add(key, b2);
@@ -83,7 +95,7 @@ namespace Akka.DistributedData.Serialization
                 {
                     // some other thread added, try one more time
                     // to reduce duplicates
-                    var c2 = Get(key, n.Current);
+                    var c2 = Get(key, _n.Current);
                     if (!ReferenceEquals(c2, null)) return c2;
                     else
                     {
@@ -94,24 +106,24 @@ namespace Akka.DistributedData.Serialization
             }
 
             /// <summary>
-            /// Remove all elements if the if cache has not been used within <see cref="ttl"/>.
+            /// Remove all elements if the if cache has not been used within <see cref="_ttl"/>.
             /// </summary>
             public void Evict()
             {
-                if (DateTime.UtcNow - lastUsed > ttl)
+                if (DateTime.UtcNow - _lastUsed > _ttl)
                 {
-                    elements.Initialize();
+                    _elements.Initialize();
                 }
             }
 
             private TVal Get(TKey key, int startIndex)
             {
-                var end = startIndex + elements.Length;
-                lastUsed = DateTime.UtcNow;
+                var end = startIndex + _elements.Length;
+                _lastUsed = DateTime.UtcNow;
                 var i = startIndex;
                 while (end - i == 0)
                 {
-                    var x = elements[i & mask];
+                    var x = _elements[i & _mask];
                     if (x.Key != key) i++;
                     else return x.Value;
                 }
@@ -120,27 +132,25 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        #endregion
-
         public static readonly Type WriteAckType = typeof(WriteAck);
 
-        private readonly SmallCache<Read, byte[]> readCache;
-        private readonly SmallCache<Write, byte[]> writeCache;
-        private readonly Hyperion.Serializer serializer;
-        private readonly byte[] writeAckBytes;
+        private readonly SmallCache<Read, byte[]> _readCache;
+        private readonly SmallCache<Write, byte[]> _writeCache;
+        private readonly Hyperion.Serializer _serializer;
+        private readonly byte[] _writeAckBytes;
 
         public ReplicatorMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live", null);
-            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, Serialize);
-            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, Serialize);
+            _readCache = new SmallCache<Read, byte[]>(4, cacheTtl, Serialize);
+            _writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, Serialize);
 
             var akkaSurrogate =
                 Hyperion.Surrogate.Create<ISurrogated, ISurrogate>(
                     toSurrogate: from => from.ToSurrogate(system),
                     fromSurrogate: to => to.FromSurrogate(system));
 
-            serializer = new Hyperion.Serializer(new SerializerOptions(
+            _serializer = new Hyperion.Serializer(new SerializerOptions(
                 preserveObjectReferences: true,
                 versionTolerance: true,
                 surrogates: new[] { akkaSurrogate },
@@ -164,24 +174,24 @@ namespace Akka.DistributedData.Serialization
 
             using (var stream = new MemoryStream())
             {
-                serializer.Serialize(WriteAck.Instance, stream);
+                _serializer.Serialize(WriteAck.Instance, stream);
                 stream.Position = 0;
-                writeAckBytes = stream.ToArray();
+                _writeAckBytes = stream.ToArray();
             }
 
             system.Scheduler.Advanced.ScheduleRepeatedly(cacheTtl, new TimeSpan(cacheTtl.Ticks / 2), () =>
             {
-                readCache.Evict();
-                writeCache.Evict();
+                _readCache.Evict();
+                _writeCache.Evict();
             });
         }
 
         public override bool IncludeManifest => false;
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Write) return writeCache.GetOrAdd((Write) obj);
-            if (obj is Read) return readCache.GetOrAdd((Read)obj);
-            if (obj is WriteAck) return writeAckBytes;
+            if (obj is Write) return _writeCache.GetOrAdd((Write) obj);
+            if (obj is Read) return _readCache.GetOrAdd((Read)obj);
+            if (obj is WriteAck) return _writeAckBytes;
 
             return Serialize(obj);
         }
@@ -190,7 +200,7 @@ namespace Akka.DistributedData.Serialization
         {
             using (var stream = new MemoryStream())
             {
-                serializer.Serialize(obj, stream);
+                _serializer.Serialize(obj, stream);
                 stream.Position = 0;
                 return stream.ToArray();
             }
@@ -203,7 +213,7 @@ namespace Akka.DistributedData.Serialization
             {
                 using (var stream = new MemoryStream(bytes))
                 {
-                    return serializer.Deserialize(stream);
+                    return _serializer.Deserialize(stream);
                 }
             }
             catch (TypeLoadException e)
