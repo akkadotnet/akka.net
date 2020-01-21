@@ -97,7 +97,7 @@ namespace Akka.Remote.Transport.DotNetty
                 logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
                 byteOrder: order,
                 enableBufferPooling: config.GetBoolean("enable-pooling", true),
-                batchWriterSettings);
+                batchWriterSettings: batchWriterSettings);
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
