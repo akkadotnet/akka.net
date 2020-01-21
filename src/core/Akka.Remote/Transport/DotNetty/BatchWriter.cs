@@ -25,6 +25,8 @@ namespace Akka.Remote.Transport.DotNetty
         internal readonly int MaxPendingMillis;
         internal readonly int MaxPendingBytes;
 
+        internal bool CanSchedule { get; private set; } = true;
+
         public BatchWriter(int maxPendingWrites = 20, int maxPendingMillis = 40, int maxPendingBytes = 128000)
         {
             MaxPendingWrites = maxPendingWrites;
@@ -70,6 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             // flush any pending writes first
             context.Flush();
+            CanSchedule = false;
             return base.CloseAsync(context);
         }
 
@@ -109,11 +112,8 @@ namespace Akka.Remote.Transport.DotNetty
                     _writer.Reset();
                 }
 
-                // channel is still open
-                if (_context.Channel.Open)
-                {
+                if(_writer.CanSchedule)
                     _context.Executor.Schedule(this, _interval); // reschedule
-                }
             }
         }
     }
