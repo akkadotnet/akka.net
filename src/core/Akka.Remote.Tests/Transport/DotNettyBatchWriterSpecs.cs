@@ -1,28 +1,63 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DotNettyBatchWriterSpecs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Remote.Transport.DotNetty;
+using Akka.TestKit;
 using DotNetty.Buffers;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Embedded;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
-    public class DotNettyBatchWriterSpecs
+    public class DotNettyBatchWriterSpecs : AkkaSpec
     {
-        class FlushHandler : ChannelHandlerAdapter
+        public class FlushLogger : ChannelHandlerAdapter
         {
-            public ChannelOutboundBuffer Buffer { get; private set; }
+            public ITestOutputHelper Helper;
+
+            private TaskCompletionSource<Done> _tcs = new TaskCompletionSource<Done>();
+
+            public Task Activated => _tcs.Task;
+
+            public FlushLogger(ITestOutputHelper helper)
+            {
+                Helper = helper;
+            }
+
+            public override void ChannelActive(IChannelHandlerContext context)
+            {
+                _tcs.TrySetResult(Done.Instance);
+                base.ChannelActive(context);
+            }
 
             public override void Flush(IChannelHandlerContext context)
             {
-                Buffer = context.Channel.Unsafe.OutboundBuffer;
+                Helper.WriteLine($"[{DateTime.UtcNow}] flushed");
+
+                base.Flush(context);
             }
         }
+
+        public FlushLogger Flush { get; }
+
+        public DotNettyBatchWriterSpecs(ITestOutputHelper helper) : base(output: helper, null)
+        {
+            Flush = new FlushLogger(helper);
+        }
+
+
 
         /// <summary>
         /// Stay below the write / count and write / byte threshold. Rely on the timer.
@@ -31,19 +66,28 @@ namespace Akka.Remote.Tests.Transport
         public async Task BatchWriter_should_succeed_with_timer()
         {
             var writer = new BatchWriter();
-            var flushHandler = new FlushHandler();
-            var ch = new EmbeddedChannel(writer);
-            
+            var ch = new EmbeddedChannel(Flush, writer);
+
+            await Flush.Activated;
+
             var ints = Enumerable.Range(0, 4).ToArray();
             foreach(var i in ints)
             {
                 ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
             }
 
-            ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(0);
+            // force write tasks to run
             ch.RunPendingTasks();
-            await Task.Delay(writer.MaxPendingMillis * 2);
-            ch.OutboundMessages.Count.Should().Be(ints.Length);
+
+            ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(ints.Length * 4);
+            ch.OutboundMessages.Count.Should().Be(0);
+
+            await AwaitAssertAsync(() =>
+            {
+                ch.RunPendingTasks(); // force scheduled task to run
+                ch.OutboundMessages.Count.Should().Be(ints.Length);
+            }, interval:100.Milliseconds());
+
         }
     }
 }
