@@ -35,8 +35,7 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            var msg = obj as DaemonMsgCreate;
-            if (msg != null)
+            if (obj is DaemonMsgCreate msg)
             {
                 var message = new Proto.Msg.DaemonMsgCreateData();
                 message.Props = PropsToProto(msg.Props);
@@ -70,7 +69,7 @@ namespace Akka.Remote.Serialization
             var propsBuilder = new Proto.Msg.PropsData();
             propsBuilder.Clazz = props.Type.TypeQualifiedName();
             propsBuilder.Deploy = DeployToProto(props.Deploy);
-            foreach (object arg in props.Arguments)
+            foreach (var arg in props.Arguments)
             {
                 var tuple = Serialize(arg);
 
@@ -207,21 +206,8 @@ namespace Akka.Remote.Serialization
         {
             var serializer = system.Serialization.FindSerializerFor(obj);
 
-            bool hasManifest;
-            string manifest;
-
-            var serializerWithStringManifest = serializer as SerializerWithStringManifest;
-            if (serializerWithStringManifest != null)
-            {
-                var ser = serializerWithStringManifest;
-                hasManifest = true;
-                manifest = ser.Manifest(obj);
-            }
-            else
-            {
-                hasManifest = serializer.IncludeManifest;
-                manifest = obj == null ? "null" : obj.GetType().TypeQualifiedName();
-            }
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, obj);
+            var hasManifest = string.IsNullOrEmpty(manifest);
 
             return (serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
         }
