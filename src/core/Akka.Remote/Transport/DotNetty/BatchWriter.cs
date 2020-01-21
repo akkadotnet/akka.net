@@ -20,15 +20,16 @@ namespace Akka.Remote.Transport.DotNetty
     /// </summary>
     internal class BatchWriter : ChannelHandlerAdapter
     {
-        private readonly int _maxPendingWrites;
-        private readonly int _maxPendingMillis;
-        private readonly int _maxPendingBytes;
+        // Made internal for testing purposes
+        internal readonly int MaxPendingWrites;
+        internal readonly int MaxPendingMillis;
+        internal readonly int MaxPendingBytes;
 
         public BatchWriter(int maxPendingWrites = 20, int maxPendingMillis = 40, int maxPendingBytes = 128000)
         {
-            _maxPendingWrites = maxPendingWrites;
-            _maxPendingMillis = maxPendingMillis;
-            _maxPendingBytes = maxPendingBytes;
+            MaxPendingWrites = maxPendingWrites;
+            MaxPendingMillis = maxPendingMillis;
+            MaxPendingBytes = maxPendingBytes;
         }
 
         private int _currentPendingWrites = 0;
@@ -55,8 +56,8 @@ namespace Akka.Remote.Transport.DotNetty
             var write = base.WriteAsync(context, message);
             _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
             _currentPendingWrites++;
-            if (_currentPendingWrites >= _maxPendingWrites
-                || _currentPendingBytes >= _maxPendingBytes)
+            if (_currentPendingWrites >= MaxPendingWrites
+                || _currentPendingBytes >= MaxPendingBytes)
             {
                 context.Flush();
                 Reset();
@@ -75,7 +76,7 @@ namespace Akka.Remote.Transport.DotNetty
         void ScheduleFlush(IChannelHandlerContext context)
         {
             // Schedule a recurring flush - only fires when there's writable data
-            var time = TimeSpan.FromMilliseconds(_maxPendingMillis);
+            var time = TimeSpan.FromMilliseconds(MaxPendingMillis);
             var task = new FlushTask(context, time, this);
             context.Executor.Schedule(task, time);
         }
