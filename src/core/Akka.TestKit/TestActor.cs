@@ -125,27 +125,12 @@ namespace Akka.TestKit
         /// </summary>
         public class Spawn : INoSerializationVerificationNeeded
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly Props _props;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly Option<string> _name;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly Option<SupervisorStrategy> _supervisorStrategy;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="props">TBD</param>
-            /// <param name="name">TBD</param>
-            /// <param name="supervisorStrategy">TBD</param>
             public Spawn(Props props, Option<string> name, Option<SupervisorStrategy> supervisorStrategy)
             {
                 _props = props;
@@ -156,8 +141,6 @@ namespace Akka.TestKit
             /// <summary>
             /// Using the given context, create an actor of the given _props, and optionally naming it with _name
             /// </summary>
-            /// <param name="context">TBD</param>
-            /// <returns></returns>
             public IActorRef Apply(IActorRefFactory context)
             {
                 if (_name.HasValue)
