@@ -121,14 +121,12 @@ message DeltaPropagation {
 
 message UniqueAddress {
    Address address = 1;
-   sfixed32 uid = 2;
-  // 64 bit uids but with backward wire compatibility
-   sfixed32 uid2 = 3;
+   int64 uid = 2;
 }
 
 message Address {
    string hostname = 1;
-   uint32 port = 2;
+   int32 port = 2;
 }
 
 message VersionVector {

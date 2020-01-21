@@ -87,22 +87,21 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             "CBqGAQoFRW50cnkSCwoDa2V5GAEgASgJEkwKCGVudmVsb3BlGAIgASgLMjou",
             "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
             "RGF0YUVudmVsb3BlEhEKCWZyb21TZXFOchgDIAEoAxIPCgd0b1NlcU5yGAQg",
-            "ASgDInIKDVVuaXF1ZUFkZHJlc3MSRgoHYWRkcmVzcxgBIAEoCzI1LkFra2Eu",
+            "ASgDImQKDVVuaXF1ZUFkZHJlc3MSRgoHYWRkcmVzcxgBIAEoCzI1LkFra2Eu",
             "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFkZHJl",
-            "c3MSCwoDdWlkGAIgASgPEgwKBHVpZDIYAyABKA8iKQoHQWRkcmVzcxIQCgho",
-            "b3N0bmFtZRgBIAEoCRIMCgRwb3J0GAIgASgNIsgBCg1WZXJzaW9uVmVjdG9y",
-            "ElIKB2VudHJpZXMYASADKAsyQS5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5WZXJzaW9uVmVjdG9yLkVudHJ5GmMKBUVu",
-            "dHJ5EkkKBG5vZGUYASABKAsyOy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEg8KB3ZlcnNpb24Y",
-            "AiABKAMiVgoMT3RoZXJNZXNzYWdlEhcKD2VuY2xvc2VkTWVzc2FnZRgBIAEo",
-            "DBIUCgxzZXJpYWxpemVySWQYAiABKAUSFwoPbWVzc2FnZU1hbmlmZXN0GAQg",
-            "ASgMIh4KClN0cmluZ0dTZXQSEAoIZWxlbWVudHMYASADKAkiuQEKE0R1cmFi",
-            "bGVEYXRhRW52ZWxvcGUSSAoEZGF0YRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0",
-            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJY",
-            "CgdwcnVuaW5nGAIgAygLMkcuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlLlBydW5pbmdFbnRyeUIC",
-            "SAFiBnByb3RvMw=="));
+            "c3MSCwoDdWlkGAIgASgDIikKB0FkZHJlc3MSEAoIaG9zdG5hbWUYASABKAkS",
+            "DAoEcG9ydBgCIAEoBSLIAQoNVmVyc2lvblZlY3RvchJSCgdlbnRyaWVzGAEg",
+            "AygLMkEuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuVmVyc2lvblZlY3Rvci5FbnRyeRpjCgVFbnRyeRJJCgRub2RlGAEg",
+            "ASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuVW5pcXVlQWRkcmVzcxIPCgd2ZXJzaW9uGAIgASgDIlYKDE90aGVy",
+            "TWVzc2FnZRIXCg9lbmNsb3NlZE1lc3NhZ2UYASABKAwSFAoMc2VyaWFsaXpl",
+            "cklkGAIgASgFEhcKD21lc3NhZ2VNYW5pZmVzdBgEIAEoDCIeCgpTdHJpbmdH",
+            "U2V0EhAKCGVsZW1lbnRzGAEgAygJIrkBChNEdXJhYmxlRGF0YUVudmVsb3Bl",
+            "EkgKBGRhdGEYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
+            "emF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USWAoHcHJ1bmluZxgCIAMo",
+            "CzJHLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLkRhdGFFbnZlbG9wZS5QcnVuaW5nRW50cnlCAkgBYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -121,7 +120,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Parser, new[]{ "Chunk", "TotChunks", "Entries", "ToSystemUid", "FromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry.Parser, new[]{ "Key", "Digest" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Parser, new[]{ "SendBack", "Entries", "ToSystemUid", "FromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry.Parser, new[]{ "Key", "Envelope" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation), global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Parser, new[]{ "FromNode", "Entries", "Reply" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Types.Entry.Parser, new[]{ "Key", "Envelope", "FromSeqNr", "ToSeqNr" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress), global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid", "Uid2" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress), global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Address), global::Akka.DistributedData.Serialization.Proto.Msg.Address.Parser, new[]{ "Hostname", "Port" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.VersionVector), global::Akka.DistributedData.Serialization.Proto.Msg.VersionVector.Parser, new[]{ "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.VersionVector.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.VersionVector.Types.Entry.Parser, new[]{ "Node", "Version" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage), global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage.Parser, new[]{ "EnclosedMessage", "SerializerId", "MessageManifest" }, null, null, null),
@@ -3416,7 +3415,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public UniqueAddress(UniqueAddress other) : this() {
       Address = other.address_ != null ? other.Address.Clone() : null;
       uid_ = other.uid_;
-      uid2_ = other.uid2_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3437,26 +3435,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "uid" field.</summary>
     public const int UidFieldNumber = 2;
-    private int uid_;
+    private long uid_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int Uid {
+    public long Uid {
       get { return uid_; }
       set {
         uid_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "uid2" field.</summary>
-    public const int Uid2FieldNumber = 3;
-    private int uid2_;
-    /// <summary>
-    /// 64 bit uids but with backward wire compatibility
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int Uid2 {
-      get { return uid2_; }
-      set {
-        uid2_ = value;
       }
     }
 
@@ -3475,7 +3459,6 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (!object.Equals(Address, other.Address)) return false;
       if (Uid != other.Uid) return false;
-      if (Uid2 != other.Uid2) return false;
       return true;
     }
 
@@ -3483,8 +3466,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       if (address_ != null) hash ^= Address.GetHashCode();
-      if (Uid != 0) hash ^= Uid.GetHashCode();
-      if (Uid2 != 0) hash ^= Uid2.GetHashCode();
+      if (Uid != 0L) hash ^= Uid.GetHashCode();
       return hash;
     }
 
@@ -3499,13 +3481,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(10);
         output.WriteMessage(Address);
       }
-      if (Uid != 0) {
-        output.WriteRawTag(21);
-        output.WriteSFixed32(Uid);
-      }
-      if (Uid2 != 0) {
-        output.WriteRawTag(29);
-        output.WriteSFixed32(Uid2);
+      if (Uid != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(Uid);
       }
     }
 
@@ -3515,11 +3493,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (address_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Address);
       }
-      if (Uid != 0) {
-        size += 1 + 4;
-      }
-      if (Uid2 != 0) {
-        size += 1 + 4;
+      if (Uid != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(Uid);
       }
       return size;
     }
@@ -3535,11 +3510,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         }
         Address.MergeFrom(other.Address);
       }
-      if (other.Uid != 0) {
+      if (other.Uid != 0L) {
         Uid = other.Uid;
-      }
-      if (other.Uid2 != 0) {
-        Uid2 = other.Uid2;
       }
     }
 
@@ -3558,12 +3530,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             input.ReadMessage(address_);
             break;
           }
-          case 21: {
-            Uid = input.ReadSFixed32();
-            break;
-          }
-          case 29: {
-            Uid2 = input.ReadSFixed32();
+          case 16: {
+            Uid = input.ReadInt64();
             break;
           }
         }
@@ -3618,9 +3586,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "port" field.</summary>
     public const int PortFieldNumber = 2;
-    private uint port_;
+    private int port_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint Port {
+    public int Port {
       get { return port_; }
       set {
         port_ = value;
@@ -3666,7 +3634,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (Port != 0) {
         output.WriteRawTag(16);
-        output.WriteUInt32(Port);
+        output.WriteInt32(Port);
       }
     }
 
@@ -3677,7 +3645,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Hostname);
       }
       if (Port != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(Port);
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Port);
       }
       return size;
     }
@@ -3708,7 +3676,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             break;
           }
           case 16: {
-            Port = input.ReadUInt32();
+            Port = input.ReadInt32();
             break;
           }
         }
