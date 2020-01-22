@@ -258,3 +258,14 @@ _Hint:_ Each test run will append new log entries to output files.
 If this is not desired, you can pass `-Dmultinode.clear-output=1` option to delete output folder before MNTR will run tests.
 
 If you're lost and need more examples, please explore the Akka.NET source code and take a look at some of the MNTR output produced by our CI system on any open pull request.
+
+## Debugging Failed Tests
+
+As already mentioned, after each spec is finished, test runner wil emit log files for it to output directory subfolder with the full name of the spec.
+In this folder you will find individual logs for each node (named according to the roles they were assigned), and `aggregated.txt` file, 
+which contains all nodes logs aggregated into single timeline.
+
+Also, `FAILED_SPECS_LOGS` subdirectory will be generated. If any of your specs failed, this folder will contain aggregated logs for each spec - 
+basically, the same `aggregated.txt` files but with their spec's names. This is a good place to get a full picture of what has failed and why.
+
+Also, `-Dmultinode.failed-specs-directory={failed spec dir}` option could be used to override `FAILED_SPECS_LOGS` name.
