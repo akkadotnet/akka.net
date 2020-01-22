@@ -133,9 +133,18 @@ namespace Akka.Cluster.Sharding.Tests
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
 
-            // This would fail before as sharded actor would be stuck passivating
-            region.Tell(new Msg(10, "hello"));
-            ExpectMsg<Response>(TimeSpan.FromSeconds(20));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                // This would fail before as sharded actor would be stuck passivating
+                // Need to use AwaitAssert here - message can be sent the the BackOffSupervisor, which is now
+                // terminating but still alive, but its child (the ultimate recipient of the message) is dead
+                // and this message will go to DeadLetters.
+                AwaitAssert(() =>
+                {
+                    region.Tell(new Msg(10, "hello"));
+                    ExpectMsg<Response>();
+                });
+            });
         }
     }
 }
