@@ -4617,6 +4617,7 @@ namespace Akka.Serialization
         public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
         public static Akka.Serialization.Information GetCurrentTransportInformation() { }
+        public static string ManifestFor(Akka.Serialization.Serializer s, object msg) { }
         public byte[] Serialize(object o) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
         [System.ObsoleteAttribute("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
