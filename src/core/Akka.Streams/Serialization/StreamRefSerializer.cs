@@ -170,13 +170,7 @@ namespace Akka.Streams.Serialization
         {
             var payload = onNext.Payload;
             var serializer = _serialization.FindSerializerFor(payload);
-            string manifest = null;
-            if (serializer.IncludeManifest)
-            {
-                manifest = serializer is SerializerWithStringManifest s
-                    ? s.Manifest(payload)
-                    : payload.GetType().TypeQualifiedName();
-            }
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
 
             var p = new Payload
             {
