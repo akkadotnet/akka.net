@@ -254,4 +254,7 @@ We strongly recommend setting the `-Dmultinode.output-directory={dir path}` dire
 1. An output file for the entire test run of the DLL and
 2. For each individual spec, a subfolder that contains logs pertaining to the original node.
 
+_Hint:_ Each test run will append new log entries to output files. 
+If this is not desired, you can pass `-Dmultinode.clear-output=1` option to delete output folder before MNTR will run tests.
+
 If you're lost and need more examples, please explore the Akka.NET source code and take a look at some of the MNTR output produced by our CI system on any open pull request.
