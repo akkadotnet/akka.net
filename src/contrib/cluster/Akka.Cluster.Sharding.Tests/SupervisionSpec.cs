@@ -134,8 +134,11 @@ namespace Akka.Cluster.Sharding.Tests
             ExpectTerminated(response.Self);
 
             // This would fail before as sharded actor would be stuck passivating
-            region.Tell(new Msg(10, "hello"));
-            ExpectMsg<Response>(TimeSpan.FromSeconds(20));
+            AwaitAssert(() =>
+            {
+                region.Tell(new Msg(10, "hello"));
+                ExpectMsg<Response>();
+            });
         }
     }
 }
