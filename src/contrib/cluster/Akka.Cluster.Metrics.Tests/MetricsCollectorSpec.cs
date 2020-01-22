@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.TestKit;
+using Akka.Util.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
@@ -90,15 +91,25 @@ namespace Akka.Cluster.Metrics.Tests
         [Fact]
         public async Task MetricsCollector_should_collect_50_node_metrics_samples_in_an_acceptable_duration()
         {
-            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
+            const int iterationsCount = 50;
+            var delay = TimeSpan.FromMilliseconds(100);
+            var iterationAverageExpectation = TimeSpan.FromMilliseconds(500) /*max sample time*/ + delay;
+
+            var delayBetweenFailures = TimeSpan.FromMilliseconds(500);
+            const int tryCount = 3; // In case of we have a high load on CI, let's try to execute racy failure once more
+            
+            await AwaitAssertAsync(async () =>
             {
-                for (var i = 0; i < 50; ++i)
+                await WithinAsync(iterationAverageExpectation.Multiply(iterationsCount), async () =>
                 {
-                    var sample = Collector.Sample();
-                    sample.Metrics.Count.Should().BeGreaterOrEqualTo(3);
-                    await Task.Delay(100);
-                }
-            });
+                    for (var i = 0; i < iterationsCount; ++i)
+                    {
+                        var sample = Collector.Sample();
+                        sample.Metrics.Count.Should().BeGreaterOrEqualTo(3);
+                        await Task.Delay(delay);
+                    }
+                });
+            }, iterationAverageExpectation.Multiply(iterationsCount * tryCount), delayBetweenFailures);
         }
     }
 }
