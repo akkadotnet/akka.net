@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName) + @"""";
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
