@@ -7,10 +7,10 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.Configuration;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
+using Hocon;
 
 namespace Akka.Remote.Transport.DotNetty
 {
