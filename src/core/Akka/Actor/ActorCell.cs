@@ -546,14 +546,8 @@ namespace Akka.Actor
 
                 var bytes = serializer.ToBinary(obj);
 
-                if (serializer is SerializerWithStringManifest manifestSerializer)
-                {
-                    var manifest = manifestSerializer.Manifest(obj);
-                    return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
-                }
-
-                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier,
-                    obj.GetType().TypeQualifiedName());
+                var manifest = Serialization.Serialization.ManifestFor(serializer, obj);
+                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
             }
             finally
             {

@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 
@@ -77,6 +78,28 @@ namespace Akka.Serialization
     /// </summary>
     public class Serialization
     {
+        /// <summary>
+        /// Used to determine the manifest for a message, if applicable.
+        /// </summary>
+        /// <param name="s">The serializer we want to use on the message.</param>
+        /// <param name="msg">The message payload.</param>
+        /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
+        /// <remarks>
+        /// WARNING: if you change this method it's likely that the DaemonMsgCreateSerializer and other calls will need changes too.
+        /// </remarks>
+        public static string ManifestFor(Serializer s, object msg)
+        {
+            switch (s)
+            {
+                case SerializerWithStringManifest s2:
+                    return s2.Manifest(msg);
+                case Serializer s3 when s3.IncludeManifest:
+                    return msg.GetType().TypeQualifiedName();
+                default:
+                    return string.Empty;
+            }
+        }
+
         /// <summary>
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
