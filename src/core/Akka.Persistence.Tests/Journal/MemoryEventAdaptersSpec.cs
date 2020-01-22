@@ -52,7 +52,7 @@ akka.persistence.journal {
       """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
     }
   }
-}").WithFallback(ConfigurationFactory.Load());
+}").WithFallback(ConfigurationFactory.Default());
 
             _extendedActorSystem = (ExtendedActorSystem) Sys;
             _memoryConfig = config.GetConfig("akka.persistence.journal.inmem");
