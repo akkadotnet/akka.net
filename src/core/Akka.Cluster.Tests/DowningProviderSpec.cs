@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tests
               }
             }
           }
-        ").WithFallback(ConfigurationFactory.Load());
+        ");
 
         [Fact]
         public void Downing_provider_should_default_to_NoDowning()
