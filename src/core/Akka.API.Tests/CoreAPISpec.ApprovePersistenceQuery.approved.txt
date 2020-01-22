@@ -61,7 +61,7 @@ namespace Akka.Persistence.Query
         public PersistenceQuery(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Event.ILoggingAdapter Log { get; }
         public static Akka.Persistence.Query.PersistenceQuery Get(Akka.Actor.ActorSystem system) { }
-        public static Akka.Configuration.Config GetDefaultConfig<TJournal>() { }
+        public static Hocon.Config GetDefaultConfig<TJournal>() { }
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId)
             where TJournal : Akka.Persistence.Query.IReadJournal { }
     }

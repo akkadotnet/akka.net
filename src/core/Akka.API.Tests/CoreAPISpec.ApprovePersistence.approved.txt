@@ -202,7 +202,7 @@ namespace Akka.Persistence
     public sealed class DiscardConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
         public DiscardConfigurator() { }
-        public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
+        public Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config) { }
     }
     public class DiscardToDeadLetterStrategy : Akka.Persistence.IStashOverflowStrategy
     {
@@ -1023,7 +1023,7 @@ namespace Akka.Persistence.Journal
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
-        public PersistencePluginProxy(Akka.Configuration.Config config) { }
+        public PersistencePluginProxy(Hocon.Config config) { }
         public Akka.Actor.IStash Stash { get; set; }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }

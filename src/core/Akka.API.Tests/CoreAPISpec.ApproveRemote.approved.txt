@@ -27,9 +27,9 @@ namespace Akka.Remote
     }
     public class AkkaProtocolSettings
     {
-        public AkkaProtocolSettings(Akka.Configuration.Config config) { }
+        public AkkaProtocolSettings(Hocon.Config config) { }
         public System.TimeSpan HandshakeTimeout { get; }
-        public Akka.Configuration.Config TransportFailureDetectorConfig { get; }
+        public Hocon.Config TransportFailureDetectorConfig { get; }
         public string TransportFailureDetectorImplementationClass { get; }
         public System.TimeSpan TransportHeartBeatInterval { get; }
     }
