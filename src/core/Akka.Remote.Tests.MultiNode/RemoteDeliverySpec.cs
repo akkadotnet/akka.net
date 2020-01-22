@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 
 namespace Akka.Remote.Tests.MultiNode
@@ -21,7 +22,10 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(false);
+            CommonConfig = DebugConfig(true)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                  akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
+                "));
         }
 
         public RoleName First { get; }

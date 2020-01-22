@@ -467,26 +467,11 @@ namespace Akka.Actor
                             {
                                 var serializer = ser.FindSerializerFor(argument);
                                 var bytes = serializer.ToBinary(argument);
-                                if (serializer is SerializerWithStringManifest manifestSerializer)
-                                {
-                                    var manifest = manifestSerializer.Manifest(argument);
-                                    if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
-                                    {
-                                        throw new ArgumentException(
+                                var ms = Serialization.Serialization.ManifestFor(serializer, argument);
+                                if(ser.Deserialize(bytes, serializer.Identifier, ms) == null)
+                                    throw new ArgumentException(
                                             $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
                                             nameof(name));
-                                    }
-                                }
-                                else
-                                {
-                                    if (ser.Deserialize(bytes, serializer.Identifier,
-                                            argument.GetType().TypeQualifiedName()) == null)
-                                    {
-                                        throw new ArgumentException(
-                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
-                                            nameof(name));
-                                    }
-                                }
                             }
                         }
                     }
