@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpStages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,7 +110,7 @@ namespace Akka.Streams.Implementation.IO
                 _stage._tcpManager.Tell(new Tcp.Bind(StageActor.Ref, _stage._endpoint, _stage._backlog, _stage._options, pullMode: true), StageActor.Ref);
             }
 
-            private void Receive(Tuple<IActorRef, object> args)
+            private void Receive((IActorRef, object) args)
             {
                 var sender = args.Item1;
                 var msg = args.Item2;
@@ -522,7 +522,7 @@ namespace Akka.Streams.Implementation.IO
 
             }
 
-            private void Connected(Tuple<IActorRef, object> args)
+            private void Connected((IActorRef, object) args)
             {
                 var msg = args.Item2;
 

@@ -1,26 +1,23 @@
-﻿#region copyright
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#endregion
 
 using System;
 using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
-using Akka.Streams.Implementation;
 using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Util;
 using Google.Protobuf;
-using Akka.Streams.Dsl;
-using CumulativeDemand = Akka.Streams.Dsl.CumulativeDemand;
-using OnSubscribeHandshake = Akka.Streams.Dsl.OnSubscribeHandshake;
-using RemoteStreamCompleted = Akka.Streams.Dsl.RemoteStreamCompleted;
-using RemoteStreamFailure = Akka.Streams.Dsl.RemoteStreamFailure;
-using SequencedOnNext = Akka.Streams.Dsl.SequencedOnNext;
+using Akka.Streams.Implementation.StreamRef;
+using CumulativeDemand = Akka.Streams.Implementation.StreamRef.CumulativeDemand;
+using OnSubscribeHandshake = Akka.Streams.Implementation.StreamRef.OnSubscribeHandshake;
+using RemoteStreamCompleted = Akka.Streams.Implementation.StreamRef.RemoteStreamCompleted;
+using RemoteStreamFailure = Akka.Streams.Implementation.StreamRef.RemoteStreamFailure;
+using SequencedOnNext = Akka.Streams.Implementation.StreamRef.SequencedOnNext;
 
 namespace Akka.Streams.Serialization
 {
@@ -88,21 +85,10 @@ namespace Akka.Streams.Serialization
             }
         }
 
-        private Type TypeFromProto(Proto.Msg.EventType eventType)
-        {
-            var typeName = eventType.TypeName;
-            return Type.GetType(typeName, throwOnError: true);
-        }
-
-        private Proto.Msg.EventType TypeToProto(Type clrType) => new Proto.Msg.EventType
-        {
-            TypeName = clrType.TypeQualifiedName()
-        };
-
         private SinkRefImpl DeserializeSinkRef(byte[] bytes)
         {
             var sinkRef = SinkRef.Parser.ParseFrom(bytes);
-            var type = TypeFromProto(sinkRef.EventType);
+            var type = SerializationTools.TypeFromProto(sinkRef.EventType);
             var targetRef = _system.Provider.ResolveActorRef(sinkRef.TargetRef.Path);
             return SinkRefImpl.Create(type, targetRef);
         }
@@ -110,9 +96,7 @@ namespace Akka.Streams.Serialization
         private SourceRefImpl DeserializeSourceRef(byte[] bytes)
         {
             var sourceRef = SourceRef.Parser.ParseFrom(bytes);
-            var type = TypeFromProto(sourceRef.EventType);
-            var originRef = _system.Provider.ResolveActorRef(sourceRef.OriginRef.Path);
-            return SourceRefImpl.Create(type, originRef);
+            return SerializationTools.ToSourceRefImpl(_system, sourceRef.EventType.TypeName, sourceRef.OriginRef.Path);
         }
 
         private RemoteStreamCompleted DeserializeRemoteSinkCompleted(byte[] bytes)
@@ -154,24 +138,15 @@ namespace Akka.Streams.Serialization
 
         private ByteString SerializeSinkRef(SinkRefImpl sinkRef) => new SinkRef
         {
-            EventType = TypeToProto(sinkRef.EventType),
+            EventType = SerializationTools.TypeToProto(sinkRef.EventType),
             TargetRef = new ActorRef
             {
                 Path = Akka.Serialization.Serialization.SerializedActorPath(sinkRef.InitialPartnerRef)
             }
         }.ToByteString();
 
-        private ByteString SerializeSourceRef(SourceRefImpl sourceRef)
-        {
-            return new SourceRef
-            {
-                EventType = TypeToProto(sourceRef.EventType),
-                OriginRef = new ActorRef
-                {
-                    Path = Akka.Serialization.Serialization.SerializedActorPath(sourceRef.InitialPartnerRef)
-                }
-            }.ToByteString();
-        }
+        private ByteString SerializeSourceRef(SourceRefImpl sourceRef) =>
+            SerializationTools.ToSourceRef(sourceRef).ToByteString();
 
         private ByteString SerializeRemoteStreamCompleted(RemoteStreamCompleted completed) =>
             new Proto.Msg.RemoteStreamCompleted { SeqNr = completed.SeqNr }.ToByteString();
@@ -195,13 +170,7 @@ namespace Akka.Streams.Serialization
         {
             var payload = onNext.Payload;
             var serializer = _serialization.FindSerializerFor(payload);
-            string manifest = null;
-            if (serializer.IncludeManifest)
-            {
-                manifest = serializer is SerializerWithStringManifest s
-                    ? s.Manifest(payload)
-                    : payload.GetType().TypeQualifiedName();
-            }
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
 
             var p = new Payload
             {

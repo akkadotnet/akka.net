@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,8 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
+using Akka.Util;
+using Akka.Util.Extensions;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
@@ -167,7 +169,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Parallelism limits the number of how many asks can be "in flight" at the same time.
         /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
-        /// (i.e. same behaviour as <see cref="SelectAsync{TIn,TOut,TMat}"/>).
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
         /// 
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
         /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.
@@ -284,10 +286,10 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">The materializer.</param>
         /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
         ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
-        public Tuple<TMat, Source<TOut, NotUsed>> PreMaterialize(IMaterializer materializer)
+        public (TMat, Source<TOut, NotUsed>) PreMaterialize(IMaterializer materializer)
         {
             var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
-            return Tuple.Create(tup.Item1, Source.FromPublisher(tup.Item2));
+            return (tup.Item1, Source.FromPublisher(tup.Item2));
         }
 
         /// <summary>
@@ -549,8 +551,8 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Repeat<T>(T element)
         {
-            var next = new Tuple<T, T>(element, element);
-            return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
+            var next = (element, element);
+            return Unfold(element, _ => next.AsOption()).WithAttributes(DefaultAttributes.Repeat);
         }
 
         /// <summary>
@@ -571,7 +573,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Option<(TState, TElem)>> unfold)
             => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
@@ -594,7 +596,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfoldAsync">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Option<(TState, TElem)>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>
@@ -613,12 +615,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TElem">TBD</typeparam>
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
-        {
-            throw new NotImplementedException();
-        }
+        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, (TState, TElem)> unfold)
+            => FromGraph(new UnfoldInfinite<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.UnfoldInf);
 
         /// <summary>
         /// A <see cref="Source{TOut,TMat}"/> with no elements, i.e. an empty stream that is completed immediately for every connected <see cref="Sink{TIn,TMat}"/>.

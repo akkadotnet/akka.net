@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
 using AddressData = Akka.Remote.Serialization.Proto.Msg.AddressData;
+using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 {
@@ -66,14 +67,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Internal.Status) return StatusToProto(obj as Internal.Status);
-            if (obj is Internal.Delta) return DeltaToProto(obj as Internal.Delta);
-            if (obj is Send) return SendToProto(obj as Send);
-            if (obj is SendToAll) return SendToAllToProto(obj as SendToAll);
-            if (obj is Publish) return PublishToProto(obj as Publish);
-            if (obj is SendToOneSubscriber) return SendToOneSubscriberToProto(obj as SendToOneSubscriber);
-
-            throw new ArgumentException($"Can't serialize object of type {obj.GetType()} with {nameof(DistributedPubSubMessageSerializer)}");
+            switch (obj)
+            {
+                case Status status:
+                    return StatusToProto(status);
+                case Delta delta:
+                    return DeltaToProto(delta);
+                case Send send:
+                    return SendToProto(send);
+                case SendToAll all:
+                    return SendToAllToProto(all);
+                case Publish publish:
+                    return PublishToProto(publish);
+                case SendToOneSubscriber subscriber:
+                    return SendToOneSubscriberToProto(subscriber);
+                default:
+                    throw new ArgumentException($"Can't serialize object of type {obj.GetType()} with {nameof(DistributedPubSubMessageSerializer)}");
+            }
         }
 
         /// <summary>
@@ -106,14 +116,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
-            if (o is Internal.Status) return StatusManifest;
-            if (o is Internal.Delta) return DeltaManifest;
-            if (o is Send) return SendManifest;
-            if (o is SendToAll) return SendToAllManifest;
-            if (o is Publish) return PublishManifest;
-            if (o is SendToOneSubscriber) return SendToOneSubscriberManifest;
-
-            throw new ArgumentException($"Serializer {nameof(DistributedPubSubMessageSerializer)} cannot serialize message of type {o.GetType()}");
+            switch (o)
+            {
+                case Status _:
+                    return StatusManifest;
+                case Delta _:
+                    return DeltaManifest;
+                case Send _:
+                    return SendManifest;
+                case SendToAll _:
+                    return SendToAllManifest;
+                case Publish _:
+                    return PublishManifest;
+                case SendToOneSubscriber _:
+                    return SendToOneSubscriberManifest;
+                default:
+                    throw new ArgumentException($"Serializer {nameof(DistributedPubSubMessageSerializer)} cannot serialize message of type {o.GetType()}");
+            }
         }
 
         private byte[] StatusToProto(Internal.Status status)
@@ -278,16 +297,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             return system.Provider.ResolveActorRef(path);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string GetObjectManifest(Serializer serializer, object obj)
-        {
-            var manifestSerializer = serializer as SerializerWithStringManifest;
-            if (manifestSerializer != null)
-            {
-                return manifestSerializer.Manifest(obj);
-            }
 
-            return obj.GetType().TypeQualifiedName();
-        }
     }
 }

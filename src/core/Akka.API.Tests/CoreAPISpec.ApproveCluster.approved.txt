@@ -9,14 +9,14 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Cluster
 {
     public sealed class AutoDowning : Akka.Cluster.IDowningProvider
     {
         public AutoDowning(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props DowningActorProps { get; }
     }
     public class Cluster : Akka.Actor.IExtension
     {
@@ -183,9 +183,9 @@ namespace Akka.Cluster
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public bool AllowWeaklyUpMembers { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
-        public System.Type DowningProviderType { get; }
         [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public System.TimeSpan DownRemovalMargin { get; }
+        public System.Type DowningProviderType { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
         public double GossipDifferentViewProbability { get; }
@@ -206,8 +206,9 @@ namespace Akka.Cluster
         public bool RunCoordinatedShutdownWhenDown { get; }
         public System.TimeSpan SchedulerTickDuration { get; }
         public int SchedulerTicksPerWheel { get; }
-        public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
+        public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
+        public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
@@ -218,8 +219,8 @@ namespace Akka.Cluster
     public interface IClusterMessage { }
     public interface IDowningProvider
     {
-        Akka.Actor.Props DowningActorProps { get; }
         System.TimeSpan DownRemovalMargin { get; }
+        Akka.Actor.Props DowningActorProps { get; }
     }
     public class Member : System.IComparable, System.IComparable<Akka.Cluster.Member>
     {
@@ -254,14 +255,14 @@ namespace Akka.Cluster
     public sealed class NoDowning : Akka.Cluster.IDowningProvider
     {
         public NoDowning(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props DowningActorProps { get; }
     }
     public sealed class SplitBrainResolver : Akka.Cluster.IDowningProvider
     {
         public SplitBrainResolver(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan StableAfter { get; }
     }
     public class UniqueAddress : System.IComparable, System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
@@ -274,6 +275,8 @@ namespace Akka.Cluster
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+        public static bool ==(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
+        public static bool !=(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
     }
     public sealed class VectorClock
     {
@@ -291,6 +294,10 @@ namespace Akka.Cluster
         public Akka.Cluster.VectorClock Merge(Akka.Cluster.VectorClock that) { }
         public Akka.Cluster.VectorClock Prune(Akka.Cluster.VectorClock.Node removedNode) { }
         public override string ToString() { }
+        public static bool ==(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool >(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool !=(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool <(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
         public class Node : System.IComparable<Akka.Cluster.VectorClock.Node>
         {
             public Node(string value) { }

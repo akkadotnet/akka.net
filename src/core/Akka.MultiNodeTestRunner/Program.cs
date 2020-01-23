@@ -1,7 +1,7 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
@@ -23,6 +24,7 @@ using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
@@ -32,6 +34,8 @@ using System.Runtime.Loader;
 
 namespace Akka.MultiNodeTestRunner
 {
+    using Shared.AzureDevOps;
+
     /// <summary>
     /// Entry point for the MultiNodeTestRunner
     /// </summary>
@@ -42,7 +46,7 @@ namespace Akka.MultiNodeTestRunner
             "net",
             "netcore"
         };
-
+        
         protected static ActorSystem TestRunSystem;
         protected static IActorRef SinkCoordinator;
 
@@ -50,6 +54,10 @@ namespace Akka.MultiNodeTestRunner
         /// file output directory
         /// </summary>
         protected static string OutputDirectory;
+        /// <summary>
+        /// Subdirectory to store failed specs logs
+        /// </summary>
+        protected static string FailedSpecsDirectory;
 
         protected static bool TeamCityFormattingOn;
         protected static bool MultiPlatform;
@@ -116,6 +124,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
+            FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
@@ -123,15 +132,34 @@ namespace Akka.MultiNodeTestRunner
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
                 throw new ArgumentException("Invalid argument provided for -Dteamcity");
 
-            SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
-                Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) })) : // mutes ConsoleMessageSinkActor
-                Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
+            var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
+
+            Props coordinatorProps;
+            switch (reporter.ToLowerInvariant())
+            {
+                case "trx":
+                    coordinatorProps = Props.Create(() => new SinkCoordinator(new[] { new TrxMessageSink(suiteName) }));
+                    break;
+
+                case "teamcity":
+                    coordinatorProps = Props.Create(() =>  new SinkCoordinator(new[] { new TeamCityMessageSink(Console.WriteLine, suiteName) }));
+                    break;
+
+                case "console":
+                    coordinatorProps = Props.Create(() =>  new SinkCoordinator(new[] { new ConsoleMessageSink() }));
+                    break;
+
+                default:
+                    throw new ArgumentException($"Given reporter name '{reporter}' is not understood, valid reporters are: trx and teamcity");
+            }
+
+            SinkCoordinator = TestRunSystem.ActorOf(coordinatorProps, "sinkCoordinator");
 
 #if CORECLR
             if (!_validNetCorePlatform.Contains(platform))
@@ -146,7 +174,7 @@ namespace Akka.MultiNodeTestRunner
 #endif
 
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
-            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
+            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint), sender: tcpLogger);
 
             var assemblyPath = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
 
@@ -216,6 +244,10 @@ namespace Akka.MultiNodeTestRunner
                             var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
 #endif
+                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
+                            string testOutputDir = null;
+                            string runningSpecName = null;
+                            
                             foreach (var nodeTest in test.Value)
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
@@ -285,13 +317,17 @@ namespace Akka.MultiNodeTestRunner
 
                                 //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                                 var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
+                                testOutputDir = testOutputDir ?? folder.FullName;
                                 var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
+                                runningSpecName = nodeTest.TestName;
+                                var nodeInfo = new TimelineLogCollectorActor.NodeInfo(nodeIndex, nodeRole, platform, nodeTest.TestName);
                                 var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                                 process.OutputDataReceived += (sender, eventArgs) =>
                                 {
                                     if (eventArgs?.Data != null)
                                     {
                                         fileActor.Tell(eventArgs.Data);
+                                        timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, eventArgs.Data));
                                         if (TeamCityFormattingOn)
                                         {
                                             // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
@@ -303,8 +339,7 @@ namespace Akka.MultiNodeTestRunner
                                 {
                                     if (process.ExitCode == 0)
                                     {
-                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole,
-                                            closureTest.TestName);
+                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
                                     }
                                 };
 
@@ -313,16 +348,37 @@ namespace Akka.MultiNodeTestRunner
                                 PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
                             }
 
+                            var specFailed = false;
                             foreach (var process in processes)
                             {
                                 process.WaitForExit();
-                                var exitCode = process.ExitCode;
+                                specFailed = specFailed || process.ExitCode > 0;
                                 process.Dispose();
                             }
 
                             PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
                             Thread.Sleep(TimeSpan.FromSeconds(3));
-                            FinishSpec(test.Value);
+                            
+                            if (testOutputDir != null)
+                            {
+                                var dumpTasks = new List<Task>()
+                                {
+                                    // Dump aggregated timeline to file for this test
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
+                                    // Print aggregated timeline into the console
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole())
+                                };
+
+                                if (specFailed)
+                                {
+                                    var dumpFailureArtifactTask = timelineCollector.Ask<Done>(
+                                        new TimelineLogCollectorActor.DumpToFile(Path.Combine(Path.GetFullPath(OutputDirectory), FailedSpecsDirectory, $"{runningSpecName}.txt")));
+                                    dumpTasks.Add(dumpFailureArtifactTask);
+                                }
+                                Task.WaitAll(dumpTasks.ToArray());
+                            }
+                            
+                            FinishSpec(test.Value, timelineCollector);
                         }
                         Console.WriteLine("Complete");
                         PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
@@ -346,7 +402,8 @@ namespace Akka.MultiNodeTestRunner
                     }
                 }
             }
-
+            
+            AbortTcpLoggingServer(tcpLogger);
             CloseAllSinks();
 
             //Block until all Sinks have been terminated.
@@ -394,6 +451,11 @@ namespace Akka.MultiNodeTestRunner
             }
         }
 
+        private static void AbortTcpLoggingServer(IActorRef tcpLogger)
+        {
+            tcpLogger.Ask<TcpLoggingServer.ListenerStopped>(new TcpLoggingServer.StopListener(), TimeSpan.FromMinutes(1)).Wait();
+        }
+
         private static void CloseAllSinks()
         {
             SinkCoordinator.Tell(new SinkCoordinator.CloseAllSinks());
@@ -409,10 +471,11 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
-        private static void FinishSpec(IList<NodeTest> tests)
+        private static void FinishSpec(IList<NodeTest> tests, IActorRef timelineCollector)
         {
             var spec = tests.First();
-            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName));
+            var log = timelineCollector.Ask<SpecLog>(new TimelineLogCollectorActor.GetSpecLog(), TimeSpan.FromMinutes(1)).Result;
+            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName, log));
         }
 
         private static void PublishRunnerMessage(string message)
@@ -429,9 +492,12 @@ namespace Akka.MultiNodeTestRunner
     internal class TcpLoggingServer : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private IActorRef _tcpManager = Nobody.Instance;
+        private IActorRef _abortSender;
 
         public TcpLoggingServer(IActorRef sinkCoordinator)
         {
+            Receive<Tcp.Bound>(_ => _tcpManager = Sender);
             Receive<Tcp.Connected>(connected =>
             {
                 _log.Info($"Node connected on {Sender}");
@@ -446,7 +512,16 @@ namespace Akka.MultiNodeTestRunner
                 var message = received.Data.ToString();
                 sinkCoordinator.Tell(message);
             });
+
+            Receive<StopListener>(_ =>
+            {
+                _abortSender = Sender;
+                _tcpManager.Tell(Tcp.Unbind.Instance);
+            });
+            Receive<Tcp.Unbound>(_ => _abortSender.Tell(new ListenerStopped()));
         }
+        
+        public class StopListener { }
+        public class ListenerStopped { }
     }
 }
-

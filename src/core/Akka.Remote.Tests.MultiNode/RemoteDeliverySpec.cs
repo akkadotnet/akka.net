@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDeliverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 
 namespace Akka.Remote.Tests.MultiNode
@@ -21,7 +22,10 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(false);
+            CommonConfig = DebugConfig(true)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                  akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
+                "));
         }
 
         public RoleName First { get; }

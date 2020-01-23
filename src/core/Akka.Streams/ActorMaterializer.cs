@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMaterializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -368,6 +368,9 @@ namespace Akka.Streams
         /// </summary>
         public readonly int SyncProcessingLimit;
 
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
         public readonly StreamRefSettings StreamRefSettings;
 
         /// <summary>
@@ -378,6 +381,7 @@ namespace Akka.Streams
         /// <param name="dispatcher">TBD</param>
         /// <param name="supervisionDecider">TBD</param>
         /// <param name="subscriptionTimeoutSettings">TBD</param>
+        /// <param name="streamRefSettings">TBD</param>
         /// <param name="isDebugLogging">TBD</param>
         /// <param name="outputBurstLimit">TBD</param>
         /// <param name="isFuzzingMode">TBD</param>

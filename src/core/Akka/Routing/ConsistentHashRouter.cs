@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashRouter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ namespace Akka.Routing
 
         private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef =
             new AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>>(
-                Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null));
+                (Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null)));
 
         private readonly Address _selfAddress;
         private readonly int _vnodes;

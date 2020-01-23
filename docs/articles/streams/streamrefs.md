@@ -3,8 +3,8 @@ uid: stream-ref
 title: StreamRefs - Reactive Streams over the network
 ---
 
-> **Warning**
-This module is currently marked as may change in the sense of being the subject of active research. This means that API or semantics can change without warning or deprecation period and it is not recommended to use this module in production just yet—you have been warned.
+> [!WARNING]
+> This module is currently marked as may change in the sense of being the subject of active research. This means that API or semantics can change without warning or deprecation period and it is not recommended to use this module in production just yet—you have been warned.
 
 Stream references, or “stream refs” for short, allow running Akka Streams across multiple nodes within an Akka Remote boundaries.
 
@@ -12,9 +12,8 @@ Unlike heavier “streaming data processing” frameworks, Akka Streams are not 
 
 Stream refs are trivial to make use of in existing clustered Akka applications, and require no additional configuration or setup. They automatically maintain flow-control / back-pressure over the network, and employ Akka’s failure detection mechanisms to fail-fast (“let it crash!”) in the case of failures of remote nodes. They can be seen as an implementation of the Work Pulling Pattern, which one would otherwise implement manually.
 
-> **Note**
-A useful way to think about stream refs is: “like an `IActorRef`, but for Akka Streams’s `Source` and `Sink`”.
-Stream refs refer to an already existing, possibly remote, `Sink` or `Source`. This is not to be mistaken with deploying streams remotely, which this feature is not intended for.
+> [!NOTE]
+> A useful way to think about stream refs is: “like an `IActorRef`, but for Akka Streams’s `Source` and `Sink`”. Stream refs refer to an already existing, possibly remote, `Sink` or `Source`. This is not to be mistaken with deploying streams remotely, which this feature is not intended for.
 
 ## Stream References
 
@@ -32,39 +31,38 @@ A `SourceRef` can be offered to a remote actor system in order for it to consume
 
 In order to share a `Source` with a remote endpoint you need to materialize it by running it into the `StreamRefs.SourceRef`. That sink materializes the `ISourceRef<T>` that you can then send to other nodes. Please note that it materializes into a Task so you will have to use the continuation (either `PipeTo` or async/await pattern).
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-source-actor)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=data-source-actor)]
 
 The origin actor which creates and owns the `Source` could also perform some validation or additional setup when preparing the source. Once it has handed out the `ISourceRef<T>` the remote side can run it like this:
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=source-ref-materialization)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=source-ref-materialization)]
 
 The process of preparing and running a `ISourceRef<T>` powered distributed stream is shown by the animation below:
 
 ![source ref](/images/source-ref-animation.gif)
 
-> **Warning**
-A `ISourceRef<T>` is by design “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean.
-While stream refs are designed to be single shot, you may use them to mimic multicast scenarios, simply by starting a `Broadcast` stage once, and attaching multiple new streams to it, for each emitting a new stream ref. This way each output of the broadcast is by itself an unique single-shot reference, however they can all be powered using a single `Source` – located before the `Broadcast` stage.
+> [!WARNING]
+> A `ISourceRef<T>` is by design “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean. While stream refs are designed to be single shot, you may use them to mimic multicast scenarios, simply by starting a `Broadcast` stage once, and attaching multiple new streams to it, for each emitting a new stream ref. This way each output of the broadcast is by itself an unique single-shot reference, however they can all be powered using a single `Source` – located before the `Broadcast` stage.
 
 ### Sink Refs - offering to receive streaming data from a remote system
 
 They can be used to offer the other side the capability to send to the origin side data in a streaming, flow-controlled fashion. The origin here allocates a Sink, which could be as simple as a `Sink.ForEach` or as advanced as a complex sink which streams the incoming data into various other systems (e.g. any of the Alpakka provided Sinks).
 
-> **Note**
+> [!NOTE]
 To form a good mental model of `SinkRef`s, you can think of them as being similar to “passive mode” in FTP.
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=data-sink-actor)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=data-sink-actor)]
 
 Using the offered `ISinkRef<>` to send data to the origin of the `Sink` is also simple, as we can treat the `ISinkRef<>` just as any other sink and directly runWith or run with it.
 
-[!code-csharp[StreamRefsDocTests.cs](../../examples/DocsExamples/Streams/StreamRefsDocTests.cs?name=sink-ref-materialization)]
+[!code-csharp[StreamRefsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamRefsDocTests.cs?name=sink-ref-materialization)]
 
 The process of preparing and running a `ISinkRef<>` powered distributed stream is shown by the animation below:
 
 ![sink ref](/images/sink-ref-animation.gif)
 
-> **Warning**
-A `ISinkRef<>` is *by design* “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean. If you have an use case for building a fan-in operation accepting writes from multiple remote nodes, you can build your `Sink` and prepend it with a `Merge` stage, each time materializing a new `ISinkRef<>` targeting that `Merge`. This has the added benefit of giving you full control how to merge these streams (i.e. by using “merge preferred” or any other variation of the fan-in stages).
+> [!Warning]
+> A `ISinkRef<>` is *by design* “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean. If you have an use case for building a fan-in operation accepting writes from multiple remote nodes, you can build your `Sink` and prepend it with a `Merge` stage, each time materializing a new `ISinkRef<>` targeting that `Merge`. This has the added benefit of giving you full control how to merge these streams (i.e. by using “merge preferred” or any other variation of the fan-in stages).
 
 ## Configuration
 

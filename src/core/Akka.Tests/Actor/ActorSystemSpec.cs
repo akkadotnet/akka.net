@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,6 +103,26 @@ namespace Akka.Tests.Actor
             ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
                 .Terminate();
+        }
+
+        [Fact]
+        public void Log_dead_letters()
+        {
+            var sys = ActorSystem.Create("LogDeadLetters", ConfigurationFactory.ParseString("akka.loglevel=INFO")
+                .WithFallback(DefaultConfig));
+
+            try
+            {
+                var a = sys.ActorOf(Props.Create<Terminater>());
+
+                var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
+                eventFilter.Info(contains: "not delivered").Expect(1, () =>
+                {
+                    a.Tell("run");
+                    a.Tell("boom");
+                });
+            }
+            finally { Shutdown(sys); }
         }
 
         [Fact]

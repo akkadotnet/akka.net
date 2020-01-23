@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<TimeSpan, ICancelable> _currentDeadline;
+        private (TimeSpan, ICancelable)? _currentDeadline;
 
         private readonly int _size;
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -45,7 +45,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="query">TBD</param>
-        public void EnqueueQuery(IQuery query)
+        private void EnqueueQuery(IQuery query)
         {
             var q = query.WithClient(Sender);
             _clients.Enqueue(q);
@@ -56,7 +56,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
-        public void EnqueueMessage(object message)
+        private void EnqueueMessage(object message)
         {
             if (_messages.Count < _size)
             {
@@ -77,9 +77,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="query">TBD</param>
         /// <returns>TBD</returns>
-        public bool ClientPredicate(IQuery query)
+        private bool ClientPredicate(IQuery query)
         {
-            if(query is Select select)
+            if (query is Select select)
                 return select.Predicate(_currentMessage);
 
             return query is Get;
@@ -90,7 +90,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        public bool MessagePredicate(object message)
+        private bool MessagePredicate(object message)
         {
             if (_currentSelect.HasValue)
                 return _currentSelect.Value.Predicate(message);
@@ -105,89 +105,91 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            switch (message)
+            if (message is Get get)
             {
-                case Get get:
-                    if (_messages.Count == 0)
-                    {
-                        EnqueueQuery(get);
-                    }
-                    else
-                    {
-                        Sender.Tell(_messages.Dequeue());
-                    }
-                    break;
-                case Select select:
-                    if (_messages.Count == 0)
+                if (_messages.Count == 0)
+                {
+                    EnqueueQuery(get);
+                }
+                else
+                {
+                    Sender.Tell(_messages.Dequeue());
+                }
+            }
+            else if (message is Select select)
+            {
+                if (_messages.Count == 0)
+                {
+                    EnqueueQuery(select);
+                }
+                else
+                {
+                    _currentSelect = select;
+                    var firstMatch = _messages.DequeueFirstOrDefault(MessagePredicate);
+                    if (firstMatch == null)
                     {
                         EnqueueQuery(select);
                     }
                     else
                     {
-                        _currentSelect = select;
-                        var firstMatch = _messages.DequeueFirstOrDefault(MessagePredicate);
-                        if (firstMatch == null)
-                        {
-                            EnqueueQuery(select);
-                        }
-                        else
-                        {
-                            Sender.Tell(firstMatch);
-                        }
-                        _currentSelect = null;
+                        Sender.Tell(firstMatch);
                     }
+                    _currentSelect = null;
+                }
+            }
+            else if (message is StartWatch startwatch)
+            {
+                if (startwatch.Message == null)
+                    Context.Watch(startwatch.Target);
+                else
+                    Context.WatchWith(startwatch.Target, startwatch.Message);
+            }
+            else if (message is StopWatch stopwatch)
+            {
+                Context.Unwatch(stopwatch.Target);
+            }
+            else if (message is Kick)
+            {
+                var now = Context.System.Scheduler.MonotonicClock;
+                var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
 
-                    break;
-                case StartWatch startWatch:
-                    if (startWatch.Message == null)
-                        Context.Watch(startWatch.Target);
-                    else
-                        Context.WatchWith(startWatch.Target, startWatch.Message);
-                    break;
-                case StopWatch stopWatch:
-                    Context.Unwatch(stopWatch.Target);
-                    break;
-                case Kick _:
-                    var now = Context.System.Scheduler.MonotonicClock;
-                    var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
+                foreach (var query in overdue)
+                {
+                    query.Client.Tell(new Status.Failure(new TimeoutException("Deadline passed")));
+                }
+                _clients.RemoveAll(q => q.Deadline < now);
 
-                    foreach (var query in overdue)
+                var afterDeadline = _clientsByTimeout.Where(q => q.Deadline >= now);
+                _clientsByTimeout.IntersectWith(afterDeadline);
+            }
+            else
+            {
+                if (_clients.Count == 0)
+                {
+                    EnqueueMessage(message);
+                }
+                else
+                {
+                    _currentMessage = message;
+                    var firstMatch = _matched[0] = _clients.DequeueFirstOrDefault(ClientPredicate); //TODO: this should work as DequeueFirstOrDefault
+                    if (firstMatch != null)
                     {
-                        query.Client.Tell(new Status.Failure(new TimeoutException("Deadline passed")));
+                        _clientsByTimeout.ExceptWith(_matched);
+                        firstMatch.Client.Tell(message);
                     }
-                    _clients.RemoveAll(q => q.Deadline < now);
-
-                    var afterDeadline = _clientsByTimeout.Where(q => q.Deadline >= now);
-                    _clientsByTimeout.IntersectWith(afterDeadline);
-                    break;
-                default:
-                    if (_clients.Count == 0)
+                    else
                     {
                         EnqueueMessage(message);
                     }
-                    else
-                    {
-                        _currentMessage = message;
-                        var firstMatch = _matched[0] = _clients.DequeueFirstOrDefault(ClientPredicate); //TODO: this should work as DequeueFirstOrDefault
-                        if (firstMatch != null)
-                        {
-                            _clientsByTimeout.ExceptWith(_matched);
-                            firstMatch.Client.Tell(message);
-                        }
-                        else
-                        {
-                            EnqueueMessage(message);
-                        }
-                        _currentMessage = null;
-                    }
-                    break;
+                    _currentMessage = null;
+                }
             }
 
             if (_clients.Count == 0)
             {
                 if (_currentDeadline != null)
                 {
-                    _currentDeadline.Item2.Cancel();
+                    _currentDeadline.Value.Item2.Cancel();
                     _currentDeadline = null;
                 }
             }
@@ -198,7 +200,7 @@ namespace Akka.Actor
                 {
                     if (_currentDeadline != null)
                     {
-                        _currentDeadline.Item2.Cancel();
+                        _currentDeadline.Value.Item2.Cancel();
                         _currentDeadline = null;
                     }
 
@@ -207,7 +209,7 @@ namespace Akka.Actor
                     if (delay > TimeSpan.Zero)
                     {
                         var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(delay, Self, new Kick(), Self);
-                        _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                        _currentDeadline = (next.Deadline, cancelable);
                     }
                     else
                     {

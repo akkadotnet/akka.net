@@ -23,6 +23,7 @@ let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
+let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
@@ -32,7 +33,8 @@ let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (build
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
-    | _ -> ""
+    | "" -> ""
+    | str -> str
 
 let releaseNotes =
     File.ReadLines "./RELEASE_NOTES.md"
@@ -222,15 +224,15 @@ module internal ResultHandling =
 Target "RunTests" (fun _ ->    
     let projects = 
         let rawProjects = match (isWindows) with 
-                            | true -> !! "./src/**/*.Tests.csproj"
-                            | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                            | true -> !! "./src/**/*.Tests.*sproj"
+                            | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
         rawProjects |> Seq.choose filterProjects
     
     let runSingleProject project =
         let arguments =
             match (hasTeamCity) with
-            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
-            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetFrameworkVersion outputTests)
+            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
 
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -247,15 +249,15 @@ Target "RunTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         let projects = 
             let rawProjects = match (isWindows) with 
-                                | true -> !! "./src/**/*.Tests.csproj"
-                                | _ -> !! "./src/**/*.Tests.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | true -> !! "./src/**/*.Tests.*sproj"
+                                | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
      
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none -teamcity" testNetCoreVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory %s -- -parallel none" testNetCoreVersion outputTests)
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -288,9 +290,10 @@ Target "MultiNodeTests" (fun _ ->
 
             let args = StringBuilder()
                     |> append assembly
-                    |> append (sprintf "-Dmultinode.teamcity=%b" hasTeamCity)
+                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                    |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                     |> toText
 
@@ -327,9 +330,10 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 let args = StringBuilder()
                         |> append multiNodeTestPath
                         |> append assembly
-                        |> append "-Dmultinode.teamcity=true"
+                        |> append "-Dmultinode.reporter=trx"
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                         |> append "-Dmultinode.platform=netcore"
                         |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                         |> toText
@@ -391,9 +395,9 @@ Target "CreateNuget" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        AdditionalArgs = ["--include-symbols --no-build"]
+                        AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet })
+                        OutputPath = "\"" + outputNuGet + "\"" })
 
         projects |> Seq.iter (runSingleProject)
 )
@@ -452,7 +456,7 @@ Target "CreateMntrNuget" (fun _ ->
                         Configuration = configuration
                         AdditionalArgs = ["--include-symbols"]
                         VersionSuffix = versionSuffix
-                        OutputPath = outputNuGet } )
+                        OutputPath = "\"" + outputNuGet + "\"" } )
         )
 
         DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
@@ -485,17 +489,15 @@ Target "PublishNuget" (fun _ ->
     if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
         printfn "Pushing nuget packages"
         if shouldPushNugetPackages then
-            let normalPackages= 
-                !! (outputNuGet @@ "*.nupkg") 
-                -- (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            let normalPackages= !! (outputNuGet @@ "*.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
                 try
-                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "https://api.nuget.org/v3/index.json") (getBuildParam "nugetkey") 3 package
                 with exn ->
                     printfn "%s" exn.Message
 
         if shouldPushSymbolsPackages then
-            let symbolPackages= !! (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            let symbolPackages= !! (outputNuGet @@ "*.snupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in symbolPackages do
                 try
                     publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
@@ -550,10 +552,13 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
-    // build the project with samples
-    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
-    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
-    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
+    // build the projects with samples
+    let docsTestsProject = "./src/core/Akka.Docs.Tests/Akka.Docs.Tests.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTestsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTestsProject; Configuration = configuration })
+    let docsTutorialsProject = "./src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTutorialsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTutorialsProject; Configuration = configuration })
 
     // install MSDN references
     NugetInstall (fun p -> 
@@ -601,14 +606,13 @@ Target "Help" <| fun _ ->
 Target "HelpNuget" <| fun _ ->
     List.iter printfn [
       "usage: "
-      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] "
-      "            [symbolspublishurl=<url>] "
+      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] [symbolskey=<key> symbolspublishurl=<url>]"
       ""
       "In order to publish a nuget package, keys must be specified."
       "If a key is not specified the nuget packages will only be created on disk"
       "After a build you can find them in build/nuget"
       ""
-      "For pushing nuget packages to nuget.org and symbols to symbolsource.org"
+      "For pushing nuget packages and symbols to nuget.org"
       "you need to specify nugetkey=<key>"
       "   build Nuget nugetKey=<key for nuget.org>"
       ""

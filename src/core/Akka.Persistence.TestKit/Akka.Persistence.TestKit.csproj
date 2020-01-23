@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Persistence.TestKit</AssemblyTitle>
+    <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="config.conf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- WORKAROUND: for some reason starting at Akka.NET 1.3.2 this package was determined as "unpackable" by default via DOTNET CLI -->
+    <IsPackable>true</IsPackable> 
+  </PropertyGroup>
+</Project>

@@ -47,7 +47,7 @@ jobs:
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-          artifactName: ${{ parameters.name }}
+          artifactName: ${{ parameters.artifactName }}
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'

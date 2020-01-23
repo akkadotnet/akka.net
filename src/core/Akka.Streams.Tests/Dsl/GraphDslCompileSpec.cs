@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphDslCompileSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var zip = b.Add(new Zip<int, string>());
                 var unzip = b.Add(new UnZip<int, string>());
-                var sink = Sink.AsPublisher<Tuple<int, string>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                var sink = Sink.AsPublisher<(int, string)>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 var source =
                     Source.From(new[]
                     {
@@ -291,7 +291,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var zip = builder.Add(new Zip<int, string>());
                     var unzip = builder.Add(new UnZip<int, string>());
-                    var wrongOut = Sink.AsPublisher<Tuple<int, int>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                    var wrongOut = Sink.AsPublisher<(int, int)>(false).MapMaterializedValue(_ => NotUsed.Instance);
                     var whatever = Sink.AsPublisher<object>(false).MapMaterializedValue(_ => NotUsed.Instance);
 
                     builder.Invoking(

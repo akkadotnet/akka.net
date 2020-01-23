@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -655,10 +655,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     reply.Msg.Should().Be("bonjour4-ack");
                     reply.Node.Should().Be(remainingContacts.First().Address);
 
-                    // TODO: bug, cannot compare with a logsource
-                    // TODO: need to implement https://github.com/akkadotnet/akka.net/issues/3867 for this to work
-                    //var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
-                    var logSource = c.ToString();
+                    var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
 
                     EventFilter.Info(start: "Connected to", source:logSource).ExpectOne(() =>
                     {

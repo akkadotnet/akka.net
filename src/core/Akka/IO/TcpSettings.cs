@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,7 +48,8 @@ namespace Akka.IO
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
-                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4"));
+                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4"),
+                writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
 
         public TcpSettings( string    bufferPoolConfigPath,
@@ -61,7 +62,8 @@ namespace Akka.IO
                             string    fileIoDispatcher,
                             int       transferToLimit,
                             int       finishConnectRetries,
-                            bool      outgoingSocketForceIpv4 )
+                            bool      outgoingSocketForceIpv4,
+                            int       writeCommandsQueueMaxSize)
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
@@ -74,6 +76,7 @@ namespace Akka.IO
             TransferToLimit = transferToLimit;
             FinishConnectRetries = finishConnectRetries;
             OutgoingSocketForceIpv4 = outgoingSocketForceIpv4;
+            WriteCommandsQueueMaxSize = writeCommandsQueueMaxSize;
         }
 
         /// <summary>
@@ -155,5 +158,12 @@ namespace Akka.IO
         /// in cases when DnsEndPoint is used to describe the remote address
         /// </summary>
         public bool OutgoingSocketForceIpv4 { get; }
+        
+        /// <summary>
+        /// Limits maximum size of internal queue, used in <see cref="TcpIncomingConnection"/> connection actor
+        /// to store pending write commands.
+        /// To allow unlimited size, set to -1.
+        /// </summary>
+        public int WriteCommandsQueueMaxSize { get; }
     }
 }

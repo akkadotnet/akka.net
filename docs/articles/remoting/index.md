@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: remote-overview
 title: Akka.Remote Overview
 ---
 

@@ -1,5 +1,103 @@
-#### 1.4.0-beta2 July 29 2019 ####
-Placeholder for nightlies.
+#### 1.4.0-beta4 November 14 2019 ####
+**Third pre-release candidate for Akka.NET 1.4**
+
+Placeholder
+
+#### 1.3.16 November 14 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+
+1.3.16 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far.
+
+This patch includes some small fixes, such as:
+
+* [fix: NuGet symbols not published](https://github.com/akkadotnet/akka.net/pull/3966)
+* [Akka.Cluster.Sharding: Consolidated passivation check on settings used in region and shard](https://github.com/akkadotnet/akka.net/pull/3961)
+* [Akka.Cluster.Tools: Singleton - missing state change fix](https://github.com/akkadotnet/akka.net/pull/4003)
+* [Akka.Cluster.Tools: Fixed singleton issue when leaving several nodes](https://github.com/akkadotnet/akka.net/pull/3962)
+
+However, the biggest fix is for .NET Core 3.0 users. When .NET Core 3.0 was introduced, it broke some of the APIs in prior versions of [Hyperion](https://github.com/akkadotnet/Hyperion) which subsequently caused Akka.Cluster.Sharding and Akka.DistributedData users to have problems when attempting to run on .NET Core 3.0. These have been fixed as Akka.NET v1.3.16 is now running using the latest versions of Hyperion, which resolve this issue.
+
+To [see the full set of changes in Akka.NET v1.3.16, click here](https://github.com/akkadotnet/akka.net/pull/4037).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 119 | 6 | Aaron Stannard |
+| 3 | 531 | 126 | Ismael Hamed |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 1 | 1 | zbynek001 |
+
+#### 1.4.0-beta3 October 30 2019 ####
+**Third pre-release candidate for Akka.NET 1.4**
+This release contains some more significant changes for Akka.NET v1.4.0.
+
+* All APIs in Akka.Streams, Akka, and elsewhere which used to return `Tuple<T1, T2>` now support the equivalent `ValueTuple<T1,T2>` syntax - so new language features such as tuple deconstruction can be used by our users.
+* Upgraded to Hyperion 0.9.10, which properly supports .NET Core 3.0 and cross-platform communication between .NET Framework and .NET Core.
+* All `ILoggingAdapter` instances running inside Akka.NET actors will now include the full Akka.Remote `Address` during logging, which is very helpful for users who aggregate their logs inside consolidated systems.
+* Various Akka.Cluster.Sharding fixes.
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+
+| 115 | 10739 | 8969 | Aaron Stannard |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 10 | 16 | 16 | dependabot-preview[bot] |
+| 6 | 897 | 579 | Sean Gilliam |
+| 6 | 1744 | 358 | zbynek001 |
+| 5 | 568 | 240 | Ismael Hamed |
+| 5 | 116 | 14 | Andre Loker |
+| 3 | 4457 | 8 | Valdis Zobēla |
+| 3 | 2 | 2 | Arjen Smits |
+| 3 | 14 | 9 | cptjazz |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 1341 | 1182 | Igor Fedchenko |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Andre |
+
+#### 1.4.0-beta2 September 23 2019 ####
+**Second pre-release candidate for Akka.NET 1.4**
+Akka.NET v1.4.0 is still moving along and this release contains some new and important changes.
+
+* We've added a new package, the Akka.Persistence.TestKit - this is designed to allow users to test their `PersistentActor` implementations under real-world conditions such as database connection failures, serialization errors, and so forth. It works alongside the standard Akka.NET TestKit distributions and offers a simple, in-place API to do so.
+* Akka.Streams now supports [Stream Context propagation](https://github.com/akkadotnet/akka.net/pull/3741), designed to make it really easy to work with tools such as Kafka, Amazon SQS, and more - where you might want to have one piece of context (such as the partition offset in Kafka) and propagate it from the very front of an Akka.Stream all the way to the end, and then finally process it once the rest of the stream has completed processing. In the case of Kakfa, this might be updating the local consumer's partition offset only once we've been able to fully guarantee the processing of the message.
+* Fixed [a major issue with Akka.Remote, which caused unnecessary `Quarantine` events](https://github.com/akkadotnet/akka.net/issues/3905).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 97 | 6527 | 3729 | Aaron Stannard |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 4 | 1708 | 347 | zbynek001 |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 37 | 114 | Ismael Hamed |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3020 | 2 | Valdis Zobēla |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Arjen Smits |
+| 1 | 1 | 1 | Andre |
 
 #### 1.3.14 July 29 2019 ####
 **Maintenance Release for Akka.NET 1.3**

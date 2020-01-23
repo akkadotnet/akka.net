@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SurviveNetworkInstabilitySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,6 +21,11 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
+     /*
+     * N.B. - Regions are used for targeting by DocFx to include
+     * code inside relevant documentation.
+     */
+    #region MultiNodeSpecConfig
     public class SurviveNetworkInstabilitySpecConfig : MultiNodeConfig
     {
         public RoleName First { get; }
@@ -52,6 +57,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             TestTransport = true;
         }
+        #endregion
 
         public class Echo : ReceiveActor
         {

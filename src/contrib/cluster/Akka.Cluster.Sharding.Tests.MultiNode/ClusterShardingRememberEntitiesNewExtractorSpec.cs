@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingRememberEntitiesNewExtractorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -133,7 +134,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         static readonly int ShardCount = 3;
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
 
         internal static ExtractShardId extractShardId1 = message =>
         {

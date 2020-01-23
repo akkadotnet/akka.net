@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -312,7 +312,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// The actual data.
         /// </summary>
-        private ImmutableDictionary<string, Tuple<DataEnvelope, Digest>> _dataEntries = ImmutableDictionary<string, Tuple<DataEnvelope, Digest>>.Empty;
+        private ImmutableDictionary<string, (DataEnvelope, Digest)> _dataEntries = ImmutableDictionary<string, (DataEnvelope, Digest)>.Empty;
 
         /// <summary>
         /// Keys that have changed, Changed event published to subscribers on FlushChanges
@@ -801,7 +801,7 @@ namespace Akka.DistributedData
             else if (newEnvelope.Data is DeletedData) digest = DeletedDigest;
             else digest = LazyDigest;
 
-            _dataEntries = _dataEntries.SetItem(key, Tuple.Create(newEnvelope, digest));
+            _dataEntries = _dataEntries.SetItem(key, (newEnvelope, digest));
             if (newEnvelope.Data is DeletedData)
             {
                 _deltaPropagationSelector.Delete(key);
@@ -812,14 +812,14 @@ namespace Akka.DistributedData
 
         private Digest GetDigest(string key)
         {
-            Tuple<DataEnvelope, Digest> value;
+            (DataEnvelope, Digest) value;
             var contained = _dataEntries.TryGetValue(key, out value);
             if (contained)
             {
                 if (Equals(value.Item2, LazyDigest))
                 {
                     var digest = Digest(value.Item1);
-                    _dataEntries = _dataEntries.SetItem(key, Tuple.Create(value.Item1, digest));
+                    _dataEntries = _dataEntries.SetItem(key, (value.Item1, digest));
                     return digest;
                 }
                 else return value.Item2;
@@ -838,13 +838,13 @@ namespace Akka.DistributedData
 
         private DataEnvelope GetData(string key)
         {
-            Tuple<DataEnvelope, Digest> value;
+            (DataEnvelope, Digest) value;
             return !_dataEntries.TryGetValue(key, out value) ? null : value.Item1;
         }
 
         private long GetDeltaSequenceNr(string key, UniqueAddress from)
         {
-            Tuple<DataEnvelope, Digest> tuple;
+            (DataEnvelope, Digest) tuple;
             return _dataEntries.TryGetValue(key, out tuple) ? tuple.Item1.DeltaVersions.VersionAt(@from) : 0L;
         }
 
@@ -854,7 +854,7 @@ namespace Akka.DistributedData
 
             return keys.Any(key =>
             {
-                Tuple<DataEnvelope, Digest> tuple;
+                (DataEnvelope, Digest) tuple;
                 return _dataEntries.TryGetValue(key, out tuple)
                     ? tuple.Item1.Pruning.ContainsKey(node)
                     : false;
@@ -1418,7 +1418,7 @@ namespace Akka.DistributedData
             protected override ImmutableArray<Address> AllNodes =>
                 _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
 
-            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas)
+            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas)
             {
                 // Important to include the pruning state in the deltas. For example if the delta is based
                 // on an entry that has been pruned but that has not yet been performed on the target node.

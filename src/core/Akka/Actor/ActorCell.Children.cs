@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -467,26 +467,11 @@ namespace Akka.Actor
                             {
                                 var serializer = ser.FindSerializerFor(argument);
                                 var bytes = serializer.ToBinary(argument);
-                                if (serializer is SerializerWithStringManifest manifestSerializer)
-                                {
-                                    var manifest = manifestSerializer.Manifest(argument);
-                                    if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
-                                    {
-                                        throw new ArgumentException(
+                                var ms = Serialization.Serialization.ManifestFor(serializer, argument);
+                                if(ser.Deserialize(bytes, serializer.Identifier, ms) == null)
+                                    throw new ArgumentException(
                                             $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
                                             nameof(name));
-                                    }
-                                }
-                                else
-                                {
-                                    if (ser.Deserialize(bytes, serializer.Identifier,
-                                            argument.GetType().TypeQualifiedName()) == null)
-                                    {
-                                        throw new ArgumentException(
-                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
-                                            nameof(name));
-                                    }
-                                }
                             }
                         }
                     }

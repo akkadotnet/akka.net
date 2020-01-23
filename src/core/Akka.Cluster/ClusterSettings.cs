@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,6 +41,7 @@ namespace Akka.Cluster
             SeedNodes = cc.GetStringList("seed-nodes").Select(Address.Parse).ToImmutableList();
             SeedNodeTimeout = cc.GetTimeSpan("seed-node-timeout");
             RetryUnsuccessfulJoinAfter = cc.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
+            ShutdownAfterUnsuccessfulJoinSeedNodes = cc.GetTimeSpanWithOffSwitch("shutdown-after-unsuccessful-join-seed-nodes");
             PeriodicTasksInitialDelay = cc.GetTimeSpan("periodic-tasks-initial-delay");
             GossipInterval = cc.GetTimeSpan("gossip-interval");
             GossipTimeToLive = cc.GetTimeSpan("gossip-time-to-live");
@@ -127,6 +128,11 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public TimeSpan? RetryUnsuccessfulJoinAfter { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
 
         /// <summary>
         /// TBD

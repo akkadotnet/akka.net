@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamOfStreams.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -178,7 +178,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>>>
+    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)>>
     {
         #region internal classes
         
@@ -258,7 +258,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _left--;
                     if (_left == 0)
                     {
-                        Push(_stage._out, Tuple.Create((IImmutableList<T>) _builder.ToImmutable(), OpenSubstream()));
+                        Push(_stage._out, ((IImmutableList<T>) _builder.ToImmutable(), OpenSubstream()));
                         Complete(_stage._out);
                     }
                     else
@@ -270,7 +270,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (_left == 0)
                 {
-                    Push(_stage._out, Tuple.Create((IImmutableList<T>) ImmutableList<T>.Empty, OpenSubstream()));
+                    Push(_stage._out, ((IImmutableList<T>) ImmutableList<T>.Empty, OpenSubstream()));
                     Complete(_stage._out);
                 }
                 else
@@ -282,7 +282,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsPrefixComplete)
                 {
                     // This handles the unpulled out case as well
-                    Emit(_stage._out, Tuple.Create((IImmutableList<T>) _builder.ToImmutable(), Source.Empty<T>()), CompleteStage);
+                    Emit(_stage._out, ((IImmutableList<T>) _builder.ToImmutable(), Source.Empty<T>()), CompleteStage);
                 }
                 else
                 {
@@ -316,7 +316,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _count;
         private readonly Inlet<T> _in = new Inlet<T>("PrefixAndTail.in");
-        private readonly Outlet<Tuple<IImmutableList<T>, Source<T, NotUsed>>> _out = new Outlet<Tuple<IImmutableList<T>, Source<T, NotUsed>>>("PrefixAndTail.out");
+        private readonly Outlet<(IImmutableList<T>, Source<T, NotUsed>)> _out = new Outlet<(IImmutableList<T>, Source<T, NotUsed>)>("PrefixAndTail.out");
 
         /// <summary>
         /// TBD
@@ -326,7 +326,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             _count = count;
 
-            Shape = new FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>>(_in, _out);
+            Shape = new FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)>(_in, _out);
         }
 
         /// <summary>
@@ -337,7 +337,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public override FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>> Shape { get; }
+        public override FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)> Shape { get; }
 
         /// <summary>
         /// TBD
