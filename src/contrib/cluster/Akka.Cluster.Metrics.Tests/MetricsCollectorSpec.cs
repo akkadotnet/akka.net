@@ -88,7 +88,8 @@ namespace Akka.Cluster.Metrics.Tests
             });
         }
 
-        [Fact]
+        [Fact(Skip = "This performance really depends on current load - so while should work well with specified timeouts," +
+                     "let's disable it to avoid flaky failures in future")]
         public async Task MetricsCollector_should_collect_50_node_metrics_samples_in_an_acceptable_duration()
         {
             const int iterationsCount = 50;
