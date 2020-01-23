@@ -40,7 +40,7 @@ namespace Akka.Remote.Tests.Serialization
         }
         #endregion
 
-        public SystemMessageSerializationSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public SystemMessageSerializationSpec(ITestOutputHelper output) : base(output, RemoteConfigFactory.Default())
         {
         }
 

@@ -16,7 +16,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class PrimitiveSerializersSpec : AkkaSpec
     {
-        public PrimitiveSerializersSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public PrimitiveSerializersSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

@@ -19,7 +19,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class ProtobufSerializerSpec : AkkaSpec
     {
-        public ProtobufSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public ProtobufSerializerSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

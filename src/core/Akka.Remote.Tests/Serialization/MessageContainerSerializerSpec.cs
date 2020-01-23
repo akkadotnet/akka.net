@@ -18,7 +18,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class MessageContainerSerializerSpec : AkkaSpec
     {
-        public MessageContainerSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public MessageContainerSerializerSpec() : base(RemoteConfigFactory.Default())
         {
         }
 
