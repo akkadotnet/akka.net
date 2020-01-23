@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
-  <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote.Tests.MultiNode</AssemblyTitle>
