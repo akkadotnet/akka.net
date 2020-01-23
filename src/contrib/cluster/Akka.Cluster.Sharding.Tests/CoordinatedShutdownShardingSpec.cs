@@ -108,11 +108,11 @@ namespace Akka.Cluster.Sharding.Tests
             await AwaitAssertAsync(() =>
             {
                 _region2.Tell(1, _probe2.Ref);
-                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(1);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(1);
                 _region2.Tell(2, _probe2.Ref);
-                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(2);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
                 _region2.Tell(3, _probe2.Ref);
-                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(3);
+                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(3);
             }, TimeSpan.FromSeconds(60));
         }
 
