@@ -103,7 +103,7 @@ namespace Akka.Cluster.Sharding.Tests
         public static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
