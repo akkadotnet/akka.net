@@ -402,7 +402,7 @@ namespace Akka.Tests.IO
                     // try sending overflow
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                    actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                    actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
 
                     // First overflow data will be received anyway
                     actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
@@ -415,7 +415,7 @@ namespace Akka.Tests.IO
                     actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
                         .Sum(m => m.Data.Count)
                         .Should().Be(InternalConnectionActorMaxQueueSize);
-                }, TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(5));
+                }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
             });
         }
 
