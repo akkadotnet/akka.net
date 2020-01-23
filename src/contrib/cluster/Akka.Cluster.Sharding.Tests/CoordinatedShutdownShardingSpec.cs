@@ -108,12 +108,12 @@ namespace Akka.Cluster.Sharding.Tests
             await AwaitAssertAsync(() =>
             {
                 _region2.Tell(1, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(1);
+                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(1);
                 _region2.Tell(2, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
+                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(2);
                 _region2.Tell(3, _probe2.Ref);
-                _probe2.ExpectMsg<int>(1.Seconds()).Should().Be(3);
-            }, TimeSpan.FromSeconds(10));
+                _probe2.ExpectMsg<int>(10.Seconds()).Should().Be(3);
+            }, TimeSpan.FromSeconds(60));
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace Akka.Cluster.Sharding.Tests
         private async Task RunCoordinatedShutdownWhenLeaving()
         {
             Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
-            _probe1.ExpectMsg("CS-unbind-1");
+            _probe1.ExpectMsg("CS-unbind-1", TimeSpan.FromSeconds(10));
 
             await WithinAsync(20.Seconds(), async () =>
             {
@@ -188,7 +188,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             // coordinator is on Sys2
             Cluster.Get(_sys2).Down(Cluster.Get(_sys3).SelfAddress);
-            _probe3.ExpectMsg("CS-unbind-3");
+            _probe3.ExpectMsg("CS-unbind-3", TimeSpan.FromSeconds(10));
 
             await WithinAsync(20.Seconds(), async () =>
             {
