@@ -122,7 +122,7 @@ namespace Akka.Cluster.Metrics.Collectors
                     .ToImmutableDictionary(u => u.Key, u =>
                     {
                         var timeForProcess = (u.Value - _lastCpuTimings[u.Key]).TotalMilliseconds;
-                        return  Math.Max(timeForProcess / (Environment.ProcessorCount * totalMsPassed), 1);
+                        return  Math.Min(timeForProcess / (Environment.ProcessorCount * totalMsPassed), 1);
                     });
 
                 _lastCpuTimings = currentCpuTimings;
