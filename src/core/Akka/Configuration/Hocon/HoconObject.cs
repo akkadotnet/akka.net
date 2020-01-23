@@ -142,6 +142,26 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Returns a HOCON string representation of this element.
         /// </summary>
+        /// <param name="indent">The number of spaces to indent the string.</param>
+        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
+        /// <returns>A HOCON string representation of this element.</returns>
+        internal string ToString(int indent, bool includeFallback)
+        {
+            var i = new string(' ', indent *2);
+            var sb = new StringBuilder();
+            foreach (var kvp in Items)
+            {
+                if (kvp.Value.AdoptedFromFallback && !includeFallback) continue;
+                string key = QuoteIfNeeded(kvp.Key);
+                sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent, includeFallback));
+            }
+            return sb.ToString();
+        }
+        
+        
+        /// <summary>
+        /// Returns a HOCON string representation of this element.
+        /// </summary>
         /// <returns>A HOCON string representation of this element.</returns>
         public override string ToString()
         {
@@ -155,15 +175,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>A HOCON string representation of this element.</returns>
         public string ToString(int indent)
         {
-            var i = new string(' ', indent*2);
-            var sb = new StringBuilder();
-            foreach (var kvp in Items)
-            {
-                if (kvp.Value.AdoptedFromFallback) continue;
-                string key = QuoteIfNeeded(kvp.Key);
-                sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
-            }
-            return sb.ToString();
+            return ToString(indent, false);
         }
 
         private string QuoteIfNeeded(string text)
