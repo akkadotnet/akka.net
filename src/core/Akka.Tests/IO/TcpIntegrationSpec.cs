@@ -386,9 +386,9 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void Should_fail_writing_when_buffer_is_filled()
+        public async Task Should_fail_writing_when_buffer_is_filled()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 var actors = x.EstablishNewClientConnection();
 
@@ -396,22 +396,26 @@ namespace Akka.Tests.IO
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
                 var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
 
-                // try sending overflow
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                // If test runner is too loaded, let it try ~3 times with 5 pause interval
+                await AwaitAssertAsync(() =>
+                {
+                    // try sending overflow
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                    actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
 
-                // First overflow data will be received anyway
-                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
-                    .Sum(m => m.Data.Count)
-                    .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                    // First overflow data will be received anyway
+                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                        .Sum(m => m.Data.Count)
+                        .Should().Be(InternalConnectionActorMaxQueueSize + 1);
                 
-                // Check that almost-overflow size does not cause any problems
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
-                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
-                    .Sum(m => m.Data.Count)
-                    .Should().Be(InternalConnectionActorMaxQueueSize);
+                    // Check that almost-overflow size does not cause any problems
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
+                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                        .Sum(m => m.Data.Count)
+                        .Should().Be(InternalConnectionActorMaxQueueSize);
+                }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
             });
         }
 
@@ -590,6 +594,12 @@ namespace Akka.Tests.IO
             {
                 if (_shouldBindServer) BindServer();
                 action(this);
+            }
+            
+            public Task RunAsync(Func<TestSetup, Task> asyncAction)
+            {
+                if (_shouldBindServer) BindServer();
+                return asyncAction(this);
             }
         }
 
