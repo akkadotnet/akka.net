@@ -131,7 +131,7 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="config">TBD</param>
-        public CachingConfig(Config config) : base(null)
+        public CachingConfig(Config config) : base(EmptyConfig)
         {
             if (config is CachingConfig cachingConfig)
             {

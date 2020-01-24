@@ -241,7 +241,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// The <see cref="Configuration.Config"/> for the default dispatcher.
+        /// The <see cref="Hocon.Config"/> for the default dispatcher.
         /// </summary>
         public Config DefaultDispatcherConfig
         {
@@ -318,7 +318,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Creates a dispatcher from a <see cref="Configuration.Config"/>. Internal test purpose only.
+        /// Creates a dispatcher from a <see cref="Hocon.Config"/>. Internal test purpose only.
         /// <code>
         /// From(Config.GetConfig(id));
         /// </code>
