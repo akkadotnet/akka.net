@@ -9,6 +9,7 @@ using Akka.Actor;
 using Hocon;
 using Akka.Persistence.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -40,9 +41,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public LoadPluginSpec() : base(Configuration("LoadPluginSpec", extraConfig:
+        public LoadPluginSpec(ITestOutputHelper helper) : base(Configuration("LoadPluginSpec", extraConfig:
   @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.LoadPluginSpec+JournalWithConfig, Akka.Persistence.Tests""
-  akka.persistence.journal.inmem.extra-property = 17"))
+  akka.persistence.journal.inmem.extra-property = 17"), helper)
         {
         }
 
