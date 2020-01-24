@@ -1,7 +1,7 @@
 <Project>
   <!-- use the xunit JSON settings file -->
   <ItemGroup>
-    <Content Include="..\..\xunit.runner.json" Link="xunit.runner.json">
+    <Content Include="$(SolutionDir)xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
