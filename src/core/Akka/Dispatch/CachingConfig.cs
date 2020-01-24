@@ -124,20 +124,23 @@ namespace Akka.Dispatch
 
         #endregion
 
+        private readonly Config _config;
         private readonly ConcurrentDictionary<string, IPathEntry> _entryMap;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="config">TBD</param>
-        public CachingConfig(Config config) : base(config)
+        public CachingConfig(Config config) : base(null)
         {
             if (config is CachingConfig cachingConfig)
             {
+                _config = cachingConfig._config;
                 _entryMap = cachingConfig._entryMap;
             }
             else
             {
+                _config = config;
                 _entryMap = new ConcurrentDictionary<string, IPathEntry>();
             }
         }
@@ -148,11 +151,11 @@ namespace Akka.Dispatch
             {
                 try
                 {
-                    if (base.HasPath(path)) //found something
+                    if (_config.HasPath(path)) //found something
                     {
                         try
                         {
-                            var configValue = base.GetValue(path);
+                            var configValue = _config.GetValue(path);
                             if (configValue == null) //empty
                                 pathEntry = EmptyPathEntry;
                             else if (configValue.Type == HoconType.String) //is a string value
@@ -185,10 +188,18 @@ namespace Akka.Dispatch
         /// <summary>
         /// TBD
         /// </summary>
+        public override HoconValue Root
+        {
+            get { return _config.Root; }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="fallback">TBD</param>
         public override Config WithFallback(Config fallback)
         {
-            return new CachingConfig(base.WithFallback(fallback));
+            return new CachingConfig(_config.WithFallback(fallback));
         }
 
         /// <summary>
@@ -201,7 +212,68 @@ namespace Akka.Dispatch
             if (entry.Valid)
                 return entry.Exists;
             else //run the real code in order to get exceptions
-                return base.HasPath(path);
+                return _config.HasPath(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override bool IsEmpty
+        {
+            get { return _config.IsEmpty; }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override IEnumerable<KeyValuePair<string, HoconField>> AsEnumerable()
+        {
+            return _config.AsEnumerable();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override bool GetBoolean(string path, bool @default = false)
+        {
+            return _config.GetBoolean(path, @default);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override int GetInt(string path, int @default = 0)
+        {
+            return _config.GetInt(path, @default);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override long GetLong(string path, long @default = 0)
+        {
+            return _config.GetLong(path, @default);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override double GetDouble(string path, double @default = 0)
+        {
+            return _config.GetDouble(path, @default);
         }
 
         /// <summary>
@@ -213,14 +285,148 @@ namespace Akka.Dispatch
         public override string GetString(string path, string @default = null)
         {
             var pathEntry = GetPathEntry(path);
-            if (pathEntry is StringPathEntry entry)
+            if (pathEntry is StringPathEntry)
             {
-                return entry.Value;
+                return ((StringPathEntry) pathEntry).Value;
             }
             else
             {
                 return pathEntry.Config.GetString("cached");
             }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override decimal GetDecimal(string path, decimal @default = 0)
+        {
+            return _config.GetDecimal(path, @default);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<bool> GetBooleanList(string path)
+        {
+            return _config.GetBooleanList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<byte> GetByteList(string path)
+        {
+            return _config.GetByteList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override long? GetByteSize(string path)
+        {
+            return _config.GetByteSize(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<decimal> GetDecimalList(string path)
+        {
+            return _config.GetDecimalList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<double> GetDoubleList(string path)
+        {
+            return _config.GetDoubleList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <returns>TBD</returns>
+        public override float GetFloat(string path, float @default = 0)
+        {
+            return _config.GetFloat(path, @default);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<float> GetFloatList(string path)
+        {
+            return _config.GetFloatList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<int> GetIntList(string path)
+        {
+            return _config.GetIntList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<long> GetLongList(string path)
+        {
+            return _config.GetLongList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override IList<string> GetStringList(string path)
+        {
+            return _config.GetStringList(path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="default">TBD</param>
+        /// <param name="allowInfinite">TBD</param>
+        /// <returns>TBD</returns>
+        public override TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
+        {
+            return _config.GetTimeSpan(path, @default, allowInfinite);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public override Config GetConfig(string path)
+        {
+            return _config.GetConfig(path);
         }
     }
 }
