@@ -187,7 +187,16 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             Should_start_cluster_nodes();
             await Should_use_all_nodes_in_the_cluster_when_not_overloaded();
-            await Should_prefer_node_with_more_free_memory_capacity();
+            
+            /*
+             * This part of spec has to be ignored since this in MNTR tests all nodes
+             * are running on the same machine and share system resources - like memory
+             * so allocating memory on one node allocates it on all nodes.
+             * 
+             * Sometimes it may pass, sometimes not - too racy to keep it running on CI
+             */
+            //await Should_prefer_node_with_more_free_memory_capacity();
+            
             await Should_create_routees_from_configuration();
             await Should_create_routees_from_cluster_enabled_configuration();
         }
