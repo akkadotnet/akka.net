@@ -91,21 +91,24 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private async Task Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring()
         {
-            await WithinAsync(60.Seconds(), async () =>
+            await AwaitAssertAsync(() =>
             {
-                await AwaitAssertAsync(() =>
-                {
-                    AwaitClusterUp(roles: _config.NodeList.ToArray());
-                }, TimeSpan.FromSeconds(30));
+                AwaitClusterUp(roles: _config.NodeList.ToArray());
+            }, TimeSpan.FromSeconds(30));
                 
-                EnterBarrier("cluster_started");
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(Roles.Count);
-                });
+            EnterBarrier("cluster_started");
+            await AwaitAssertAsync(() =>
+            {
+                Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(Roles.Count);
+            }, TimeSpan.FromSeconds(30));
                 
-                await AwaitAssertAsync(() => MetricsView.ClusterMetrics.Count.Should().Be(Roles.Count));
-                
+            await AwaitAssertAsync(() =>
+            {
+                MetricsView.ClusterMetrics.Count.Should().Be(Roles.Count);
+            }, TimeSpan.FromSeconds(30));
+            
+            await WithinAsync(10.Seconds(), async () =>
+            {
                 var collector = new MetricsCollectorBuilder().Build(Cluster.System);
                 collector.Sample().Metrics.Count.Should().BeGreaterThan(3);
                 EnterBarrier("after");
