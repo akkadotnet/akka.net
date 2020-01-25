@@ -5,6 +5,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -92,7 +93,11 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             await WithinAsync(60.Seconds(), async () =>
             {
-                AwaitClusterUp(roles: _config.NodeList.ToArray());
+                await AwaitAssertAsync(() =>
+                {
+                    AwaitClusterUp(roles: _config.NodeList.ToArray());
+                }, TimeSpan.FromSeconds(10));
+                
                 EnterBarrier("cluster_started");
                 await AwaitAssertAsync(() =>
                 {
