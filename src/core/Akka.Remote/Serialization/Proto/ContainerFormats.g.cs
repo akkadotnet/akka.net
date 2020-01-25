@@ -10,6 +10,7 @@
 #pragma warning disable 1591, 0612, 3021
 #region Designer generated code
 
+using Akka.Annotations;
 using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
@@ -496,9 +497,12 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   }
 
   /// <summary>
+  /// INTERNAL API
+  /// 
   /// Defines a remote address.
   /// </summary>
-  internal sealed partial class AddressData : pb::IMessage<AddressData> {
+  [InternalApi]
+  public sealed partial class AddressData : pb::IMessage<AddressData> {
     private static readonly pb::MessageParser<AddressData> _parser = new pb::MessageParser<AddressData>(() => new AddressData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AddressData> Parser { get { return _parser; } }

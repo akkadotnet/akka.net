@@ -110,7 +110,7 @@ namespace Akka.Cluster.Metrics.Serialization {
     public const int FromFieldNumber = 1;
     private global::Akka.Remote.Serialization.Proto.Msg.AddressData from_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    internal global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
+    public global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
       get { return from_; }
       set {
         from_ = value;

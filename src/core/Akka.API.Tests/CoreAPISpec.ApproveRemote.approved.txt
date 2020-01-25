@@ -453,6 +453,34 @@ namespace Akka.Remote.Serialization
         public override byte[] ToBinary(object obj) { }
     }
 }
+namespace Akka.Remote.Serialization.Proto.Msg
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class AddressData : Google.Protobuf.IDeepCloneable<Akka.Remote.Serialization.Proto.Msg.AddressData>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Remote.Serialization.Proto.Msg.AddressData>, System.IEquatable<Akka.Remote.Serialization.Proto.Msg.AddressData>
+    {
+        public const int HostnameFieldNumber = 2;
+        public const int PortFieldNumber = 3;
+        public const int ProtocolFieldNumber = 4;
+        public const int SystemFieldNumber = 1;
+        public AddressData() { }
+        public AddressData(Akka.Remote.Serialization.Proto.Msg.AddressData other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public string Hostname { get; set; }
+        public static Google.Protobuf.MessageParser<Akka.Remote.Serialization.Proto.Msg.AddressData> Parser { get; }
+        public uint Port { get; set; }
+        public string Protocol { get; set; }
+        public string System { get; set; }
+        public int CalculateSize() { }
+        public Akka.Remote.Serialization.Proto.Msg.AddressData Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Remote.Serialization.Proto.Msg.AddressData other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Remote.Serialization.Proto.Msg.AddressData other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+}
 namespace Akka.Remote.Transport
 {
     public abstract class AbstractTransportAdapter : Akka.Remote.Transport.Transport
