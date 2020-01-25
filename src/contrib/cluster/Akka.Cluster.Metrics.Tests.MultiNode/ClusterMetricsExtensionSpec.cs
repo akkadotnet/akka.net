@@ -96,7 +96,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 await AwaitAssertAsync(() =>
                 {
                     AwaitClusterUp(roles: _config.NodeList.ToArray());
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromSeconds(30));
                 
                 EnterBarrier("cluster_started");
                 await AwaitAssertAsync(() =>
