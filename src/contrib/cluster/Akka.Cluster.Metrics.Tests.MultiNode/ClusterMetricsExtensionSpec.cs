@@ -25,8 +25,6 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public readonly RoleName Node4;
         public readonly RoleName Node5;
 
-        public IImmutableSet<RoleName> NodeList => ImmutableHashSet.Create(Node1, Node2, Node3, Node4, Node5);
-
         public Config EnableMetricsExtension => ConfigurationFactory.ParseString(@"
             akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
             akka.cluster.metrics.collector.enabled = on
@@ -93,7 +91,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         {
             await AwaitAssertAsync(() =>
             {
-                AwaitClusterUp(roles: _config.NodeList.ToArray());
+                AwaitClusterUp(Roles.ToArray());
             }, TimeSpan.FromSeconds(30));
                 
             EnterBarrier("cluster_started");
