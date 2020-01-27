@@ -15,7 +15,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
 using Akka.Configuration.Hocon;
@@ -505,6 +505,16 @@ namespace Akka.Remote.TestKit
         {
             if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
+        }
+        
+        /// <summary>
+        /// Execute the given block of code only on the given nodes (names according
+        /// to the `roleMap`).
+        /// </summary>
+        public async Task RunOnAsync(Func<Task> thunkAsync, params RoleName[] nodes)
+        {
+            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
+            if (IsNode(nodes)) await thunkAsync();
         }
 
         /// <summary>
