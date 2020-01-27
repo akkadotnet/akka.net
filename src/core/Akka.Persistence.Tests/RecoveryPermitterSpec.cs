@@ -73,7 +73,7 @@ namespace Akka.Persistence.Tests
             # snapshot store plugin is NOT defined, things should still work
             akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store""
             akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(RecoveryPermitterSpec).FullName +
-                                                                               "/"))
+                                                                               @"/"""))
         {
             permitter = Persistence.Instance.Apply(Sys).RecoveryPermitter();
         }
