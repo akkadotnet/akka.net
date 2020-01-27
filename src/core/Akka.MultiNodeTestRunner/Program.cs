@@ -140,7 +140,7 @@ namespace Akka.MultiNodeTestRunner
             var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
             
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
-            if (clearOutputDirectory > 0)
+            if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
                 Directory.Delete(OutputDirectory, true);
 
             Props coordinatorProps;
