@@ -497,12 +497,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  /// INTERNAL API
-  /// 
   /// Defines a remote address.
   /// </summary>
-  [InternalApi]
-  public sealed partial class AddressData : pb::IMessage<AddressData> {
+  internal sealed partial class AddressData : pb::IMessage<AddressData> {
     private static readonly pb::MessageParser<AddressData> _parser = new pb::MessageParser<AddressData>(() => new AddressData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AddressData> Parser { get { return _parser; } }

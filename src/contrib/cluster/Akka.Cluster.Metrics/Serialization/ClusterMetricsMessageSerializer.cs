@@ -169,9 +169,9 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <summary>
         /// Converts Akka.NET type into Protobuf serializable message
         /// </summary>
-        private Akka.Remote.Serialization.Proto.Msg.AddressData AddressToProto(Actor.Address address)
+        private AddressData AddressToProto(Actor.Address address)
         {
-            return new Akka.Remote.Serialization.Proto.Msg.AddressData()
+            return new AddressData()
             {
                 Hostname = address.Host,
                 Protocol = address.Protocol,
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         /// <param name="address"></param>
         /// <returns></returns>
-        private Akka.Actor.Address AddressFromProto(Akka.Remote.Serialization.Proto.Msg.AddressData address)
+        private Akka.Actor.Address AddressFromProto(AddressData address)
         {
             return new Akka.Actor.Address(address.Protocol, address.System, address.Hostname, (int)address.Port);
         }

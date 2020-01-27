@@ -7,8 +7,6 @@ syntax = "proto3";
 option csharp_namespace = "Akka.Cluster.Metrics.Serialization";
 option optimize_for = SPEED;
 
-import "protobuf/ContainerFormats.proto";
-
 /****************************************
  * Metrics Gossip Messages
  ****************************************/
@@ -17,7 +15,7 @@ import "protobuf/ContainerFormats.proto";
  * Metrics Gossip Envelope
  */
 message MetricsGossipEnvelope {
-  Akka.Remote.Serialization.Proto.Msg.AddressData from = 1;
+  AddressData from = 1;
   MetricsGossip gossip = 2;
   bool reply = 3;
 }
@@ -26,7 +24,7 @@ message MetricsGossipEnvelope {
  * Metrics Gossip
  */
 message MetricsGossip {
-  repeated Akka.Remote.Serialization.Proto.Msg.AddressData allAddresses = 1;
+  repeated AddressData allAddresses = 1;
   repeated string allMetricNames = 2;
   repeated NodeMetrics nodeMetrics = 3;
 }
@@ -60,6 +58,20 @@ message NodeMetrics {
   int32 addressIndex = 1;
   int64 timestamp = 2;
   repeated Metric metrics = 3;
+}
+
+/****************************************
+ * Common Datatypes and Messages
+ ****************************************/
+
+/**
+ * Defines a remote address.
+ */
+message AddressData {
+  string system = 1;
+  string hostname = 2;
+  uint32 port = 3;
+  string protocol = 4;
 }
 
 /****************************************
