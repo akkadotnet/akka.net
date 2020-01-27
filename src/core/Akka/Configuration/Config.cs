@@ -419,11 +419,13 @@ namespace Akka.Configuration
 
             while (current.Fallback != null)
             {
-                clone.Root.GetObject().Merge(current.Fallback.Root.GetObject());
+                var mergedValue = clone.Root.GetObject().MergeImmutable(current.Fallback.Root.GetObject());
+                var newValue = new HoconValue(new List<IHoconElement> { mergedValue }, !includeFallback);
+                clone.Root = newValue;
                 current = current.Fallback;
             }
 
-            return clone.ToString();
+            return clone.Root.ToString(0, includeFallback);
         }
 
         /// <summary>

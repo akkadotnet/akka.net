@@ -13,7 +13,7 @@ namespace Akka.Actor
     /// <summary>
     /// This interface represents the parts of the internal actor state; the behavior stack, watched by, watching and termination queue
     /// </summary>
-    internal interface IActorState
+    internal interface IActorState 
     {
         /// <summary>
         /// Removes the provided <see cref="IActorRef"/> from the `Watching` set
