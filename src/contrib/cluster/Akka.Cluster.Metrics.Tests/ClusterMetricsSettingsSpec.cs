@@ -15,6 +15,7 @@ using Akka.Util;
 using Xunit;
 using FluentAssertions;
 using FsCheck;
+using Hocon;
 
 namespace Akka.Cluster.Metrics.Tests
 {

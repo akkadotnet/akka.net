@@ -14,6 +14,7 @@ using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Util;
+using Hocon;
 
 namespace Akka.Cluster.Metrics
 {

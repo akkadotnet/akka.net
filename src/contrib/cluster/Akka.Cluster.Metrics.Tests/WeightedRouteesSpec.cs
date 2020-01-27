@@ -16,13 +16,14 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Hocon;
 using Xunit;
 
 namespace Akka.Cluster.Metrics.Tests
 {
     public class WeightedRouteesSpec : AkkaSpec
     {
-        // TODO: Once Artery will be impleented, need to use "akka" value when enabled
+        // TODO: Once Artery will be implemented, need to use "akka" value when enabled
         // i.e. : RARP(system).provider.remoteSettings.Artery.Enabled ? "akka" : "akka.tcp"
         private const string Protocol = "akka.tcp";
         

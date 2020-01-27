@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Cluster.Metrics.Configuration
 {
