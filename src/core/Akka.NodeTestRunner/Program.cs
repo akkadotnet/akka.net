@@ -109,6 +109,14 @@ namespace Akka.NodeTestRunner
                             specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);
+                            var innerEx = ex.InnerException;
+                            while (innerEx != null)
+                            {
+                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                specFail.FailureMessages.Add(innerEx.Message);
+                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                innerEx = innerEx.InnerException;
+                            }
                             _logger.Tell(specFail.ToString());
                             Console.WriteLine(specFail);
 
