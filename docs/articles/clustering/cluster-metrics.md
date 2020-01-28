@@ -27,7 +27,7 @@ Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics
 * `CpuTotalUsage` - total CPU usage
 
 > Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics, 
-> but this is something to be fixed in near future.
+> but this is something to be fixed in near future (see [this issue](https://github.com/akkadotnet/akka.net/issues/4142) for details).
 
 Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation, 
 which collects all metrics defined above.
