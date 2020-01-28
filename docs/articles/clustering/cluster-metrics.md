@@ -101,7 +101,11 @@ It is only `router` type and the `metrics-selector` parameter that is specific t
 
 The same type of router could also have been defined in code:
 
+### Group Router
+
 [!code-csharp[RouterInCodeSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterInCodeSample.cs?name=RouterInCodeSample1)]
+
+### Pool Router
 
 [!code-csharp[RouterInCodeSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterInCodeSample.cs?name=RouterInCodeSample2)]
 
