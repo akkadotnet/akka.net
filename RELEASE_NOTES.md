@@ -1,7 +1,11 @@
-#### 1.4.0-beta4 November 14 2019 ####
-**Third pre-release candidate for Akka.NET 1.4**
+#### 1.4.0-beta4 January 28 2020 ####
+**Fourth pre-release candidate for Akka.NET 1.4**
 
-Placeholder
+Akka.NET v1.4.0-beta4 represents a significant advancement against the v1.4.0 milestone, with numerous changes and fixes. 
+
+**Akka.NET now targets .NET Standard 2.0 going forward** - this first big change in this release is that we've dropped support for .NET Framework 4.5. We will only target .NET Standard 2.0 going forward with the v1.4.0 milestone from this point onward. .NET Standard 2.0 can be consumed by .NET Framework 4.6.1+ and .NET Core 2.0 and higher.
+
+**Introduction to Akka.Cluster.Metrics** - in this release we introduce a brand new Akka.NET NuGet package, Akka.Cluster.Metrics, which is designed to allow users to share data about the relative busyness of each node in their cluster. Akka.Cluster.Metrics can be consumed inside routers, i.e. "route this message to the node with the most available memory," and Akka.Cluster.Metrics also supports the publication of custom metrics types.
 
 #### 1.3.16 November 14 2019 ####
 **Maintenance Release for Akka.NET 1.3**
