@@ -7,10 +7,15 @@
 
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Annotations;
 
 namespace Akka.Cluster.Tests
 {
-    static class TestMember
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
+    public static class TestMember
     {
         public static Member Create(Address address, MemberStatus status, int uid = 0)
         {

@@ -1,0 +1,100 @@
+/*
+ * Copyright (C) 2009-2019 Lightbend Inc. <https://www.lightbend.com>
+ */
+
+syntax = "proto3";
+
+option csharp_namespace = "Akka.Cluster.Metrics.Serialization";
+option optimize_for = SPEED;
+
+/****************************************
+ * Metrics Gossip Messages
+ ****************************************/
+
+/**
+ * Metrics Gossip Envelope
+ */
+message MetricsGossipEnvelope {
+  AddressData from = 1;
+  MetricsGossip gossip = 2;
+  bool reply = 3;
+}
+
+/**
+ * Metrics Gossip
+ */
+message MetricsGossip {
+  repeated AddressData allAddresses = 1;
+  repeated string allMetricNames = 2;
+  repeated NodeMetrics nodeMetrics = 3;
+}
+
+/**
+ * Node Metrics
+ */
+message NodeMetrics {
+  enum NumberType {
+    Serialized = 0;
+    Double = 1;
+    Float = 2;
+    Integer = 3;
+    Long = 4;
+  }
+  message Number {
+    NumberType type = 1;
+    uint32 value32 = 2;
+    uint64 value64 = 3;
+    bytes serialized = 4;
+  }
+  message EWMA {
+    double value = 1;
+    double alpha = 2;
+  }
+  message Metric {
+    int32 nameIndex = 1;
+    Number number = 2;
+    EWMA ewma = 3;
+  }
+  int32 addressIndex = 1;
+  int64 timestamp = 2;
+  repeated Metric metrics = 3;
+}
+
+/****************************************
+ * Common Datatypes and Messages
+ ****************************************/
+
+/**
+ * Defines a remote address.
+ */
+message AddressData {
+  string system = 1;
+  string hostname = 2;
+  uint32 port = 3;
+  string protocol = 4;
+}
+
+/****************************************
+ * Router pool (for remote deployment
+ ****************************************/
+
+message AdaptiveLoadBalancingPool {
+  // omitted if default
+  MetricsSelector metricsSelector = 1;
+  uint32 nrOfInstances = 2;
+  // omitted if default
+  string routerDispatcher = 3;
+  bool usePoolDispatcher = 4;
+}
+
+
+// couldn't figure out how to import Payload
+message MetricsSelector {
+  uint32 serializerId = 1;
+  string manifest = 2;
+  bytes data = 3;
+}
+
+message MixMetricsSelector {
+  repeated MetricsSelector selectors = 1;
+}
