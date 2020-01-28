@@ -7,6 +7,31 @@ Akka.NET v1.4.0-beta4 represents a significant advancement against the v1.4.0 mi
 
 **Introduction to Akka.Cluster.Metrics** - in this release we introduce a brand new Akka.NET NuGet package, Akka.Cluster.Metrics, which is designed to allow users to share data about the relative busyness of each node in their cluster. Akka.Cluster.Metrics can be consumed inside routers, i.e. "route this message to the node with the most available memory," and Akka.Cluster.Metrics also supports the publication of custom metrics types.
 
+If you want to [learn more about how to use Akka.Cluster.Metrics, read the official documentation here](https://getakka.net/articles/clustering/cluster-metrics.html).
+
+**Significant Akka.Remote Performance Improvements** - as part of this release we've introduced some new changes that are enabled by default in the Akka.Remote DotNetty transport: "flush batching" or otherwise known as I/O batching. The idea behind this is to group multiple logical writes into a smaller number of system writes. 
+
+You will want to tune this setting to match the behavior of your specific application, and you can read our [brand new "Akka.Remote Performance Optimization" page](https://getakka.net/articles/remoting/performance.html).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 27 | 15375 | 5575 | Igor Fedchenko |
+| 26 | 2131 | 2468 | Aaron Stannard |
+| 25 | 34 | 34 | dependabot-preview[bot] |
+| 8 | 765 | 203 | Ismael Hamed |
+| 4 | 75 | 70 | Jonathan Nagy |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 380 | 43 | Valdis Zobēla |
+| 1 | 62 | 15 | Mathias Feitzinger |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 14 | 0 | Kaiwei Li |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Christoffer Jedbäck |
+
 #### 1.3.16 November 14 2019 ####
 **Maintenance Release for Akka.NET 1.3**
 
