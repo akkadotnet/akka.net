@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
