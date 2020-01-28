@@ -1,10 +1,3 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="MetricsListenerSample.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
-
 using Akka.Actor;
 using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Serialization;
@@ -44,7 +37,6 @@ namespace Akka.Cluster.Metrics.Tests
         }
         
         // Unsubscribe from ClusterMetricsEvent events.
-        /// <inheritdoc />
         protected override void PostStop()
         {
             base.PostStop();

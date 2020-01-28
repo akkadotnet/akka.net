@@ -69,78 +69,11 @@ Let’s take a look at this router in action. What can be more demanding than ca
 
 The backend worker that performs the factorial calculation:
 
-```c#
-public class FactorialBackend : ReceiveActor
-{
-    public FactorialBackend()
-    {
-        ReceiveAsync<int>(n =>
-        {
-            var sender = Sender;
-            return Task.Run(() => Factorial(n)).PipeTo(sender, success: factorial => new FactorialResult(n, factorial));
-        });
-    }
-
-    private BigInteger Factorial(int n)
-    {
-        var acc = BigInteger.One;
-        for (var i = 0; i <= n; ++i)
-            acc *= i;
-
-        return acc;
-    }
-}
-```
+[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialBackend)]
 
 The frontend that receives user jobs and delegates to the backends via the router:
-```c#
-public class FactorialFrontend : ReceiveActor
-{
-    private readonly int _upToN;
-    private readonly ILoggingAdapter _log = Context.GetLogger();
-    private readonly IActorRef _backend = Context.ActorOf(FromConfig.Instance.Props(), "factorialBackendRouter");
 
-    public FactorialFrontend(int upToN, bool repeat)
-    {
-        _upToN = upToN;
-
-        Receive<FactorialResult>(result =>
-        {
-            if (result.N != _upToN) 
-                return;
-            
-            _log.Debug("{0}! = {1}", result.N, result.Factorial);
-            if (repeat)
-                SendJobs();
-            else
-                Context.Stop(Self);
-        });
-
-        Receive<ReceiveTimeout>(_ =>
-        {
-            _log.Info("Timeout");
-            SendJobs();
-        });
-    }
-
-    protected override void PreStart()
-    {
-        base.PreStart();
-
-        SendJobs();
-        Context.SetReceiveTimeout(10.Seconds());
-    }
-
-    private void SendJobs()
-    {
-        _log.Info("Starting batch of factorials up to [{0}]", _upToN);
-        for (var n = 1; n <= _upToN; ++n)
-        {
-            _backend.Tell(n);
-        }
-    }
-}
-```
+[!code-csharp[RouterUsageSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterUsageSample.cs?name=FactorialFrontend)]
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 
@@ -167,98 +100,16 @@ akka.actor.deployment {
 It is only `router` type and the `metrics-selector` parameter that is specific to this router, other things work in the same way as other routers.
 
 The same type of router could also have been defined in code:
-```c#
-var totalInstances = 100;
-var routeesPaths = new []{ "/user/factorialBackend", "" };
-var allowLocalRoutees = true;
-var useRoles = "backend";
-IActorRef backend = Context.ActorOf(
-    new ClusterRouterGroup(
-        new AdaptiveLoadBalancingGroup(MemoryMetricsSelector.Instance), 
-        new ClusterRouterGroupSettings(totalInstances, routeesPaths, allowLocalRoutees, useRoles)
-    ).Props(), 
-    "factorialBackendRouter2");
 
-var totalInstances = 100;
-var maxInstancesPerNode = 3;
-var allowLocalRoutees = false;
-var useRoles = "backend";
-IActorRef backend = Context.ActorOf(
-    new ClusterRouterPool(
-        new AdaptiveLoadBalancingPool(CpuMetricsSelector.Instance, 0),
-        new ClusterRouterPoolSettings(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRoles))
-    .Props(Props.Create<FactorialBackend>()),
-    "factorialBackendRouter3");
-```
+[!code-csharp[RouterInCodeSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterInCodeSample.cs?name=RouterInCodeSample1)]
+
+[!code-csharp[RouterInCodeSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/RouterInCodeSample.cs?name=RouterInCodeSample2)]
 
 ## Subscribe to Metrics Events
 
 It is possible to subscribe to the metrics events directly to implement other functionality.
 
-```c#
-using Akka.Actor;
-using Akka.Cluster.Metrics.Events;
-using Akka.Cluster.Metrics.Serialization;
-using Akka.Event;
-using Akka.Util;
-
-namespace Akka.Cluster.Metrics.Tests
-{
-    public class MetricsListener : ReceiveActor
-    {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        private readonly Cluster _cluster = Cluster.Get(Context.System);
-        private readonly ClusterMetrics _metricsExtension = ClusterMetrics.Get(Context.System);
-        
-        public MetricsListener()
-        {
-            Receive<ClusterMetricsChanged>(clusterMetrics =>
-            {
-                foreach (var nodeMetrics in clusterMetrics.NodeMetrics)
-                {
-                    if (nodeMetrics.Address.Equals(_cluster.SelfAddress))
-                    {
-                        LogMemory(nodeMetrics);
-                        LogCpu(nodeMetrics);
-                    }
-                }
-            });
-        }
-
-        // Subscribe unto ClusterMetricsEvent events.
-        protected override void PreStart()
-        {
-            base.PreStart();
-            
-            _metricsExtension.Subscribe(Self);
-        }
-        
-        // Unsubscribe from ClusterMetricsEvent events.
-        /// <inheritdoc />
-        protected override void PostStop()
-        {
-            base.PostStop();
-            
-            _metricsExtension.Unsubscribe(Self);
-        }
-
-        private void LogMemory(NodeMetrics nodeMetrics)
-        {
-            Option<StandardMetrics.Memory> memory = StandardMetrics.ExtractMemory(nodeMetrics);
-            if (memory.HasValue)
-                _log.Info("Used memory: {0} Mb", memory.Value.Used / 1024 / 1024);
-        }
-
-        private void LogCpu(NodeMetrics nodeMetrics)
-        {
-            Option<StandardMetrics.Cpu> cpu = StandardMetrics.ExtractCpu(nodeMetrics);
-            if (cpu.HasValue)
-                _log.Info("Cpu load: {0}% ({1} processors)", cpu.Value.TotalUsage / 100, cpu.Value.ProcessorsNumber);
-        }
-    }
-}
-```
+[!code-csharp[MetricsListenerSample](../../../src/core/Akka.Docs.Tests/Cluster.Metrics/MetricsListenerSample.cs)]
 
 ## Custom Metrics Collector
 

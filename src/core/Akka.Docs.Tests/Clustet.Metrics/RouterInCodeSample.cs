@@ -14,6 +14,7 @@ namespace Akka.Cluster.Metrics.Tests
     {
         public void Sample1()
         {
+            // <RouterInCodeSample1>
             var totalInstances = 100;
             var routeesPaths = new []{ "/user/factorialBackend", "" };
             var allowLocalRoutees = true;
@@ -24,10 +25,12 @@ namespace Akka.Cluster.Metrics.Tests
                     new ClusterRouterGroupSettings(totalInstances, routeesPaths, allowLocalRoutees, useRoles)
                 ).Props(), 
                 "factorialBackendRouter2");
+            // </RouterInCodeSample1>
         }
 
         public void Sample2()
         {
+            // <RouterInCodeSample2>
             var totalInstances = 100;
             var maxInstancesPerNode = 3;
             var allowLocalRoutees = false;
@@ -38,6 +41,7 @@ namespace Akka.Cluster.Metrics.Tests
                         new ClusterRouterPoolSettings(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRoles))
                     .Props(Props.Create<FactorialBackend>()),
                 "factorialBackendRouter3");
+            // </RouterInCodeSample2>
         }
 
         /// <inheritdoc />

@@ -30,6 +30,7 @@ namespace Akka.Cluster.Metrics.Tests
         public BigInteger Factorial { get; }
     }
     
+    // <FactorialBackend>
     public class FactorialBackend : ReceiveActor
     {
         public FactorialBackend()
@@ -50,7 +51,9 @@ namespace Akka.Cluster.Metrics.Tests
             return acc;
         }
     }
+    // </FactorialBackend>
 
+    // <FactorialFrontend>
     public class FactorialFrontend : ReceiveActor
     {
         private readonly int _upToN;
@@ -97,6 +100,6 @@ namespace Akka.Cluster.Metrics.Tests
             }
         }
     }
-
+    // </FactorialFrontend>
     
 }
