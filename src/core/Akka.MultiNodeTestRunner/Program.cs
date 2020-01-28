@@ -132,13 +132,16 @@ namespace Akka.MultiNodeTestRunner
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
                 throw new ArgumentException("Invalid argument provided for -Dteamcity");
 
-
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
             var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
+            
+            var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
+            if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
+                Directory.Delete(OutputDirectory, true);
 
             Props coordinatorProps;
             switch (reporter.ToLowerInvariant())
