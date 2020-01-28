@@ -36,7 +36,7 @@ $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVers
 $NugetVersion = "4.3.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 $ProtobufVersion = "3.4.0"
-$DocfxVersion = "2.48.1"
+$DocfxVersion = "2.43.2"
 
 $IncrementalistVersion = "0.2.1";
 
