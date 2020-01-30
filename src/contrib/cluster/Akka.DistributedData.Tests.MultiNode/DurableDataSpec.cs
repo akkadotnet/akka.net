@@ -27,16 +27,16 @@ namespace Akka.DistributedData.Tests.MultiNode
             Second = Role("second");
 
             var writeBehindInterval = writeBehind ? "200ms" : "off";
-            CommonConfig = ConfigurationFactory.ParseString($@"
+            CommonConfig = ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.log-dead-letters-during-shutdown = off
             akka.cluster.distributed-data.durable.keys = [""durable*""]
-            akka.cluster.distributed-data.durable.lmdb {{
+            akka.cluster.distributed-data.durable.lmdb {
               dir = ""target/DurableDataSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
               write-behind-interval = ${writeBehindInterval}
-            }}
+            }
             akka.test.single-expect-default = 5s
             ").WithFallback(DistributedData.DefaultConfig());
         }

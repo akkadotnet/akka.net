@@ -31,10 +31,10 @@ namespace Akka.DistributedData.Tests.MultiNode
             akka.actor.provider = ""cluster""
             akka.log-dead-letters-during-shutdown = off
             akka.cluster.distributed-data.durable.keys = [""*""]
-            akka.cluster.distributed-data.durable.lmdb {{
+            akka.cluster.distributed-data.durable.lmdb {
               dir = ""target/DurablePruningSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
-            }}")).WithFallback(DistributedData.DefaultConfig());
+            }")).WithFallback(DistributedData.DefaultConfig());
         }
     }
 
