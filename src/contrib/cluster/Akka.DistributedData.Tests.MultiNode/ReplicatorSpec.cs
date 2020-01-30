@@ -548,7 +548,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 // note that the order of the replies are not defined, and therefore we use separate probes
                 var probe3 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe3.Ref);
-                probe1.ExpectMsg(151);
+                probe1.ExpectMsg(151UL);
                 probe2.ExpectMsg(new UpdateSuccess(KeyE, null));
                 var c152 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c152.Value.ShouldBe(152UL);
