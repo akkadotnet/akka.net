@@ -35,10 +35,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             akka.cluster.distributed-data.durable.lmdb {
               dir = ""target/DurableDataSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
-              write-behind-interval = ${writeBehindInterval}
+              write-behind-interval = " + writeBehindInterval + @"
             }
-            akka.test.single-expect-default = 5s
-            ").WithFallback(DistributedData.DefaultConfig());
+            akka.test.single-expect-default = 5s").WithFallback(DistributedData.DefaultConfig());
         }
     }
 
