@@ -10,11 +10,16 @@
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
+    
+  <ItemGroup>
+      <!--    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />-->
+      <!--    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2-preview.52.g19fc37fb0a" />-->
+      <PackageReference Include="Akka.MultiNodeTestRunner.VisualStudio" Version="2.4.2-preview.1.gc2e1f4722c" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
   </ItemGroup>
 

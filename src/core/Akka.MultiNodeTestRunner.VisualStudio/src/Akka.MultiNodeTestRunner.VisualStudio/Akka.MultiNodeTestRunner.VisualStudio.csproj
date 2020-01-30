@@ -8,7 +8,6 @@
     <Title>xUnit.net [Runner: Visual Studio]</Title>
     <AssemblyTitle>xUnit.net Runner for Visual Studio ($(TargetFramework))</AssemblyTitle>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyOriginatorKeyFile>../signing.snk</AssemblyOriginatorKeyFile>
     <DebugType>embedded</DebugType>
     <LangVersion>latest</LangVersion>
     <RootNamespace>Xunit.Runner.VisualStudio</RootNamespace>
