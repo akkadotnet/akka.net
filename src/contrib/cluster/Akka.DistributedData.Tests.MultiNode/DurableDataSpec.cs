@@ -33,7 +33,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             akka.log-dead-letters-during-shutdown = off
             akka.cluster.distributed-data.durable.keys = [""durable*""]
             akka.cluster.distributed-data.durable.lmdb {{
-              dir = target/DurableDataSpec-${DateTime.UtcNow.Ticks}-ddata
+              dir = ""target/DurableDataSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
               write-behind-interval = ${writeBehindInterval}
             }}

@@ -26,7 +26,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(on: false).WithFallback(ConfigurationFactory.ParseString($@"
+            CommonConfig = DebugConfig(on: false).WithFallback(ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.actor.provider = ""cluster""
             akka.log-dead-letters-during-shutdown = off
