@@ -48,7 +48,11 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly GCounterKey keyA = new GCounterKey("A");
         private readonly IActorRef replicator;
 
-        protected DurablePruningSpec() : base(new DurablePruningSpecConfig(), typeof(DurablePruningSpec))
+        protected DurablePruningSpec() : this(new DurablePruningSpecConfig())
+        {
+        }
+
+        protected DurablePruningSpec(DurablePruningSpecConfig config) : base(config, typeof(DurablePruningSpec))
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
