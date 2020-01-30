@@ -47,6 +47,30 @@ namespace Akka.Cluster.Metrics
         public const string CpuTotalUsage = "CpuTotalUsage";
 
         /// <summary>
+        /// Extract <see cref="Memory"/> data from nodeMetrics, if the nodeMetrics
+        /// contains necessary memory metrics, otherwise it returns <see cref="Option{T}.None"/>.
+        /// </summary>
+        public static Option<Memory> ExtractMemory(NodeMetrics nodeMetrics)
+        {
+            return Memory.Decompose(nodeMetrics).Select(data =>
+            {
+                return new Memory(data.Address, data.Timestamp, data.UsedSmoothValue, data.AvailableSmoothValue, data.MaxRecommendedSmoothValue);
+            });
+        }
+
+        /// <summary>
+        /// Extract <see cref="Cpu"/> data from nodeMetrics, if the nodeMetrics
+        /// contains necessary CPU metrics, otherwise it returns <see cref="Option{T}.None"/>.
+        /// </summary>
+        public static Option<Cpu> ExtractCpu(NodeMetrics nodeMetrics)
+        {
+            return Cpu.Decompose(nodeMetrics).Select(data =>
+            {
+                return new Cpu(data.Address, data.Timestamp, data.CpuProcessUsage, data.CpuTotalUsage, data.Processors);
+            });
+        }
+
+        /// <summary>
         /// Allocated memory metric
         /// </summary>
         public sealed class Memory
