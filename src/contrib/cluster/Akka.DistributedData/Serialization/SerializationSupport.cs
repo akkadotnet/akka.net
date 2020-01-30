@@ -14,6 +14,7 @@ using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData.Serialization
 {
+    
     /// <summary>
     /// INTERNAL API.
     ///
