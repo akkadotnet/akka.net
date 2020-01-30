@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net452;netcoreapp2.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\test.testcasefilter\test.testcasefilter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="PerfTests.cs" DesignTime="True" AutoGen="True" DependentUpon="PerfTests.tt" />
+    <None Update="PerfTests.tt" Generator="TextTemplatingFileGenerator" LastGenOutput="PerfTests.cs" />
+  </ItemGroup>
+
+</Project>

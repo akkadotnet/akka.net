@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup Condition=" '$(TargetFrameworkIdentifier)' == '.NETFramework' ">
+    <DebugType>full</DebugType>
+    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DefineConstants Condition=" '$(TargetFrameworkIdentifier)' == '.NETFramework' ">$(DefineConstants);NETFRAMEWORK</DefineConstants>
+    <DefineConstants Condition=" '$(TargetFrameworkIdentifier)' == '.NETCoreApp' ">$(DefineConstants);NETCOREAPP</DefineConstants>
+    <DefineConstants Condition=" '$(TargetFrameworkIdentifier)' == '.NETStandard' ">$(DefineConstants);NETSTANDARD</DefineConstants>
+  </PropertyGroup>
+
+</Project>

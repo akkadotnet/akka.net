@@ -1,0 +1,67 @@
+﻿<Project Sdk="MSBuild.Sdk.Extras">
+
+  <PropertyGroup>
+    <Copyright>Copyright (c) .NET Foundation and Contributors.</Copyright>
+    <Authors>.NET Foundation and Contributors</Authors>
+    <Company>.NET Foundation</Company>
+    <Product>xUnit.net Testing Framework</Product>
+    <Title>xUnit.net [Runner: Visual Studio]</Title>
+    <AssemblyTitle>xUnit.net Runner for Visual Studio ($(TargetFramework))</AssemblyTitle>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyOriginatorKeyFile>../signing.snk</AssemblyOriginatorKeyFile>
+    <DebugType>embedded</DebugType>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Xunit.Runner.VisualStudio</RootNamespace>
+    <SignAssembly>true</SignAssembly>
+    <TargetFrameworks>net452;netcoreapp2.1</TargetFrameworks>
+    <WarningsAsErrors>true</WarningsAsErrors>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <Description>Visual Studio 2017 15.9+ Test Explorer runner for the xUnit.net framework. Capable of running xUnit.net v1.9.2 and v2.0+ tests. Supports .NET 2.0 or later, .NET Core 2.1 or later, and Universal Windows 10.0.16299 or later.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIconUrl>https://raw.githubusercontent.com/xunit/media/master/logo-512-transparent.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/xunit/visualstudio.xunit</PackageProjectUrl>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <BuildOutputTargetFolder>build</BuildOutputTargetFolder>
+    <XunitVersion>2.4.1</XunitVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NoWarn>$(NoWarn)1701;1702;NU5105</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <AssemblyName>xunit.runner.visualstudio.testadapter</AssemblyName>
+    <DefineConstants>$(DefineConstants);NETFRAMEWORK</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.1' ">
+    <AssemblyName>xunit.runner.visualstudio.dotnetcore.testadapter</AssemblyName>
+    <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.0.28" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="xunit.runner.reporters" Version="$(XunitVersion)" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="16.4.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup Label="Package">
+    <None Include="build\xunit.runner.visualstudio.desktop.props" PackagePath="build\net452\xunit.runner.visualstudio.props" Pack="true" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.reporters\$(XunitVersion)\lib\net452\*.dll" PackagePath="build\net452" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.utility\$(XunitVersion)\lib\net452\*.dll" PackagePath="build\net452" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.abstractions\2.0.3\lib\netstandard1.0\*.dll" PackagePath="build\net452" Pack="true" Visible="false" />
+
+    <None Include="build\xunit.runner.visualstudio.dotnetcore.props" PackagePath="build\netcoreapp2.1\xunit.runner.visualstudio.props" Pack="true" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.reporters\$(XunitVersion)\lib\netcoreapp1.0\*.dll" PackagePath="build\netcoreapp2.1" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.utility\$(XunitVersion)\lib\netcoreapp1.0\*.dll" PackagePath="build\netcoreapp2.1" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.abstractions\2.0.3\lib\netstandard2.0\*.dll" PackagePath="build\netcoreapp2.1" Pack="true" Visible="false" />
+
+    <None Include="build\xunit.runner.visualstudio.uwp.props" PackagePath="build\uap10.0.16299\xunit.runner.visualstudio.props" Pack="true" />
+    <None Include="build\xunit.runner.visualstudio.uwp.targets" PackagePath="build\uap10.0.16299\xunit.runner.visualstudio.targets" Pack="true" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.reporters\$(XunitVersion)\lib\netstandard1.5\*.dll" PackagePath="build\uap10.0.16299" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.utility\$(XunitVersion)\lib\netstandard1.5\*.dll" PackagePath="build\uap10.0.16299" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.utility\$(XunitVersion)\lib\uap10.0\*.dll" PackagePath="build\uap10.0.16299" Pack="true" Visible="false" />
+    <None Include="$(NuGetPackageRoot)xunit.runner.utility\$(XunitVersion)\lib\uap10.0\*.pri" PackagePath="build\uap10.0.16299" Pack="true" Visible="false" />
+  </ItemGroup>
+
+</Project>

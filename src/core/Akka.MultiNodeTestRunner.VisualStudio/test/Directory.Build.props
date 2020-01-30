@@ -1,0 +1,32 @@
+<Project>
+
+  <PropertyGroup>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <LangVersion>latest</LangVersion>
+    <PackageId>$(MSBuildProjectName)</PackageId>
+    <VersionPrefix>99.99.99-dev</VersionPrefix>
+    <WarningsAsErrors>true</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalTestAssemblyInfo.cs" LinkBase="Properties" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(MSBuildProjectName)' != 'test.utility' ">
+    <Content Include="$(MSBuildThisFileDirectory)xunit.runner.json" Link="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Need this Choose/When for legacy projects (UWP) in the IDE -->
+  <!--<Choose>
+    <When Condition=" '$(MSBuildProjectName)' != 'test.utility' AND '$(MSBuildProjectName)' != 'test.harness.uwp'  ">
+      <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)test.utility\test.utility.csproj" />
+      </ItemGroup>
+    </When>
+  </Choose>-->
+
+</Project>

@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.168
+MinimumVisualStudioVersion = 15.0.26228.4
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{BA799592-92C2-40AD-9FB2-623E94A427F3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{88AA0DC3-2723-4E7D-A89E-A977F319B3AA}"
+	ProjectSection(SolutionItems) = preProject
+		test\Directory.Build.props = test\Directory.Build.props
+		test\Directory.Build.targets = test\Directory.Build.targets
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.VisualStudio", "src\Akka.MultiNodeTestRunner.VisualStudio\Akka.MultiNodeTestRunner.VisualStudio.csproj", "{6FBF46BB-C136-4587-B121-0B7F1DB02A18}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test.xunit.runner.visualstudio", "test\test.xunit.runner.visualstudio\test.xunit.runner.visualstudio.csproj", "{24D04B23-4E06-4214-89EB-96BF5EAA1C72}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test.harness", "test\test.harness\test.harness.csproj", "{91597B83-3C83-4E24-850A-D3B4DB8142AD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test.testcasefilter", "test\test.testcasefilter\test.testcasefilter.csproj", "{AE527802-7EA2-4796-A295-3FDF9ECCE32D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A8EAFB53-8C80-4FD4-AE90-09DD6606D6CB}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		azure-pipelines.yml = azure-pipelines.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FBF46BB-C136-4587-B121-0B7F1DB02A18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FBF46BB-C136-4587-B121-0B7F1DB02A18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FBF46BB-C136-4587-B121-0B7F1DB02A18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FBF46BB-C136-4587-B121-0B7F1DB02A18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24D04B23-4E06-4214-89EB-96BF5EAA1C72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24D04B23-4E06-4214-89EB-96BF5EAA1C72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24D04B23-4E06-4214-89EB-96BF5EAA1C72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24D04B23-4E06-4214-89EB-96BF5EAA1C72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91597B83-3C83-4E24-850A-D3B4DB8142AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91597B83-3C83-4E24-850A-D3B4DB8142AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91597B83-3C83-4E24-850A-D3B4DB8142AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91597B83-3C83-4E24-850A-D3B4DB8142AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE527802-7EA2-4796-A295-3FDF9ECCE32D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE527802-7EA2-4796-A295-3FDF9ECCE32D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE527802-7EA2-4796-A295-3FDF9ECCE32D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE527802-7EA2-4796-A295-3FDF9ECCE32D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6FBF46BB-C136-4587-B121-0B7F1DB02A18} = {BA799592-92C2-40AD-9FB2-623E94A427F3}
+		{24D04B23-4E06-4214-89EB-96BF5EAA1C72} = {88AA0DC3-2723-4E7D-A89E-A977F319B3AA}
+		{91597B83-3C83-4E24-850A-D3B4DB8142AD} = {88AA0DC3-2723-4E7D-A89E-A977F319B3AA}
+		{AE527802-7EA2-4796-A295-3FDF9ECCE32D} = {88AA0DC3-2723-4E7D-A89E-A977F319B3AA}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D98C9775-3F13-458F-A382-1BD82A380073}
+	EndGlobalSection
+EndGlobal
