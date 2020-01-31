@@ -35,6 +35,8 @@ namespace Akka.DistributedData.Tests.MultiNode
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
                 akka.loglevel = DEBUG
+                akka.debug.unhandled = on
+                akka.debug.receive = on
                 akka.log-dead-letters-during-shutdown = on
             ").WithFallback(DistributedData.DefaultConfig());
 
