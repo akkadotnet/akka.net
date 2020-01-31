@@ -557,8 +557,7 @@ namespace Akka.DistributedData
                 if (localValue == null)
                 {
                     var d = modify(null);
-                    var withDelta = d as IDeltaReplicatedData;
-                    if (withDelta != null)
+                    if (d is IDeltaReplicatedData withDelta)
                     {
                         envelope = new DataEnvelope(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
@@ -578,8 +577,7 @@ namespace Akka.DistributedData
                 else
                 {
                     var d = modify(localValue.Data);
-                    var withDelta = d as IDeltaReplicatedData;
-                    if (withDelta != null)
+                    if (d is IDeltaReplicatedData withDelta)
                     {
                         envelope = localValue.Merge(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
