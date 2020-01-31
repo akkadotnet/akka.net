@@ -154,10 +154,10 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Tries to return a result of the request, given a replicated collection 
-        /// <paramref name="key"/> used when sending a <see cref="Get"/> request.
+        /// <paramref name="key"/> used when sending a <see cref="Replicator.Get"/> request.
         /// </summary>
         /// <typeparam name="T">Replicated data.</typeparam>
-        /// <param name="key">Key send originally with a <see cref="Get"/> request.</param>
+        /// <param name="key">Key send originally with a <see cref="Replicator.Get"/> request.</param>
         /// <exception cref="KeyNotFoundException">Thrown when no value for provided <paramref name="key"/> was found.</exception>
         /// <exception cref="TimeoutException">Thrown when response with given consistency didn't arrive within specified timeout.</exception>
         /// <returns></returns>
@@ -211,7 +211,7 @@ namespace Akka.DistributedData
 
         public T Get<T>(IKey<T> key) where T : IReplicatedData
         {
-            if (Data is T data) return data;
+            if (Data is T) return (T)Data;
 
             throw new InvalidCastException($"Response returned for key '{Key}' is of type [{Data?.GetType()}] and cannot be casted using key '{key}' to type [{typeof(T)}]");
         }
