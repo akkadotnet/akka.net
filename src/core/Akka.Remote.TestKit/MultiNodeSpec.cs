@@ -522,7 +522,12 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public bool IsNode(params RoleName[] nodes)
         {
-            return nodes.Contains(_myself);
+            _log.Debug("[{0}] Checking to see if we can run thunk specified for roles [{1}]", _myself,
+                string.Join(",", nodes.Select(x => x.Name)));
+            var isNode = nodes.Contains(_myself);
+            _log.Debug("[{0}] Determined we are {2} to run thunk [{1}]", _myself,
+                string.Join(",", nodes.Select(x => x.Name)), isNode ? "ABLE" : "NOT ABLE");
+            return isNode;
         }
 
         /// <summary>
