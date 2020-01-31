@@ -30,15 +30,22 @@ let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
 let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
 let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else DateTime.UtcNow.Ticks.ToString())
+
+let releaseNotes =
+    File.ReadLines (__SOURCE_DIRECTORY__ @@ "RELEASE_NOTES.md")
+    |> ReleaseNotesHelper.parseReleaseNotes
+
+let versionFromReleaseNotes =
+    match releaseNotes.SemVer.PreRelease with
+    | Some r -> r.Origin
+    | None -> ""
+
 let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
     | "dev" -> preReleaseVersionSuffix
-    | "" -> ""
+    | "" -> versionFromReleaseNotes
     | str -> str
-
-let releaseNotes =
-    File.ReadLines "./RELEASE_NOTES.md"
-    |> ReleaseNotesHelper.parseReleaseNotes
+    
 
 // Incremental builds
 let runIncrementally = hasBuildParam "incremental"
@@ -464,7 +471,7 @@ Target "CreateMntrNuget" (fun _ ->
 
 Target "PublishNuget" (fun _ ->
     let nugetExe = FullName @"./tools/nuget.exe"
-    let rec publishPackage url accessKey trialsLeft packageFile =
+    let rec publishPackage url apiKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
         let args p =
@@ -474,33 +481,23 @@ Target "PublishNuget" (fun _ ->
 
         tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
         try 
-            let result = ExecProcess (fun info -> 
-                    info.FileName <- nugetExe
-                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
-                    info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
-            enableProcessTracing <- tracing
-            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, "key omitted",url))
+            DotNetCli.RunCommand
+                (fun p -> 
+                    { p with 
+                        TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "nuget push %s --api-key %s --source %s" packageFile apiKey url)
         with exn -> 
-            if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
+            if (trialsLeft > 0) then (publishPackage url apiKey (trialsLeft-1) packageFile)
             else raise exn
     let shouldPushNugetPackages = hasBuildParam "nugetkey"
-    let shouldPushSymbolsPackages = (hasBuildParam "symbolspublishurl") && (hasBuildParam "symbolskey")
     
-    if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
+    if (shouldPushNugetPackages) then
         printfn "Pushing nuget packages"
         if shouldPushNugetPackages then
             let normalPackages= !! (outputNuGet @@ "*.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
                 try
                     publishPackage (getBuildParamOrDefault "nugetpublishurl" "https://api.nuget.org/v3/index.json") (getBuildParam "nugetkey") 3 package
-                with exn ->
-                    printfn "%s" exn.Message
-
-        if shouldPushSymbolsPackages then
-            let symbolPackages= !! (outputNuGet @@ "*.snupkg") |> Seq.sortBy(fun x -> x.ToLower())
-            for package in symbolPackages do
-                try
-                    publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
                 with exn ->
                     printfn "%s" exn.Message
 )

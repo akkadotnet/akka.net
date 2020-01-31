@@ -4617,6 +4617,7 @@ namespace Akka.Serialization
         public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
         public static Akka.Serialization.Information GetCurrentTransportInformation() { }
+        public static string ManifestFor(Akka.Serialization.Serializer s, object msg) { }
         public byte[] Serialize(object o) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
         [System.ObsoleteAttribute("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
@@ -4701,6 +4702,13 @@ namespace Akka.Util
         public bool Contains(T item) { }
         public bool TryAdd(T item) { }
         public bool TryRemove(T item) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class static DynamicAccess
+    {
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Util.Try<TResult> CreateInstanceFor<TResult>(string typeName, params object[] args)
+            where TResult :  class { }
     }
     public class static Either
     {
@@ -4816,6 +4824,8 @@ namespace Akka.Util
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public T GetOrElse(T fallbackValue) { }
+        public void OnSuccess(System.Action<T> action) { }
+        public Akka.Util.Option<TNew> Select<TNew>(System.Func<T, TNew> selector) { }
         public override string ToString() { }
         public static Akka.Util.Option<T> op_Implicit(T value) { }
     }
@@ -4928,6 +4938,20 @@ namespace Akka.Util
         public void Init() { }
         public long Offer(long cost) { }
     }
+    public class Try<T>
+    {
+        public Try(T success) { }
+        public Try(System.Exception failure) { }
+        public Akka.Util.Option<System.Exception> Failure { get; }
+        public bool IsSuccess { get; }
+        public Akka.Util.Option<T> Success { get; }
+        public static Akka.Util.Try<T> From(System.Func<T> func) { }
+        public T Get() { }
+        public Akka.Util.Try<T> GetOrElse(System.Func<T> fallback) { }
+        public Akka.Util.Try<T> OrElse(Akka.Util.Try<T> @default) { }
+        public Akka.Util.Try<T> Recover(System.Action<System.Exception> failureHandler) { }
+        public static Akka.Util.Try<T> op_Implicit(T value) { }
+    }
     public class static TypeExtensions
     {
         public static bool Implements<T>(this System.Type type) { }
@@ -4959,9 +4983,18 @@ namespace Akka.Util
 }
 namespace Akka.Util.Extensions
 {
+    public class static DateTimeExtensions
+    {
+        public static long ToTimestamp(this System.DateTime dateTime) { }
+    }
     public class static ObjectExtensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
+    }
+    public class static TimeSpanExtensions
+    {
+        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, int multiplier) { }
+        public static System.TimeSpan Multiply(this System.TimeSpan multiplicand, double multiplier) { }
     }
 }
 namespace Akka.Util.Internal
