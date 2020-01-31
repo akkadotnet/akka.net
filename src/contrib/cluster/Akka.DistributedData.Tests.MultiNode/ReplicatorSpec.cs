@@ -687,13 +687,13 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                changedProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.True)
                 })).ShouldBeTrue();
 
                 _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "b", Flag.True)));
-                changedProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.True),
                     new KeyValuePair<string, Flag>("b", Flag.True)
