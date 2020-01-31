@@ -550,7 +550,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe3.Ref);
                 probe1.ExpectMsg(151UL);
                 probe2.ExpectMsg(new UpdateSuccess(KeyE, null));
-                var c152 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
+                var c152 = probe3.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c152.Value.ShouldBe(152UL);
             }, _first);
 
