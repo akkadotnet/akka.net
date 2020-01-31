@@ -592,8 +592,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
+                Sys.Log.Info("Opening up traffic to third node again...");
                 TestConductor.PassThrough(_first, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
                 TestConductor.PassThrough(_second, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+                Sys.Log.Info("Traffic open to node 3.");
             }, _first);
 
             EnterBarrier("passThrough-third");
