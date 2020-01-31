@@ -148,6 +148,8 @@
     href: remoting/deathwatch.md
   - name: Network Security
     href: remoting/security.md
+  - name: Performance Optimization
+    href: remoting/performance.md
 - name: Clustering
   items:
   - name: Overview
