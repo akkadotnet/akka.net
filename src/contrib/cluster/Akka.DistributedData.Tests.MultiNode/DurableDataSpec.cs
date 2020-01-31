@@ -21,8 +21,6 @@ namespace Akka.DistributedData.Tests.MultiNode
         public RoleName First { get; }
         public RoleName Second { get; }
 
-        public DurableDataSpecConfig() : this(true) { }
-
         public DurableDataSpecConfig(bool writeBehind)
         {
             First = Role("first");
