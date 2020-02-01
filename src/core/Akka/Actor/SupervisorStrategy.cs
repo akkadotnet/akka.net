@@ -141,7 +141,7 @@ namespace Akka.Actor
         /// <param name="cause">The exception that caused the child to fail.</param>
         /// <param name="stats">The stats for the child that failed. The ActorRef to the child can be obtained via the <see cref="ChildRestartStats.Child"/> property</param>
         /// <param name="children">The stats for all children</param>
-        protected abstract void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children);
+        public abstract void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children);
 
         /// <summary>
         /// Resumes the previously failed child. Suspend/resume needs to be done in
@@ -413,7 +413,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="stats">TBD</param>
         /// <param name="children">TBD</param>
-        protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
+        public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (restart && stats.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds))
                 RestartChild(child, cause, suspendFirst: false);
@@ -684,7 +684,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="stats">TBD</param>
         /// <param name="children">TBD</param>
-        protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
+        public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (children.Count > 0)
             {
