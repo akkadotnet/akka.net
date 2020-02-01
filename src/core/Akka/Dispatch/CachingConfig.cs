@@ -199,6 +199,15 @@ namespace Akka.Dispatch
         /// <param name="fallback">TBD</param>
         public override Config WithFallback(Config fallback)
         {
+            if (fallback.IsNullOrEmpty())
+                return this; // no-op
+
+            if (fallback == _config)
+                throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
+
+            if (_config.IsEmpty)
+                return new CachingConfig(fallback);
+
             return new CachingConfig(_config.WithFallback(fallback));
         }
 

@@ -20,7 +20,7 @@ namespace DocsExamples.Streams
         private ActorMaterializer Materializer { get; }
 
         public StreamTcpDocTests(ITestOutputHelper output)
-            : base("", output)
+            : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }

@@ -31,8 +31,7 @@ namespace Akka.Actor
             Config = _userConfig.SafeWithFallback(_fallbackConfig);
 
             //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
-            if(System != null && System.Dispatchers != null)
-                System.Dispatchers.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
+            System?.Dispatchers?.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
             if (System is Internal.ISupportSerializationConfigReload rs)
                 rs.ReloadSerialization();
         }

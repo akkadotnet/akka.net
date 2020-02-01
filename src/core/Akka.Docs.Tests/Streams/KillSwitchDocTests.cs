@@ -14,7 +14,7 @@ namespace DocsExamples.Streams
         private ActorMaterializer Materializer { get; }
 
         public KillSwitchDocTests(ITestOutputHelper output) 
-            : base("", output)
+            : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }

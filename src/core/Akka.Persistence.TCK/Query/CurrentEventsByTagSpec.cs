@@ -95,6 +95,7 @@ namespace Akka.Persistence.TCK.Query
             probe.Request(2).ExpectComplete();
         }
 
+        // Unit test failed because of time-out but passed when the delays were raised to 300
         [Fact]
         public virtual void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
         {

@@ -17,7 +17,7 @@ namespace DocsExamples.Streams
         private ActorMaterializer Materializer { get; }
 
         public RestartDocTests(ITestOutputHelper output)
-            : base("", output)
+            : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }
