@@ -312,7 +312,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// The actual data.
         /// </summary>
-        private ImmutableDictionary<string, (DataEnvelope, Digest)> _dataEntries = ImmutableDictionary<string, (DataEnvelope, Digest)>.Empty;
+        private ImmutableDictionary<string, (DataEnvelope envelope, Digest digest)> _dataEntries = ImmutableDictionary<string, (DataEnvelope, Digest)>.Empty;
 
         /// <summary>
         /// Keys that have changed, Changed event published to subscribers on FlushChanges
@@ -513,7 +513,7 @@ namespace Akka.DistributedData
             _log.Debug("ignoring message [{0}] when loading durable data", typeof(T));
         }
 
-        private void Ignore<T>(T msg) { }
+        private static void Ignore<T>(T msg) { }
 
         private void ReceiveGet(IKey key, IReadConsistency consistency, object req)
         {
@@ -557,8 +557,7 @@ namespace Akka.DistributedData
                 if (localValue == null)
                 {
                     var d = modify(null);
-                    var withDelta = d as IDeltaReplicatedData;
-                    if (withDelta != null)
+                    if (d is IDeltaReplicatedData withDelta)
                     {
                         envelope = new DataEnvelope(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
@@ -578,8 +577,7 @@ namespace Akka.DistributedData
                 else
                 {
                     var d = modify(localValue.Data);
-                    var withDelta = d as IDeltaReplicatedData;
-                    if (withDelta != null)
+                    if (d is IDeltaReplicatedData withDelta)
                     {
                         envelope = localValue.Merge(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
@@ -603,7 +601,7 @@ namespace Akka.DistributedData
 
                 // note that it's important to do deltaPropagationSelector.update before setData,
                 // so that the latest delta version is used
-                DataEnvelope newEnvelope = SetData(key.Id, envelope);
+                var newEnvelope = SetData(key.Id, envelope);
 
                 var durable = IsDurable(key.Id);
                 if (IsLocalUpdate(consistency))
@@ -622,7 +620,7 @@ namespace Akka.DistributedData
                 {
                     DataEnvelope writeEnvelope;
                     Delta writeDelta;
-                    if (delta == null || delta == DeltaPropagation.NoDeltaPlaceholder)
+                    if (delta == null || Equals(delta, DeltaPropagation.NoDeltaPlaceholder))
                     {
                         writeEnvelope = newEnvelope;
                         writeDelta = null;
@@ -812,17 +810,16 @@ namespace Akka.DistributedData
 
         private Digest GetDigest(string key)
         {
-            (DataEnvelope, Digest) value;
-            var contained = _dataEntries.TryGetValue(key, out value);
+            var contained = _dataEntries.TryGetValue(key, out var value);
             if (contained)
             {
-                if (Equals(value.Item2, LazyDigest))
+                if (Equals(value.digest, LazyDigest))
                 {
-                    var digest = Digest(value.Item1);
-                    _dataEntries = _dataEntries.SetItem(key, (value.Item1, digest));
+                    var digest = Digest(value.envelope);
+                    _dataEntries = _dataEntries.SetItem(key, (value.envelope, digest));
                     return digest;
                 }
-                else return value.Item2;
+                else return value.digest;
             }
             else return NotFoundDigest;
         }
@@ -838,27 +835,19 @@ namespace Akka.DistributedData
 
         private DataEnvelope GetData(string key)
         {
-            (DataEnvelope, Digest) value;
-            return !_dataEntries.TryGetValue(key, out value) ? null : value.Item1;
+            return !_dataEntries.TryGetValue(key, out var value) ? null : value.Item1;
         }
 
         private long GetDeltaSequenceNr(string key, UniqueAddress from)
         {
-            (DataEnvelope, Digest) tuple;
-            return _dataEntries.TryGetValue(key, out tuple) ? tuple.Item1.DeltaVersions.VersionAt(@from) : 0L;
+            return _dataEntries.TryGetValue(key, out var tuple) ? tuple.Item1.DeltaVersions.VersionAt(@from) : 0L;
         }
 
         private bool IsNodeRemoved(UniqueAddress node, IEnumerable<string> keys)
         {
             if (_removedNodes.ContainsKey(node)) return true;
 
-            return keys.Any(key =>
-            {
-                (DataEnvelope, Digest) tuple;
-                return _dataEntries.TryGetValue(key, out tuple)
-                    ? tuple.Item1.Pruning.ContainsKey(node)
-                    : false;
-            });
+            return keys.Any(key => _dataEntries.TryGetValue(key, out var tuple) && tuple.envelope.Pruning.ContainsKey(node));
         }
 
         private void Notify(string keyId, HashSet<IActorRef> subs)
@@ -881,8 +870,7 @@ namespace Akka.DistributedData
             {
                 foreach (var key in _changed)
                 {
-                    HashSet<IActorRef> subs;
-                    if (_subscribers.TryGetValue(key, out subs))
+                    if (_subscribers.TryGetValue(key, out var subs))
                         Notify(key, subs);
                 }
             }
@@ -894,8 +882,7 @@ namespace Akka.DistributedData
                 foreach (var kvp in _newSubscribers)
                 {
                     Notify(kvp.Key, kvp.Value);
-                    HashSet<IActorRef> set;
-                    if (!_subscribers.TryGetValue(kvp.Key, out set))
+                    if (!_subscribers.TryGetValue(kvp.Key, out var set))
                     {
                         set = new HashSet<IActorRef>();
                         _subscribers.Add(kvp.Key, set);
