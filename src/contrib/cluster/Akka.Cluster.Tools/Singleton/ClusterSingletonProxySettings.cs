@@ -26,7 +26,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
-            if (config == null)
+            if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Cannot create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
 
             return Create(config);

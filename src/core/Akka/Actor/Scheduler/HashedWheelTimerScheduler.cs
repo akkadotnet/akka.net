@@ -40,11 +40,14 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="scheduler">TBD</param>
+        /// <param name="config">TBD</param>
         /// <param name="log">TBD</param>
         /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
-        public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
+        public HashedWheelTimerScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
+            if (SchedulerConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(HashedWheelTimerScheduler)}: {nameof(config)} parameter is null or empty.");
+
             var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
             var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
             if (tickDuration.TotalMilliseconds < 10.0d)

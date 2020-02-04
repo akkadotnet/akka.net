@@ -188,14 +188,6 @@ namespace Akka.Dispatch
         /// <summary>
         /// TBD
         /// </summary>
-        public override HoconValue Root
-        {
-            get { return _config.Root; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="fallback">TBD</param>
         public override Config WithFallback(Config fallback)
         {

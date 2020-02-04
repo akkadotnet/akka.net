@@ -12,15 +12,18 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
+using Hocon;
 
 namespace DocsExamples.Streams
 {
     public class StreamTcpDocTests : TestKit
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         private ActorMaterializer Materializer { get; }
 
         public StreamTcpDocTests(ITestOutputHelper output)
-            : base("{}", output)
+            : base(AkkaDllConfig, "Actorname", output)
         {
             Materializer = Sys.Materializer();
         }

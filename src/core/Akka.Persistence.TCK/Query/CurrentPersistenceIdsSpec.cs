@@ -19,12 +19,14 @@ namespace Akka.Persistence.TCK.Query
 {
     public abstract class CurrentPersistenceIdsSpec : Akka.TestKit.Xunit2.TestKit
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         protected ActorMaterializer Materializer { get; }
 
         protected IReadJournal ReadJournal { get; set; }
 
         protected CurrentPersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base((config == null ? Config.Empty : config).WithFallback(AkkaDllConfig), actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }

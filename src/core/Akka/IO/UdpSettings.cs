@@ -18,8 +18,14 @@ namespace Akka.IO
         /// and fills it with values parsed from `akka.io.udp` HOCON
         /// path found in actor system.
         /// </summary>
-        public static UdpSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.io.udp"));
+        public static UdpSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.io.udp");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(UdpSettings)}: akka.io.udp configuration node not found");
+
+            return Create(config);
+        }
 
         /// <summary>
         /// Creates a new instance of <see cref="UdpSettings"/> class 
@@ -28,7 +34,8 @@ namespace Akka.IO
         /// <param name="config">TBD</param>
         public static UdpSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(UdpSettings)}: {nameof(config)} parameter is null or empty.");
 
             return new UdpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool"),

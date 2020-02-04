@@ -23,6 +23,8 @@ namespace Akka.Cluster
         {
             _clusterSettings = Cluster.Get(system).Settings;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(SplitBrainResolver)}: akka.cluster.split-brain-resolver configuration node not found");
 
             StableAfter = config.GetTimeSpan("stable-after");
             Strategy = ResolveSplitBrainStrategy(config);

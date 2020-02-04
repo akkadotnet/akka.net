@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Event;
+using Hocon;
 
 namespace Akka.Persistence.Snapshot
 {
@@ -45,6 +46,11 @@ namespace Akka.Persistence.Snapshot
         public LocalSnapshotStore()
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
+            /*
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(LocalSnapshotStore)}: akka.persistence.snapshot-store.local configuration node not found");
+            */
+
             _maxLoadAttempts = config.GetInt("max-load-attempts");
 
             _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher"));

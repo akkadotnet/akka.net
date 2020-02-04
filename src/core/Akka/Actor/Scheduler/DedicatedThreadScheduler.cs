@@ -64,6 +64,9 @@ namespace Akka.Actor
         /// <param name="log">N/A</param>
         public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
+            if (SchedulerConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(DedicatedThreadScheduler)}: {nameof(config)} parameter is null or empty.");
+
             var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
             _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
             var thread = new Thread(_ =>

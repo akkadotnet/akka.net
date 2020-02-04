@@ -42,7 +42,10 @@ namespace Akka.Persistence.TCK.Snapshot
                 }
             }";
 
-        protected static readonly Config Config = ConfigurationFactory.ParseString(_specConfigTemplate);
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+        protected static readonly Config Config = 
+            ConfigurationFactory.ParseString(_specConfigTemplate)
+            .WithFallback(AkkaDllConfig);
 
         protected override bool SupportsSerialization => true;
 

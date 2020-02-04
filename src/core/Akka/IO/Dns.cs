@@ -240,7 +240,12 @@ namespace Akka.IO
         public DnsExt(ExtendedActorSystem system)
         {
             _system = system;
-            Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
+
+            var config = system.Settings.Config.GetConfig("akka.io.dns");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(DnsSettings)}: akka.io.dns configuration node not found");
+
+            Settings = new DnsSettings(config);
             //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
             Provider = (IDnsProvider) Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName));
             Cache = Provider.Cache;

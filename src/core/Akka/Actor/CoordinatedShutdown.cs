@@ -35,6 +35,9 @@ namespace Akka.Actor
         public override CoordinatedShutdown CreateExtension(ExtendedActorSystem system)
         {
             var conf = system.Settings.Config.GetConfig("akka.coordinated-shutdown");
+            if (conf.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(CoordinatedShutdown)}: akka.coordinated-shutdown configuration node not found");
+
             var phases = CoordinatedShutdown.PhasesFromConfig(conf);
             var coord = new CoordinatedShutdown(system, phases);
             CoordinatedShutdown.InitPhaseActorSystemTerminate(system, conf, coord);

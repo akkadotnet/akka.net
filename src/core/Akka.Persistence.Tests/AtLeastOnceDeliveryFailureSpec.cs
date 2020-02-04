@@ -144,6 +144,9 @@ namespace Akka.Persistence.Tests
                 State = new List<int>();
 
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.sender.chaos");
+                if (_config.IsNullOrEmpty())
+                    throw new ConfigurationException($"Cannot create {typeof(ChaosSender)}: akka.persistence.sender.chaos configuration node not found");
+
                 _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
                 _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
             }
@@ -315,6 +318,8 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         private static readonly Config FailureSpecConfig = ConfigurationFactory.ParseString(
             @"akka.persistence.sender.chaos.live-processing-failure-rate = 0.3
               akka.persistence.sender.chaos.replay-processing-failure-rate = 0.1
@@ -332,7 +337,7 @@ namespace Akka.Persistence.Tests
         internal const int NumberOfMessages = 10;
 
         public AtLeastOnceDeliveryFailureSpec(ITestOutputHelper output)
-            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()), output)
+            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig().WithFallback(AkkaDllConfig)), output)
         {
         }
 

@@ -19,6 +19,8 @@ namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class SnapshotStoreSerializationSpec : PluginSpec
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
             : base(ConfigurationFactory.ParseString(@"
                 akka.actor {
@@ -31,7 +33,7 @@ namespace Akka.Persistence.TCK.Serialization
                     ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
                   }
                 }
-            ").WithFallback(config), actorSystem, output)
+            ").WithFallback(config).WithFallback(AkkaDllConfig), actorSystem, output)
         {
         }
 

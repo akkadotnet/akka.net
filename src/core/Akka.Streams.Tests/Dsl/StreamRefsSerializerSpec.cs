@@ -35,7 +35,8 @@ namespace Akka.Streams.Tests
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}
-            }}").WithFallback(ConfigurationFactory.Load());
+            }}")
+                .WithFallback(ConfigurationFactory.Default());
 
             var system = ActorSystem.Create("remote-system-2", config);
 
@@ -126,6 +127,8 @@ namespace Akka.Streams.Tests
 
     public class StreamRefsSerializerSpec : AkkaSpec
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         public static Config Config()
         {
             var address = TestUtils.TemporaryServerAddress();
@@ -140,7 +143,9 @@ namespace Akka.Streams.Tests
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}
-            }}").WithFallback(ConfigurationFactory.Load());
+            }}")
+            .WithFallback(ConfigurationFactory.Default())
+            .WithFallback(AkkaDllConfig);
         }
 
         public StreamRefsSerializerSpec(ITestOutputHelper output) : this(Config(), output: output)

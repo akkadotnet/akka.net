@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Singleton
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
-            if (config == null)
+            if (config.IsNullOrEmpty())
                 throw new ConfigurationException(
                     $"Cannot initialize {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
 

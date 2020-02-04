@@ -199,7 +199,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                     DistributedPubSubMediatorRouterConfig.GetConfig("random")
                         .WithFallback(Sys.Settings.Config)
                         .GetConfig("akka.cluster.pub-sub");
-
+                Assert.False(config.IsNullOrEmpty());
                 DistributedPubSubSettings.Create(config).WithRoutingLogic(new ConsistentHashingRoutingLogic(Sys));
             });
         }

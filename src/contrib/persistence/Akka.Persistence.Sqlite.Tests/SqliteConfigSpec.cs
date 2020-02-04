@@ -29,7 +29,7 @@ namespace Akka.Persistence.Sqlite.Tests
 
             var config = Sys.Settings.Config.GetConfig("akka.persistence.journal.sqlite");
 
-            Assert.NotNull(config);
+            Assert.False(config.IsNullOrEmpty());
             Assert.Equal("Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite", config.GetString("class"));
             Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher"));
             Assert.Equal(string.Empty, config.GetString("connection-string"));
@@ -48,7 +48,7 @@ namespace Akka.Persistence.Sqlite.Tests
 
             var config = Sys.Settings.Config.GetConfig("akka.persistence.snapshot-store.sqlite");
 
-            Assert.NotNull(config);
+            Assert.False(config.IsNullOrEmpty());
             Assert.Equal("Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite", config.GetString("class"));
             Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher"));
             Assert.Equal(string.Empty, config.GetString("connection-string"));

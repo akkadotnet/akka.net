@@ -29,7 +29,44 @@ namespace Akka.Streams.Tests.IO
     public class TcpSpec : TcpHelper
     {
         public TcpSpec(ITestOutputHelper helper) : base(@"
-            akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
+akka.stream.materializer.subscription-timeout.timeout = 2s
+akka.io {
+  pinned-dispatcher {
+    type = ""PinnedDispatcher""
+    executor = ""fork-join-executor""
+  }
+
+  tcp {
+    direct-buffer-pool {
+      class = ""Akka.IO.Buffers.DirectBufferPool, Akka""
+      buffer-size = 512
+      buffers-per-segment = 500
+      initial-segments = 1
+      buffer-pool-limit = 1024
+    }
+
+    disabled-buffer-pool {
+      class = ""Akka.IO.Buffers.DisabledBufferPool, Akka""
+      buffer-size = 512
+    }
+
+    buffer-pool = ""akka.io.tcp.disabled-buffer-pool""
+    max-channels = 256000
+    selector-association-retries = 10
+    batch-accept-limit = 10
+    register-timeout = 5s
+    max-received-message-size = unlimited
+    trace-logging = off
+    selector-dispatcher = ""akka.io.pinned-dispatcher""
+    worker-dispatcher = ""akka.actor.default-dispatcher""
+    management-dispatcher = ""akka.actor.default-dispatcher""
+    file-io-dispatcher = ""akka.actor.default-dispatcher""
+    file-io-transferTo-limit = 524288 # 512 KiB
+    finish-connect-retries = 5
+    windows-connection-abort-workaround-enabled = off
+  }
+}
+", helper)
         {
         }
 
@@ -473,7 +510,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_handle_when_connection_actor_terminates_unexpectedly()
         {
-            var system2 = ActorSystem.Create("system2");
+            var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             InitializeLogger(system2);
             var mat2 = ActorMaterializer.Create(system2);
 
@@ -500,7 +537,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
-            var sys2 = ActorSystem.Create("shutdown-test-system");
+            var sys2 = ActorSystem.Create("shutdown-test-system", Sys.Settings.Config);
             var mat2 = sys2.Materializer();
 
             try

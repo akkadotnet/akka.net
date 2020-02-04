@@ -22,10 +22,13 @@ namespace Akka.Persistence.TCK.Tests
 {
     public class MemorySnapshotStoreSpec : SnapshotStoreSpec
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         public MemorySnapshotStoreSpec(ITestOutputHelper output) 
             : base(ConfigurationFactory.ParseString(
                 @"akka.test.timefactor = 3
-                  akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem"""), 
+                  akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""")
+                  .WithFallback(AkkaDllConfig), 
                   "MemorySnapshotStoreSpec",
                   output)
         {

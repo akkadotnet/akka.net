@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
-            if (config == null) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
+            if (config.IsNullOrEmpty()) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
 
             return Create(config);
         }

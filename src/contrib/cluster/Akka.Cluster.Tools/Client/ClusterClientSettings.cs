@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Client
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
-            if (config == null)
+            if (config.IsNullOrEmpty())
                 throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
 
             return Create(config);

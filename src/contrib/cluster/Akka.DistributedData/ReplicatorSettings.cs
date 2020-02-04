@@ -32,7 +32,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public static ReplicatorSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DistributedData HOCON config not provided.");
+            if (config.IsNullOrEmpty()) throw new ArgumentNullException(nameof(config), "DistributedData HOCON config not provided.");
 
             var dispatcher = config.GetString("use-dispatcher");
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;

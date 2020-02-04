@@ -57,6 +57,9 @@ namespace Akka.DistributedData
         {
             system.Settings.InjectTopLevelFallback(DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.distributed-data");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(DistributedData)}: akka.cluster.distributed-data configuration node not found");
+
             _settings = ReplicatorSettings.Create(config);
             _system = system;
             if (IsTerminated)

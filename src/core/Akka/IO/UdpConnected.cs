@@ -383,8 +383,8 @@ namespace Akka.IO
         public UdpConnectedExt(ExtendedActorSystem system, UdpSettings settings)
         {
             var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-            if (bufferPoolConfig == null)
-                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
+            if (bufferPoolConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
             BufferPool = CreateBufferPool(system, bufferPoolConfig);

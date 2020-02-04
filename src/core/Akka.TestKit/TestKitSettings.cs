@@ -31,6 +31,9 @@ namespace Akka.TestKit
         /// </exception>
         public TestKitSettings(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(TestKitSettings)}: {nameof(config)} parameter is null or empty.");
+
             _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", allowInfinite:false);
             _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", allowInfinite: false);
             _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", allowInfinite: false);

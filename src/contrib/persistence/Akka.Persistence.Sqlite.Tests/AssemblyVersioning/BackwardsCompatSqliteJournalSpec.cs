@@ -17,6 +17,8 @@ namespace Akka.Persistence.Sqlite.Tests.AssemblyVersioning
 {
     public class BackwardsCompatSqliteJournalSpec : Akka.TestKit.Xunit2.TestKit
     {
+        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
+
         public BackwardsCompatSqliteJournalSpec(ITestOutputHelper output) : base(CreateSpecConfig(@"Filename=file:AssemblyVersioning/samples/memdb-journal-1-v123-altered.db;"), "BackwardsCompatSqliteSnapshotStoreSpec", output)
         {
         }
@@ -49,7 +51,7 @@ namespace Akka.Persistence.Sqlite.Tests.AssemblyVersioning
                             connection-string = """ + connectionString + @"""
                         }
                     }
-                }");
+                }").WithFallback(AkkaDllConfig);
         }
     }
 }

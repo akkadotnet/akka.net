@@ -21,8 +21,14 @@ namespace Akka.IO
         /// and fills it with values parsed from `akka.io.tcp` HOCON
         /// path found in actor system.
         /// </summary>
-        public static TcpSettings Create(ActorSystem system) => 
-            Create(system.Settings.Config.GetConfig("akka.io.tcp"));
+        public static TcpSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.io.tcp");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+
+            return Create(config);
+        }
 
         /// <summary>
         /// Creates a new instance of <see cref="TcpSettings"/> class 
@@ -31,8 +37,9 @@ namespace Akka.IO
         /// <param name="config">TBD</param>
         public static TcpSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(TcpSettings)}: {nameof(config)} parameter is null or empty.");
+
             return new TcpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.direct-buffer-pool"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),

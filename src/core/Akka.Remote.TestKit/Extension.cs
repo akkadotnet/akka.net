@@ -113,6 +113,9 @@ namespace Akka.Remote.TestKit
 
         public TestConductorSettings(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(TestConductorSettings)}: {nameof(config)} is null or empty.");
+
             _connectTimeout = config.GetTimeSpan("connect-timeout");
             _clientReconnects = config.GetInt("client-reconnects");
             _reconnectBackoff = config.GetTimeSpan("reconnect-backoff");

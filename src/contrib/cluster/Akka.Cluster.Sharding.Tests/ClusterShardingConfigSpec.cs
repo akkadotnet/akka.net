@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys);
             var config = Sys.Settings.Config.GetConfig("akka.cluster.sharding");
 
-            Assert.NotNull(config);
+            Assert.False(config.IsNullOrEmpty());
             Assert.Equal("sharding", config.GetString("guardian-name"));
             Assert.Equal(string.Empty, config.GetString("role"));
             Assert.False(config.GetBoolean("remember-entities"));

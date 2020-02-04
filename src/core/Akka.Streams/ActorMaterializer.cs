@@ -301,10 +301,12 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
+            // NOTE: no need to check for empty Config because Create function can handle empty Config
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
-            return Create(config ?? Config.Empty);
+            return Create(config);
         }
 
+        // NOTE: Make sure that this class can handle empty Config
         private static ActorMaterializerSettings Create(Config config)
         {
             return new ActorMaterializerSettings(
@@ -319,7 +321,7 @@ namespace Akka.Streams
                 isAutoFusing: config.GetBoolean("auto-fusing", true),
                 maxFixedBufferSize: config.GetInt("max-fixed-buffer-size", 1000000000),
                 syncProcessingLimit: config.GetInt("sync-processing-limit", 1000),
-                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref") ?? Config.Empty));
+                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref")));
         }
 
         private const int DefaultlMaxFixedbufferSize = 1000;
@@ -521,7 +523,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static StreamSubscriptionTimeoutSettings Create(Config config)
         {
-            var c = config.GetConfig("subscription-timeout") ?? Config.Empty;
+            var c = config.GetConfig("subscription-timeout");
             var configMode = c.GetString("mode", "cancel").ToLowerInvariant();
             StreamSubscriptionTimeoutTerminationMode mode;
             switch (configMode)

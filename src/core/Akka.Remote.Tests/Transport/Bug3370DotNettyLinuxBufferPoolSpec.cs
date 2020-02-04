@@ -44,7 +44,10 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_start_without_pooling()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
             try
             {
                 // bind

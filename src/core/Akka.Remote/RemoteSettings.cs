@@ -264,10 +264,9 @@ namespace Akka.Remote
         private static IDictionary<string, string> ConfigToMap(Config cfg)
         {
             if(cfg.IsEmpty) return new Dictionary<string, string>();
-            var unwrapped = cfg.Root.GetObject();
 
             // adjusted API to match stand-alone HOCON per https://github.com/akkadotnet/HOCON/pull/191#issuecomment-577455865
-            return unwrapped.ToDictionary(k => k.Key, v => v.Value?.GetString());
+            return cfg.MergedValue.GetObject().ToDictionary(k => k.Key, v => v.Value?.GetString());
         }
     }
 }

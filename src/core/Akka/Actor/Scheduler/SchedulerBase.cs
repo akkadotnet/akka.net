@@ -32,11 +32,11 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="scheduler">TBD</param>
+        /// <param name="config">TBD</param>
         /// <param name="log">TBD</param>
-        protected SchedulerBase(Config scheduler, ILoggingAdapter log)
+        protected SchedulerBase(Config config, ILoggingAdapter log)
         {
-            SchedulerConfig = scheduler;
+            SchedulerConfig = config;
             Log = log;
         }
 

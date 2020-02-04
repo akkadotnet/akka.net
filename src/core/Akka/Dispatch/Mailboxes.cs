@@ -54,6 +54,9 @@ namespace Akka.Dispatch
             _system = system;
             _deadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
             var mailboxConfig = system.Settings.Config.GetConfig("akka.actor.mailbox");
+            if (mailboxConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(Mailboxes)}: akka.actor.mailbox configuration node not found");
+
             var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
             _mailboxBindings = new Dictionary<Type, string>();
             foreach (var kvp in requirements)
@@ -323,6 +326,9 @@ namespace Akka.Dispatch
             }
 
             var config = _system.Settings.Config.GetConfig(path);
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve mailbox type from config: {path} configuration node not found");
+
             var type = config.GetString("mailbox-type");
 
             var mailboxType = TypeCache.GetType(type);

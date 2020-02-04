@@ -26,7 +26,10 @@ namespace Akka.Remote.Transport.DotNetty
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
-            return Create(system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(DotNettyTransportSettings)}: akka.remote.dot-netty.tcp configuration node not found");
+            return Create(config);
         }
 
         /// <summary>
@@ -52,7 +55,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static DotNettyTransportSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
+            if (config.IsNullOrEmpty())
+                throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");

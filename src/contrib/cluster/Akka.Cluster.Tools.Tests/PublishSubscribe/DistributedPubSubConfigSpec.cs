@@ -41,6 +41,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             distributedPubSubSettings.MaxDeltaElements.ShouldBe(3000);
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
+            Assert.False(config.IsNullOrEmpty());
             config.GetString("name").ShouldBe("distributedPubSubMediator");
             config.GetString("use-dispatcher").ShouldBe(string.Empty);
         }

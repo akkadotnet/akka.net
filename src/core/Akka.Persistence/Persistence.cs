@@ -71,6 +71,8 @@ namespace Akka.Persistence
             _system = system;
             _system.Settings.InjectTopLevelFallback(Persistence.DefaultConfig());
             _config = system.Settings.Config.GetConfig("akka.persistence");
+            if (_config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(PersistenceExtension)}: akka.persistence configuration node not found");
 
             _log = Logging.GetLogger(_system, this);
 
@@ -282,6 +284,9 @@ namespace Akka.Persistence
         private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
         {
             var pluginConfig = system.Settings.Config.GetConfig(configPath);
+            if (pluginConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(EventAdapters)}: {configPath} configuration node not found");
+
             return EventAdapters.Create(system, pluginConfig);
         }
 

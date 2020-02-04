@@ -27,7 +27,7 @@ namespace Akka.Persistence.Sql.TestKit
             var readJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var config = Sys.Settings.Config.GetConfig("akka.persistence.query.journal.sql");
 
-            config.Should().NotBeNull();
+            config.IsNullOrEmpty().Should().BeFalse();
             config.GetString("class").Should().Be("Akka.Persistence.Query.Sql.SqlReadJournalProvider, Akka.Persistence.Query.Sql");
             config.GetTimeSpan("refresh-interval").Should().Be(TimeSpan.FromSeconds(3));
             config.GetInt("max-buffer-size").Should().Be(100);

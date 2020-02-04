@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
+using Hocon;
 
 namespace Akka.Persistence.Tests.Journal
 {
@@ -49,6 +50,9 @@ namespace Akka.Persistence.Tests.Journal
         public ChaosJournal()
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.journal.chaos");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(ChaosJournal)}: akka.persistence.journal.chaos configuration node not found");
+
             _writeFailureRate = config.GetDouble("write-failure-rate");
             _deleteFailureRate = config.GetDouble("delete-failure-rate");
             _replayFailureRate = config.GetDouble("replay-failure-rate");
