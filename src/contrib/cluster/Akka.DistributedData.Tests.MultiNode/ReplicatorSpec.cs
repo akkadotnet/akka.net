@@ -714,7 +714,12 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _second);
 
             Within(TimeSpan.FromSeconds(5), () =>
-                changedProbe.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a"))));
+            {
+                
+                var changed =  changedProbe.ExpectMsg<Changed>(c =>
+                        c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
+                Sys.Log.Debug("DEBUG: {0} - delta received", changed.Get(KeyI));
+            });
 
             EnterBarrier("update-I");
 

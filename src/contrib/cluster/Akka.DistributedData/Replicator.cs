@@ -835,12 +835,12 @@ namespace Akka.DistributedData
 
         private DataEnvelope GetData(string key)
         {
-            return !_dataEntries.TryGetValue(key, out var value) ? null : value.Item1;
+            return !_dataEntries.TryGetValue(key, out var value) ? null : value.envelope;
         }
 
         private long GetDeltaSequenceNr(string key, UniqueAddress from)
         {
-            return _dataEntries.TryGetValue(key, out var tuple) ? tuple.Item1.DeltaVersions.VersionAt(@from) : 0L;
+            return _dataEntries.TryGetValue(key, out var tuple) ? tuple.envelope.DeltaVersions.VersionAt(@from) : 0L;
         }
 
         private bool IsNodeRemoved(UniqueAddress node, IEnumerable<string> keys)
