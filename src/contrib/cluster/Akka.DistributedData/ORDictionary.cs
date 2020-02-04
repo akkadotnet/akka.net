@@ -280,7 +280,7 @@ namespace Akka.DistributedData
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
-        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((IDeltaOperation)delta);
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation)delta);
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public ImmutableHashSet<UniqueAddress> ModifiedByNodes =>

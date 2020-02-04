@@ -713,8 +713,7 @@ namespace Akka.DistributedData
             else
             {
                 // no existing data for the key
-                var withDelta = writeEnvelope.Data as IReplicatedDelta;
-                if (withDelta != null)
+                if (writeEnvelope.Data is IReplicatedDelta withDelta)
                     writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
 
                 return SetData(key, writeEnvelope.AddSeen(_selfAddress));
