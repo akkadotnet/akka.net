@@ -36,7 +36,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 akka.actor.provider = cluster
                 akka.loglevel = DEBUG
                 akka.log-dead-letters-during-shutdown = on
-            ").WithFallback(DistributedData.DefaultConfig());
+            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(true));
 
             TestTransport = true;
         }
@@ -105,7 +105,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             _readAll = new ReadAll(_timeOut);
         }
 
-        [MultiNodeFact(Skip = "FIXME")]
+        [MultiNodeFact()]
         public void ReplicatorSpecTests()
         {
             Cluster_CRDT_should_work_in_single_node_cluster();
@@ -406,9 +406,9 @@ namespace Akka.DistributedData.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                        var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC)).Get(KeyC);
+                        var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC), TimeSpan.FromMilliseconds(300)).Get(KeyC);
                         c.Value.ShouldBe(33UL);
-                    });
+                    }, interval:TimeSpan.FromMilliseconds(300));
                 });
             }, _first, _second);
 
@@ -548,9 +548,9 @@ namespace Akka.DistributedData.Tests.MultiNode
                 // note that the order of the replies are not defined, and therefore we use separate probes
                 var probe3 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe3.Ref);
-                probe1.ExpectMsg(151);
+                probe1.ExpectMsg(151UL);
                 probe2.ExpectMsg(new UpdateSuccess(KeyE, null));
-                var c152 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
+                var c152 = probe3.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c152.Value.ShouldBe(152UL);
             }, _first);
 
@@ -592,8 +592,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
+                Sys.Log.Info("Opening up traffic to third node again...");
                 TestConductor.PassThrough(_first, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
                 TestConductor.PassThrough(_second, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+                Sys.Log.Info("Traffic open to node 3.");
             }, _first);
 
             EnterBarrier("passThrough-third");
@@ -670,7 +672,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 _replicator.Tell(Dsl.Subscribe(KeyH, changedProbe.Ref));
                 _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "a", Flag.False)));
-                ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.False),
                 })).ShouldBeTrue();
@@ -685,13 +687,13 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                changedProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.True)
                 })).ShouldBeTrue();
 
                 _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "b", Flag.True)));
-                changedProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.True),
                     new KeyValuePair<string, Flag>("b", Flag.True)
@@ -712,7 +714,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _second);
 
             Within(TimeSpan.FromSeconds(5), () =>
-                changedProbe.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a"))));
+            {
+                
+                var changed =  changedProbe.ExpectMsg<Changed>(c =>
+                        c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
+                var keyIData = changed.Get(KeyI);
+                Sys.Log.Debug("DEBUG: Received Changed {0}", changed);
+            });
 
             EnterBarrier("update-I");
 
