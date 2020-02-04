@@ -718,7 +718,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                 
                 var changed =  changedProbe.ExpectMsg<Changed>(c =>
                         c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
-                Sys.Log.Debug("DEBUG: {0} - delta received", changed.Get(KeyI));
+                var keyIData = changed.Get(KeyI);
+                Sys.Log.Debug("DEBUG: Received Changed {0}", changed);
             });
 
             EnterBarrier("update-I");
