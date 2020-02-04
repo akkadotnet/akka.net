@@ -26,7 +26,7 @@ namespace Akka.DistributedData
         public abstract int GossipInternalDivisor { get; }
         protected abstract ImmutableArray<Address> AllNodes { get; }
         protected abstract int MaxDeltaSize { get; }
-        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas);
+        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas);
 
         public long CurrentVersion(string key) => _deltaCounter.GetValueOrDefault(key, 0L);
 

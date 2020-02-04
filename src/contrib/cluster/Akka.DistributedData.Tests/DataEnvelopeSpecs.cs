@@ -72,5 +72,16 @@ namespace Akka.DistributedData.Tests
             d5.Merge(d7).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
             d7.Merge(d5).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
         }
+
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4184
+        /// </summary>
+        [Fact]
+
+        public void Bugfix_4184_Merge_ORDictionary()
+        {
+            var or1 = ORDictionary<string, Flag>.Empty.SetItem(node1, "foo", Flag.True);
+            var or2 = ORDictionary<string, Flag>.Empty.SetItem(node1, "foo", Flag.True);
+        }
     }
 }

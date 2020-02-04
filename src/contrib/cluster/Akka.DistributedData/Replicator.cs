@@ -1418,12 +1418,12 @@ namespace Akka.DistributedData
             protected override ImmutableArray<Address> AllNodes =>
                 _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
 
-            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas)
+            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas)
             {
                 // Important to include the pruning state in the deltas. For example if the delta is based
                 // on an entry that has been pruned but that has not yet been performed on the target node.
                 var newDeltas = deltas
-                    .Where(x => !Equals(x.Value.Item1, DeltaPropagation.NoDeltaPlaceholder))
+                    .Where(x => !Equals(x.Value.data, DeltaPropagation.NoDeltaPlaceholder))
                     .Select(x =>
                     {
                         var key = x.Key;
@@ -1431,9 +1431,9 @@ namespace Akka.DistributedData
                         var envelope = _replicator.GetData(key);
                         return envelope != null
                             ? new KeyValuePair<string, Delta>(key,
-                                new Delta(envelope.WithData(t.Item1), t.Item2, t.Item3))
+                                new Delta(envelope.WithData(t.data), t.from, t.to))
                             : new KeyValuePair<string, Delta>(key,
-                                new Delta(new DataEnvelope(t.Item1), t.Item2, t.Item3));
+                                new Delta(new DataEnvelope(t.data), t.from, t.to));
                     })
                     .ToImmutableDictionary();
 
