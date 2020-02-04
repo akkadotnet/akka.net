@@ -51,12 +51,13 @@ namespace Akka.DistributedData.Tests
         private readonly ReadAll _readAll;
 
         private readonly ORDictionaryKey<string, Flag> KeyH = new ORDictionaryKey<string, Flag>("H");
+        private readonly GSetKey<string> KeyI = new GSetKey<string>("I");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _sys3 = Sys;
+            _sys3 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys2 = Sys;
 
             _timeOut = Dilated(TimeSpan.FromSeconds(3.0));
             _writeTwo = new WriteTo(2, _timeOut);
@@ -73,7 +74,7 @@ namespace Akka.DistributedData.Tests
             var props = Replicator.Props(settings);
             _replicator1 = _sys1.ActorOf(props, "replicator");
             _replicator2 = _sys2.ActorOf(props, "replicator");
-            _replicator2 = _sys3.ActorOf(props, "replicator");
+            _replicator3 = _sys3.ActorOf(props, "replicator");
         }
 
         /// <summary>
@@ -148,6 +149,49 @@ namespace Akka.DistributedData.Tests
                 new KeyValuePair<string, Flag>("a", Flag.True),
                 new KeyValuePair<string, Flag>("b", Flag.True)
             })).ShouldBeTrue();
+        }
+
+        // <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4184
+        /// </summary>
+        [Fact]
+        public async Task Bugfix_Duplicate_Publish()
+        {
+            await InitCluster();
+            await ReplicatorDuplicatePublish();
+        }
+
+        private async Task ReplicatorDuplicatePublish()
+        {
+            var p1 = CreateTestProbe(_sys1);
+            var p2 = CreateTestProbe(_sys2);
+            var p3 = CreateTestProbe(_sys3);
+
+            var probes = new[] { p1, p2, p3 };
+
+            // subscribe to updates on all 3 nodes
+            _replicator1.Tell(Dsl.Subscribe(KeyI, p1.Ref));
+            _replicator2.Tell(Dsl.Subscribe(KeyI, p2.Ref));
+            _replicator3.Tell(Dsl.Subscribe(KeyI, p3.Ref));
+
+            // update item on 2
+            _replicator2.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
+
+            // wait for write to replicate to all 3 nodes
+            Within(TimeSpan.FromSeconds(5), () =>
+            {
+                foreach(var p in probes)
+                    p.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
+            });
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // create duplicate write on node 1
+            _replicator1.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
+
+            // no probe should receive an update
+            foreach (var p in probes)
+               p.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         protected override void BeforeTermination()
