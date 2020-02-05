@@ -184,14 +184,13 @@ namespace Akka.DistributedData.Tests
                     p.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
             });
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(1));
 
             // create duplicate write on node 1
             _replicator1.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
 
             // no probe should receive an update
-            foreach (var p in probes)
-               p.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         protected override void BeforeTermination()
