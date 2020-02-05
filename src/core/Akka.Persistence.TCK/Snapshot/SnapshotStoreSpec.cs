@@ -257,6 +257,8 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public void ShouldSerializeSnapshots()
         {
+            if (!SupportsSerialization) return;
+
             var probe = CreateTestProbe();
             var metadata = new SnapshotMetadata(Pid, 100L);
             var snap = new TestPayload(probe.Ref);
