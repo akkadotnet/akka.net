@@ -26,15 +26,15 @@ namespace Akka.DistributedData.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(on: false).WithFallback(ConfigurationFactory.ParseString($@"
+            CommonConfig = DebugConfig(on: false).WithFallback(ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.actor.provider = ""cluster""
             akka.log-dead-letters-during-shutdown = off
             akka.cluster.distributed-data.durable.keys = [""*""]
-            akka.cluster.distributed-data.durable.lmdb {{
-              dir = target/DurablePruningSpec-${DateTime.UtcNow.Ticks}-ddata
+            akka.cluster.distributed-data.durable.lmdb {
+              dir = ""target/DurablePruningSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
-            }}")).WithFallback(DistributedData.DefaultConfig());
+            }")).WithFallback(DistributedData.DefaultConfig());
         }
     }
 
@@ -48,7 +48,11 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly GCounterKey keyA = new GCounterKey("A");
         private readonly IActorRef replicator;
 
-        protected DurablePruningSpec() : base(new DurablePruningSpecConfig(), typeof(DurablePruningSpec))
+        protected DurablePruningSpec() : this(new DurablePruningSpecConfig())
+        {
+        }
+
+        protected DurablePruningSpec(DurablePruningSpecConfig config) : base(config, typeof(DurablePruningSpec))
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
