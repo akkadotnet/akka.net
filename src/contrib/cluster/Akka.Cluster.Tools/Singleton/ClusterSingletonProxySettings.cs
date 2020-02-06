@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.Singleton
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
+                throw new ConfigurationException($"Failed to create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
 
             return Create(config);
         }
@@ -39,6 +39,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(ClusterSingletonProxySettings)}: {nameof(config)} parameter is null or empty.");
+
             var role = config.GetString("role");
             if (role == string.Empty) role = null;
 

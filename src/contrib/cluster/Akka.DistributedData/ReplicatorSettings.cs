@@ -21,7 +21,8 @@ namespace Akka.DistributedData
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public static ReplicatorSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ?? throw new ConfigurationException("HOCON config section `akka.cluster.distributed-data` was not found"));
+            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ?? 
+                throw new ConfigurationException($"Failed to create {typeof(ReplicatorSettings)}: akka.cluster.distributed-data configuration node not found"));
 
         /// <summary>
         /// Create settings from a configuration with the same layout as
@@ -32,7 +33,8 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public static ReplicatorSettings Create(Config config)
         {
-            if (config.IsNullOrEmpty()) throw new ArgumentNullException(nameof(config), "DistributedData HOCON config not provided.");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(ReplicatorSettings)}: DistributedData HOCON config not provided.");
 
             var dispatcher = config.GetString("use-dispatcher");
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;

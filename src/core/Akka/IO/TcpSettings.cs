@@ -25,7 +25,7 @@ namespace Akka.IO
         {
             var config = system.Settings.Config.GetConfig("akka.io.tcp");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+                throw new ConfigurationException($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
 
             return Create(config);
         }
@@ -38,7 +38,7 @@ namespace Akka.IO
         public static TcpSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(TcpSettings)}: {nameof(config)} parameter is null or empty.");
+                throw new ConfigurationException($"Failed to create {typeof(TcpSettings)}: {nameof(config)} parameter is null or empty.");
 
             return new TcpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.direct-buffer-pool"),

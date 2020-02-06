@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tools.Client
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
             if (config.IsNullOrEmpty())
-                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
+                throw new ConfigurationException($"Failed to create {nameof(ClusterClientSettings)}: Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
 
             return Create(config);
         }
@@ -44,6 +44,9 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public static ClusterClientSettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(ClusterClientSettings)}: {nameof(config)} parameter is null or empty.");
+
             var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
 
             TimeSpan? reconnectTimeout = config.GetString("reconnect-timeout").Equals("off")

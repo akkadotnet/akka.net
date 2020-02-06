@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Client
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
             if (config.IsNullOrEmpty())
-                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client.receptionist` config set up");
+                throw new ArgumentException($"Failed to create {typeof(ClusterReceptionistSettings)}: Actor system [{system.Name}] doesn't have `akka.cluster.client.receptionist` config set up");
 
             return Create(config);
         }
@@ -40,6 +40,9 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public static ClusterReceptionistSettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(ClusterReceptionistSettings)}: {nameof(config)} parameter is null or empty.");
+
             var role = config.GetString("role");
             if (string.IsNullOrEmpty(role)) role = null;
 

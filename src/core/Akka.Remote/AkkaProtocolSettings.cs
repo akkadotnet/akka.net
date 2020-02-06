@@ -41,6 +41,9 @@ namespace Akka.Remote
         /// <param name="config">The HOCON configuration.</param>
         public AkkaProtocolSettings(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(AkkaProtocolSettings)}: {nameof(config)} parameter is null or empty.");
+
             TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");
             TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class");
             TransportHeartBeatInterval = TransportFailureDetectorConfig.GetTimeSpan("heartbeat-interval");

@@ -30,7 +30,7 @@ namespace Akka.Cluster.Tools.Singleton
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException(
-                    $"Cannot initialize {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
+                    $"Failed to create {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
 
             return Create(config).WithRemovalMargin(Cluster.Get(system).DowningProvider.DownRemovalMargin);
         }
@@ -42,6 +42,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(ClusterSingletonManagerSettings)}: {nameof(config)} parameter is null or empty.");
+
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),
                 role: RoleOption(config.GetString("role")),

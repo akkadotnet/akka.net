@@ -28,7 +28,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(DotNettyTransportSettings)}: akka.remote.dot-netty.tcp configuration node not found");
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: akka.remote.dot-netty.tcp configuration node not found");
             return Create(config);
         }
 
@@ -56,7 +56,7 @@ namespace Akka.Remote.Transport.DotNetty
         public static DotNettyTransportSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");
@@ -108,7 +108,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private static int ComputeWorkerPoolSize(Config config)
         {
-            if (config == null) return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+            if (config.IsNullOrEmpty()) return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
                 floor: config.GetInt("pool-size-min"),
@@ -289,9 +289,8 @@ namespace Akka.Remote.Transport.DotNetty
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
-
-            
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {

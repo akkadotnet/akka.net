@@ -26,8 +26,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public static DistributedPubSubSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
-            if (config.IsNullOrEmpty()) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(DistributedPubSubSettings)}: akka.cluster.pub-sub configuration node not found");
 
             return Create(config);
         }
@@ -40,6 +42,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public static DistributedPubSubSettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(DistributedPubSubSettings)}: {nameof(config)} parameter is null or empty.");
+
             RoutingLogic routingLogic = null;
             var routingLogicName = config.GetString("routing-logic");
             switch (routingLogicName)

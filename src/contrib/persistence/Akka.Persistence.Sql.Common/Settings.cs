@@ -65,7 +65,8 @@ namespace Akka.Persistence.Sql.Common
         /// </exception>
         public JournalSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(JournalSettings)}: SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
@@ -127,7 +128,8 @@ namespace Akka.Persistence.Sql.Common
         /// </exception>
         public SnapshotStoreSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(SnapshotStoreSettings)}: SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");

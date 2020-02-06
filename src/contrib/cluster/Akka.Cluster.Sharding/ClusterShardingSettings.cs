@@ -211,6 +211,9 @@ namespace Akka.Cluster.Sharding
         public static ClusterShardingSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(ClusterShardingSettings)}: akka.cluster.sharding configuration node not found");
+
             var coordinatorSingletonPath = config.GetString("coordinator-singleton");
 
             return Create(config, system.Settings.Config.GetConfig(coordinatorSingletonPath));
@@ -224,6 +227,9 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public static ClusterShardingSettings Create(Config config, Config singletonConfig)
         {
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(ClusterShardingSettings)}: {nameof(config)} parameter is null or empty.");
+
             var tuningParameters = new TunningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),

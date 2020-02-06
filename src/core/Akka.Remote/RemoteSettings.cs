@@ -25,6 +25,9 @@ namespace Akka.Remote
         public RemoteSettings(Config config)
         {
             //TODO: need to add value validation for each field
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {nameof(RemoteSettings)}: {nameof(config)} parameter is null or empty.");
+
             Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages");
             LogSend = config.GetBoolean("akka.remote.log-sent-messages");
@@ -263,7 +266,7 @@ namespace Akka.Remote
 
         private static IDictionary<string, string> ConfigToMap(Config cfg)
         {
-            if(cfg.IsEmpty) return new Dictionary<string, string>();
+            if(cfg.IsNullOrEmpty()) return new Dictionary<string, string>();
 
             // adjusted API to match stand-alone HOCON per https://github.com/akkadotnet/HOCON/pull/191#issuecomment-577455865
             return cfg.Root.GetObject().ToDictionary(k => k.Key, v => v.Value?.GetString());

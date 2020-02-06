@@ -32,7 +32,7 @@ namespace Akka.Cluster
             //TODO: Requiring!
             var clusterConfig = config.GetConfig("akka.cluster");
             if (clusterConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(ClusterSettings)}: akka.cluster configuration node not found");
+                throw new ConfigurationException($"Failed to create {typeof(ClusterSettings)}: akka.cluster configuration node not found");
 
             LogInfo = clusterConfig.GetBoolean("log-info");
             _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
