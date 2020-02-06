@@ -53,6 +53,7 @@ namespace Akka.Remote.Tests
             common-helios-settings {
               port = 0
               hostname = ""localhost""
+              #enforce-ip-family = true
             }
 
             akka {
@@ -99,6 +100,7 @@ namespace Akka.Remote.Tests
             common-helios-settings {
               port = 0
               hostname = ""localhost""
+              #enforce-ip-family = true
             }
 
             akka {

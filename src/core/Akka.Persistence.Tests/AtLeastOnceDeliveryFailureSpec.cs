@@ -318,8 +318,6 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-
         private static readonly Config FailureSpecConfig = ConfigurationFactory.ParseString(
             @"akka.persistence.sender.chaos.live-processing-failure-rate = 0.3
               akka.persistence.sender.chaos.replay-processing-failure-rate = 0.1
@@ -337,7 +335,7 @@ namespace Akka.Persistence.Tests
         internal const int NumberOfMessages = 10;
 
         public AtLeastOnceDeliveryFailureSpec(ITestOutputHelper output)
-            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig().WithFallback(AkkaDllConfig)), output)
+            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()), output)
         {
         }
 

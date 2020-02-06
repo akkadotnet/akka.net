@@ -20,8 +20,6 @@ namespace Akka.Persistence.TestKit.Performance
 {
     public abstract class JournalPerfSpec : Akka.TestKit.Xunit2.TestKit
     {
-        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-
         private TestProbe testProbe;
 
         // Number of messages sent to the PersistentActor under test for each test iteration
@@ -35,7 +33,7 @@ namespace Akka.Persistence.TestKit.Performance
         private TimeSpan ExpectDuration = TimeSpan.FromSeconds(10);
 
         protected JournalPerfSpec(Config config, string actorSystem, ITestOutputHelper output)
-            : base((config ?? Config.Empty).WithFallback(AkkaDllConfig), actorSystem, output)
+            : base(config ?? Config.Empty, actorSystem, output)
         {
             testProbe = CreateTestProbe();
         }

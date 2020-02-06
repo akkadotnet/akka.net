@@ -231,7 +231,7 @@ namespace Akka.Remote.Serialization
             if (config.IsEmpty)
                 return EmptyBytes;
 
-            return Encoding.UTF8.GetBytes(config.MergedValue.ToString());
+            return Encoding.UTF8.GetBytes(config.Root.ToString());
         }
 
         private Config ConfigFromProto(byte[] bytes)

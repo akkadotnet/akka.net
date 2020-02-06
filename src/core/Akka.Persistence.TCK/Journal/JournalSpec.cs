@@ -21,8 +21,6 @@ namespace Akka.Persistence.TCK.Journal
 {
     public abstract class JournalSpec : PluginSpec
     {
-        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-
         protected static readonly Config Config =
             ConfigurationFactory.ParseString(@"akka.persistence.publish-plugin-commands = on
             akka.actor{
@@ -51,7 +49,7 @@ namespace Akka.Persistence.TCK.Journal
         private TestProbe _receiverProbe;
 
         protected JournalSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(FromConfig(config).WithFallback(Config).WithFallback(AkkaDllConfig), actorSystemName ?? "JournalSpec", output)
+            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", output)
         {
         }
 

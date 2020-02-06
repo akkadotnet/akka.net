@@ -266,7 +266,7 @@ namespace Akka.Remote
             if(cfg.IsEmpty) return new Dictionary<string, string>();
 
             // adjusted API to match stand-alone HOCON per https://github.com/akkadotnet/HOCON/pull/191#issuecomment-577455865
-            return cfg.MergedValue.GetObject().ToDictionary(k => k.Key, v => v.Value?.GetString());
+            return cfg.Root.GetObject().ToDictionary(k => k.Key, v => v.Value?.GetString());
         }
     }
 }

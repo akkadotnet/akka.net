@@ -22,8 +22,6 @@ namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class JournalSerializationSpec : PluginSpec
     {
-        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-
         protected JournalSerializationSpec(Config config, string actorSystem, ITestOutputHelper output)
             : base(ConfigurationFactory.ParseString(@"
                 akka.actor {
@@ -37,7 +35,7 @@ namespace Akka.Persistence.TCK.Serialization
                     ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = my-payload
                   }
                 }
-            ").WithFallback(config).WithFallback(AkkaDllConfig), actorSystem, output)
+            ").WithFallback(config), actorSystem, output)
         {
         }
 

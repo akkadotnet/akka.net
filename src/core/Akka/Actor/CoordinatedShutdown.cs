@@ -564,7 +564,7 @@ namespace Akka.Actor
                 depends-on = []
             ");
 
-            return phasesConf.Root.GetObject().Unwrapped.ToDictionary(x => x.Key, v =>
+            return phasesConf.Root.GetObject().ToDictionary(x => x.Key, v =>
              {
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
                  var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();

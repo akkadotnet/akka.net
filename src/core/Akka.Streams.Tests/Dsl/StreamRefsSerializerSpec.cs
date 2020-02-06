@@ -127,8 +127,6 @@ namespace Akka.Streams.Tests
 
     public class StreamRefsSerializerSpec : AkkaSpec
     {
-        internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-
         public static Config Config()
         {
             var address = TestUtils.TemporaryServerAddress();
@@ -144,8 +142,7 @@ namespace Akka.Streams.Tests
                 hostname = ""{address.Address}""
               }}
             }}")
-            .WithFallback(ConfigurationFactory.Default())
-            .WithFallback(AkkaDllConfig);
+            .WithFallback(ConfigurationFactory.Default());
         }
 
         public StreamRefsSerializerSpec(ITestOutputHelper output) : this(Config(), output: output)
