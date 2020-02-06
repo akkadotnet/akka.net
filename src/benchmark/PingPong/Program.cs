@@ -30,14 +30,15 @@ namespace PingPong
     {
         public static uint CpuSpeed()
         {
-#if THREADS
-            var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
-            var sp = (uint)(mo["CurrentClockSpeed"]);
-            mo.Dispose();
-            return sp;
-#else
+            // TODO: Cross platform?
+//#if THREADS
+//            var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
+//            var sp = (uint)(mo["CurrentClockSpeed"]);
+//            mo.Dispose();
+//            return sp;
+//#else
             return 0;
-#endif
+//#endif
         }
 
         private static void Main(params string[] args)

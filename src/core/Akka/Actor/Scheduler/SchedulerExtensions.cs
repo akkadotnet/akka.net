@@ -199,6 +199,43 @@ namespace Akka.Actor
             scheduler.ScheduleRepeatedly(initialMillisecondsDelay, millisecondsInterval, action, cancelable);
             return cancelable;
         }
+
+        public static void ScheduleAtFixedRate(this IActionScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, Action action, ICancelable cancelable = null)
+        {
+            scheduler.ScheduleWithFixedDelay(TimeSpan.FromMilliseconds(initialMillisecondsDelay), TimeSpan.FromMilliseconds(millisecondsInterval), action, cancelable);
+        }
+        
+        public static ICancelable ScheduleAtFixedRateCancelable(this IActionScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            var cancelable = new Cancelable(scheduler);
+            scheduler.ScheduleAtFixedRate(initialDelay, interval, action, cancelable);
+            return cancelable;
+        }
+        
+        public static void ScheduleWithFixedDelay(this IActionScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, Action action, ICancelable cancelable = null)
+        {
+            scheduler.ScheduleWithFixedDelay(TimeSpan.FromMilliseconds(initialMillisecondsDelay), TimeSpan.FromMilliseconds(millisecondsInterval), action, cancelable);
+        }
+        
+        public static ICancelable ScheduleWithFixedDelayCancelable(this IActionScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            var cancelable = new Cancelable(scheduler);
+            scheduler.ScheduleWithFixedDelay(initialDelay, interval, action, cancelable);
+            return cancelable;
+        }
+
+        public static void SchedulePeriodically(this IActionScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, Action action, ICancelable cancelable = null)
+        {
+            scheduler.SchedulePeriodically(TimeSpan.FromMilliseconds(initialMillisecondsDelay), TimeSpan.FromMilliseconds(millisecondsInterval), action, cancelable);
+        }
+        
+        public static ICancelable SchedulePeriodicallyCancelable(this IActionScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            var cancelable = new Cancelable(scheduler);
+            scheduler.SchedulePeriodically(initialDelay, interval, action, cancelable);
+            return cancelable;
+        }
+        
         #endregion
     }
 }

@@ -45,4 +45,12 @@ namespace Akka.Annotations
     {
         
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class DoNotInheritAttribute : Attribute
+    {
+        
+    }
 }

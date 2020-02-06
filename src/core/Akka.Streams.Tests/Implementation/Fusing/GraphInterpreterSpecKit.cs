@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
@@ -21,6 +22,104 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public class NoMaterializer : IMaterializer
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly IMaterializer Instance = new NoMaterializer();
+
+        protected NoMaterializer() { }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="name">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be named.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public IMaterializer WithNamePrefix(string name)
+        {
+            throw new NotSupportedException("NoMaterializer cannot be named");
+        }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <typeparam name="TMat">N/A</typeparam>
+        /// <param name="runnable">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be materialized.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
+        {
+            throw new NotSupportedException("NoMaterializer cannot materialize");
+        }
+
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <typeparam name="TMat">N/A</typeparam>
+        /// <param name="runnable">N/A</param>
+        /// <param name="initialAttributes">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be materialized.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes)
+        {
+            throw new NotSupportedException("NoMaterializer cannot materialize");
+        }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="delay">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot schedule an event.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public ICancelable ScheduleOnce(TimeSpan delay, Action action)
+        {
+            throw new NotSupportedException("NoMaterializer cannot schedule a single event");
+        }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="initialDelay">N/A</param>
+        /// <param name="interval">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot schedule a repeatable event.
+        /// </exception>
+        /// <returns>N/A</returns>
+        public ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            throw new NotSupportedException("NoMaterializer cannot schedule a repeated event");
+        }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> does not provide an execution context.
+        /// </exception>
+        public MessageDispatcher ExecutionContext
+        {
+            get { throw new NotSupportedException("NoMaterializer doesn't provide an ExecutionContext"); }
+        }
+    }
+
+
     public class GraphInterpreterSpecKit : AkkaSpec
     {
         public GraphInterpreterSpecKit(ITestOutputHelper output = null, Config config = null) : base(output, config)

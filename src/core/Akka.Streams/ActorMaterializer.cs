@@ -8,8 +8,8 @@
 using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
-using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -30,17 +30,30 @@ namespace Akka.Streams
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
     /// </summary>
-    public abstract class ActorMaterializer : IMaterializer, IMaterializerLoggingProvider, IDisposable
+    public abstract class ActorMaterializer : Materializer, IMaterializerLoggingProvider
     {
+
+        #region static
+
         /// <summary>
-        /// TBD
+        ///
+        /// Scala API: Creates an ActorMaterializer that can materialize stream blueprints as running streams.
+        ///
+        /// The required [[akka.actor.ActorRefFactory]]
+        /// (which can be either an [[akka.actor.ActorSystem]] or an [[akka.actor.ActorContext]])
+        /// will be used to create these actors, therefore it is *forbidden* to pass this object
+        /// to another actor if the factory is an ActorContext.
+        ///
+        /// The `namePrefix` is used as the first part of the names of the actors running
+        /// the processing steps. The default `namePrefix` is `"flow"`. The actor names are built up of
+        /// `namePrefix-flowNumber-flowStepNumber-stepName`.
         /// </summary>
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
             => ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
 
-        #region static
-
+        // NOTE To Self: The method below is equivalent to the first two ActorMaterializer.Apply() methods.
+        
         /// <summary>
         /// <para>
         /// Creates a ActorMaterializer which will execute every step of a transformation
@@ -68,18 +81,20 @@ namespace Akka.Streams
         /// This exception is thrown when the specified <paramref name="context"/> is undefined.
         /// </exception>
         /// <returns>TBD</returns>
+        [Obsolete("Use the system wide materializer with stream attributes or configuration settings to change defaults")]
         public static ActorMaterializer Create(IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
         {
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
             system.Settings.InjectTopLevelFallback(DefaultConfig());
             settings = settings ?? ActorMaterializerSettings.Create(system);
+            var defaultAttributes = settings.ToAttributes();
 
             return new ActorMaterializerImpl(
                 system: system,
                 settings: settings,
                 dispatchers: system.Dispatchers,
-                supervisor: context.ActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
+                supervisor: ActorOfStreamSupervisor(defaultAttributes, context, haveShutDown),
                 haveShutDown: haveShutDown,
                 flowNames: EnumerableActorName.Create(namePrefix ?? "Flow"));
         }
@@ -96,68 +111,52 @@ namespace Akka.Streams
             throw new ArgumentException($"ActorRefFactory context must be a ActorSystem or ActorContext, got [{context.GetType()}]");
         }
 
+        /// <summary>
+        /// INTERNAL API: Creates the `StreamSupervisor` as a system actor.
+        /// </summary>
+        /// <param name="materializerSettings"></param>
+        /// <param name="namePrefix"></param>
+        /// <param name="system"></param>
+        /// <returns></returns>
+        [InternalApi]
+        internal static ActorMaterializer SystemMaterializer(
+            ActorMaterializerSettings materializerSettings,
+            string namePrefix,
+            ExtendedActorSystem system)
+        {
+            var haveShutdown = new AtomicBoolean();
+            var attributes = materializerSettings.ToAttributes();
+            return new PhasedFusingActorMaterializer(
+                system,
+                materializerSettings,
+                attributes,
+                system.Dispatchers,
+#pragma warning disable 618,619
+                system.SystemActorOf(StreamSupervisor.Props(materializerSettings, haveShutdown), StreamSupervisor.NextName()),
+#pragma warning restore 618,619
+                haveShutdown,
+                EnumerableActorName.Create(namePrefix)
+            );
+        }
+
+        private static IActorRef ActorOfStreamSupervisor(Attributes attributes, IActorRefFactory context, AtomicBoolean haveShutDown)
+        {
+            var props = StreamSupervisor.Props(attributes, haveShutDown);
+            switch (context) 
+            {
+                case ExtendedActorSystem s: 
+                    return s.SystemActorOf(props, StreamSupervisor.NextName());
+                    
+                case IActorContext a:     
+                    return a.ActorOf(props, StreamSupervisor.NextName());
+                
+                default:
+                    throw new InvalidOperationException($"Unknown IActorRefFactory type {context.GetType().Name}");
+            }
+        }
+        
         #endregion
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract ActorMaterializerSettings Settings { get; }
-
-        /// <summary>
-        /// Indicates if the materializer has been shut down.
-        /// </summary>
-        public abstract bool IsShutdown { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract MessageDispatcher ExecutionContext { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract ActorSystem System { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract ILoggingAdapter Logger { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract IActorRef Supervisor { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="namePrefix">TBD</param>
-        /// <returns>TBD</returns>
-        public abstract IMaterializer WithNamePrefix(string namePrefix);
-
-        /// <inheritdoc />
-        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
-
-        /// <inheritdoc />
-        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
-        public abstract ICancelable ScheduleOnce(TimeSpan delay, Action action);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
-        public abstract ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -166,29 +165,12 @@ namespace Akka.Streams
         public abstract ActorMaterializerSettings EffectiveSettings(Attributes attributes);
 
         /// <summary>
-        /// Shuts down this materializer and all the stages that have been materialized through this materializer. After
-        /// having shut down, this materializer cannot be used again. Any attempt to materialize stages after having
-        /// shut down will result in an <see cref="IllegalStateException"/> being thrown at materialization time.
-        /// </summary>
-        public abstract void Shutdown();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <returns>TBD</returns>
-        public abstract IActorRef ActorOf(MaterializationContext context, Props props);
-
-        /// <summary>
         /// Creates a new logging adapter.
         /// </summary>
         /// <param name="logSource">The source that produces the log events.</param>
         /// <returns>The newly created logging adapter.</returns>
         public abstract ILoggingAdapter MakeLogger(object logSource);
 
-        /// <inheritdoc/>
-        public void Dispose() => Shutdown();
     }
 
     /// <summary>
@@ -286,8 +268,7 @@ namespace Akka.Streams
 
         }
     }
-
-
+    
     /// <summary>
     /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
     /// Please refer to the withX methods for descriptions of the individual settings.
@@ -402,6 +383,11 @@ namespace Akka.Streams
             MaxFixedBufferSize = maxFixedBufferSize;
             SyncProcessingLimit = syncProcessingLimit;
             StreamRefSettings = streamRefSettings;
+        }
+
+        public Attributes ToAttributes()
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

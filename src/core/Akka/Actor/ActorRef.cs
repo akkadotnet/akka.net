@@ -22,7 +22,6 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-
     /// <summary>
     /// INTERNAL API
     /// 

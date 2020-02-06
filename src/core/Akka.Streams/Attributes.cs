@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
@@ -326,6 +327,22 @@ namespace Akka.Streams
         /// <param name="attribute">TBD</param>
         /// <returns>TBD</returns>
         public bool Contains<TAttr>(TAttr attribute) where TAttr : IAttribute => _attributes.Contains(attribute);
+
+        /// <summary>
+        /// Get the most specific of one of the mandatory attributes. Mandatory attributes are guaranteed
+        /// to always be among the attributes when the attributes are coming from a materialization.
+        /// </summary>
+        /// <typeparam name="TAttr"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="IllegalStateException"></exception>
+        public TAttr MandatoryAttribute<TAttr>()
+            where TAttr : class, IAttribute
+        {
+            var attr = GetFirstAttribute<TAttr>();
+            if (attr == null)
+                throw new IllegalStateException($"Mandatory attribute {typeof(TAttr).Name} not found");
+            return attr;
+        }
 
         /// <summary>
         /// Specifies the name of the operation.

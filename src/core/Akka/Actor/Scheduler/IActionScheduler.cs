@@ -55,6 +55,18 @@ namespace Akka.Actor
         /// <param name="interval">The time period that has to pass between each invocation of the action.</param>
         /// <param name="action">The action that is being scheduled.</param>
         void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
+        
+        void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action);
+        
+        void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
+        
+        void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action);
+        
+        void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
+
+        void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action);
+        
+        void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
     }
 }
 

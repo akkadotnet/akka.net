@@ -5,9 +5,14 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
+using Akka.Actor;
+using Akka.Streams.Implementation;
+
 namespace Akka.Streams
 {
-    public class MaterializerExtraClasses
+    [Obsolete("Temporary marker")]
+    public class DoNotInheritAttribute : Attribute
     {
         
     }

@@ -5,10 +5,30 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
+using Akka.Annotations;
+
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Glue API introduced to allow minimal user effort integration between classic and typed for example for streams.
+    /// </summary>
+    [DoNotInherit]
     public interface IClassicActorSystemProvider
     {
-        
+
+        [InternalApi]
+        ActorSystem ClassicSystem { get; }
     }
+
+    /// <summary>
+    /// Glue API introduced to allow minimal user effort integration between classic and typed for example for streams.
+    /// </summary>
+    [DoNotInherit]
+    public interface IClassicActorContextProvider
+    {
+        [InternalApi]
+        IActorContext ClassicActorContext { get; }
+    }
+    
 }

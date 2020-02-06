@@ -21,6 +21,12 @@ using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation
 {
+    public interface IIslandTag
+    {
+        
+    }
+    
+    // TODO: Silence me...
     /// <summary>
     /// ExtendedActorMaterializer used by subtypes which materializer using GraphInterpreterShell
     /// </summary>
@@ -56,12 +62,32 @@ namespace Akka.Streams.Implementation
         [InternalApi]
         public override IActorRef ActorOf(MaterializationContext context, Props props)
         {
+            /*
+             * val effectiveProps = props.dispatcher match {
+              case Dispatchers.DefaultDispatcherId =>
+               props.withDispatcher(context.effectiveAttributes.mandatoryAttribute[ActorAttributes.Dispatcher].dispatcher)
+             case ActorAttributes.IODispatcher.dispatcher =>
+               // this one is actually not a dispatcher but a relative config key pointing containing the actual dispatcher name
+               val actual = context.effectiveAttributes.mandatoryAttribute[ActorAttributes.BlockingIoDispatcher].dispatcher
+               props.withDispatcher(actual)
+             case _ => props
+           }
+
+           actorOf(effectiveProps, context.islandName)
+             */
             var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
                 ? EffectiveSettings(context.EffectiveAttributes).Dispatcher
                 : props.Dispatcher;
 
             return ActorOf(props, context.StageName, dispatcher);
         }
+        
+        [InternalApi]
+        internal abstract TMat Materialize<TMat>(
+            IGraph<ClosedShape, TMat> graph,
+            Attributes defaultAttributes,
+            Phase defaultPhase, // TODO: Object -> Any
+            Dictionary<IIslandTag, Phase> phases); // TODO: check on dict type and any type (object now)
 
         /// <summary>
         /// INTERNAL API
@@ -74,6 +100,22 @@ namespace Akka.Streams.Implementation
         [InternalApi]
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
+            //        @InternalApi private[akka] def actorOf(props: Props, name: String): ActorRef = {
+//            supervisor match {
+//                case ref: LocalActorRef =>
+//                    ref.underlying.attachChild(props, name, systemService = false)
+//                case ref: RepointableActorRef =>
+//                if (ref.isStarted)
+//                    ref.underlying.asInstanceOf[ActorCell].attachChild(props, name, systemService = false)
+//                else {
+//                    implicit val timeout = ref.system.settings.CreationTimeout
+//                    val f = (supervisor ? StreamSupervisor.Materialize(props, name)).mapTo[ActorRef]
+//                    Await.result(f, timeout.duration)
+//                }
+//                case unknown =>
+//                    throw new IllegalStateException(s"Stream supervisor must be a local actor, was [${unknown.getClass.getName}]")
+//            }
+//        }
             var localActorRef = Supervisor as LocalActorRef;
             if (localActorRef != null)
                 return ((ActorCell) localActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher),
@@ -339,6 +381,15 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
             => _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
+
+        public override ICancelable ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan delay, Action action)
+            => _system.Scheduler.Advanced.ScheduleWithFixedDelayCancelable(initialDelay, delay, action);
+
+        public override ICancelable ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action)
+            => _system.Scheduler.Advanced.ScheduleAtFixedRateCancelable(initialDelay, interval, action);
+
+        public override ICancelable SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action)
+            => _system.Scheduler.Advanced.SchedulePeriodicallyCancelable(initialDelay, interval, action);
 
         /// <summary>
         /// TBD
@@ -623,8 +674,15 @@ namespace Akka.Streams.Implementation
         /// <param name="settings">TBD</param>
         /// <param name="haveShutdown">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Use attributes instead of settings")] // TODO: Investigate this.
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
             => Actor.Props.Create(() => new StreamSupervisor(settings, haveShutdown)).WithDeploy(Deploy.Local);
+        
+        public static Props Props(Attributes attributes, AtomicBoolean haveShutDown)
+            // TODO: Maybe can utilize EffectiveSettings(attributes) somehow
+            => Actor.Props.Create(() => new StreamSupervisor(haveShutDown))
+                .WithDeploy(Deploy.Local)
+                .WithDispatcher(attributes.MandatoryAttribute<ActorAttributes.Dispatcher>().Name);
 
         /// <summary>
         /// TBD
@@ -651,6 +709,12 @@ namespace Akka.Streams.Implementation
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
             Settings = settings;
+            HaveShutdown = haveShutdown;
+        }
+        
+        // TODO: This is just temp
+        public StreamSupervisor(AtomicBoolean haveShutdown)
+        {
             HaveShutdown = haveShutdown;
         }
 

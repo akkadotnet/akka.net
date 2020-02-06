@@ -85,6 +85,42 @@ namespace Akka.Actor
             InternalScheduleRepeatedly(initialDelay, interval, action, null);
         }
 
+        public void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
         void IActionScheduler.ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             ValidateDelay(initialDelay, "initialDelay");

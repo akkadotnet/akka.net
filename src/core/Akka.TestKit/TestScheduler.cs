@@ -197,6 +197,42 @@ namespace Akka.TestKit
             InternalSchedule(initialDelay, interval, null, null, action, null, null);
         }
 
+        public void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleWithFixedDelay(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleAtFixedRate(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
+        public void SchedulePeriodically(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
