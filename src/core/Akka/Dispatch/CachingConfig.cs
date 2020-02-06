@@ -26,8 +26,6 @@ namespace Akka.Dispatch
     [InternalApi]
     class CachingConfig : Config
     {
-        private static readonly Config EmptyConfig = ConfigurationFactory.Empty;
-
         #region PathEntry definitions
 
         interface IPathEntry
@@ -61,7 +59,7 @@ namespace Akka.Dispatch
             /// <param name="valid">TBD</param>
             /// <param name="exists">TBD</param>
             public ValuePathEntry(bool valid, bool exists)
-                : this(valid, exists, EmptyConfig)
+                : this(valid, exists, Config.Empty)
             {
             }
 
@@ -131,16 +129,16 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="config">TBD</param>
-        public CachingConfig(Config config) : base(EmptyConfig)
+        public CachingConfig(Config config) : base(Empty)
         {
             if (config is CachingConfig cachingConfig)
             {
-                _config = cachingConfig._config;
+                _config = new Config(cachingConfig._config);
                 _entryMap = cachingConfig._entryMap;
             }
             else
             {
-                _config = config;
+                _config = new Config(config);
                 _entryMap = new ConcurrentDictionary<string, IPathEntry>();
             }
         }
@@ -194,7 +192,7 @@ namespace Akka.Dispatch
             if (fallback.IsNullOrEmpty())
                 return this; // no-op
 
-            if (fallback == _config)
+            if (ReferenceEquals(fallback, _config))
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
 
             if (_config.IsEmpty)
