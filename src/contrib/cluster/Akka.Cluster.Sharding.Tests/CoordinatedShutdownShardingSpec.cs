@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +45,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly ExtractEntityId _extractEntityId = message => (message.ToString(), message);
 
-        private readonly ExtractShardId _extractShard = message => (message.GetHashCode() % 10).ToString();
+        private readonly ExtractShardId _extractShard = message => (MurmurHash.StringHash(message.ToString())).ToString();
 
         static CoordinatedShutdownShardingSpec()
         {
