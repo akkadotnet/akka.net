@@ -425,8 +425,7 @@ namespace Akka.DistributedData
             public override IReplicatedData Merge(IReplicatedData other)
             {
                 UpdateDeltaOperation update;
-                var put = other as PutDeltaOperation;
-                if (put != null && Equals(Key, put.Key))
+                if (other is PutDeltaOperation put && Equals(Key, put.Key))
                 {
                     return new PutDeltaOperation((ORSet<TKey>.IDeltaOperation)Underlying.Merge(put.Underlying), put.Key, put.Value);
                 }
@@ -434,9 +433,9 @@ namespace Akka.DistributedData
                 {
                     var merged = (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying);
                     var e2 = update.Values.First().Value;
-                    if (Value is IDeltaReplicatedData)
+                    if (Value is IDeltaReplicatedData data)
                     {
-                        var mergedDelta = ((IDeltaReplicatedData)Value).MergeDelta((IReplicatedDelta)e2);
+                        var mergedDelta = data.MergeDelta((IReplicatedDelta)e2);
                         return new PutDeltaOperation(merged, Key, (TValue)mergedDelta);
                     }
                     else

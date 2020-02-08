@@ -97,7 +97,7 @@ namespace Akka.DistributedData
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is VersionVector && Equals((VersionVector)obj);
+        public override bool Equals(object obj) => obj is VersionVector vector && Equals(vector);
 
         /// <summary>
         /// Returns true if this VersionVector has the same history
@@ -274,16 +274,14 @@ namespace Akka.DistributedData
 
         public override VersionVector Merge(VersionVector other)
         {
-            if (other is MultiVersionVector)
+            if (other is MultiVersionVector vector1)
             {
-                var vector = (MultiVersionVector)other;
-                var v2 = vector.Versions.GetValueOrDefault(Node, 0L);
-                var mergedVersions = v2 >= Version ? vector.Versions : vector.Versions.SetItem(Node, Version);
+                var v2 = vector1.Versions.GetValueOrDefault(Node, 0L);
+                var mergedVersions = v2 >= Version ? vector1.Versions : vector1.Versions.SetItem(Node, Version);
                 return new MultiVersionVector(mergedVersions);
             }
-            else if (other is SingleVersionVector)
+            else if (other is SingleVersionVector vector)
             {
-                var vector = (SingleVersionVector)other;
                 if (Node == vector.Node)
                 {
                     return Version >= vector.Version ? this : new SingleVersionVector(vector.Node, vector.Version);
@@ -342,10 +340,9 @@ namespace Akka.DistributedData
 
         public override VersionVector Merge(VersionVector other)
         {
-            if (other is MultiVersionVector)
+            if (other is MultiVersionVector vector1)
             {
-                var vector = (MultiVersionVector)other;
-                var merged = vector.Versions.ToBuilder();
+                var merged = vector1.Versions.ToBuilder();
                 foreach (var pair in Versions)
                 {
                     var mergedCurrentTime = merged.GetValueOrDefault(pair.Key, 0L);
@@ -355,9 +352,8 @@ namespace Akka.DistributedData
 
                 return new MultiVersionVector(merged.ToImmutable());
             }
-            else if (other is SingleVersionVector)
+            else if (other is SingleVersionVector vector)
             {
-                var vector = (SingleVersionVector)other;
                 var v1 = Versions.GetValueOrDefault(vector.Node, 0L);
                 var merged = v1 >= vector.Version ? Versions : Versions.SetItem(vector.Node, vector.Version);
                 return new MultiVersionVector(merged);
