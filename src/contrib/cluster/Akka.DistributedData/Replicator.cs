@@ -697,6 +697,7 @@ namespace Akka.DistributedData
             {
                 if (envelope.Equals(writeEnvelope))
                 {
+                    _log.Debug("Determined local data {0} and remote data {1} were equal.", envelope, writeEnvelope);
                     return envelope;
                 }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
@@ -1031,9 +1032,7 @@ namespace Akka.DistributedData
         private bool IsOtherDifferent(string key, Digest otherDigest)
         {
             var d = GetDigest(key);
-            var isFound = !Equals(d, NotFoundDigest);
-            var isEqualToOther = Equals(d, otherDigest);
-            return isFound && !isEqualToOther;
+            return d != NotFoundDigest && d != otherDigest;
         }
 
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
@@ -1053,7 +1052,7 @@ namespace Akka.DistributedData
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
-                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x)) % totChunks == chunk))
+                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x) % totChunks) == chunk))
                 .ToImmutableHashSet();
 
             var otherMissingKeys = myKeys.Except(otherKeys);
