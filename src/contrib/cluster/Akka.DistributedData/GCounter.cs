@@ -173,8 +173,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            ulong prunedNodeValue;
-            return State.TryGetValue(removedNode, out prunedNodeValue)
+            return State.TryGetValue(removedNode, out var prunedNodeValue)
                 ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue)
                 : this;
         }
