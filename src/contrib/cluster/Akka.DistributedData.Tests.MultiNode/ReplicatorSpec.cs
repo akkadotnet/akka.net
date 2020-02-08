@@ -35,8 +35,8 @@ namespace Akka.DistributedData.Tests.MultiNode
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
                 akka.loglevel = DEBUG
-                akka.log-dead-letters-during-shutdown = on
-            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(true));
+                akka.log-dead-letters-during-shutdown = off
+            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(false));
 
             TestTransport = true;
         }
@@ -442,7 +442,6 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                //TODO: for some reason this RunOn never gets called
                 for (ulong i = 1; i <= 30UL; i++)
                 {
                     var n = i;
@@ -475,7 +474,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         {
                             var keydn = new GCounterKey("D" + i);
                             _replicator.Tell(Dsl.Get(keydn, ReadLocal.Instance));
-                            ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn)).Get(keydn).Value.ShouldBe(i);
+                            ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn), TimeSpan.FromMilliseconds(50)).Get(keydn).Value.ShouldBe(i);
                         }
                     }));
             }, _first, _second);

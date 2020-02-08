@@ -152,7 +152,7 @@ namespace Akka.DistributedData.Tests
         }
 
         // <summary>
-        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4184
+        /// Reproduction spec for replicator duplicate publication.
         /// </summary>
         [Fact]
         public async Task Bugfix_Duplicate_Publish()
