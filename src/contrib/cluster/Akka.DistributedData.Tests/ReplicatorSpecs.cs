@@ -55,9 +55,9 @@ namespace Akka.DistributedData.Tests
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
-            _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys1 = Sys;
             _sys3 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _sys2 = Sys;
+            _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
 
             _timeOut = Dilated(TimeSpan.FromSeconds(3.0));
             _writeTwo = new WriteTo(2, _timeOut);
@@ -177,6 +177,8 @@ namespace Akka.DistributedData.Tests
             // update item on 2
             _replicator2.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
 
+            Sys.Log.Info("Pushed change from sys2 for I");
+
             // wait for write to replicate to all 3 nodes
             Within(TimeSpan.FromSeconds(5), () =>
             {
@@ -184,10 +186,10 @@ namespace Akka.DistributedData.Tests
                     p.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
             });
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
-
             // create duplicate write on node 1
+            Sys.Log.Info("Pushing change from sys1 for I");
             _replicator1.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
+            
 
             // no probe should receive an update
             p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
@@ -196,7 +198,7 @@ namespace Akka.DistributedData.Tests
         protected override void BeforeTermination()
         {
             Shutdown(_sys1);
-            Shutdown(_sys2);
+            Shutdown(_sys3);
         }
 
     }
