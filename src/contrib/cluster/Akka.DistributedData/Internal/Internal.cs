@@ -541,6 +541,7 @@ namespace Akka.DistributedData.Internal
 
             if (!Data.Equals(other.Data)) return false;
             if (Pruning.Count != other.Pruning.Count) return false;
+            if (!DeltaVersions.Equals(other.DeltaVersions)) return false;
 
             foreach (var entry in Pruning)
             {
