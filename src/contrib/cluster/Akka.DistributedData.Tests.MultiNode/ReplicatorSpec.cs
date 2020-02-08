@@ -256,7 +256,6 @@ namespace Akka.DistributedData.Tests.MultiNode
                 Within(TimeSpan.FromSeconds(5), () =>
                     AwaitAssert(() =>
                     {
-                        //TODO: received message is NotFound(A) instead of GetSuccess
                         // for some reason result is returned before CRDT gets replicated
                         _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
                         var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);

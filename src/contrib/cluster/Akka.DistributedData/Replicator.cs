@@ -695,7 +695,10 @@ namespace Akka.DistributedData
             var envelope = GetData(key);
             if (envelope != null)
             {
-                if (envelope.Equals(writeEnvelope)) return writeEnvelope;
+                if (envelope.Equals(writeEnvelope))
+                {
+                    return envelope;
+                }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
 
                 try

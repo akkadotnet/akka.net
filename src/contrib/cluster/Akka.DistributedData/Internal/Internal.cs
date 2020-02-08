@@ -547,7 +547,7 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            if (!Equals(Data, other.Data)) return false;
+            if (!Data.Equals(other.Data)) return false;
             if (Pruning.Count != other.Pruning.Count) return false;
 
             foreach (var entry in Pruning)
