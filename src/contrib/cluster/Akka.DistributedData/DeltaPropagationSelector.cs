@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -91,6 +92,7 @@ namespace Akka.DistributedData
                         var entries = entry.Value;
 
                         var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
+                        
                         var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
                         var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
                         if (!deltaEntriesAfterJ.IsEmpty)
@@ -101,8 +103,7 @@ namespace Akka.DistributedData
                             // in most cases the delta group merging will be the same for each node,
                             // so we cache the merged results
                             var cacheKey = (key, fromSeqNr, toSeqNr);
-                            IReplicatedData deltaGroup;
-                            if (!cache.TryGetValue(cacheKey, out deltaGroup))
+                            if (!cache.TryGetValue(cacheKey, out var deltaGroup))
                             {
                                 using (var e = deltaEntriesAfterJ.Values.GetEnumerator())
                                 {
@@ -190,6 +191,28 @@ namespace Akka.DistributedData
             }
 
             return 0L;
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used to provide a dump of the current delta state for each node.
+        /// </summary>
+        /// <param name="key">The key of the object.</param>
+        /// <param name="logger">A logging adapter that we can use for reporting output</param>
+        internal void DumpDeltaEntriesForKey(string key, ILoggingAdapter logger)
+        {
+            if (_deltaSentToNode.TryGetValue(key, out var nodeSends))
+            {
+                foreach (var send in nodeSends)
+                {
+                    logger.Debug("Recorded sent for key [{0}] to node [{1}]: [{2}]", key, send, send.Value);
+                }
+            }
+            else
+            {
+                logger.Debug("No other nodes have received deltas for key [{0}]", key);
+            }
         }
     }
 }

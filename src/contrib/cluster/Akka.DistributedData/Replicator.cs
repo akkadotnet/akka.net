@@ -904,7 +904,8 @@ namespace Akka.DistributedData
 
         private void ReceiveDeltaPropagationTick()
         {
-            foreach (var entry in _deltaPropagationSelector.CollectPropagations())
+            var propagations = _deltaPropagationSelector.CollectPropagations();
+            foreach (var entry in propagations)
             {
                 var node = entry.Key;
                 var deltaPropagation = entry.Value;
@@ -921,6 +922,12 @@ namespace Akka.DistributedData
                 {
                     _log.Debug("Skipping DeltaPropagation to node [{0}] - nothing to send", node);
                 }
+            }
+
+            if (propagations.IsEmpty && _dataEntries.ContainsKey("D5")) // debugging
+            {
+                _log.Debug("Received no propagations for any keys. Dumping.");
+                _deltaPropagationSelector.DumpDeltaEntriesForKey("D5", _log);
             }
 
             if (_deltaPropagationSelector.PropagationCount % _deltaPropagationSelector.GossipInternalDivisor == 0)
@@ -1410,8 +1417,16 @@ namespace Akka.DistributedData
             protected override int MaxDeltaSize => _replicator._maxDeltaSize;
 
             // TODO optimize, by maintaining a sorted instance variable instead
-            protected override ImmutableArray<Address> AllNodes =>
-                _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+            protected override ImmutableArray<Address> AllNodes
+            {
+                get
+                {
+                    var allNodes = _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes));
+                    return allNodes;
+                }
+            }
+                
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas)
             {
