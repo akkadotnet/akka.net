@@ -36,13 +36,13 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     [Serializable]
     internal sealed class DeltaPropagationTick
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance
         /// </summary>
         public static DeltaPropagationTick Instance { get; } = new DeltaPropagationTick();
 
