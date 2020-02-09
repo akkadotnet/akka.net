@@ -694,14 +694,11 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
-            _log.Debug("Checking data for [{0}:{1}]", key, writeEnvelope);
             var envelope = GetData(key);
             if (envelope != null)
             {
-                
                 if (envelope.Equals(writeEnvelope))
                 {
-                    _log.Debug("Determined local data {0} and remote data {1} were equal.", envelope, writeEnvelope);
                     return envelope;
                 }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
@@ -910,30 +907,16 @@ namespace Akka.DistributedData
 
         private void ReceiveDeltaPropagationTick()
         {
-            var propagations = _deltaPropagationSelector.CollectPropagations();
-            foreach (var entry in propagations)
+            foreach (var entry in _deltaPropagationSelector.CollectPropagations())
             {
                 var node = entry.Key;
                 var deltaPropagation = entry.Value;
 
                 // TODO split it to several DeltaPropagation if too many entries
-                // TODO: remove delta propagation debugging
                 if (!deltaPropagation.Deltas.IsEmpty)
                 {
-                    _log.Debug("Sending DeltaPropagation to node [{0}] containing [{1}]", node, 
-                        string.Join(", ", deltaPropagation.Deltas.Select(d => $"{d.Key}:{d.Value.FromSeqNr}->{d.Value.ToSeqNr}")));
                     Replica(node).Tell(deltaPropagation);
                 }
-                else
-                {
-                    _log.Debug("Skipping DeltaPropagation to node [{0}] - nothing to send", node);
-                }
-            }
-
-            if (propagations.IsEmpty && _dataEntries.ContainsKey("D5")) // debugging
-            {
-                _log.Debug("Received no propagations for any keys. Dumping.");
-                _deltaPropagationSelector.DumpDeltaEntriesForKey("D5", _log);
             }
 
             if (_deltaPropagationSelector.PropagationCount % _deltaPropagationSelector.GossipInternalDivisor == 0)
@@ -1074,18 +1057,12 @@ namespace Akka.DistributedData
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
 
-            _log.Debug("Other keys with different digests: {0}", 
-                string.Join(",", otherDifferentKeys.Select(x => $"Remote key/digest: {x}:{otherDigests[x].ToBase64()}, local digest: {GetDigest(x).ToBase64()}")));
-
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
                     : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x) % totChunks) == chunk))
                 .ToImmutableHashSet();
 
-            _log.Debug("My keys for this set {0}", string.Join(",", myKeys));
-
-            // bug
             var otherMissingKeys = myKeys.Except(otherKeys);
 
             var keys = otherDifferentKeys
