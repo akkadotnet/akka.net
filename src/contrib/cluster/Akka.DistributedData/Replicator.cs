@@ -910,7 +910,17 @@ namespace Akka.DistributedData
                 var deltaPropagation = entry.Value;
 
                 // TODO split it to several DeltaPropagation if too many entries
-                if (!deltaPropagation.Deltas.IsEmpty) Replica(node).Tell(deltaPropagation);
+                // TODO: remove delta propagation debugging
+                if (!deltaPropagation.Deltas.IsEmpty)
+                {
+                    _log.Debug("Sending DeltaPropagation to node [{0}] containing [{1}]", node, 
+                        string.Join(", ", deltaPropagation.Deltas.Select(d => $"{d.Key}:{d.Value.FromSeqNr}->{d.Value.ToSeqNr}")));
+                    Replica(node).Tell(deltaPropagation);
+                }
+                else
+                {
+                    _log.Debug("Skipping DeltaPropagation to node [{0}] - nothing to send", node);
+                }
             }
 
             if (_deltaPropagationSelector.PropagationCount % _deltaPropagationSelector.GossipInternalDivisor == 0)
