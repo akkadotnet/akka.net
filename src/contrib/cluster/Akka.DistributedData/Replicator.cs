@@ -837,7 +837,9 @@ namespace Akka.DistributedData
         {
             if (Equals(envelope.Data, DeletedData.Instance)) return DeletedDigest;
 
-            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions());
+            // TODO: need to serialize the content of the envelope, but Hyperion doesn't produce stable output
+            // Workaround: using the hashcode of the envelope for now
+            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions().GetHashCode());
             var serialized = SHA1.Create().ComputeHash(bytes);
             return ByteString.CopyFrom(serialized);
         }
@@ -1072,7 +1074,8 @@ namespace Akka.DistributedData
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
 
-            _log.Debug("Other keys with different digests: {0}", string.Join(",", otherDifferentKeys));
+            _log.Debug("Other keys with different digests: {0}", 
+                string.Join(",", otherDifferentKeys.Select(x => $"Remote key/digest: {x}:{otherDigests[x].ToBase64()}, local digest: {GetDigest(x).ToBase64()}")));
 
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
