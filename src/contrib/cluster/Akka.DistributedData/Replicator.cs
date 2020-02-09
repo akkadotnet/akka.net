@@ -1085,10 +1085,14 @@ namespace Akka.DistributedData
             // bug
             var otherMissingKeys = myKeys.Except(otherKeys);
 
+            _log.Debug("Other missing keys for this set {0}", string.Join(",", otherMissingKeys));
+
             var keys = otherDifferentKeys
                 .Union(otherMissingKeys)
                 .Take(_settings.MaxDeltaElements)
                 .ToArray();
+
+            _log.Debug("Gossip keys for this set {0}", string.Join(",", keys));
 
             if (keys.Length != 0)
             {
