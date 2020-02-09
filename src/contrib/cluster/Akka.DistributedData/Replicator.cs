@@ -989,7 +989,8 @@ namespace Akka.DistributedData
             var to = Replica(address);
             if (_dataEntries.Count <= _settings.MaxDeltaElements)
             {
-                var status = new Internal.Status(_dataEntries.Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key))).ToImmutableDictionary(), chunk: 0, totalChunks: 1);
+                var status = new Internal.Status(_dataEntries
+                    .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key)), chunk: 0, totalChunks: 1);
                 to.Tell(status);
             }
             else
@@ -1007,9 +1008,8 @@ namespace Akka.DistributedData
                         _statusTotChunks = totChunks;
                     }
                     var chunk = (int)(_statusCount % totChunks);
-                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key)) % totChunks == chunk)
-                        .Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key)))
-                        .ToImmutableDictionary();
+                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key) % totChunks) == chunk)
+                        .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key));
                     var status = new Internal.Status(entries, chunk, totChunks);
                     to.Tell(status);
                 }
