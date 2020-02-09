@@ -343,7 +343,7 @@ namespace Akka.DistributedData
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            return obj is ORDictionary<TKey, TValue> && Equals((ORDictionary<TKey, TValue>)obj);
+            return obj is ORDictionary<TKey, TValue> pairs && Equals(pairs);
         }
 
         /// <inheritdoc/>

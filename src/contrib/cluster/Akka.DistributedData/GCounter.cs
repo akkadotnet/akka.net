@@ -201,7 +201,7 @@ namespace Akka.DistributedData
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is GCounter && Equals((GCounter)obj);
+        public override bool Equals(object obj) => obj is GCounter counter && Equals(counter);
 
         /// <inheritdoc/>
         public int CompareTo(GCounter other)
