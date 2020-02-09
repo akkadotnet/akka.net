@@ -826,9 +826,11 @@ namespace Akka.DistributedData
                     _dataEntries = _dataEntries.SetItem(key, (value.envelope, digest));
                     return digest;
                 }
-                else return value.digest;
+
+                return value.digest;
             }
-            else return NotFoundDigest;
+
+            return NotFoundDigest;
         }
 
         private Digest Digest(DataEnvelope envelope)
@@ -1070,12 +1072,17 @@ namespace Akka.DistributedData
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
 
+            _log.Debug("Other keys with different digests: {0}", string.Join(",", otherDifferentKeys));
+
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
                     : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x) % totChunks) == chunk))
                 .ToImmutableHashSet();
 
+            _log.Debug("My keys for this set {0}", string.Join(",", myKeys));
+
+            // bug
             var otherMissingKeys = myKeys.Except(otherKeys);
 
             var keys = otherDifferentKeys
