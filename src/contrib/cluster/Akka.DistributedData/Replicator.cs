@@ -692,9 +692,11 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
+            _log.Debug("Checking data for [{0}:{1}]", key, writeEnvelope);
             var envelope = GetData(key);
             if (envelope != null)
             {
+                
                 if (envelope.Equals(writeEnvelope))
                 {
                     _log.Debug("Determined local data {0} and remote data {1} were equal.", envelope, writeEnvelope);
