@@ -180,7 +180,7 @@ namespace Akka.DistributedData.Tests
             var c2 = c1.Increment(_node1);
             var c3 = c1.Increment(_node2);
 
-            c2.Should().NotBe(c3);
+            c2.Equals(c3).Should().BeFalse();
         }
     }
 }
