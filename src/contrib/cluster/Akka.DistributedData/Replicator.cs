@@ -1258,8 +1258,7 @@ namespace Akka.DistributedData
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
-                var removedNodePruning = pair.Value.Item1.Data as IRemovedNodePruning;
-                if (removedNodePruning != null)
+                if (pair.Value.envelope.Data is IRemovedNodePruning removedNodePruning)
                 {
                     newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n.Address))));
                 }
@@ -1295,11 +1294,9 @@ namespace Akka.DistributedData
                         {
                             if (envelope.Data is IRemovedNodePruning)
                             {
-                                IPruningState state;
-                                if (envelope.Pruning.TryGetValue(removed, out state))
+                                if (envelope.Pruning.TryGetValue(removed, out var state))
                                 {
-                                    var initialized = state as PruningInitialized;
-                                    if (initialized != null && initialized.Owner != _selfUniqueAddress)
+                                    if (state is PruningInitialized initialized && initialized.Owner != _selfUniqueAddress)
                                     {
                                         var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
                                         _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
@@ -1329,14 +1326,12 @@ namespace Akka.DistributedData
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
-                var envelope = entry.Value.Item1;
-                var data = envelope.Data as IRemovedNodePruning;
-                if (data != null)
+                var envelope = entry.Value.envelope;
+                if (envelope.Data is IRemovedNodePruning data)
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        var init = entry2.Value as PruningInitialized;
-                        if (init != null && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
