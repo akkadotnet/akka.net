@@ -820,7 +820,7 @@ namespace Akka.DistributedData
             var contained = _dataEntries.TryGetValue(key, out var value);
             if (contained)
             {
-                if (Equals(value.digest, LazyDigest))
+                if (value.digest == LazyDigest)
                 {
                     var digest = Digest(value.envelope);
                     _dataEntries = _dataEntries.SetItem(key, (value.envelope, digest));
@@ -998,7 +998,7 @@ namespace Akka.DistributedData
 
         private void ReceiveGossipTick()
         {
-            var node = SelectRandomNode(_nodes.Union(_weaklyUpNodes));
+            var node = SelectRandomNode(AllNodes);
             if (node != null)
             {
                 GossipTo(node);
