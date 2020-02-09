@@ -290,6 +290,8 @@ namespace Akka.DistributedData
         /// </summary>
         private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
 
+        private ImmutableHashSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
+
         /// <summary>
         /// Cluster weaklyUp nodes, doesn't contain selfAddress
         /// </summary>
@@ -1421,8 +1423,8 @@ namespace Akka.DistributedData
             {
                 get
                 {
-                    var allNodes = _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
-                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes));
+                    var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes.Select(x => x.ToString())));
                     return allNodes;
                 }
             }
