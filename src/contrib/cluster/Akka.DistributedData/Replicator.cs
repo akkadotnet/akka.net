@@ -1412,13 +1412,13 @@ namespace Akka.DistributedData
                     .Select(x =>
                     {
                         var key = x.Key;
-                        var t = x.Value;
+                        var (data, from, to) = x.Value;
                         var envelope = _replicator.GetData(key);
                         return envelope != null
                             ? new KeyValuePair<string, Delta>(key,
-                                new Delta(envelope.WithData(t.data), t.from, t.to))
+                                new Delta(envelope.WithData(data), from, to))
                             : new KeyValuePair<string, Delta>(key,
-                                new Delta(new DataEnvelope(t.data), t.from, t.to));
+                                new Delta(new DataEnvelope(data), from, to));
                     })
                     .ToImmutableDictionary();
 

@@ -69,7 +69,7 @@ namespace Akka.DistributedData
                 {
                     var start = (int)(_deltaNodeRoundRobinCounter % all.Length);
                     var buffer = new Address[sliceSize];
-                    for (int i = 0; i < sliceSize; i++)
+                    for (var i = 0; i < sliceSize; i++)
                     {
                         buffer[i] = all[(start + i) % all.Length];
                     }
@@ -182,8 +182,7 @@ namespace Akka.DistributedData
 
         private long FindSmallestVersionPropagatedToAllNodes(string key, IEnumerable<Address> nodes)
         {
-            ImmutableDictionary<Address, long> deltaSentToNodeForKey;
-            if (_deltaSentToNode.TryGetValue(key, out deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
+            if (_deltaSentToNode.TryGetValue(key, out var deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
             {
                 return nodes.Any(node => !deltaSentToNodeForKey.ContainsKey(node))
                     ? 0L
