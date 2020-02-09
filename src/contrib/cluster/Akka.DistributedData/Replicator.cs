@@ -1069,7 +1069,7 @@ namespace Akka.DistributedData
                 if (_log.IsDebugEnabled)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
-                var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), !otherDifferentKeys.IsEmpty);
+                var g = new Gossip(keys.ToImmutableDictionary(x => x, _ => GetData(_)), !otherDifferentKeys.IsEmpty);
                 Sender.Tell(g);
             }
 
@@ -1079,7 +1079,7 @@ namespace Akka.DistributedData
                 if (Context.System.Log.IsDebugEnabled)
                     Context.System.Log.Debug("Sending gossip status to {0}, requesting missing {1}", Sender.Path.Address, string.Join(", ", myMissingKeys));
 
-                var status = new Internal.Status(myMissingKeys.Select(x => new KeyValuePair<string, ByteString>(x, NotFoundDigest)).ToImmutableDictionary(), chunk, totChunks);
+                var status = new Internal.Status(myMissingKeys.ToImmutableDictionary(x => x, _ => NotFoundDigest), chunk, totChunks);
                 Sender.Tell(status);
             }
         }
