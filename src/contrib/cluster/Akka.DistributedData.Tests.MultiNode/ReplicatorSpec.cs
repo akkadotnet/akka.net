@@ -34,7 +34,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
-                akka.loglevel = DEBUG
+                akka.loglevel = INFO
                 akka.log-dead-letters-during-shutdown = off
             ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(false));
 
@@ -72,7 +72,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
-        private int afterCounter = 0;
+        private int _afterCounter = 0;
 
         private readonly RoleName _first;
         private readonly RoleName _second;
@@ -734,8 +734,8 @@ namespace Akka.DistributedData.Tests.MultiNode
         protected override int InitialParticipantsValueFactory => Roles.Count;
         private void EnterBarrierAfterTestStep()
         {
-            afterCounter++;
-            EnterBarrier("after-" + afterCounter);
+            _afterCounter++;
+            EnterBarrier("after-" + _afterCounter);
         }
 
         private void Join(RoleName from, RoleName to)
