@@ -192,5 +192,27 @@ namespace Akka.DistributedData
 
             return 0L;
         }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used to provide a dump of the current delta state for each node.
+        /// </summary>
+        /// <param name="key">The key of the object.</param>
+        /// <param name="logger">A logging adapter that we can use for reporting output</param>
+        internal void DumpDeltaEntriesForKey(string key, ILoggingAdapter logger)
+        {
+            if (_deltaSentToNode.TryGetValue(key, out var nodeSends))
+            {
+                foreach (var send in nodeSends)
+                {
+                    logger.Debug("Recorded sent for key [{0}] to node [{1}]: [{2}]", key, send, send.Value);
+                }
+            }
+            else
+            {
+                logger.Debug("No other nodes have received deltas for key [{0}]", key);
+            }
+        }
     }
 }
