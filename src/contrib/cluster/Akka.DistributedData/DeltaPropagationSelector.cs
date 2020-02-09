@@ -213,6 +213,18 @@ namespace Akka.DistributedData
             {
                 logger.Debug("No other nodes have received deltas for key [{0}]", key);
             }
+
+            if (_deltaEntries.TryGetValue(key, out var deltaEntry))
+            {
+                foreach (var entries in deltaEntry)
+                {
+                    logger.Debug("Have delta entry for key [{0}] -> [{1}:{2}]", key, entries.Key, entries.Value);
+                }
+            }
+            else
+            {
+                logger.Debug("No delta entries for key [{0}]", key);
+            }
         }
     }
 }
