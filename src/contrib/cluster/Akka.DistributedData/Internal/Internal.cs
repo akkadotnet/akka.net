@@ -541,6 +541,7 @@ namespace Akka.DistributedData.Internal
 
             if (!Data.Equals(other.Data)) return false;
             if (Pruning.Count != other.Pruning.Count) return false;
+            if (!DeltaVersions.Equals(other.DeltaVersions)) return false;
 
             foreach (var entry in Pruning)
             {
@@ -555,7 +556,7 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
-        public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
+        public override bool Equals(object obj) => obj is DataEnvelope envelope && Equals(envelope);
 
         /// <summary>
         /// TBD
@@ -565,7 +566,15 @@ namespace Akka.DistributedData.Internal
         {
             unchecked
             {
-                return ((Data != null ? Data.GetHashCode() : 0) * 397) ^ (Pruning != null ? Pruning.GetHashCode() : 0);
+                var seed =  ((Data != null ? Data.GetHashCode() : 0) * 397)
+                            ^ (DeltaVersions != null ? DeltaVersions.GetHashCode() : 0);
+
+                foreach (var p in Pruning)
+                {
+                    seed *= p.Key.GetHashCode() ^ p.Value.GetHashCode();
+                }
+
+                return seed;
             }
         }
 

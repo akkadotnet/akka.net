@@ -305,7 +305,13 @@ namespace Akka.DistributedData
 
         public override string ToString() => $"VersionVector({Node}->{Version})";
 
-        public override int GetHashCode() => Node.GetHashCode() ^ Version.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (int)(Node.GetHashCode() ^ Version);
+            }
+        }
     }
 
     [Serializable]
@@ -376,6 +382,18 @@ namespace Akka.DistributedData
             $"VersionVector({string.Join(";", Versions.Select(kv => $"({kv.Key}->{kv.Value})"))})";
 
         /// <inheritdoc/>
-        public override int GetHashCode() => Versions.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var seed = 17;
+                foreach (var v in Versions)
+                {
+                    seed *= (int)(v.Key.GetHashCode() ^ v.Value);
+                }
+
+                return seed;
+            }
+        }
     }
 }
