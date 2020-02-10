@@ -17,6 +17,25 @@ using FluentAssertions;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
+    public class ReplicatorPruningSpecConfig : MultiNodeConfig
+    {
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public ReplicatorPruningSpecConfig()
+        {
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+
+            CommonConfig = ConfigurationFactory.ParseString(@"
+                akka.loglevel = DEBUG
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.log-dead-letters-during-shutdown = off")
+                .WithFallback(DistributedData.DefaultConfig());
+        }
+    }
+
     public class ReplicatorPruningSpec : MultiNodeClusterSpec
     {
         public readonly RoleName First;
@@ -32,15 +51,19 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ORSetKey<string> _keyB = new ORSetKey<string>("B");
         private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
 
-        public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig()) { }
+        public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig())
+        {
+        }
 
-        protected ReplicatorPruningSpec(ReplicatorPruningSpecConfig config) : base(config, typeof(ReplicatorPruningSpec))
+        protected ReplicatorPruningSpec(ReplicatorPruningSpecConfig config) : base(config,
+            typeof(ReplicatorPruningSpec))
         {
             _cluster = Akka.Cluster.Cluster.Get(Sys);
             _timeout = Dilated(TimeSpan.FromSeconds(3));
             _replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)
-                .WithGossipInterval(TimeSpan.FromSeconds(1))
-                .WithPruning(pruningInterval: TimeSpan.FromSeconds(1), maxPruningDissemination: _maxPruningDissemination)),
+                    .WithGossipInterval(TimeSpan.FromSeconds(1))
+                    .WithPruning(pruningInterval: TimeSpan.FromSeconds(1),
+                        maxPruningDissemination: _maxPruningDissemination)),
                 "replicator");
 
             First = config.First;
@@ -48,7 +71,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Third = config.Third;
         }
 
-        
+
         [MultiNodeFact()]
         public void Pruning_of_CRDT_should_move_data_from_removed_node()
         {
@@ -67,9 +90,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             // we need the UniqueAddress
             var memberProbe = CreateTestProbe();
-            _cluster.Subscribe(memberProbe.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.MemberUp));
+            _cluster.Subscribe(memberProbe.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
+                typeof(ClusterEvent.MemberUp));
             var thirdUniqueAddress = memberProbe.FishForMessage(msg =>
-                msg is ClusterEvent.MemberUp up && up.Member.Address == Node(Third).Address)
+                    msg is ClusterEvent.MemberUp up && up.Member.Address == Node(Third).Address)
                 .AsInstanceOf<ClusterEvent.MemberUp>().Member.UniqueAddress;
 
             _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 3)));
@@ -125,7 +149,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                         _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
                         var counter = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyA)).Get(_keyA);
                         counter.Value.ShouldBe(9UL);
-                        counter.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{counter} shouldn't need prunning from {thirdUniqueAddress}");
+                        counter.NeedPruningFrom(thirdUniqueAddress).Should()
+                            .BeFalse($"{counter} shouldn't need prunning from {thirdUniqueAddress}");
                     });
                 });
 
@@ -136,7 +161,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                         _replicator.Tell(Dsl.Get(_keyB, ReadLocal.Instance));
                         var set = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyB)).Get(_keyB);
                         set.Elements.Should().BeEquivalentTo(new[] { "c", "b", "a" });
-                        set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need pruning from {thirdUniqueAddress}");
+                        set.NeedPruningFrom(thirdUniqueAddress).Should()
+                            .BeFalse($"{set} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
 
@@ -148,7 +174,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var map = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyC)).Get(_keyC);
                         map["x"].Should().Be(3);
                         map["y"].Should().Be(3);
-                        map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need pruning from {thirdUniqueAddress}");
+                        map.NeedPruningFrom(thirdUniqueAddress).Should()
+                            .BeFalse($"{map} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
             }, First, Second);
@@ -194,25 +221,6 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             RunOn(() => _cluster.Join(Node(to).Address), from);
             EnterBarrier(from.Name + "-joined");
-        }
-    }
-    
-    public class ReplicatorPruningSpecConfig : MultiNodeConfig
-    {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-        public ReplicatorPruningSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.log-dead-letters-during-shutdown = off")
-                .WithFallback(DistributedData.DefaultConfig());
         }
     }
 }
