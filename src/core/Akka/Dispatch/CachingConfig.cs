@@ -183,10 +183,12 @@ namespace Akka.Dispatch
             return pathEntry;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="fallback">TBD</param>
+        private IPathEntry GetPathEntry(HoconPath path)
+        {
+            return GetPathEntry(path.ToString());
+        }
+
+        /// <inheritdoc />
         public override Config WithFallback(Config fallback)
         {
             if (fallback.IsNullOrEmpty())
@@ -201,10 +203,7 @@ namespace Akka.Dispatch
             return new CachingConfig(_config.WithFallback(fallback));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
+        /// <inheritdoc />
         public override bool HasPath(string path)
         {
             var entry = GetPathEntry(path);
@@ -214,73 +213,149 @@ namespace Akka.Dispatch
                 return _config.HasPath(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc />
         public override bool IsEmpty
         {
             get { return _config.IsEmpty; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
         public override IEnumerable<KeyValuePair<string, HoconField>> AsEnumerable()
         {
             return _config.AsEnumerable();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override Config GetConfig(string path)
+        {
+            return _config.GetConfig(path);
+        }
+
+        /// <inheritdoc />
+        public override Config GetConfig(HoconPath path)
+        {
+            return _config.GetConfig(path);
+        }
+
+        #region Value getter functions
+
+        /// <inheritdoc />
+        public override bool GetBoolean(string path)
+        {
+            return _config.GetBoolean(path);
+        }
+
+        /// <inheritdoc />
+        public override bool GetBoolean(HoconPath path)
+        {
+            return _config.GetBoolean(path);
+        }
+
+        /// <inheritdoc />
         public override bool GetBoolean(string path, bool @default = false)
         {
             return _config.GetBoolean(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override bool GetBoolean(HoconPath path, bool @default = false)
+        {
+            return _config.GetBoolean(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override int GetInt(string path)
+        {
+            return _config.GetInt(path);
+        }
+
+        /// <inheritdoc />
+        public override int GetInt(HoconPath path)
+        {
+            return _config.GetInt(path);
+        }
+
+        /// <inheritdoc />
         public override int GetInt(string path, int @default = 0)
         {
             return _config.GetInt(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override int GetInt(HoconPath path, int @default = 0)
+        {
+            return _config.GetInt(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override long GetLong(string path)
+        {
+            return _config.GetLong(path);
+        }
+
+        /// <inheritdoc />
+        public override long GetLong(HoconPath path)
+        {
+            return _config.GetLong(path);
+        }
+
+        /// <inheritdoc />
         public override long GetLong(string path, long @default = 0)
         {
             return _config.GetLong(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override long GetLong(HoconPath path, long @default = 0)
+        {
+            return _config.GetLong(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override double GetDouble(string path)
+        {
+            return _config.GetDouble(path);
+        }
+
+        /// <inheritdoc />
+        public override double GetDouble(HoconPath path)
+        {
+            return _config.GetDouble(path);
+        }
+
+        /// <inheritdoc />
         public override double GetDouble(string path, double @default = 0)
         {
             return _config.GetDouble(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override double GetDouble(HoconPath path, double @default = 0)
+        {
+            return _config.GetDouble(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override string GetString(string path)
+        {
+            var pathEntry = GetPathEntry(path);
+            if (pathEntry is StringPathEntry)
+            {
+                return ((StringPathEntry)pathEntry).Value;
+            }
+            else
+            {
+                return pathEntry.Config.GetString("cached");
+            }
+        }
+
+        /// <inheritdoc />
+        public override string GetString(HoconPath path)
+        {
+            return GetString(path.ToString());
+        }
+
+        /// <inheritdoc />
         public override string GetString(string path, string @default = null)
         {
             var pathEntry = GetPathEntry(path);
@@ -290,143 +365,294 @@ namespace Akka.Dispatch
             }
             else
             {
-                return pathEntry.Config.GetString("cached");
+                return pathEntry.Config.GetString("cached", @default);
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override string GetString(HoconPath path, string @default = null)
+        {
+            return GetString(path.ToString(), @default);
+        }
+
+        /// <inheritdoc />
+        public override decimal GetDecimal(string path)
+        {
+            return _config.GetDecimal(path);
+        }
+
+        /// <inheritdoc />
+        public override decimal GetDecimal(HoconPath path)
+        {
+            return _config.GetDecimal(path);
+        }
+
+        /// <inheritdoc />
         public override decimal GetDecimal(string path, decimal @default = 0)
         {
             return _config.GetDecimal(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override decimal GetDecimal(HoconPath path, decimal @default = 0)
+        {
+            return _config.GetDecimal(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<bool> GetBooleanList(string path)
         {
             return _config.GetBooleanList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<bool> GetBooleanList(HoconPath path)
+        {
+            return _config.GetBooleanList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<bool> GetBooleanList(string path, IList<bool> @default)
+        {
+            return _config.GetBooleanList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<bool> GetBooleanList(HoconPath path, IList<bool> @default)
+        {
+            return _config.GetBooleanList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<byte> GetByteList(string path)
         {
             return _config.GetByteList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<byte> GetByteList(HoconPath path)
+        {
+            return _config.GetByteList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<byte> GetByteList(string path, IList<byte> @default)
+        {
+            return _config.GetByteList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<byte> GetByteList(HoconPath path, IList<byte> @default)
+        {
+            return _config.GetByteList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override long? GetByteSize(string path)
         {
             return _config.GetByteSize(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override long? GetByteSize(HoconPath path)
+        {
+            return _config.GetByteSize(path);
+        }
+
+        /// <inheritdoc />
         public override IList<decimal> GetDecimalList(string path)
         {
             return _config.GetDecimalList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<decimal> GetDecimalList(HoconPath path)
+        {
+            return _config.GetDecimalList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<decimal> GetDecimalList(string path, IList<decimal> @default)
+        {
+            return _config.GetDecimalList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<decimal> GetDecimalList(HoconPath path, IList<decimal> @default)
+        {
+            return _config.GetDecimalList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<double> GetDoubleList(string path)
         {
             return _config.GetDoubleList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <returns>TBD</returns>
-        public override float GetFloat(string path, float @default = 0)
+        /// <inheritdoc />
+        public override IList<double> GetDoubleList(HoconPath path)
+        {
+            return _config.GetDoubleList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<double> GetDoubleList(string path, IList<double> @default)
+        {
+            return _config.GetDoubleList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<double> GetDoubleList(HoconPath path, IList<double> @default)
+        {
+            return _config.GetDoubleList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override float GetFloat(string path)
+        {
+            return _config.GetFloat(path);
+        }
+
+        /// <inheritdoc />
+        public override float GetFloat(HoconPath path)
+        {
+            return _config.GetFloat(path);
+        }
+
+        /// <inheritdoc />
+        public override float GetFloat(string path, float @default)
         {
             return _config.GetFloat(path, @default);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override float GetFloat(HoconPath path, float @default)
+        {
+            return _config.GetFloat(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<float> GetFloatList(string path)
         {
             return _config.GetFloatList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<float> GetFloatList(HoconPath path)
+        {
+            return _config.GetFloatList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<float> GetFloatList(string path, IList<float> @default)
+        {
+            return _config.GetFloatList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<float> GetFloatList(HoconPath path, IList<float> @default)
+        {
+            return _config.GetFloatList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<int> GetIntList(string path)
         {
             return _config.GetIntList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<int> GetIntList(HoconPath path)
+        {
+            return _config.GetIntList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<int> GetIntList(string path, IList<int> @default)
+        {
+            return _config.GetIntList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<int> GetIntList(HoconPath path, IList<int> @default)
+        {
+            return _config.GetIntList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<long> GetLongList(string path)
         {
             return _config.GetLongList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<long> GetLongList(HoconPath path)
+        {
+            return _config.GetLongList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<long> GetLongList(string path, IList<long> @default)
+        {
+            return _config.GetLongList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<long> GetLongList(HoconPath path, IList<long> @default)
+        {
+            return _config.GetLongList(path, @default);
+        }
+
+        /// <inheritdoc />
         public override IList<string> GetStringList(string path)
         {
             return _config.GetStringList(path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="default">TBD</param>
-        /// <param name="allowInfinite">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public override IList<string> GetStringList(HoconPath path)
+        {
+            return _config.GetStringList(path);
+        }
+
+        /// <inheritdoc />
+        public override IList<string> GetStringList(string path, IList<string> @default)
+        {
+            return _config.GetStringList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override IList<string> GetStringList(HoconPath path, IList<string> @default)
+        {
+            return _config.GetStringList(path, @default);
+        }
+
+        /// <inheritdoc />
+        public override TimeSpan GetTimeSpan(string path, bool allowInfinite = true)
+        {
+            return _config.GetTimeSpan(path, allowInfinite);
+        }
+
+        /// <inheritdoc />
+        public override TimeSpan GetTimeSpan(HoconPath path, bool allowInfinite = true)
+        {
+            return _config.GetTimeSpan(path, allowInfinite);
+        }
+
+        /// <inheritdoc />
         public override TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             return _config.GetTimeSpan(path, @default, allowInfinite);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
-        public override Config GetConfig(string path)
+        /// <inheritdoc />
+        public override TimeSpan GetTimeSpan(HoconPath path, TimeSpan? @default = null, bool allowInfinite = true)
         {
-            return _config.GetConfig(path);
+            return _config.GetTimeSpan(path, @default, allowInfinite);
         }
+
+        #endregion
+
     }
 }
 

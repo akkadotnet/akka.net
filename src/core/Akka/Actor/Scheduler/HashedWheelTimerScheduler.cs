@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
@@ -46,9 +47,9 @@ namespace Akka.Actor
         public HashedWheelTimerScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
             if (SchedulerConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(HashedWheelTimerScheduler)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
 
-            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
+            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
             var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
             if (tickDuration.TotalMilliseconds < 10.0d)
                 throw new ArgumentOutOfRangeException("minimum supported akka.scheduler.tick-duration on Windows is 10ms");

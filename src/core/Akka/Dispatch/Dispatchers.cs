@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 using Helios.Concurrency;
 
@@ -454,8 +455,11 @@ namespace Akka.Dispatch
             if (deadlineTime.Ticks > 0)
                 deadlineTimeTicks = deadlineTime.Ticks;
 
-            _instance = new Dispatcher(this, config.GetString("id"), 
-                config.GetInt("throughput"),
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DispatcherConfigurator>();
+
+            _instance = new Dispatcher(this, config.GetString("id", null), 
+                config.GetInt("throughput", 0),
                 deadlineTimeTicks,
                 ConfigureExecutor(),
                 config.GetTimeSpan("shutdown-timeout"));

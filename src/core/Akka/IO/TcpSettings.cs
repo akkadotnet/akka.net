@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.IO
@@ -25,7 +26,7 @@ namespace Akka.IO
         {
             var config = system.Settings.Config.GetConfig("akka.io.tcp");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<TcpSettings>("akka.io.tcp");//($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
 
             return Create(config);
         }
@@ -38,7 +39,7 @@ namespace Akka.IO
         public static TcpSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(TcpSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<TcpSettings>();
 
             return new TcpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.direct-buffer-pool"),

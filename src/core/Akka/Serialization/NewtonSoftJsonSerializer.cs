@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -47,8 +48,8 @@ namespace Akka.Serialization
         /// <exception cref="ArgumentException">Raised when types defined in `converters` list didn't inherit <see cref="JsonConverter"/>.</exception>
         public static NewtonSoftJsonSerializerSettings Create(Config config)
         {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config), $"{nameof(NewtonSoftJsonSerializerSettings)} config was not provided");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<NewtonSoftJsonSerializerSettings>();
 
             return new NewtonSoftJsonSerializerSettings(
                 encodeTypeNames: config.GetBoolean("encode-type-names", true),

@@ -54,6 +54,7 @@ namespace Akka.Routing
             Dispatchers.DefaultDispatcherId,
             false) { }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastPool"/> class.
         /// </summary>
@@ -239,6 +240,7 @@ namespace Akka.Routing
     /// </summary>
     public sealed class BroadcastGroup : Group
     {
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastGroup"/> class.
         /// <note>

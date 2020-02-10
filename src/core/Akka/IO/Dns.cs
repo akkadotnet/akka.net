@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 using Akka.Routing;
 
@@ -243,7 +244,7 @@ namespace Akka.IO
 
             var config = system.Settings.Config.GetConfig("akka.io.dns");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(DnsSettings)}: akka.io.dns configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<DnsSettings>("akka.io.dns");
 
             Settings = new DnsSettings(config);
             //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()

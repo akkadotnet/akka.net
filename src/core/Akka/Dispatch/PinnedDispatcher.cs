@@ -10,6 +10,7 @@ using Akka.Actor;
 using Hocon;
 using Akka.Dispatch.MessageQueues;
 using Akka.Event;
+using Akka.Configuration;
 using Helios.Concurrency;
 
 namespace Akka.Dispatch
@@ -34,8 +35,9 @@ namespace Akka.Dispatch
         public PinnedDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
-            
-            _executorServiceConfigurator = new ForkJoinExecutorServiceFactory(ForkJoinExecutorServiceFactory.SingleThreadDefault.WithFallback("id=" + config.GetString("id")), Prerequisites);
+            _executorServiceConfigurator = 
+                new ForkJoinExecutorServiceFactory(
+                    ForkJoinExecutorServiceFactory.SingleThreadDefault.WithFallback("id=" + config.GetString("id", null)), Prerequisites);
             // We don't bother trying to support any other type of executor here. PinnedDispatcher doesn't support them
         }
 
@@ -45,8 +47,11 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override MessageDispatcher Dispatcher()
         {
-            return new PinnedDispatcher(this, Config.GetString("id"),
-                Config.GetInt("throughput"),
+            if (Config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<MessageDispatcher>();
+
+            return new PinnedDispatcher(this, Config.GetString("id", null),
+                Config.GetInt("throughput", 0),
                 Config.GetTimeSpan("throughput-deadline-time").Ticks,
                 _executorServiceConfigurator,
                 Config.GetTimeSpan("shutdown-timeout"));

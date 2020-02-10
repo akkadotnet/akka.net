@@ -18,7 +18,7 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
-using Hocon;
+using Akka.Configuration;
 
 namespace Akka.Actor.Internal
 {
@@ -53,7 +53,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Default())
+            : this(name, AkkaConfigurationFactory.Default())
         {
         }
 
@@ -72,8 +72,9 @@ namespace Akka.Actor.Internal
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
                     $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')", nameof(name));
+
             // Not checking for empty Config here, default values will be substituted in Settings class constructor (called in ConfigureSettings)
-            if(config == null)
+            if(config.IsNullOrEmpty())
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
             _name = name;            

@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using Akka.Configuration;
 
 namespace Akka.Tests.Event
 {
@@ -110,7 +111,7 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task LoggingBus_should_stop_all_loggers_on_termination()
         {
-            var system = ActorSystem.Create("TestSystem", ConfigurationFactory.Default());
+            var system = ActorSystem.Create("TestSystem", AkkaConfigurationFactory.Default());
 
             system.EventStream.Subscribe(TestActor, typeof(Debug));
             await system.Terminate();

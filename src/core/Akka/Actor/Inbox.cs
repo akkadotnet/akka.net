@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Actor
@@ -417,9 +418,9 @@ namespace Akka.Actor
         {
             var config = system.Settings.Config.GetConfig("akka.actor.inbox");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(Inbox)}: akka.actor.inbox configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<Inbox>("akka.actor.inbox");
 
-            var inboxSize = config.GetInt("inbox-size");
+            var inboxSize = config.GetInt("inbox-size", 0);
             var timeout = config.GetTimeSpan("default-timeout");
 
             var receiver = ((ActorSystemImpl)system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref _inboxNr));

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 
@@ -65,7 +66,7 @@ namespace Akka.Actor
         public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
             if (SchedulerConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(DedicatedThreadScheduler)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<DedicatedThreadScheduler>();
 
             var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
             _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");

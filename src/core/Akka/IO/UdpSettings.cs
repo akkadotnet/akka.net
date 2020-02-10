@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.IO
@@ -22,7 +23,7 @@ namespace Akka.IO
         {
             var config = system.Settings.Config.GetConfig("akka.io.udp");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(UdpSettings)}: akka.io.udp configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<UdpSettings>("akka.io.udp");
 
             return Create(config);
         }
@@ -35,7 +36,7 @@ namespace Akka.IO
         public static UdpSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(UdpSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<UdpSettings>();
 
             return new UdpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool"),

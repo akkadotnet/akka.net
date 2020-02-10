@@ -336,6 +336,7 @@ namespace Akka.Routing
             Dispatchers.DefaultDispatcherId,
             false) { }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
         /// 
@@ -606,6 +607,7 @@ namespace Akka.Routing
     {
         private readonly ConsistentHashMapping _hashMapping;
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
         /// </summary>

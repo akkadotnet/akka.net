@@ -13,10 +13,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
-using Hocon;
 using static Akka.Pattern.FutureTimeoutSupport;
 using static Akka.Util.Internal.TaskEx;
 
@@ -36,7 +36,7 @@ namespace Akka.Actor
         {
             var conf = system.Settings.Config.GetConfig("akka.coordinated-shutdown");
             if (conf.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(CoordinatedShutdown)}: akka.coordinated-shutdown configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<CoordinatedShutdown>("akka.coordinated-shutdown");
 
             var phases = CoordinatedShutdown.PhasesFromConfig(conf);
             var coord = new CoordinatedShutdown(system, phases);
@@ -550,6 +550,7 @@ namespace Akka.Actor
             get { return _tasks.Keys.Aggregate(TimeSpan.Zero, (span, s) => span.Add(Timeout(s))); }
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// INTERNAL API
         /// </summary>
@@ -614,6 +615,7 @@ namespace Akka.Actor
             return result;
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// INTERNAL API
         ///
@@ -672,6 +674,7 @@ namespace Akka.Actor
             }
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes the CLR hook
         /// </summary>

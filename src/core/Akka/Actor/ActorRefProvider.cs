@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;

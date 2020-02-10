@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Routing
@@ -144,14 +145,17 @@ namespace Akka.Routing
         /// <returns>TBD</returns>
         internal static DefaultResizer Apply(Config resizerConfig)
         {
+            if (resizerConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DefaultResizer>();
+
             return new DefaultResizer(
-                  resizerConfig.GetInt("lower-bound"),
-                  resizerConfig.GetInt("upper-bound"),
-                  resizerConfig.GetInt("pressure-threshold"),
-                  resizerConfig.GetDouble("rampup-rate"),
-                  resizerConfig.GetDouble("backoff-threshold"),
-                  resizerConfig.GetDouble("backoff-rate"),
-                  resizerConfig.GetInt("messages-per-resize")
+                  resizerConfig.GetInt("lower-bound", 0),
+                  resizerConfig.GetInt("upper-bound", 0),
+                  resizerConfig.GetInt("pressure-threshold", 0),
+                  resizerConfig.GetDouble("rampup-rate", 0),
+                  resizerConfig.GetDouble("backoff-threshold", 0),
+                  resizerConfig.GetDouble("backoff-rate", 0),
+                  resizerConfig.GetInt("messages-per-resize", 0)
                 );
         }
 

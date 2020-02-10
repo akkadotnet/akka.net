@@ -55,7 +55,7 @@ namespace Akka.Dispatch
             _deadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
             var mailboxConfig = system.Settings.Config.GetConfig("akka.actor.mailbox");
             if (mailboxConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(Mailboxes)}: akka.actor.mailbox configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<Mailboxes>("akka.actor.mailbox");
 
             var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
             _mailboxBindings = new Dictionary<Type, string>();
