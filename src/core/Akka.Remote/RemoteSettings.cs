@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Remote
@@ -26,31 +27,31 @@ namespace Akka.Remote
         {
             //TODO: need to add value validation for each field
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(RemoteSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<RemoteSettings>();
 
             Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages");
             LogSend = config.GetBoolean("akka.remote.log-sent-messages");
 
             var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
-            if (config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("off") ||
-                config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("false"))
+            if (config.GetString(bufferSizeLogKey, null).ToLowerInvariant().Equals("off") ||
+                config.GetString(bufferSizeLogKey, null).ToLowerInvariant().Equals("false"))
             {
                 LogBufferSizeExceeding = Int32.MaxValue;
             }
             else
             {
-                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey);
+                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey, 0);
             }
 
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
-            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
-            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
-            Dispatcher = config.GetString("akka.remote.use-dispatcher");
+            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new List<string>()));
+            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", null) ?? "DEBUG";
+            Dispatcher = config.GetString("akka.remote.use-dispatcher", null);
             if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase)) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
-            TransportNames = config.GetStringList("akka.remote.enabled-transports");
+            TransportNames = config.GetStringList("akka.remote.enabled-transports", new List<string>());
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
@@ -58,9 +59,9 @@ namespace Akka.Remote
             BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval");
             RetryGateClosedFor = config.GetTimeSpan("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
-            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
+            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size", 0);
             SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval");
-            SysResendLimit = config.GetInt("akka.remote.resend-limit");
+            SysResendLimit = config.GetInt("akka.remote.resend-limit", 0);
             InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout");
             QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence");
             SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout");
@@ -70,7 +71,7 @@ namespace Akka.Remote
             CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout");
 
             WatchFailureDetectorConfig = config.GetConfig("akka.remote.watch-failure-detector");
-            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class");
+            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class", null);
             WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
             WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
             WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after");
@@ -243,8 +244,11 @@ namespace Akka.Remote
             /// <param name="config">TBD</param>
             public TransportSettings(Config config)
             {
-                TransportClass = config.GetString("transport-class");
-                Adapters = config.GetStringList("applied-adapters").Reverse().ToList();
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<TransportSettings>();
+
+                TransportClass = config.GetString("transport-class", null);
+                Adapters = config.GetStringList("applied-adapters", new List<string>()).Reverse().ToList();
                 Config = config;
             }
 

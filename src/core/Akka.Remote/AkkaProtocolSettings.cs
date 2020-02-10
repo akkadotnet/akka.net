@@ -7,6 +7,7 @@
 
 using System;
 using Hocon;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -42,7 +43,7 @@ namespace Akka.Remote
         public AkkaProtocolSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(AkkaProtocolSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<AkkaProtocolSettings>();
 
             TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");
             TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class");

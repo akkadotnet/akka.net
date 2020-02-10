@@ -6,11 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using DotNetty.Buffers;
@@ -28,7 +30,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: akka.remote.dot-netty.tcp configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
             return Create(config);
         }
 
@@ -56,10 +58,10 @@ namespace Akka.Remote.Transport.DotNetty
         public static DotNettyTransportSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>();
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
-            var host = config.GetString("hostname");
+            var host = config.GetString("hostname", null);
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
             var publicHost = config.GetString("public-hostname", null);
             var publicPort = config.GetInt("public-port", 0);
@@ -108,12 +110,13 @@ namespace Akka.Remote.Transport.DotNetty
 
         private static int ComputeWorkerPoolSize(Config config)
         {
-            if (config.IsNullOrEmpty()) return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+            if (config.IsNullOrEmpty())
+                return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
-                floor: config.GetInt("pool-size-min"),
-                scalar: config.GetDouble("pool-size-factor"),
-                ceiling: config.GetInt("pool-size-max"));
+                floor: config.GetInt("pool-size-min", 0),
+                scalar: config.GetDouble("pool-size-factor", 0),
+                ceiling: config.GetInt("pool-size-max", 0));
         }
 
         /// <summary>
@@ -294,20 +297,20 @@ namespace Akka.Remote.Transport.DotNetty
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {
-                return new SslSettings(config.GetString("certificate.thumbprint"),
-                    config.GetString("certificate.store-name"),
-                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                return new SslSettings(config.GetString("certificate.thumbprint", null),
+                    config.GetString("certificate.store-name", null),
+                    ParseStoreLocationName(config.GetString("certificate.store-location", null)),
                         config.GetBoolean("suppress-validation", false));
 
             }
             else
             {
-                var flagsRaw = config.GetStringList("certificate.flags");
+                var flagsRaw = config.GetStringList("certificate.flags", new List<string>());
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(
-                    certificatePath: config.GetString("certificate.path"),
-                    certificatePassword: config.GetString("certificate.password"),
+                    certificatePath: config.GetString("certificate.path", null),
+                    certificatePassword: config.GetString("certificate.password", null),
                     flags: flags,
                     suppressValidation: config.GetBoolean("suppress-validation", false));
             }

@@ -7,7 +7,7 @@
 
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Hocon;
+using Akka.Configuration;
 using Akka.Remote.Routing;
 using Akka.Routing;
 using Akka.TestKit;

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
 using Akka.Util;
+using Akka.Configuration;
 using Google.Protobuf;
 
 namespace Akka.Remote.Transport

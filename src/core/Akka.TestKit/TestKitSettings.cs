@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.TestKit
@@ -32,12 +33,12 @@ namespace Akka.TestKit
         public TestKitSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(TestKitSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<TestKitSettings>();
 
             _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", allowInfinite:false);
             _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", allowInfinite: false);
             _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", allowInfinite: false);
-            _timefactor = config.GetDouble("akka.test.timefactor");
+            _timefactor = config.GetDouble("akka.test.timefactor", 0);
             _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug");
 
             if(_timefactor <= 0)

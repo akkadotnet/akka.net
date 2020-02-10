@@ -18,6 +18,7 @@ using Akka.Actor;
 using Hocon;
 using Akka.Event;
 using Akka.Util;
+using Akka.Configuration;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Common.Utilities;

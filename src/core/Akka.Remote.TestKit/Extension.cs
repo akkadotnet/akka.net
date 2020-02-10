@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote.TestKit.Internals;
 using Akka.Util.Internal;
@@ -114,10 +115,10 @@ namespace Akka.Remote.TestKit
         public TestConductorSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(TestConductorSettings)}: {nameof(config)} is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<TestConductorSettings>();
 
             _connectTimeout = config.GetTimeSpan("connect-timeout");
-            _clientReconnects = config.GetInt("client-reconnects");
+            _clientReconnects = config.GetInt("client-reconnects", 0);
             _reconnectBackoff = config.GetTimeSpan("reconnect-backoff");
             _barrierTimeout = config.GetTimeSpan("barrier-timeout");
             _queryTimeout = config.GetTimeSpan("query-timeout");
@@ -128,10 +129,13 @@ namespace Akka.Remote.TestKit
 
         public int ComputeWps(Config config)
         {
+            if (config.IsNullOrEmpty())
+                return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+
             return ThreadPoolConfig.ScaledPoolSize(
-                config.GetInt("pool-size-min"),
-                config.GetDouble("pool-size-factor"),
-                config.GetInt("pool-size-max"));
+                config.GetInt("pool-size-min", 0),
+                config.GetDouble("pool-size-factor", 0),
+                config.GetInt("pool-size-max", 0));
         }
     }
 }

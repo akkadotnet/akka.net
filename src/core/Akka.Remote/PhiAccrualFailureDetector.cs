@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 
@@ -81,8 +82,11 @@ namespace Akka.Remote
         public PhiAccrualFailureDetector(Config config, EventStream ev)
             : this(DefaultClock)
         {
-            _threshold = config.GetDouble("threshold");
-            _maxSampleSize = config.GetInt("max-sample-size");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<PhiAccrualFailureDetector>();
+
+            _threshold = config.GetDouble("threshold", 0);
+            _maxSampleSize = config.GetInt("max-sample-size", 0);
             _minStdDeviation = config.GetTimeSpan("min-std-deviation");
             _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause");
             _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval");

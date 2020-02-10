@@ -12,7 +12,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;

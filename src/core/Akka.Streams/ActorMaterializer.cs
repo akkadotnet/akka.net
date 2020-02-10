@@ -9,6 +9,7 @@ using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
@@ -301,14 +302,22 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
-            // NOTE: no need to check for empty Config because Create function can handle empty Config
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
+
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<ActorMaterializerSettings>("akka.stream.materializer");
+
             return Create(config);
         }
 
         // NOTE: Make sure that this class can handle empty Config
         private static ActorMaterializerSettings Create(Config config)
         {
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<ActorMaterializerSettings>();
+
             return new ActorMaterializerSettings(
                 initialInputBufferSize: config.GetInt("initial-input-buffer-size", 4),
                 maxInputBufferSize: config.GetInt("max-input-buffer-size", 16),
@@ -523,6 +532,10 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static StreamSubscriptionTimeoutSettings Create(Config config)
         {
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<StreamSubscriptionTimeoutSettings>();
+
             var c = config.GetConfig("subscription-timeout");
             var configMode = c.GetString("mode", "cancel").ToLowerInvariant();
             StreamSubscriptionTimeoutTerminationMode mode;
