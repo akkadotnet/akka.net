@@ -48,13 +48,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             Third = config.Third;
         }
 
+        
         [MultiNodeFact()]
-        public void Test()
-        {
-            Pruning_of_CRDT_should_move_data_from_removed_node();
-        }
-
-        private void Pruning_of_CRDT_should_move_data_from_removed_node()
+        public void Pruning_of_CRDT_should_move_data_from_removed_node()
         {
             Join(First, First);
             Join(Second, First);
@@ -73,7 +69,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             var memberProbe = CreateTestProbe();
             _cluster.Subscribe(memberProbe.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.MemberUp));
             var thirdUniqueAddress = memberProbe.FishForMessage(msg =>
-                msg is ClusterEvent.MemberUp && ((ClusterEvent.MemberUp)msg).Member.Address == Node(Third).Address)
+                msg is ClusterEvent.MemberUp up && up.Member.Address == Node(Third).Address)
                 .AsInstanceOf<ClusterEvent.MemberUp>().Member.UniqueAddress;
 
             _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 3)));
