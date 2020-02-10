@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Hocon;
 
@@ -51,12 +52,12 @@ namespace Akka.Persistence.Tests.Journal
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.journal.chaos");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(ChaosJournal)}: akka.persistence.journal.chaos configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<ChaosJournal>("akka.persistence.journal.chaos");
 
-            _writeFailureRate = config.GetDouble("write-failure-rate");
-            _deleteFailureRate = config.GetDouble("delete-failure-rate");
-            _replayFailureRate = config.GetDouble("replay-failure-rate");
-            _readHighestFailureRate = config.GetDouble("read-highest-failure-rate");
+            _writeFailureRate = config.GetDouble("write-failure-rate", 0);
+            _deleteFailureRate = config.GetDouble("delete-failure-rate", 0);
+            _replayFailureRate = config.GetDouble("replay-failure-rate", 0);
+            _readHighestFailureRate = config.GetDouble("read-highest-failure-rate", 0);
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)

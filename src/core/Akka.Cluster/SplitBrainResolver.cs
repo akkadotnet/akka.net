@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 using Akka.Event;
 
@@ -24,7 +25,7 @@ namespace Akka.Cluster
             _clusterSettings = Cluster.Get(system).Settings;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(SplitBrainResolver)}: akka.cluster.split-brain-resolver configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
 
             StableAfter = config.GetTimeSpan("stable-after");
             Strategy = ResolveSplitBrainStrategy(config);
@@ -87,11 +88,12 @@ namespace Akka.Cluster
         IEnumerable<Member> Apply(NetworkPartitionContext context);
     }
 
+    // TODO: Can quorum size be 0 and role be null?
     internal sealed class StaticQuorum : ISplitBrainStrategy
     {
         public StaticQuorum(Config config) : this(
-           quorumSize: config.GetInt("quorum-size"),
-           role: config.GetString("role"))
+           quorumSize: config.GetInt("quorum-size", 0),
+           role: config.GetString("role", null))
         { }
 
         public StaticQuorum(int quorumSize, string role)

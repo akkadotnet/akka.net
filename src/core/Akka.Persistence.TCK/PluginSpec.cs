@@ -29,7 +29,7 @@ namespace Akka.Persistence.TCK
 
         protected static Config FromConfig(Config config = null)
         {
-            return config == null
+            return config.IsNullOrEmpty()
                 ? Persistence.DefaultConfig()
                 : config.WithFallback(Persistence.DefaultConfig());
         }

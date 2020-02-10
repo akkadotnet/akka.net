@@ -12,6 +12,7 @@ using Akka.Annotations;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Routing;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Remote.Routing;
@@ -163,7 +164,7 @@ namespace Akka.Cluster
             {
                 var maxTotalNrOfInstances = config
                     .WithFallback(Default)
-                    .GetInt("cluster.max-total-nr-of-instances");
+                    .GetInt("cluster.max-total-nr-of-instances", 0);
                 config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
                     .WithFallback(config);
             }

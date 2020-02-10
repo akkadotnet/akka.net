@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 using Akka.Event;
 using Akka.Persistence.Journal;
@@ -72,7 +73,7 @@ namespace Akka.Persistence
             _system.Settings.InjectTopLevelFallback(Persistence.DefaultConfig());
             _config = system.Settings.Config.GetConfig("akka.persistence");
             if (_config.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(PersistenceExtension)}: akka.persistence configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<PersistenceExtension>("akka.persistence");
 
             _log = Logging.GetLogger(_system, this);
 
@@ -285,7 +286,7 @@ namespace Akka.Persistence
         {
             var pluginConfig = system.Settings.Config.GetConfig(configPath);
             if (pluginConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot create {typeof(EventAdapters)}: {configPath} configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
 
             return EventAdapters.Create(system, pluginConfig);
         }
