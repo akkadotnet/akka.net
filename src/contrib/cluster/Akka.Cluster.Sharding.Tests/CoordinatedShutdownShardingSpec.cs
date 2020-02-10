@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding.Tests
             }, TimeSpan.FromSeconds(60));
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public async Task Sharding_and_CoordinatedShutdown_must_run_successfully()
         {
             await InitCluster();
