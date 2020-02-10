@@ -19,18 +19,18 @@ namespace Akka.DistributedData.Tests.MultiNode
 {
     public class ReplicatorPruningSpec : MultiNodeClusterSpec
     {
-        public static readonly RoleName First = new RoleName("first");
-        public static readonly RoleName Second = new RoleName("second");
-        public static readonly RoleName Third = new RoleName("third");
+        public readonly RoleName First;
+        public readonly RoleName Second;
+        public readonly RoleName Third;
 
         private readonly Cluster.Cluster _cluster;
         private readonly TimeSpan _maxPruningDissemination = TimeSpan.FromSeconds(3);
         private readonly IActorRef _replicator;
         private readonly TimeSpan _timeout;
 
-        private readonly GCounterKey KeyA = new GCounterKey("A");
-        private readonly ORSetKey<string> KeyB = new ORSetKey<string>("B");
-        private readonly PNCounterDictionaryKey<string> KeyC = new PNCounterDictionaryKey<string>("C");
+        private readonly GCounterKey _keyA = new GCounterKey("A");
+        private readonly ORSetKey<string> _keyB = new ORSetKey<string>("B");
+        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
 
         public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig()) { }
 
@@ -42,9 +42,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                 .WithGossipInterval(TimeSpan.FromSeconds(1))
                 .WithPruning(pruningInterval: TimeSpan.FromSeconds(1), maxPruningDissemination: _maxPruningDissemination)),
                 "replicator");
+
+            First = config.First;
+            Second = config.Second;
+            Third = config.Third;
         }
 
-        [MultiNodeFact(Skip="FIXME")]
+        [MultiNodeFact()]
         public void Test()
         {
             Pruning_of_CRDT_should_move_data_from_removed_node();
@@ -72,32 +76,32 @@ namespace Akka.DistributedData.Tests.MultiNode
                 msg is ClusterEvent.MemberUp && ((ClusterEvent.MemberUp)msg).Member.Address == Node(Third).Address)
                 .AsInstanceOf<ClusterEvent.MemberUp>().Member.UniqueAddress;
 
-            _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 3)));
-            ExpectMsg(new UpdateSuccess(KeyA, null));
+            _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 3)));
+            ExpectMsg(new UpdateSuccess(_keyA, null));
 
-            _replicator.Tell(Dsl.Update(KeyB, ORSet<string>.Empty, new WriteAll(_timeout), x => x
+            _replicator.Tell(Dsl.Update(_keyB, ORSet<string>.Empty, new WriteAll(_timeout), x => x
                 .Add(_cluster, "a")
                 .Add(_cluster, "b")
                 .Add(_cluster, "c")));
-            ExpectMsg(new UpdateSuccess(KeyB, null));
+            ExpectMsg(new UpdateSuccess(_keyB, null));
 
-            _replicator.Tell(Dsl.Update(KeyC, PNCounterDictionary<string>.Empty, new WriteAll(_timeout), x => x
+            _replicator.Tell(Dsl.Update(_keyC, PNCounterDictionary<string>.Empty, new WriteAll(_timeout), x => x
                 .Increment(_cluster, "x")
                 .Increment(_cluster, "y")));
-            ExpectMsg(new UpdateSuccess(KeyC, null));
+            ExpectMsg(new UpdateSuccess(_keyC, null));
 
             EnterBarrier("udpates-done");
 
-            _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-            var oldCounter = ExpectMsg<GetSuccess>().Get(KeyA);
+            _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
+            var oldCounter = ExpectMsg<GetSuccess>().Get(_keyA);
             oldCounter.Value.Should().Be(9);
 
-            _replicator.Tell(Dsl.Get(KeyB, ReadLocal.Instance));
-            var oldSet = ExpectMsg<GetSuccess>().Get(KeyB);
+            _replicator.Tell(Dsl.Get(_keyB, ReadLocal.Instance));
+            var oldSet = ExpectMsg<GetSuccess>().Get(_keyB);
             oldSet.Elements.Should().BeEquivalentTo(new[] { "c", "b", "a" });
 
-            _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-            var oldMap = ExpectMsg<GetSuccess>().Get(KeyC);
+            _replicator.Tell(Dsl.Get(_keyC, ReadLocal.Instance));
+            var oldMap = ExpectMsg<GetSuccess>().Get(_keyC);
             oldMap["x"].Should().Be(3);
             oldMap["y"].Should().Be(3);
 
@@ -122,8 +126,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     AwaitAssert(() =>
                     {
-                        _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-                        var counter = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyA)).Get(KeyA);
+                        _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
+                        var counter = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyA)).Get(_keyA);
                         counter.Value.ShouldBe(9UL);
                         counter.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{counter} shouldn't need prunning from {thirdUniqueAddress}");
                     });
@@ -133,8 +137,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     AwaitAssert(() =>
                     {
-                        _replicator.Tell(Dsl.Get(KeyB, ReadLocal.Instance));
-                        var set = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyB)).Get(KeyB);
+                        _replicator.Tell(Dsl.Get(_keyB, ReadLocal.Instance));
+                        var set = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyB)).Get(_keyB);
                         set.Elements.Should().BeEquivalentTo(new[] { "c", "b", "a" });
                         set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need pruning from {thirdUniqueAddress}");
                     });
@@ -144,8 +148,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     AwaitAssert(() =>
                     {
-                        _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                        var map = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyC)).Get(KeyC);
+                        _replicator.Tell(Dsl.Get(_keyC, ReadLocal.Instance));
+                        var map = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyC)).Get(_keyC);
                         map["x"].Should().Be(3);
                         map["y"].Should().Be(3);
                         map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need pruning from {thirdUniqueAddress}");
@@ -181,11 +185,11 @@ namespace Akka.DistributedData.Tests.MultiNode
         /// </summary>
         private void UpdateAfterPruning(ulong expectedValue)
         {
-            _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
+            _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
             ExpectMsg<UpdateSuccess>(msg =>
             {
-                _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
-                var retrieved = ExpectMsg<GetSuccess>().Get(KeyA);
+                _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
+                var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);
                 retrieved.Value.Should().Be(expectedValue);
             });
         }
