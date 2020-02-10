@@ -34,9 +34,9 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
-                akka.loglevel = DEBUG
-                akka.log-dead-letters-during-shutdown = on
-            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(true));
+                akka.loglevel = INFO
+                akka.log-dead-letters-during-shutdown = off
+            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(false));
 
             TestTransport = true;
         }
@@ -72,7 +72,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
-        private int afterCounter = 0;
+        private int _afterCounter = 0;
 
         private readonly RoleName _first;
         private readonly RoleName _second;
@@ -256,7 +256,6 @@ namespace Akka.DistributedData.Tests.MultiNode
                 Within(TimeSpan.FromSeconds(5), () =>
                     AwaitAssert(() =>
                     {
-                        //TODO: received message is NotFound(A) instead of GetSuccess
                         // for some reason result is returned before CRDT gets replicated
                         _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
                         var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);
@@ -442,7 +441,6 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                //TODO: for some reason this RunOn never gets called
                 for (ulong i = 1; i <= 30UL; i++)
                 {
                     var n = i;
@@ -475,7 +473,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         {
                             var keydn = new GCounterKey("D" + i);
                             _replicator.Tell(Dsl.Get(keydn, ReadLocal.Instance));
-                            ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn)).Get(keydn).Value.ShouldBe(i);
+                            ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn), TimeSpan.FromMilliseconds(50)).Get(keydn).Value.ShouldBe(i);
                         }
                     }));
             }, _first, _second);
@@ -736,8 +734,8 @@ namespace Akka.DistributedData.Tests.MultiNode
         protected override int InitialParticipantsValueFactory => Roles.Count;
         private void EnterBarrierAfterTestStep()
         {
-            afterCounter++;
-            EnterBarrier("after-" + afterCounter);
+            _afterCounter++;
+            EnterBarrier("after-" + _afterCounter);
         }
 
         private void Join(RoleName from, RoleName to)

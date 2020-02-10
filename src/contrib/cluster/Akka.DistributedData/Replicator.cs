@@ -290,6 +290,8 @@ namespace Akka.DistributedData
         /// </summary>
         private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
 
+        private ImmutableHashSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
+
         /// <summary>
         /// Cluster weaklyUp nodes, doesn't contain selfAddress
         /// </summary>
@@ -695,7 +697,10 @@ namespace Akka.DistributedData
             var envelope = GetData(key);
             if (envelope != null)
             {
-                if (ReferenceEquals(envelope, writeEnvelope)) return writeEnvelope;
+                if (envelope.Equals(writeEnvelope))
+                {
+                    return envelope;
+                }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
 
                 try
@@ -713,8 +718,7 @@ namespace Akka.DistributedData
             else
             {
                 // no existing data for the key
-                var withDelta = writeEnvelope.Data as IReplicatedDelta;
-                if (withDelta != null)
+                if (writeEnvelope.Data is IReplicatedDelta withDelta)
                     writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
 
                 return SetData(key, writeEnvelope.AddSeen(_selfAddress));
@@ -813,22 +817,26 @@ namespace Akka.DistributedData
             var contained = _dataEntries.TryGetValue(key, out var value);
             if (contained)
             {
-                if (Equals(value.digest, LazyDigest))
+                if (value.digest == LazyDigest)
                 {
                     var digest = Digest(value.envelope);
                     _dataEntries = _dataEntries.SetItem(key, (value.envelope, digest));
                     return digest;
                 }
-                else return value.digest;
+
+                return value.digest;
             }
-            else return NotFoundDigest;
+
+            return NotFoundDigest;
         }
 
         private Digest Digest(DataEnvelope envelope)
         {
             if (Equals(envelope.Data, DeletedData.Instance)) return DeletedDigest;
 
-            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions());
+            // TODO: need to serialize the content of the envelope, but Hyperion doesn't produce stable output
+            // Workaround: using the string representation of the envelope for now
+            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions().ToString());
             var serialized = SHA1.Create().ComputeHash(bytes);
             return ByteString.CopyFrom(serialized);
         }
@@ -905,7 +913,10 @@ namespace Akka.DistributedData
                 var deltaPropagation = entry.Value;
 
                 // TODO split it to several DeltaPropagation if too many entries
-                if (!deltaPropagation.Deltas.IsEmpty) Replica(node).Tell(deltaPropagation);
+                if (!deltaPropagation.Deltas.IsEmpty)
+                {
+                    Replica(node).Tell(deltaPropagation);
+                }
             }
 
             if (_deltaPropagationSelector.PropagationCount % _deltaPropagationSelector.GossipInternalDivisor == 0)
@@ -974,7 +985,7 @@ namespace Akka.DistributedData
 
         private void ReceiveGossipTick()
         {
-            var node = SelectRandomNode(_nodes.Union(_weaklyUpNodes));
+            var node = SelectRandomNode(AllNodes);
             if (node != null)
             {
                 GossipTo(node);
@@ -986,7 +997,8 @@ namespace Akka.DistributedData
             var to = Replica(address);
             if (_dataEntries.Count <= _settings.MaxDeltaElements)
             {
-                var status = new Internal.Status(_dataEntries.Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key))).ToImmutableDictionary(), chunk: 0, totalChunks: 1);
+                var status = new Internal.Status(_dataEntries
+                    .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key)), chunk: 0, totalChunks: 1);
                 to.Tell(status);
             }
             else
@@ -1004,9 +1016,8 @@ namespace Akka.DistributedData
                         _statusTotChunks = totChunks;
                     }
                     var chunk = (int)(_statusCount % totChunks);
-                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key)) % totChunks == chunk)
-                        .Select(x => new KeyValuePair<string, Digest>(x.Key, GetDigest(x.Key)))
-                        .ToImmutableDictionary();
+                    var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key) % totChunks) == chunk)
+                        .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key));
                     var status = new Internal.Status(entries, chunk, totChunks);
                     to.Tell(status);
                 }
@@ -1029,9 +1040,7 @@ namespace Akka.DistributedData
         private bool IsOtherDifferent(string key, Digest otherDigest)
         {
             var d = GetDigest(key);
-            var isFound = !Equals(d, NotFoundDigest);
-            var isEqualToOther = Equals(d, otherDigest);
-            return isFound && !isEqualToOther;
+            return d != NotFoundDigest && d != otherDigest;
         }
 
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
@@ -1051,7 +1060,7 @@ namespace Akka.DistributedData
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                     ? _dataEntries.Keys
-                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x)) % totChunks == chunk))
+                    : _dataEntries.Keys.Where(x => Math.Abs(MurmurHash.StringHash(x) % totChunks) == chunk))
                 .ToImmutableHashSet();
 
             var otherMissingKeys = myKeys.Except(otherKeys);
@@ -1066,7 +1075,7 @@ namespace Akka.DistributedData
                 if (_log.IsDebugEnabled)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
-                var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), !otherDifferentKeys.IsEmpty);
+                var g = new Gossip(keys.ToImmutableDictionary(x => x, _ => GetData(_)), !otherDifferentKeys.IsEmpty);
                 Sender.Tell(g);
             }
 
@@ -1076,7 +1085,7 @@ namespace Akka.DistributedData
                 if (Context.System.Log.IsDebugEnabled)
                     Context.System.Log.Debug("Sending gossip status to {0}, requesting missing {1}", Sender.Path.Address, string.Join(", ", myMissingKeys));
 
-                var status = new Internal.Status(myMissingKeys.Select(x => new KeyValuePair<string, ByteString>(x, NotFoundDigest)).ToImmutableDictionary(), chunk, totChunks);
+                var status = new Internal.Status(myMissingKeys.ToImmutableDictionary(x => x, _ => NotFoundDigest), chunk, totChunks);
                 Sender.Tell(status);
             }
         }
@@ -1257,8 +1266,7 @@ namespace Akka.DistributedData
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
-                var removedNodePruning = pair.Value.Item1.Data as IRemovedNodePruning;
-                if (removedNodePruning != null)
+                if (pair.Value.envelope.Data is IRemovedNodePruning removedNodePruning)
                 {
                     newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n.Address))));
                 }
@@ -1294,11 +1302,9 @@ namespace Akka.DistributedData
                         {
                             if (envelope.Data is IRemovedNodePruning)
                             {
-                                IPruningState state;
-                                if (envelope.Pruning.TryGetValue(removed, out state))
+                                if (envelope.Pruning.TryGetValue(removed, out var state))
                                 {
-                                    var initialized = state as PruningInitialized;
-                                    if (initialized != null && initialized.Owner != _selfUniqueAddress)
+                                    if (state is PruningInitialized initialized && initialized.Owner != _selfUniqueAddress)
                                     {
                                         var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
                                         _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
@@ -1328,14 +1334,12 @@ namespace Akka.DistributedData
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
-                var envelope = entry.Value.Item1;
-                var data = envelope.Data as IRemovedNodePruning;
-                if (data != null)
+                var envelope = entry.Value.envelope;
+                if (envelope.Data is IRemovedNodePruning data)
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        var init = entry2.Value as PruningInitialized;
-                        if (init != null && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
@@ -1402,25 +1406,33 @@ namespace Akka.DistributedData
             protected override int MaxDeltaSize => _replicator._maxDeltaSize;
 
             // TODO optimize, by maintaining a sorted instance variable instead
-            protected override ImmutableArray<Address> AllNodes =>
-                _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+            protected override ImmutableArray<Address> AllNodes
+            {
+                get
+                {
+                    var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes.Select(x => x.ToString())));
+                    return allNodes;
+                }
+            }
+                
 
-            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas)
+            protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas)
             {
                 // Important to include the pruning state in the deltas. For example if the delta is based
                 // on an entry that has been pruned but that has not yet been performed on the target node.
                 var newDeltas = deltas
-                    .Where(x => !Equals(x.Value.Item1, DeltaPropagation.NoDeltaPlaceholder))
+                    .Where(x => !Equals(x.Value.data, DeltaPropagation.NoDeltaPlaceholder))
                     .Select(x =>
                     {
                         var key = x.Key;
-                        var t = x.Value;
+                        var (data, from, to) = x.Value;
                         var envelope = _replicator.GetData(key);
                         return envelope != null
                             ? new KeyValuePair<string, Delta>(key,
-                                new Delta(envelope.WithData(t.Item1), t.Item2, t.Item3))
+                                new Delta(envelope.WithData(data), from, to))
                             : new KeyValuePair<string, Delta>(key,
-                                new Delta(new DataEnvelope(t.Item1), t.Item2, t.Item3));
+                                new Delta(new DataEnvelope(data), from, to));
                     })
                     .ToImmutableDictionary();
 

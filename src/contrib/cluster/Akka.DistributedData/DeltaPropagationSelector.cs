@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -26,7 +27,7 @@ namespace Akka.DistributedData
         public abstract int GossipInternalDivisor { get; }
         protected abstract ImmutableArray<Address> AllNodes { get; }
         protected abstract int MaxDeltaSize { get; }
-        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas);
+        protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas);
 
         public long CurrentVersion(string key) => _deltaCounter.GetValueOrDefault(key, 0L);
 
@@ -69,7 +70,7 @@ namespace Akka.DistributedData
                 {
                     var start = (int)(_deltaNodeRoundRobinCounter % all.Length);
                     var buffer = new Address[sliceSize];
-                    for (int i = 0; i < sliceSize; i++)
+                    for (var i = 0; i < sliceSize; i++)
                     {
                         buffer[i] = all[(start + i) % all.Length];
                     }
@@ -91,6 +92,7 @@ namespace Akka.DistributedData
                         var entries = entry.Value;
 
                         var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
+                        
                         var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
                         var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
                         if (!deltaEntriesAfterJ.IsEmpty)
@@ -101,8 +103,7 @@ namespace Akka.DistributedData
                             // in most cases the delta group merging will be the same for each node,
                             // so we cache the merged results
                             var cacheKey = (key, fromSeqNr, toSeqNr);
-                            IReplicatedData deltaGroup;
-                            if (!cache.TryGetValue(cacheKey, out deltaGroup))
+                            if (!cache.TryGetValue(cacheKey, out var deltaGroup))
                             {
                                 using (var e = deltaEntriesAfterJ.Values.GetEnumerator())
                                 {
@@ -182,8 +183,7 @@ namespace Akka.DistributedData
 
         private long FindSmallestVersionPropagatedToAllNodes(string key, IEnumerable<Address> nodes)
         {
-            ImmutableDictionary<Address, long> deltaSentToNodeForKey;
-            if (_deltaSentToNode.TryGetValue(key, out deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
+            if (_deltaSentToNode.TryGetValue(key, out var deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
             {
                 return nodes.Any(node => !deltaSentToNodeForKey.ContainsKey(node))
                     ? 0L

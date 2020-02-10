@@ -280,7 +280,7 @@ namespace Akka.DistributedData
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
-        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((IDeltaOperation)delta);
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation)delta);
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public ImmutableHashSet<UniqueAddress> ModifiedByNodes =>
@@ -343,7 +343,7 @@ namespace Akka.DistributedData
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            return obj is ORDictionary<TKey, TValue> && Equals((ORDictionary<TKey, TValue>)obj);
+            return obj is ORDictionary<TKey, TValue> pairs && Equals(pairs);
         }
 
         /// <inheritdoc/>
@@ -425,8 +425,7 @@ namespace Akka.DistributedData
             public override IReplicatedData Merge(IReplicatedData other)
             {
                 UpdateDeltaOperation update;
-                var put = other as PutDeltaOperation;
-                if (put != null && Equals(Key, put.Key))
+                if (other is PutDeltaOperation put && Equals(Key, put.Key))
                 {
                     return new PutDeltaOperation((ORSet<TKey>.IDeltaOperation)Underlying.Merge(put.Underlying), put.Key, put.Value);
                 }
@@ -434,9 +433,9 @@ namespace Akka.DistributedData
                 {
                     var merged = (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying);
                     var e2 = update.Values.First().Value;
-                    if (Value is IDeltaReplicatedData)
+                    if (Value is IDeltaReplicatedData data)
                     {
-                        var mergedDelta = ((IDeltaReplicatedData)Value).MergeDelta((IReplicatedDelta)e2);
+                        var mergedDelta = data.MergeDelta((IReplicatedDelta)e2);
                         return new PutDeltaOperation(merged, Key, (TValue)mergedDelta);
                     }
                     else
@@ -488,23 +487,19 @@ namespace Akka.DistributedData
 
             public UpdateDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, ImmutableDictionary<TKey, IReplicatedData> values)
             {
-                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying));
                 Values = values;
             }
 
             public override IReplicatedData Merge(IReplicatedData other)
             {
                 PutDeltaOperation put;
-                if (other is UpdateDeltaOperation)
+                if (other is UpdateDeltaOperation update)
                 {
-                    var update = (UpdateDeltaOperation)other;
-                    var builder = this.Values.ToBuilder();
+                    var builder = Values.ToBuilder();
                     foreach (var entry in update.Values)
                     {
-                        IReplicatedData value;
-                        if (this.Values.TryGetValue(entry.Key, out value))
+                        if (Values.TryGetValue(entry.Key, out var value))
                         {
                             builder[entry.Key] = value.Merge(entry.Value);
                         }
@@ -514,7 +509,7 @@ namespace Akka.DistributedData
                         }
                     }
                     return new UpdateDeltaOperation(
-                        underlying: (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying),
+                        underlying: (ORSet<TKey>.IDeltaOperation)Underlying.Merge(update.Underlying),
                         values: builder.ToImmutable());
                 }
                 else if ((put = other as PutDeltaOperation) != null && this.Values.Count == 1 && this.Values.ContainsKey(put.Key))
@@ -564,9 +559,7 @@ namespace Akka.DistributedData
         {
             public RemoveDeltaOperation(ORSet<TKey>.IDeltaOperation underlying)
             {
-                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying));
             }
 
             public override ORSet<TKey>.IDeltaOperation Underlying { get; }
@@ -592,9 +585,7 @@ namespace Akka.DistributedData
 
             public RemoveKeyDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key)
             {
-                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying));
                 Key = key;
             }
 
@@ -631,14 +622,13 @@ namespace Akka.DistributedData
 
             public IReplicatedData Merge(IReplicatedData other)
             {
-                var atomic = other as AtomicDeltaOperation;
-                if (atomic != null)
+                if (other is AtomicDeltaOperation atomic)
                 {
                     var lastIndex = Operations.Length - 1;
                     var last = Operations[lastIndex];
                     if (last is PutDeltaOperation || last is UpdateDeltaOperation)
                     {
-                        var builder = this.Operations.ToList();
+                        var builder = Operations.ToList();
                         var merged = (IDeltaOperation)last.Merge(atomic);
                         if (merged is AtomicDeltaOperation)
                         {
@@ -667,7 +657,7 @@ namespace Akka.DistributedData
             public IDeltaReplicatedData Zero => ((IReplicatedDelta)Operations.FirstOrDefault())?.Zero;
             public int DeltaSize => Operations.Length;
 
-            public override bool Equals(object obj) => obj is IDeltaOperation && Equals((IDeltaOperation)obj);
+            public override bool Equals(object obj) => obj is IDeltaOperation operation && Equals(operation);
 
             public bool Equals(IDeltaOperation op)
             {
@@ -708,15 +698,15 @@ namespace Akka.DistributedData
             if (delta == null) throw new ArgumentNullException();
 
             var withDeltas = DryMergeDeltas(delta);
-            return this.Merge(withDeltas);
+            return Merge(withDeltas);
         }
 
         private ORDictionary<TKey, TValue> DryMergeDeltas(IDeltaOperation delta, bool withValueDelta = false)
         {
-            var mergedKeys = this.KeySet;
+            var mergedKeys = KeySet;
             var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
             var tombstonedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
-            foreach (var entry in this.ValueMap)
+            foreach (var entry in ValueMap)
             {
                 if (this.KeySet.Contains(entry.Key))
                     mergedValues.Add(entry);
@@ -808,9 +798,7 @@ namespace Akka.DistributedData
 
         private TValue MergeValue(TValue value, IReplicatedData delta)
         {
-            var v = value as IDeltaReplicatedData;
-            var d = delta as IReplicatedDelta;
-            if (v != null && d != null)
+            if (value is IDeltaReplicatedData v && delta is IReplicatedDelta d)
             {
                 return (TValue)v.MergeDelta(d);
             }
@@ -828,7 +816,7 @@ namespace Akka.DistributedData
         internal ORDictionary<TKey, TValue> MergeRetainingDeletedValues(ORDictionary<TKey, TValue> other)
         {
             var mergedKeys = KeySet.Merge(other.KeySet);
-            return DryMerge(other, mergedKeys, this.ValueMap.Keys.Union(other.ValueMap.Keys).GetEnumerator());
+            return DryMerge(other, mergedKeys, ValueMap.Keys.Union(other.ValueMap.Keys).GetEnumerator());
         }
 
         internal ORDictionary<TKey, TValue> RemoveKey(UniqueAddress node, TKey key)
