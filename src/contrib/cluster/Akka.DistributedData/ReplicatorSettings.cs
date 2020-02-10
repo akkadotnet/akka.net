@@ -7,9 +7,11 @@
 
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using System;
 using System.Collections.Immutable;
+using System.Collections.Generic;
 
 namespace Akka.DistributedData
 {
@@ -21,8 +23,8 @@ namespace Akka.DistributedData
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public static ReplicatorSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ?? 
-                throw new ConfigurationException($"Failed to create {typeof(ReplicatorSettings)}: akka.cluster.distributed-data configuration node not found"));
+            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ??
+                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>("akka.cluster.distributed-data"));
 
         /// <summary>
         /// Create settings from a configuration with the same layout as
@@ -34,15 +36,15 @@ namespace Akka.DistributedData
         public static ReplicatorSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(ReplicatorSettings)}: DistributedData HOCON config not provided.");
+                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>("akka.cluster.distributed-data");
 
-            var dispatcher = config.GetString("use-dispatcher");
+            var dispatcher = config.GetString("use-dispatcher", null);
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 
             var durableConfig = config.GetConfig("durable");
-            var durableKeys = durableConfig.GetStringList("keys");
+            var durableKeys = durableConfig.GetStringList("keys", new List<string>());
             Props durableStoreProps = Props.Empty;
-            var durableStoreTypeName = durableConfig.GetString("store-actor-class");
+            var durableStoreTypeName = durableConfig.GetString("store-actor-class", null);
             var isDurableStoreConfigured = !string.IsNullOrEmpty(durableStoreTypeName);
             if (durableKeys.Count != 0)
             {
@@ -51,14 +53,14 @@ namespace Akka.DistributedData
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
                 }
-                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher"));
+                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher", null));
             }
 
             return new ReplicatorSettings(
-                role: config.GetString("role"),
+                role: config.GetString("role", null),
                 gossipInterval: config.GetTimeSpan("gossip-interval"),
                 notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval"),
-                maxDeltaElements: config.GetInt("max-delta-elements"),
+                maxDeltaElements: config.GetInt("max-delta-elements", 0),
                 dispatcher: dispatcher,
                 pruningInterval: config.GetTimeSpan("pruning-interval"),
                 maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"),
@@ -66,7 +68,7 @@ namespace Akka.DistributedData
                 durableStoreProps: durableStoreProps,
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live"),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"),
-                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size"));
+                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 0));
         }
 
         /// <summary>

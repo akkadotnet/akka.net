@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -29,7 +30,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DistributedPubSubSettings)}: akka.cluster.pub-sub configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<DistributedPubSubSettings>("akka.cluster.pub-sub");
 
             return Create(config);
         }
@@ -43,10 +44,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public static DistributedPubSubSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DistributedPubSubSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<DistributedPubSubSettings>();
 
             RoutingLogic routingLogic = null;
-            var routingLogicName = config.GetString("routing-logic");
+            var routingLogicName = config.GetString("routing-logic", null);
             switch (routingLogicName)
             {
                 case "random":
@@ -66,11 +67,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
 
             return new DistributedPubSubSettings(
-                config.GetString("role"),
+                config.GetString("role", null),
                 routingLogic,
                 config.GetTimeSpan("gossip-interval"),
                 config.GetTimeSpan("removed-time-to-live"),
-                config.GetInt("max-delta-elements"));
+                config.GetInt("max-delta-elements", 0));
         }
 
         /// <summary>

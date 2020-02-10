@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Cluster.Tools.Singleton
@@ -29,8 +30,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException(
-                    $"Failed to create {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonManagerSettings>("akka.cluster.singleton");
 
             return Create(config).WithRemovalMargin(Cluster.Get(system).DowningProvider.DownRemovalMargin);
         }
@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tools.Singleton
         public static ClusterSingletonManagerSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(ClusterSingletonManagerSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonManagerSettings>();
 
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),

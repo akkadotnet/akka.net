@@ -6,7 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
-//using Akka.Configuration;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Cluster.Metrics.Configuration
@@ -24,8 +24,8 @@ namespace Akka.Cluster.Metrics.Configuration
         public ClusterMetricsSettings(Config config)
         {
             _config = config.GetConfig("akka.cluster.metrics");
-            if(_config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(ClusterMetricsSettings)}: akka.cluster.metrics configuration node not found");
+            if (_config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterMetricsSettings>("akka.cluster.metrics");
 
             MetricsDispatcher = _config.GetString("dispatcher");
             PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay");

@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Cluster.Tools.Client
@@ -28,7 +29,7 @@ namespace Akka.Cluster.Tools.Client
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
             if (config.IsNullOrEmpty())
-                throw new ArgumentException($"Failed to create {typeof(ClusterReceptionistSettings)}: Actor system [{system.Name}] doesn't have `akka.cluster.client.receptionist` config set up");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterReceptionistSettings>("akka.cluster.client.receptionist");
 
             return Create(config);
         }
@@ -41,14 +42,14 @@ namespace Akka.Cluster.Tools.Client
         public static ClusterReceptionistSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(ClusterReceptionistSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterReceptionistSettings>();
 
-            var role = config.GetString("role");
+            var role = config.GetString("role", null);
             if (string.IsNullOrEmpty(role)) role = null;
 
             return new ClusterReceptionistSettings(
                 role,
-                config.GetInt("number-of-contacts"),
+                config.GetInt("number-of-contacts", 0),
                 config.GetTimeSpan("response-tunnel-receive-timeout"),
                 config.GetTimeSpan("heartbeat-interval"),
                 config.GetTimeSpan("acceptable-heartbeat-pause"),

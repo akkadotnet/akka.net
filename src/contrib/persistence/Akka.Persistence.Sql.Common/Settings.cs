@@ -7,6 +7,7 @@
 
 using System;
 using Hocon;
+using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common
@@ -66,7 +67,7 @@ namespace Akka.Persistence.Sql.Common
         public JournalSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(JournalSettings)}: SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
+                throw ConfigurationException.NullOrEmptyConfig<JournalSettings>();
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
@@ -129,7 +130,7 @@ namespace Akka.Persistence.Sql.Common
         public SnapshotStoreSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {nameof(SnapshotStoreSettings)}: SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
+                throw ConfigurationException.NullOrEmptyConfig<SnapshotStoreSettings>(); //($"Failed to create {nameof(SnapshotStoreSettings)}: SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");

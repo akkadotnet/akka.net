@@ -12,6 +12,7 @@ using System.IO;
 using System.Text;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
@@ -54,7 +55,8 @@ namespace Akka.DistributedData.LightningDB
         public LmdbDurableStore(Config config)
         {
             config = config.GetConfig("lmdb");
-            if (config == null) throw new ArgumentException("Couldn't find config for LMDB durable store. Default path: `akka.cluster.distributed-data.durable.lmdb`");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<LmdbDurableStore>("akka.cluster.distributed-data.durable.lmdb");
 
             _log = Context.GetLogger();
 

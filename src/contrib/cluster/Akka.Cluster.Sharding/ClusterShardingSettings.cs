@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Cluster.Tools.Singleton;
 using Hocon;
 
@@ -212,9 +213,9 @@ namespace Akka.Cluster.Sharding
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(ClusterShardingSettings)}: akka.cluster.sharding configuration node not found");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>("akka.cluster.sharding");
 
-            var coordinatorSingletonPath = config.GetString("coordinator-singleton");
+            var coordinatorSingletonPath = config.GetString("coordinator-singleton", null);
 
             return Create(config, system.Settings.Config.GetConfig(coordinatorSingletonPath));
         }
@@ -228,42 +229,42 @@ namespace Akka.Cluster.Sharding
         public static ClusterShardingSettings Create(Config config, Config singletonConfig)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(ClusterShardingSettings)}: {nameof(config)} parameter is null or empty.");
+                throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
 
             var tuningParameters = new TunningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
-                bufferSize: config.GetInt("buffer-size"),
+                bufferSize: config.GetInt("buffer-size", 0),
                 handOffTimeout: config.GetTimeSpan("handoff-timeout"),
                 shardStartTimeout: config.GetTimeSpan("shard-start-timeout"),
                 shardFailureBackoff: config.GetTimeSpan("shard-failure-backoff"),
                 entityRestartBackoff: config.GetTimeSpan("entity-restart-backoff"),
                 rebalanceInterval: config.GetTimeSpan("rebalance-interval"),
-                snapshotAfter: config.GetInt("snapshot-after"),
-                keepNrOfBatches: config.GetInt("keep-nr-of-batches"),
-                leastShardAllocationRebalanceThreshold: config.GetInt("least-shard-allocation-strategy.rebalance-threshold"),
-                leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"),
+                snapshotAfter: config.GetInt("snapshot-after", 0),
+                keepNrOfBatches: config.GetInt("keep-nr-of-batches", 0),
+                leastShardAllocationRebalanceThreshold: config.GetInt("least-shard-allocation-strategy.rebalance-threshold", 0),
+                leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance", 0),
                 waitingForStateTimeout: config.GetTimeSpan("waiting-for-state-timeout"),
                 updatingStateTimeout: config.GetTimeSpan("updating-state-timeout"),
-                entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
+                entityRecoveryStrategy: config.GetString("entity-recovery-strategy", null),
                 entityRecoveryConstantRateStrategyFrequency: config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"),
-                entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
+                entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities", 0));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
-            var role = config.GetString("role");
+            var role = config.GetString("role", null);
             if (role == string.Empty) role = null;
 
-            var passivateIdleAfter = config.GetString("passivate-idle-entity-after").ToLower() == "off" 
+            var passivateIdleAfter = config.GetString("passivate-idle-entity-after", null).ToLower() == "off" 
                 ? TimeSpan.Zero 
                 : config.GetTimeSpan("passivate-idle-entity-after");
 
             return new ClusterShardingSettings(
                 role: role,
                 rememberEntities: config.GetBoolean("remember-entities"),
-                journalPluginId: config.GetString("journal-plugin-id"),
-                snapshotPluginId: config.GetString("snapshot-plugin-id"),
+                journalPluginId: config.GetString("journal-plugin-id", null),
+                snapshotPluginId: config.GetString("snapshot-plugin-id", null),
                 passivateIdleEntityAfter: passivateIdleAfter,
-                stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
+                stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode", null), ignoreCase: true),
                 tunningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings);
         }

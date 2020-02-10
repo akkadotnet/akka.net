@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
@@ -67,7 +68,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         public ReplayFilterSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ReplayFilterSettings>();
 
             ReplayFilterMode mode;
             var replayModeString = config.GetString("mode", "off");
@@ -135,7 +137,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         public CircuitBreakerSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<CircuitBreakerSettings>();
 
             MaxFailures = config.GetInt("max-failures", 5);
             CallTimeout = config.GetTimeSpan("call-timeout", TimeSpan.FromSeconds(20));
@@ -249,7 +252,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
             var connectionString = config.GetString("connection-string");
 #if CONFIGURATION

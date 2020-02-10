@@ -74,19 +74,19 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public string Hocon_parse_resolve_string_value()
         {
-            return fallback2.GetString("akka.actor.provider");
+            return fallback2.GetString("akka.actor.provider", null);
         }
 
         [Benchmark]
         public int Hocon_parse_resolve_int_value()
         {
-            return fallback2.GetInt("akka.remote.dot-netty.tcp.port");
+            return fallback2.GetInt("akka.remote.dot-netty.tcp.port", 0);
         }
 
         [Benchmark]
         public double Hocon_parse_resolve_double_value()
         {
-            return fallback1.GetDouble("akka.actor.branch-factor");
+            return fallback1.GetDouble("akka.actor.branch-factor", 0);
         }
 
         [Benchmark]
@@ -104,7 +104,7 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public IEnumerable<string> Hocon_parse_resolve_string_list_value()
         {
-            return fallback1.GetStringList("akka.cluster.seed-nodes");
+            return fallback1.GetStringList("akka.cluster.seed-nodes", new List<string>());
         }
 
         [Benchmark]
