@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Numerics;
 using Akka.Cluster;
+using Akka.DistributedData.Internal;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -130,6 +132,41 @@ namespace Akka.DistributedData.Tests
                 { "b", 13 },
                 { "c", 7 },
             });
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4198
+        /// </summary>
+        [Fact]
+        public void Bugfix_4198_PNCounterMapDeltas_must_merge_other_PNCounterMaps()
+        {
+            var m1 = PNCounterDictionary<string>.Empty
+                .Increment(_node1, "a", 1)
+                .Increment(_node1, "b", 3)
+                .Increment(_node1, "c", 2);
+            var m2 = PNCounterDictionary<string>.Empty.Increment(_node2, "c", 5);
+
+            // This is how deltas really get merged inside the replicator
+            var dataEnvelope = new DataEnvelope(m1.Delta);
+            if (dataEnvelope.Data is IReplicatedDelta withDelta)
+            {
+                dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+            }
+
+            // Bug: this is now an ORDictionary<string, PNCounter> under #4198
+            var storedData = dataEnvelope.Data;
+
+            // simulate merging an update
+            var m3 = (PNCounterDictionary<string>)storedData.Merge(m2);
+
+            var expected = new Dictionary<string, BigInteger>
+            {
+                { "a", 1 },
+                { "b", 3 },
+                { "c", 7 },
+            }.ToImmutableDictionary();
+
+            m3.Entries.ShouldBeEquivalentTo(expected);
         }
     }
 }
