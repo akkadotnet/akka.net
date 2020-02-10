@@ -12,6 +12,7 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Dispatch
 {
@@ -62,7 +63,7 @@ namespace Akka.Tests.Dispatch
 
         #endregion
 
-        public DispatchersSpec() : base(DispatcherConfiguration) { }
+        public DispatchersSpec(ITestOutputHelper helper) : base(DispatcherConfiguration, helper) { }
 
         
 
