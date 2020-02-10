@@ -30,7 +30,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.provider = cluster
+                # we use 3s as write timeouts in test, make sure we see that
+                # and not time out the expectMsg at the same time
+                akka.test.single-expect-default = 5s
                 akka.log-dead-letters-during-shutdown = off")
                 .WithFallback(DistributedData.DefaultConfig());
         }
