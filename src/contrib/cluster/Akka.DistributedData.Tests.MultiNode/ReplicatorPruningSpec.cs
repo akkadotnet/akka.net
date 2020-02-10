@@ -209,7 +209,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.log-dead-letters-during-shutdown = off")
                 .WithFallback(DistributedData.DefaultConfig());
