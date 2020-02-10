@@ -72,5 +72,49 @@ namespace Akka.DistributedData.Tests
             d5.Merge(d7).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
             d7.Merge(d5).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
         }
+
+        /// <summary>
+        /// Need to validate that DataEnvelope instances with identical content produce identical hashcodes, and vice versa.
+        /// </summary>
+        [Fact()]
+        public void DataEnvelopes_with_identical_content_must_match()
+        {
+            var g1 = GCounter.Empty.Increment(node1, 1);
+            var d1 = new DataEnvelope(g1);
+            var d1a = new DataEnvelope(g1);
+            var g2 = GCounter.Empty.Increment(node2, 2);
+            var d2 = new DataEnvelope(g2);
+
+            d1.Should().NotBe(d2);
+            d1a.Should().Be(d1);
+            d1a.GetHashCode().Should().Be(d1.GetHashCode());
+
+            // add some delta versions
+            var d1b = d1.WithDeltaVersions(VersionVector.Create(node1, 1));
+            d1.Should().NotBe(d1b);
+            d1.GetHashCode().Should().NotBe(d1b.GetHashCode());
+
+            // add identical delta version on different instance
+            var d1b2 = d1.WithDeltaVersions(VersionVector.Create(node1, 1));
+            d1b2.Should().Be(d1b);
+            d1b2.GetHashCode().Should().Be(d1b.GetHashCode());
+
+            // merge with another instance
+            var d2b1 = d1b2.Merge(d2);
+            d2b1.Should().NotBe(d1b2);
+            d2b1.GetHashCode().Should().NotBe(d1b2.GetHashCode());
+
+            // prune
+            var d3 = d2b1.WithPruning(
+                ImmutableDictionary<UniqueAddress, IPruningState>.Empty.Add(node2, new PruningPerformed(obsoleteTime)));
+            d3.Should().NotBe(d2b1);
+            d3.GetHashCode().Should().NotBe(d2b1.GetHashCode());
+
+            // create identical instance
+            var d3b = d2b1.WithPruning(
+                ImmutableDictionary<UniqueAddress, IPruningState>.Empty.Add(node2, new PruningPerformed(obsoleteTime)));
+            d3.Should().Be(d3b);
+            d3.GetHashCode().Should().Be(d3b.GetHashCode());
+        }
     }
 }
