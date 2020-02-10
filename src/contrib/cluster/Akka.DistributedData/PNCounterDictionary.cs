@@ -81,8 +81,7 @@ namespace Akka.DistributedData
         /// </summary>
         public bool TryGetValue(TKey key, out BigInteger value)
         {
-            PNCounter counter;
-            if (_underlying.TryGetValue(key, out counter))
+            if (_underlying.TryGetValue(key, out var counter))
             {
                 value = counter.Value;
                 return true;
@@ -173,7 +172,7 @@ namespace Akka.DistributedData
 
         /// <inheritdoc/>
         public override bool Equals(object obj) =>
-            obj is PNCounterDictionary<TKey> && Equals((PNCounterDictionary<TKey>)obj);
+            obj is PNCounterDictionary<TKey> pairs && Equals(pairs);
 
         /// <inheritdoc/>
         public override int GetHashCode() => _underlying.GetHashCode();
