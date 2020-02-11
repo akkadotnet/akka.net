@@ -46,9 +46,9 @@ namespace Akka.Cluster.Tools.Singleton
             if (role == string.Empty) role = null;
 
             return new ClusterSingletonProxySettings(
-                singletonName: config.GetString("singleton-name", null),
+                singletonName: config.GetString("singleton-name"),
                 role: role,
-                singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval", null),
+                singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
                 bufferSize: config.GetInt("buffer-size", 0));
         }
 

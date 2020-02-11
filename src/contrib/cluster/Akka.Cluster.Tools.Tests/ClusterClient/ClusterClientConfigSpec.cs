@@ -86,8 +86,8 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
             Assert.False(config.IsNullOrEmpty());
-            config.GetString("name", null).Should().Be("receptionist");
-            config.GetString("use-dispatcher", null).Should().Be(string.Empty);
+            config.GetString("name").Should().Be("receptionist");
+            config.GetString("use-dispatcher").Should().Be(string.Empty);
         }
     }
 }
