@@ -172,5 +172,15 @@ namespace Akka.DistributedData.Tests
             Assert.False(c5.NeedPruningFrom(_node1));
             Assert.Equal(2UL, c4.Value);
         }
+
+        [Fact]
+        public void GCounter_equality_must_factor_nodes()
+        {
+            var c1 = new GCounter();
+            var c2 = c1.Increment(_node1);
+            var c3 = c1.Increment(_node2);
+
+            c2.Equals(c3).Should().BeFalse();
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Xunit;
@@ -6,6 +6,7 @@ using Xunit;
 namespace DocsExamples.Testkit
 {
 
+#region IntroSample_0
     public class SomeActor : ReceiveActor
     {
         IActorRef target = null;
@@ -63,4 +64,6 @@ namespace DocsExamples.Testkit
             }, EpsilonValueForWithins);
         }
     }
+#endregion IntroSample_0
+
 }
