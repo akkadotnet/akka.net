@@ -601,6 +601,7 @@ namespace Akka.DistributedData
                     _deltaPropagationSelector.Update(key.Id, delta);
                 }
 
+                _log.Debug("Updating local value for key {0} to {1}", key, envelope);
                 // note that it's important to do deltaPropagationSelector.update before setData,
                 // so that the latest delta version is used
                 var newEnvelope = SetData(key.Id, envelope);
@@ -1317,7 +1318,7 @@ namespace Akka.DistributedData
                 foreach (var entry in _dataEntries)
                 {
                     var key = entry.Key;
-                    var envelope = entry.Value.Item1;
+                    var envelope = entry.Value.envelope;
 
                     foreach (var removed in removedSet)
                     {
