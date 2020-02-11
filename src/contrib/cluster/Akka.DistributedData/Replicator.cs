@@ -672,6 +672,7 @@ namespace Akka.DistributedData
 
         private void ReceiveWrite(string key, DataEnvelope envelope)
         {
+            _log.Debug("Processing write for key [{0}]:{1}", key, envelope);
             WriteAndStore(key, envelope, reply: true);
         }
 
@@ -735,6 +736,7 @@ namespace Akka.DistributedData
 
         private void ReceiveReadRepair(string key, DataEnvelope writeEnvelope)
         {
+            _log.Debug("Processing read repair for key [{0}]:{1}", key, writeEnvelope);
             WriteAndStore(key, writeEnvelope, reply: false);
             Sender.Tell(ReadRepairAck.Instance);
         }
