@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Akka.Util;
@@ -15,9 +14,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
+using Akka.Cluster;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Google.Protobuf;
+using Gossip = Akka.DistributedData.Internal.Gossip;
 using Status = Akka.DistributedData.Internal.Status;
 
 namespace Akka.DistributedData
@@ -301,8 +302,11 @@ namespace Akka.DistributedData
         private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableHashSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
-        private Address _leader = null;
-        private bool IsLeader => _leader != null && _leader == _selfAddress;
+        /// <summary>
+        /// All nodes sorted with the leader first
+        /// </summary>
+        private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
+        private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
@@ -403,11 +407,9 @@ namespace Akka.DistributedData
         {
             if (_hasDurableKeys) _durableStore.Tell(LoadAll.Instance);
 
-            var leaderChangedClass = _settings.Role != null
-                ? typeof(ClusterEvent.RoleLeaderChanged)
-                : typeof(ClusterEvent.LeaderChanged);
+            // not using LeaderChanged/RoleLeaderChanged because here we need one node independent of data center
             _cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
-                typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent), leaderChangedClass);
+                typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
         }
 
         protected override void PostStop()
@@ -499,11 +501,9 @@ namespace Akka.DistributedData
             Receive<ClusterEvent.MemberWeaklyUp>(m => ReceiveMemberWeaklyUp(m.Member));
             Receive<ClusterEvent.MemberUp>(m => ReceiveMemberUp(m.Member));
             Receive<ClusterEvent.MemberRemoved>(m => ReceiveMemberRemoved(m.Member));
-            Receive<ClusterEvent.IMemberEvent>(_ => { });
+            Receive<ClusterEvent.IMemberEvent>(m => ReceiveOtherMemberEvent(m.Member));
             Receive<ClusterEvent.UnreachableMember>(u => ReceiveUnreachable(u.Member));
             Receive<ClusterEvent.ReachableMember>(r => ReceiveReachable(r.Member));
-            Receive<ClusterEvent.LeaderChanged>(l => ReceiveLeaderChanged(l.Leader, null));
-            Receive<ClusterEvent.RoleLeaderChanged>(r => ReceiveLeaderChanged(r.Leader, r.Role));
             Receive<GetKeyIds>(_ => ReceiveGetKeyIds());
             Receive<Delete>(d => ReceiveDelete(d.Key, d.Consistency, d.Request));
             Receive<RemovedNodePruningTick>(r => ReceiveRemovedNodePruningTick());
@@ -1200,10 +1200,14 @@ namespace Akka.DistributedData
 
         private void ReceiveMemberUp(Member m)
         {
-            if (MatchingRole(m) && m.Address != _selfAddress)
+            if (MatchingRole(m))
             {
-                _nodes = _nodes.Add(m.Address);
-                _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
+                _leader = _leader.Add(m);
+                if (m.Address != _selfAddress)
+                {
+                    _nodes = _nodes.Add(m.Address);
+                    _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
+                }
             }
         }
 
@@ -1212,9 +1216,14 @@ namespace Akka.DistributedData
             if (m.Address == _selfAddress) Context.Stop(Self);
             else if (MatchingRole(m))
             {
+                _log.Debug("Adding removed node [{0}] from MemberRemoved", m.UniqueAddress);
+
+                // filter, it's possible that the ordering is changed since it based on MemberStatus
+                _leader = _leader.Where(x => x.Address != m.Address).ToImmutableSortedSet(Member.LeaderStatusOrdering);
+
                 _nodes = _nodes.Remove(m.Address);
                 _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
-                _log.Debug("Adding removed node [{0}] from MemberRemoved", m.UniqueAddress);
+                
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(m.Address);
                 _deltaPropagationSelector.CleanupRemovedNode(m.Address);
@@ -1231,9 +1240,15 @@ namespace Akka.DistributedData
             if (MatchingRole(m)) _unreachable = _unreachable.Remove(m.Address);
         }
 
-        private void ReceiveLeaderChanged(Address leader, string role)
+        private void ReceiveOtherMemberEvent(Member m)
         {
-            if (role == _settings.Role) _leader = leader;
+            if (MatchingRole(m))
+            {
+                // replace, it's possible that the ordering is changed since it based on MemberStatus
+                _leader = _leader.Where(x => x.UniqueAddress != m.UniqueAddress)
+                    .ToImmutableSortedSet(Member.LeaderStatusOrdering);
+                _leader = _leader.Add(m);
+            }
         }
 
         private void ReceiveClockTick()
@@ -1251,6 +1266,7 @@ namespace Akka.DistributedData
             {
                 if (IsLeader)
                 {
+                    _log.Debug("Current leader - beginning pruning");
                     CollectRemovedNodes();
                     InitRemovedNodePruning();
                 }
