@@ -57,7 +57,7 @@ namespace Akka.Persistence.Journal
                 config.GetTimeSpan("circuit-breaker.call-timeout", null),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", null));
 
-            var replayFilterMode = config.GetString("replay-filter.mode", null).ToLower();
+            var replayFilterMode = config.GetString("replay-filter.mode", "").ToLowerInvariant();
             switch (replayFilterMode)
             {
                 case "off":
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Journal
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
             _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
             _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
-            _replayDebugEnabled = config.GetBoolean("replay-filter.debug");
+            _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }

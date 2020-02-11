@@ -458,7 +458,10 @@ namespace Akka.Persistence.Fsm
 
         public SnapshotAfterExtension(Config config)
         {
-            if (config.GetString(Key, null).ToLowerInvariant().Equals("off"))
+            var useSnapshot = config.GetString(Key, "");
+            if (useSnapshot.ToLowerInvariant().Equals("off") ||
+                useSnapshot.ToLowerInvariant().Equals("false") ||
+                useSnapshot.ToLowerInvariant().Equals("no"))
             {
                 SnapshotAfterValue = null;
             }

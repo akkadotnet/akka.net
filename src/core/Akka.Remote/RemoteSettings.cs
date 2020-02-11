@@ -30,12 +30,15 @@ namespace Akka.Remote
                 throw ConfigurationException.NullOrEmptyConfig<RemoteSettings>();
 
             Config = config;
-            LogReceive = config.GetBoolean("akka.remote.log-received-messages");
-            LogSend = config.GetBoolean("akka.remote.log-sent-messages");
+            LogReceive = config.GetBoolean("akka.remote.log-received-messages", false);
+            LogSend = config.GetBoolean("akka.remote.log-sent-messages", false);
 
+            // TODO: what is the default value if the key wasn't found?
             var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
-            if (config.GetString(bufferSizeLogKey, null).ToLowerInvariant().Equals("off") ||
-                config.GetString(bufferSizeLogKey, null).ToLowerInvariant().Equals("false"))
+            var useBufferSizeLog = config.GetString(bufferSizeLogKey, string.Empty).ToLowerInvariant();
+            if (useBufferSizeLog.Equals("off") ||
+                useBufferSizeLog.Equals("false") ||
+                useBufferSizeLog.Equals("no"))
             {
                 LogBufferSizeExceeding = Int32.MaxValue;
             }
@@ -44,11 +47,14 @@ namespace Akka.Remote
                 LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey, 0);
             }
 
-            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
+            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode", false);
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new string[] { }));
-            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", null) ?? "DEBUG";
+            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", "DEBUG");
+            if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase) ||
+                RemoteLifecycleEventsLogLevel.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                RemoteLifecycleEventsLogLevel.Equals("true", StringComparison.OrdinalIgnoreCase)
+                ) RemoteLifecycleEventsLogLevel = "DEBUG";
             Dispatcher = config.GetString("akka.remote.use-dispatcher", null);
-            if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase)) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", null);
             ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout", null);
             TransportNames = config.GetStringList("akka.remote.enabled-transports", new string[] { });
@@ -58,7 +64,7 @@ namespace Akka.Remote
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
             BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval", null);
             RetryGateClosedFor = config.GetTimeSpan("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
-            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
+            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections", false);
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size", 0);
             SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval", null);
             SysResendLimit = config.GetInt("akka.remote.resend-limit", 0);

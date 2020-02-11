@@ -70,7 +70,7 @@ namespace Akka.Remote.Transport
             : this(
                 Address.Parse(GetConfigString(conf, "local-address")),
                 AssociationRegistry.Get(GetConfigString(conf, "registry-key")),
-                conf.GetByteSize("maximum-payload-bytes") ?? 32000,
+                conf.GetByteSize("maximum-payload-bytes", null) ?? 32000L,
                 GetConfigString(conf, "scheme-identifier")
                 )
         {

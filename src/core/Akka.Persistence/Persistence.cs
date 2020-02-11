@@ -357,9 +357,9 @@ namespace Akka.Persistence
             /// <param name="config">TBD</param>
             public ViewSettings(Config config)
             {
-                AutoUpdate = config.GetBoolean("view.auto-update");
+                AutoUpdate = config.GetBoolean("view.auto-update", false);
                 AutoUpdateInterval = config.GetTimeSpan("view.auto-update-interval", null);
-                var repMax = config.GetLong("view.auto-update-replay-max");
+                var repMax = config.GetLong("view.auto-update-replay-max", 0);
                 AutoUpdateReplayMax = repMax < 0 ? long.MaxValue : repMax;
             }
 
@@ -500,8 +500,8 @@ namespace Akka.Persistence
         {
             public InternalSettings(Config config)
             {
-                PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands");
-                PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations");
+                PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands", false);
+                PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations", false);
             }
 
             public bool PublishPluginCommands { get; }

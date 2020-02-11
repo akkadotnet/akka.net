@@ -27,8 +27,13 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
         {
-            // TODO: Need to assert that config key exists
-            if (system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", null).ToLowerInvariant() == "off")
+            // TODO: Need to assert that config key exists. 
+            var useLogFrameSize = 
+                system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", string.Empty)
+                .ToLowerInvariant();
+            if (useLogFrameSize.Equals("off") ||
+                useLogFrameSize.Equals("false") ||
+                useLogFrameSize.Equals("no"))
             {
                 return new RemoteMetricsOff();
             }
@@ -62,7 +67,7 @@ namespace Akka.Remote
         public RemoteMetricsOn(ExtendedActorSystem system)
         {
             // TODO: Need to assert that config key exists
-            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding");
+            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding", null);
             _log = Logging.GetLogger(system, this);
         }
 

@@ -669,7 +669,7 @@ namespace Akka.Remote.Tests
         {
             get
             {
-                var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
+                var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes", null);
                 if (byteSize != null)
                     return (int)byteSize.Value;
                 return 0;

@@ -115,7 +115,7 @@ namespace Akka.Persistence.Journal
             _targetPluginId = config.GetString(key, null);
             if (string.IsNullOrEmpty(_targetPluginId))
                 throw new ArgumentException($"{pluginId}.{key} must be defined.");
-            _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier);
+            _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier, false);
 
             _selfAddress = ((ExtendedActorSystem) Context.System).Provider.DefaultAddress;
         }
