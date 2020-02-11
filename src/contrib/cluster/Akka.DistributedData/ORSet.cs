@@ -48,16 +48,14 @@ namespace Akka.DistributedData
         {
             if (dot.IsEmpty) return VersionVector.Empty;
 
-            if (dot is SingleVersionVector)
+            if (dot is SingleVersionVector single)
             {
                 // if dot is dominated by version vector, drop it
-                var single = (SingleVersionVector)dot;
-                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : dot;
+                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : single;
             }
 
-            if (dot is MultiVersionVector)
+            if (dot is MultiVersionVector multi)
             {
-                var multi = (MultiVersionVector)dot;
                 var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
                 foreach (var pair in multi.Versions)
                 {
@@ -121,20 +119,18 @@ namespace Akka.DistributedData
             var l = lhs.ElementsMap[k];
             var r = rhs.ElementsMap[k];
 
-            if (l is SingleVersionVector)
+            if (l is SingleVersionVector lhsDots1)
             {
-                var lhsDots = (SingleVersionVector)l;
-                if (r is SingleVersionVector)
+                if (r is SingleVersionVector rhsDots1)
                 {
-                    var rhsDots = (SingleVersionVector)r;
-                    if (lhsDots.Node == rhsDots.Node && lhsDots.Version == rhsDots.Version)
+                    if (lhsDots1.Node == rhsDots1.Node && lhsDots1.Version == rhsDots1.Version)
                     {
-                        return acc.SetItem(k, lhsDots);
+                        return acc.SetItem(k, lhsDots1);
                     }
                     else
                     {
-                        var lhsKeep = ORSet.SubtractDots(lhsDots, rhs._versionVector);
-                        var rhsKeep = ORSet.SubtractDots(rhsDots, lhs._versionVector);
+                        var lhsKeep = ORSet.SubtractDots(lhsDots1, rhs._versionVector);
+                        var rhsKeep = ORSet.SubtractDots(rhsDots1, lhs._versionVector);
                         var merged = lhsKeep.Merge(rhsKeep);
                         return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                     }
@@ -143,10 +139,10 @@ namespace Akka.DistributedData
                 {
                     var rhsDots = (MultiVersionVector)r;
                     var commonDots = rhsDots.Versions
-                        .Where(kv => lhsDots.Version == kv.Value && lhsDots.Node == kv.Key)
+                        .Where(kv => lhsDots1.Version == kv.Value && lhsDots1.Node == kv.Key)
                         .ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
-                    var lhsUnique = commonDotKeys.Length != 0 ? VersionVector.Empty : lhsDots;
+                    var lhsUnique = commonDotKeys.Length != 0 ? VersionVector.Empty : lhsDots1;
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
                     var lhsKeep = ORSet.SubtractDots(lhsUnique, rhs._versionVector);
                     var rhsKeep = ORSet.SubtractDots(new MultiVersionVector(rhsUniqueDots), lhs._versionVector);
@@ -158,15 +154,14 @@ namespace Akka.DistributedData
             else
             {
                 var lhsDots = (MultiVersionVector)l;
-                if (r is SingleVersionVector)
+                if (r is SingleVersionVector rhsDots1)
                 {
-                    var rhsDots = (SingleVersionVector)r;
                     var commonDots = lhsDots.Versions
-                        .Where(kv => kv.Value == rhsDots.Version && kv.Key == rhsDots.Node)
+                        .Where(kv => kv.Value == rhsDots1.Version && kv.Key == rhsDots1.Node)
                         .ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
-                    var rhsUnique = commonDotKeys.IsEmpty ? rhsDots : VersionVector.Empty;
+                    var rhsUnique = commonDotKeys.IsEmpty ? rhsDots1 : VersionVector.Empty;
                     var lhsKeep = ORSet.SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
                     var rhsKeep = ORSet.SubtractDots(rhsUnique, lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(VersionVector.Create(commonDots));

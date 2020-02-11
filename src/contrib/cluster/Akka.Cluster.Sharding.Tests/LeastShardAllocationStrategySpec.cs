@@ -18,7 +18,7 @@ using System;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class LeastShardAllocationStrategySpec : TestKitBase
+    public class LeastShardAllocationStrategySpec : TestKit.Xunit2.TestKit
     {
         /// <summary>
         /// Test dictionary, will keep the order of items as they were added
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly IActorRef _regionB;
         private readonly IActorRef _regionC;
 
-        public LeastShardAllocationStrategySpec() : base(new XunitAssertions(), "LeastShardAllocationStrategySpec")
+        public LeastShardAllocationStrategySpec() 
         {
             _regionA = Sys.ActorOf(Props.Empty, "regionA");
             _regionB = Sys.ActorOf(Props.Empty, "regionB");
