@@ -139,10 +139,10 @@ namespace Akka.Remote.TestKit
                     // of a failed operation
                     var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
-                catch (AggregateException)
+                catch (AggregateException ex)
                 {
                     _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
-                    throw new TimeoutException("Client timed out while waiting for barrier " + name);
+                    throw new TimeoutException("Client timed out while waiting for barrier " + name, ex);
                 }
                 catch (OperationCanceledException)
                 {
