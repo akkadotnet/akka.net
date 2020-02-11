@@ -741,7 +741,7 @@ namespace Akka.DistributedData
         private void ReceiveGetKeyIds()
         {
             var keys = _dataEntries
-                .Where(kvp => !(kvp.Value.Item1.Data is DeletedData))
+                .Where(kvp => !(kvp.Value.envelope.Data is DeletedData))
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
             Sender.Tell(new GetKeysIdsResult(keys));
@@ -1350,7 +1350,6 @@ namespace Akka.DistributedData
         private void PerformRemovedNodePruning()
         {
             // perform pruning when all seen Init
-            var allNodes = _nodes.Union(_weaklyUpNodes);
             var prunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.PruningMarkerTimeToLive);
             var durablePrunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.DurablePruningMarkerTimeToLive);
 
@@ -1362,7 +1361,7 @@ namespace Akka.DistributedData
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.IsSubsetOf(init.Seen)))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
@@ -1386,7 +1385,7 @@ namespace Akka.DistributedData
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
-                var envelope = entry.Value.Item1;
+                var envelope = entry.Value.envelope;
                 if (envelope.Data is IRemovedNodePruning)
                 {
                     var toRemove = envelope.Pruning
