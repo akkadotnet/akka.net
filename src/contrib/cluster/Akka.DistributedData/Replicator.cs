@@ -672,7 +672,7 @@ namespace Akka.DistributedData
 
         private void ReceiveWrite(string key, DataEnvelope envelope)
         {
-            _log.Debug("Processing write for key [{0}]:{1} from {2}", key, envelope, Sender);
+            _log.Debug("Processing write for key [{0}]:{1}", key, envelope);
             WriteAndStore(key, envelope, reply: true);
         }
 
