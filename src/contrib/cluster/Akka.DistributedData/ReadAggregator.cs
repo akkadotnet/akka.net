@@ -78,7 +78,7 @@ namespace Akka.DistributedData
 
                 Remaining = Remaining.Remove(Sender.Path.Address);
                 var done = DoneWhenRemainingSize;
-                Log.Debug("remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
+                Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
                 if (Remaining.Count == done) Reply(true);
             })
             .With<SendToSecondary>(x =>
