@@ -1278,7 +1278,7 @@ namespace Akka.DistributedData
 
         private void CollectRemovedNodes()
         {
-            var knownNodes = _nodes.Union(_weaklyUpNodes).Union(_removedNodes.Keys.Select(x => x.Address));
+            var knownNodes = AllNodes.Union(_removedNodes.Keys.Select(x => x.Address));
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
