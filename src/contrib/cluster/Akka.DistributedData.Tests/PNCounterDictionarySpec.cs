@@ -153,7 +153,7 @@ namespace Akka.DistributedData.Tests
                 dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
             }
 
-            // Bug: this is now an ORDictionary<string, PNCounter> under #4198
+            // Bug: this is was an ORDictionary<string, PNCounter> under #4198
             var storedData = dataEnvelope.Data;
 
             // simulate merging an update
@@ -167,6 +167,24 @@ namespace Akka.DistributedData.Tests
             }.ToImmutableDictionary();
 
             m3.Entries.ShouldBeEquivalentTo(expected);
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4199
+        /// </summary>
+        [Fact]
+        public void Bugfix_4199_PNCounterMaps_must_support_pruning()
+        {
+            var m1 = PNCounterDictionary<string>.Empty
+                .Increment(_node1, "a", 1)
+                .Increment(_node1, "b", 3)
+                .Increment(_node1, "c", 2)
+                .Increment(_node2, "a", 2);
+
+            m1.Entries["a"].ShouldBe(3);
+
+            var p1 = m1.Prune(_node2, _node1);
+            p1.Entries["a"].ShouldBe(m1.Entries["a"]); // values should be merged after pruning
         }
     }
 }
