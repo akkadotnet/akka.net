@@ -53,11 +53,11 @@ namespace Akka.Persistence.Journal
             CanPublish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = new CircuitBreaker(
-                config.GetInt("circuit-breaker.max-failures"),
-                config.GetTimeSpan("circuit-breaker.call-timeout"),
-                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+                config.GetInt("circuit-breaker.max-failures", 0),
+                config.GetTimeSpan("circuit-breaker.call-timeout", null),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", null));
 
-            var replayFilterMode = config.GetString("replay-filter.mode").ToLower();
+            var replayFilterMode = config.GetString("replay-filter.mode", null).ToLower();
             switch (replayFilterMode)
             {
                 case "off":
@@ -76,8 +76,8 @@ namespace Akka.Persistence.Journal
                     throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
-            _replayFilterWindowSize = config.GetInt("replay-filter.window-size");
-            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers");
+            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
+            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug");
 
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));

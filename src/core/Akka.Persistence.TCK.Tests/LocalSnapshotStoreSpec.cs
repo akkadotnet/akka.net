@@ -24,7 +24,7 @@ namespace Akka.Persistence.TCK.Tests
                   akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + Guid.NewGuid() + @""""), 
             "LocalSnapshotStoreSpec", output)
         {
-            _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+            _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir", null);
             Sys.CreateStorageLocations(_path);
 
             Initialize();

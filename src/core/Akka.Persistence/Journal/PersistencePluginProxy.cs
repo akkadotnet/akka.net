@@ -53,7 +53,7 @@ namespace Akka.Persistence.Journal
         {
             var persistence = Persistence.Instance.Apply(system);
             persistence.JournalFor(null).Tell(new TargetLocation(address));
-            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin")))
+            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin", null)))
                 persistence.SnapshotStoreFor(null).Tell(new TargetLocation(address));
         }
 
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Journal
         {
             var persistence = Persistence.Instance.Apply(system);
             persistence.JournalFor(null);
-            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin")))
+            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin", null)))
                 persistence.SnapshotStoreFor(null);
         }
 
@@ -110,9 +110,9 @@ namespace Akka.Persistence.Journal
                 _pluginType = new SnapshotStore();
             else
                 throw new ArgumentException($"Unknown plugin type: {pluginId}.");
-            _initTimeout = config.GetTimeSpan("init-timeout");
+            _initTimeout = config.GetTimeSpan("init-timeout", null);
             var key = "target-" + _pluginType.Qualifier + "-plugin";
-            _targetPluginId = config.GetString(key);
+            _targetPluginId = config.GetString(key, null);
             if (string.IsNullOrEmpty(_targetPluginId))
                 throw new ArgumentException($"{pluginId}.{key} must be defined.");
             _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier);
@@ -150,7 +150,7 @@ namespace Akka.Persistence.Journal
             else
             {
                 var targetAddressKey = "target-" + _pluginType.Qualifier + "-address";
-                var targetAddress = _config.GetString(targetAddressKey);
+                var targetAddress = _config.GetString(targetAddressKey, null);
                 if (!string.IsNullOrEmpty(targetAddress))
                 {
                     try
