@@ -153,7 +153,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var counter = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, _keyA)).Get(_keyA);
                         counter.Value.ShouldBe(9UL);
                         counter.NeedPruningFrom(thirdUniqueAddress).Should()
-                            .BeFalse($"{counter} shouldn't need prunning from {thirdUniqueAddress}");
+                            .BeFalse($"{counter} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
 

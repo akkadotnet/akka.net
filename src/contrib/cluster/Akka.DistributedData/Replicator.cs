@@ -580,7 +580,7 @@ namespace Akka.DistributedData
                 {
                     var d = modify(localValue.Data);
                     if (d is IDeltaReplicatedData withDelta)
-                    {
+                    {p
                         envelope = localValue.Merge(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
                     }
@@ -1369,7 +1369,7 @@ namespace Akka.DistributedData
                             var newEnvelope = envelope.Prune(removed, isDurable ? durablePrunningPerformed : prunningPerformed);
                             _log.Debug("Perform pruning of [{0}] from [{1}] to [{2}]", key, removed, _selfUniqueAddress);
                             SetData(key, newEnvelope);
-
+                            _log.Debug("Data for pruned key [{0}] - old: [{1}], new: [{2}]", key, envelope, newEnvelope);
                             if (!ReferenceEquals(newEnvelope.Data, data) && isDurable)
                             {
                                 _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope), null));
