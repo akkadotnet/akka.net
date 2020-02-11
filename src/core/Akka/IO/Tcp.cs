@@ -1079,7 +1079,10 @@ namespace Akka.IO
 
         private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            var type = Type.GetType(config.GetString("class"), true);
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
+
+            var type = Type.GetType(config.GetString("class", null), true);
 
             if (!typeof(IBufferPool).IsAssignableFrom(type))
                 throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");

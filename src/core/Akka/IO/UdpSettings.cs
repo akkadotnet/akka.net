@@ -39,12 +39,12 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<UdpSettings>();
 
             return new UdpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool"),
+                bufferPoolConfigPath: config.GetString("buffer-pool", null),
                 traceLogging: config.GetBoolean("trace-logging", false),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
-                directBufferSize: config.GetInt("direct-buffer-size"),
-                maxDirectBufferPoolSize: config.GetInt("direct-buffer-pool-limit"),
-                batchReceiveLimit: config.GetInt("receive-throughput"),
+                directBufferSize: config.GetInt("direct-buffer-size", 0),
+                maxDirectBufferPoolSize: config.GetInt("direct-buffer-pool-limit", 0),
+                batchReceiveLimit: config.GetInt("receive-throughput", 0),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"));
         }

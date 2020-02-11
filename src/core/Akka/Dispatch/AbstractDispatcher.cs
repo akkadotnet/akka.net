@@ -169,7 +169,7 @@ namespace Akka.Dispatch
         public ForkJoinExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
-            _threadPoolConfiguration = ConfigureSettings(config);
+            _threadPoolConfiguration = ConfigureSettings(Config);
         }
 
         /// <summary>

@@ -630,13 +630,13 @@ namespace Akka.Dispatch
         /// <inheritdoc />
         public override TimeSpan GetTimeSpan(string path, bool allowInfinite = true)
         {
-            return _config.GetTimeSpan(path, allowInfinite);
+            return _config.GetTimeSpan(path, null, allowInfinite);
         }
 
         /// <inheritdoc />
         public override TimeSpan GetTimeSpan(HoconPath path, bool allowInfinite = true)
         {
-            return _config.GetTimeSpan(path, allowInfinite);
+            return _config.GetTimeSpan(path, null, allowInfinite);
         }
 
         /// <inheritdoc />

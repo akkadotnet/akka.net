@@ -207,10 +207,13 @@ namespace Akka.IO
             /// <param name="config">TBD</param>
             public DnsSettings(Config config)
             {
-                Dispatcher = config.GetString("dispatcher");
-                Resolver = config.GetString("resolver");
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<DnsSettings>();
+
+                Dispatcher = config.GetString("dispatcher", null);
+                Resolver = config.GetString("resolver", null);
                 ResolverConfig = config.GetConfig(Resolver);
-                ProviderObjectName = ResolverConfig.GetString("provider-object");
+                ProviderObjectName = ResolverConfig.GetString("provider-object", null);
             }
 
             /// <summary>

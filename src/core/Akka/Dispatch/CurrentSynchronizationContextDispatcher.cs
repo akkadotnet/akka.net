@@ -80,9 +80,9 @@ namespace Akka.Dispatch
 
             return new CurrentSynchronizationContextDispatcher(this, Config.GetString("id", null),
                 Config.GetInt("throughput", 0),
-                Config.GetTimeSpan("throughput-deadline-time").Ticks,
+                Config.GetTimeSpan("throughput-deadline-time", null).Ticks,
                 _executorServiceConfigurator,
-                Config.GetTimeSpan("shutdown-timeout"));
+                Config.GetTimeSpan("shutdown-timeout", null));
         }
     }
 

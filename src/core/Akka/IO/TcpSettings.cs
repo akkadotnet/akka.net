@@ -49,10 +49,10 @@ namespace Akka.IO
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
                 receivedMessageSizeLimit: config.GetString("max-received-message-size", "unlimited") == "unlimited"
                     ? int.MaxValue
-                    : config.GetInt("max-received-message-size"),
+                    : config.GetInt("max-received-message-size", 0),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"),
-                transferToLimit: config.GetString("file-io-transferTo-limit") == "unlimited"
+                transferToLimit: config.GetString("file-io-transferTo-limit", null) == "unlimited"
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
