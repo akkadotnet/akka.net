@@ -50,9 +50,13 @@ namespace Akka.Cluster.Tools.Client
 
             var initialContacts = config.GetStringList("initial-contacts", new string[] { }).Select(ActorPath.Parse).ToImmutableSortedSet();
 
-            TimeSpan? reconnectTimeout = config.GetString("reconnect-timeout", null).Equals("off")
-                ? null
-                : (TimeSpan?)config.GetTimeSpan("reconnect-timeout", null);
+            var useReconnect = config.GetString("reconnect-timeout", "").ToLowerInvariant();
+            TimeSpan? reconnectTimeout = 
+                useReconnect.Equals("off") ||
+                useReconnect.Equals("false") ||
+                useReconnect.Equals("no") ? 
+                    null : 
+                    (TimeSpan?)config.GetTimeSpan("reconnect-timeout", null);
 
             return new ClusterClientSettings(initialContacts,
                 config.GetTimeSpan("establishing-get-contacts-interval", null),

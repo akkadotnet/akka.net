@@ -60,10 +60,15 @@ namespace Akka.DistributedData.LightningDB
 
             _log = Context.GetLogger();
 
-            _writeBehindInterval = config.GetString("write-behind-interval", null) == "off" 
-                ? TimeSpan.Zero : config.GetTimeSpan("write-behind-interval", null);
+            var useWriteBehind = config.GetString("write-behind-interval", "").ToLowerInvariant();
+            _writeBehindInterval = 
+                useWriteBehind == "off" ||
+                useWriteBehind == "false" ||
+                useWriteBehind == "no" ? 
+                    TimeSpan.Zero : 
+                    config.GetTimeSpan("write-behind-interval", null);
 
-            var mapSize = config.GetByteSize("map-size");
+            var mapSize = config.GetByteSize("map-size", null);
             var dirPath = config.GetString("dir", null);
             if (dirPath.EndsWith("ddata"))
             {

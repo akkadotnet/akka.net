@@ -32,7 +32,7 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.False(config.IsNullOrEmpty());
             Assert.Equal("sharding", config.GetString("guardian-name", null));
             Assert.Equal(string.Empty, config.GetString("role", null));
-            Assert.False(config.GetBoolean("remember-entities"));
+            Assert.False(config.GetBoolean("remember-entities", false));
             Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("coordinator-failure-backoff", null));
             Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("retry-interval", null));
             Assert.Equal(100000, config.GetInt("buffer-size", 0));

@@ -41,7 +41,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     serializerIdColumnName: "serializer_id",
                     timeout: config.GetTimeSpan("connection-timeout", null),
                     defaultSerializer: config.GetString("serializer", null),
-                    useSequentialAccess: config.GetBoolean("use-sequential-access")))
+                    useSequentialAccess: config.GetBoolean("use-sequential-access", false)))
         {
         }
 

@@ -76,7 +76,7 @@ namespace Akka.Persistence.Sql.Common
             JournalTableName = config.GetString("table-name", null);
             MetaTableName = config.GetString("metadata-table-name", null);
             TimestampProvider = config.GetString("timestamp-provider", null);
-            AutoInitialize = config.GetBoolean("auto-initialize");
+            AutoInitialize = config.GetBoolean("auto-initialize", false);
         }
     }
 
@@ -137,7 +137,7 @@ namespace Akka.Persistence.Sql.Common
             ConnectionTimeout = config.GetTimeSpan("connection-timeout", null);
             SchemaName = config.GetString("schema-name", null);
             TableName = config.GetString("table-name", null);
-            AutoInitialize = config.GetBoolean("auto-initialize");
+            AutoInitialize = config.GetBoolean("auto-initialize", false);
             DefaultSerializer = config.GetString("serializer", null);
         }
 

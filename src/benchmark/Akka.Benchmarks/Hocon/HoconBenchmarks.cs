@@ -92,7 +92,7 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public bool Hocon_parse_resolve_boolean_value()
         {
-            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize");
+            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize", false);
         }
 
         [Benchmark]

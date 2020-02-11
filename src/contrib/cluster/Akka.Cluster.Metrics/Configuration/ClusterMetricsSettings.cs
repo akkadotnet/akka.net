@@ -34,9 +34,9 @@ namespace Akka.Cluster.Metrics.Configuration
             SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider", null);
             SupervisorStrategyConfiguration = _config.GetConfig("supervisor.strategy.configuration");
 
-            CollectorEnabled = _config.GetBoolean("collector.enabled");
+            CollectorEnabled = _config.GetBoolean("collector.enabled", false);
             CollectorProvider = _config.GetString("collector.provider", null);
-            CollectorFallback = _config.GetBoolean("collector.fallback");
+            CollectorFallback = _config.GetBoolean("collector.fallback", false);
             CollectorSampleInterval = 
                 Requiring(_config.GetTimeSpan("collector.sample-interval", null), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
 

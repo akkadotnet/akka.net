@@ -254,13 +254,17 @@ namespace Akka.Cluster.Sharding
             var role = config.GetString("role", null);
             if (role == string.Empty) role = null;
 
-            var passivateIdleAfter = config.GetString("passivate-idle-entity-after", null).ToLower() == "off" 
-                ? TimeSpan.Zero 
-                : config.GetTimeSpan("passivate-idle-entity-after");
+            var usePassivateIdle = config.GetString("passivate-idle-entity-after", "").ToLowerInvariant();
+            var passivateIdleAfter = 
+                usePassivateIdle.Equals("off") ||
+                usePassivateIdle.Equals("false") ||
+                usePassivateIdle.Equals("no")
+                    ? TimeSpan.Zero 
+                    : config.GetTimeSpan("passivate-idle-entity-after");
 
             return new ClusterShardingSettings(
                 role: role,
-                rememberEntities: config.GetBoolean("remember-entities"),
+                rememberEntities: config.GetBoolean("remember-entities", false),
                 journalPluginId: config.GetString("journal-plugin-id", null),
                 snapshotPluginId: config.GetString("snapshot-plugin-id", null),
                 passivateIdleEntityAfter: passivateIdleAfter,

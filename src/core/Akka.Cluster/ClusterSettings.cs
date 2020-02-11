@@ -36,7 +36,7 @@ namespace Akka.Cluster
             if (clusterConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster");
 
-            LogInfo = clusterConfig.GetBoolean("log-info");
+            LogInfo = clusterConfig.GetBoolean("log-info", false);
             _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
             FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class", null);
             HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
@@ -55,9 +55,14 @@ namespace Akka.Cluster
             PublishStatsInterval = clusterConfig.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
             var key = "down-removal-margin";
-            DownRemovalMargin = clusterConfig.GetString(key, null).ToLowerInvariant().Equals("off") 
-                ? TimeSpan.Zero
-                : clusterConfig.GetTimeSpan("down-removal-margin", null);
+            var useDownRemoval = clusterConfig.GetString(key, "");
+            DownRemovalMargin = 
+                (
+                    useDownRemoval.ToLowerInvariant().Equals("off") || 
+                    useDownRemoval.ToLowerInvariant().Equals("false") || 
+                    useDownRemoval.ToLowerInvariant().Equals("no")
+                ) ? TimeSpan.Zero : 
+                clusterConfig.GetTimeSpan("down-removal-margin", null);
 
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
@@ -71,11 +76,11 @@ namespace Akka.Cluster
             SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
             SchedulerTicksPerWheel = clusterConfig.GetInt("scheduler.ticks-per-wheel", 0);
 
-            MinNrOfMembersOfRole = clusterConfig.GetObject("role")
+            MinNrOfMembersOfRole = clusterConfig.GetObject("role", HoconObject.Empty)
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetField("min-nr-of-members").Value.GetInt());
 
-            VerboseHeartbeatLogging = clusterConfig.GetBoolean("debug.verbose-heartbeat-logging");
-            VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging");
+            VerboseHeartbeatLogging = clusterConfig.GetBoolean("debug.verbose-heartbeat-logging", false);
+            VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging", false);
 
             var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
             if (!string.IsNullOrEmpty(downingProviderClassName))
@@ -85,8 +90,8 @@ namespace Akka.Cluster
             else
                 DowningProviderType = typeof(NoDowning);
 
-            RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down");
-            AllowWeaklyUpMembers = clusterConfig.GetBoolean("allow-weakly-up-members");
+            RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
+            AllowWeaklyUpMembers = clusterConfig.GetBoolean("allow-weakly-up-members", false);
         }
 
         /// <summary>
