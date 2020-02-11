@@ -558,7 +558,10 @@ namespace Akka.Actor
         /// <returns>A map of all of the phases of the shutdown.</returns>
         internal static Dictionary<string, Phase> PhasesFromConfig(Config config)
         {
-            var defaultPhaseTimeout = config.GetString("default-phase-timeout");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException("Invalid phase configuration.");
+
+            var defaultPhaseTimeout = config.GetString("default-phase-timeout", null);
             var phasesConf = config.GetConfig("phases");
             var defaultPhaseConfig = ConfigurationFactory.ParseString($"timeout = {defaultPhaseTimeout}" + @"
                 recover = true
@@ -568,8 +571,8 @@ namespace Akka.Actor
             return phasesConf.Root.GetObject().ToDictionary(x => x.Key, v =>
              {
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
-                 var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();
-                 var timeout = c.GetTimeSpan("timeout", allowInfinite: false);
+                 var dependsOn = c.GetStringList("depends-on", new string[] { }).ToImmutableHashSet();
+                 var timeout = c.GetTimeSpan("timeout", null, allowInfinite: false);
                  var recover = c.GetBoolean("recover");
                  return new Phase(dependsOn, timeout, recover);
              });

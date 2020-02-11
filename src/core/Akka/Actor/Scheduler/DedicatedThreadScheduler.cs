@@ -68,8 +68,8 @@ namespace Akka.Actor
             if (SchedulerConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<DedicatedThreadScheduler>();
 
-            var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
+            var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
             var thread = new Thread(_ =>
             {
                 var allWork = new List<ScheduledWork>();

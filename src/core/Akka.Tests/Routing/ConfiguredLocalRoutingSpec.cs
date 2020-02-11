@@ -179,7 +179,7 @@ namespace Akka.Tests.Routing
 
             public override Routee Select(object message, Routee[] routees)
             {
-                return new MyRoutee(_config.GetString(message.ToString()));
+                return new MyRoutee(_config.GetString(message.ToString(), null));
             }
         }
 

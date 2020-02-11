@@ -274,7 +274,7 @@ namespace Akka.Actor.Internal
         private void LoadExtensions()
         {
             var extensions = new List<IExtensionId>();
-            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
+            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
                 var extensionType = Type.GetType(extensionFqn);
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)

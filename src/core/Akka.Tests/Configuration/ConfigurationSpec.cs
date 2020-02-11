@@ -21,7 +21,7 @@ namespace Akka.Tests.Configuration
 {
     public class ConfigurationSpec : AkkaSpec
     {
-        public ConfigurationSpec() : base(AkkaConfigurationFactory.Default())
+        public ConfigurationSpec() : base(AkkaConfigurationFactory.DefaultConfig)
         {
         }
 
