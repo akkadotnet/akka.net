@@ -197,6 +197,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             {
                 var config =
                     DistributedPubSubMediatorRouterConfig.GetConfig("random")
+                        .WithFallback(DistributedPubSub.DefaultConfig())
                         .WithFallback(Sys.Settings.Config)
                         .GetConfig("akka.cluster.pub-sub");
                 Assert.False(config.IsNullOrEmpty());

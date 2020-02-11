@@ -65,6 +65,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                                                 routingLogicName);
             }
 
+            // TODO: This will fail if DistributedPubSub.DefaultConfig() is not inside the fallback chain.
+            // TODO: "gossip-interval" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "removed-time-to-live" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "max-delta-elements" key depends on Config.GetInt() to return a 0 default.
             return new DistributedPubSubSettings(
                 config.GetString("role", null),
                 routingLogic,
