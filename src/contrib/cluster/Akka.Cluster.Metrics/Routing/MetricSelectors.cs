@@ -41,7 +41,7 @@ namespace Akka.Cluster.Metrics
             switch (selectorTypeName)
             {
                 case "mix": return MixMetricsSelector.Instance;
-                case "heap": return MemoryMetricsSelector.Instance;
+                case "memory": return MemoryMetricsSelector.Instance;
                 case "cpu": return CpuMetricsSelector.Instance;
                 default:
                     return DynamicAccess.CreateInstanceFor<IMetricsSelector>(selectorTypeName, config)
