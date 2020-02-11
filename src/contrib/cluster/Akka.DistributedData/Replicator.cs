@@ -705,8 +705,10 @@ namespace Akka.DistributedData
 
                 try
                 {
+                   
                     // DataEnvelope will mergeDelta when needed
                     var merged = envelope.Merge(writeEnvelope).AddSeen(_selfAddress);
+
                     return SetData(key, merged);
                 }
                 catch (ArgumentException e)
@@ -734,7 +736,7 @@ namespace Akka.DistributedData
         private void ReceiveGetKeyIds()
         {
             var keys = _dataEntries
-                .Where(kvp => !(kvp.Value.Item1.Data is DeletedData))
+                .Where(kvp => !(kvp.Value.envelope.Data is DeletedData))
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
             Sender.Tell(new GetKeysIdsResult(keys));
@@ -1266,7 +1268,6 @@ namespace Akka.DistributedData
             {
                 if (IsLeader)
                 {
-                    _log.Debug("Current leader - beginning pruning");
                     CollectRemovedNodes();
                     InitRemovedNodePruning();
                 }
@@ -1278,7 +1279,7 @@ namespace Akka.DistributedData
 
         private void CollectRemovedNodes()
         {
-            var knownNodes = _nodes.Union(_weaklyUpNodes).Union(_removedNodes.Keys.Select(x => x.Address));
+            var knownNodes = AllNodes.Union(_removedNodes.Keys.Select(x => x.Address));
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
@@ -1310,7 +1311,7 @@ namespace Akka.DistributedData
                 foreach (var entry in _dataEntries)
                 {
                     var key = entry.Key;
-                    var envelope = entry.Value.Item1;
+                    var envelope = entry.Value.envelope;
 
                     foreach (var removed in removedSet)
                     {
@@ -1343,7 +1344,6 @@ namespace Akka.DistributedData
         private void PerformRemovedNodePruning()
         {
             // perform pruning when all seen Init
-            var allNodes = _nodes.Union(_weaklyUpNodes);
             var prunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.PruningMarkerTimeToLive);
             var durablePrunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.DurablePruningMarkerTimeToLive);
 
@@ -1355,15 +1355,14 @@ namespace Akka.DistributedData
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.IsSubsetOf(init.Seen)))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
                             var newEnvelope = envelope.Prune(removed, isDurable ? durablePrunningPerformed : prunningPerformed);
                             _log.Debug("Perform pruning of [{0}] from [{1}] to [{2}]", key, removed, _selfUniqueAddress);
                             SetData(key, newEnvelope);
-
-                            if (!ReferenceEquals(newEnvelope.Data, data) && isDurable)
+                            if (!newEnvelope.Data.Equals(data) && isDurable)
                             {
                                 _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope), null));
                             }
@@ -1379,7 +1378,7 @@ namespace Akka.DistributedData
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
-                var envelope = entry.Value.Item1;
+                var envelope = entry.Value.envelope;
                 if (envelope.Data is IRemovedNodePruning)
                 {
                     var toRemove = envelope.Pruning
@@ -1427,7 +1426,6 @@ namespace Akka.DistributedData
                 get
                 {
                     var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
-                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes.Select(x => x.ToString())));
                     return allNodes;
                 }
             }

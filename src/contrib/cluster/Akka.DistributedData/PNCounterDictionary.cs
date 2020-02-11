@@ -21,7 +21,7 @@ namespace Akka.DistributedData
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    public sealed partial class PNCounterDictionary<TKey> :
+    public sealed class PNCounterDictionary<TKey> :
         IDeltaReplicatedData<PNCounterDictionary<TKey>, ORDictionary<TKey, PNCounter>.IDeltaOperation>,
         IRemovedNodePruning<PNCounterDictionary<TKey>>,
         IReplicatedDataSerialization,
@@ -81,8 +81,7 @@ namespace Akka.DistributedData
         /// </summary>
         public bool TryGetValue(TKey key, out BigInteger value)
         {
-            PNCounter counter;
-            if (_underlying.TryGetValue(key, out counter))
+            if (_underlying.TryGetValue(key, out var counter))
             {
                 value = counter.Value;
                 return true;
@@ -173,7 +172,7 @@ namespace Akka.DistributedData
 
         /// <inheritdoc/>
         public override bool Equals(object obj) =>
-            obj is PNCounterDictionary<TKey> && Equals((PNCounterDictionary<TKey>)obj);
+            obj is PNCounterDictionary<TKey> pairs && Equals(pairs);
 
         /// <inheritdoc/>
         public override int GetHashCode() => _underlying.GetHashCode();
@@ -192,15 +191,74 @@ namespace Akka.DistributedData
 
         #region delta 
 
-        public ORDictionary<TKey, PNCounter>.IDeltaOperation Delta => _underlying.Delta;
+        internal sealed class PNCounterDictionaryDelta : ORDictionary<TKey, PNCounter>.IDeltaOperation, IReplicatedDeltaSize
+        {
+            internal readonly ORDictionary<TKey, PNCounter>.IDeltaOperation Underlying;
 
-        public PNCounterDictionary<TKey> MergeDelta(ORDictionary<TKey, PNCounter>.IDeltaOperation delta) =>
-            new PNCounterDictionary<TKey>(_underlying.MergeDelta(delta));
+            public PNCounterDictionaryDelta(ORDictionary<TKey, PNCounter>.IDeltaOperation underlying)
+            {
+                Underlying = underlying;
+                if (underlying is IReplicatedDeltaSize s)
+                {
+                    DeltaSize = s.DeltaSize;
+                }
+                else
+                {
+                    DeltaSize = 1;
+                }
+            }
+
+            public IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is PNCounterDictionaryDelta d)
+                {
+                    return new PNCounterDictionaryDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation)Underlying.Merge(d.Underlying));
+                }
+
+                return new PNCounterDictionaryDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation)Underlying.Merge(other));
+            }
+
+            public IDeltaReplicatedData Zero => PNCounterDictionary<TKey>.Empty;
+            public bool Equals(ORDictionary<TKey, PNCounter>.IDeltaOperation other)
+            {
+                return Underlying.Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return Underlying.GetHashCode();
+            }
+
+            public int DeltaSize { get; }
+        }
+
+        // TODO: optimize this so it doesn't allocate each time it's called
+        public ORDictionary<TKey, PNCounter>.IDeltaOperation Delta => new PNCounterDictionaryDelta(_underlying.Delta);
+
+        public PNCounterDictionary<TKey> MergeDelta(ORDictionary<TKey, PNCounter>.IDeltaOperation delta)
+        {
+            switch (delta)
+            {
+                case PNCounterDictionaryDelta d:
+                    return new PNCounterDictionary<TKey>(_underlying.MergeDelta(d.Underlying));
+                default:
+                    return new PNCounterDictionary<TKey>(_underlying.MergeDelta(delta));
+            }
+        }
+            
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
-        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
-            MergeDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation)delta);
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta)
+        {
+            switch (delta)
+            {
+                case PNCounterDictionaryDelta d:
+                    return MergeDelta(d.Underlying);
+                default:
+                    return MergeDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation)delta);
+            }
+        }
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
