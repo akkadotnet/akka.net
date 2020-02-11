@@ -29,7 +29,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             EnableBatching = hocon.GetBoolean("enabled", true);
             MaxPendingWrites = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
-            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes") ?? DefaultMaxPendingBytes;
+            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes", null) ?? DefaultMaxPendingBytes;
             FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
         }
 

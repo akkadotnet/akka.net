@@ -45,36 +45,36 @@ namespace Akka.Remote
             }
 
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
-            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new List<string>()));
+            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new string[] { }));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", null) ?? "DEBUG";
             Dispatcher = config.GetString("akka.remote.use-dispatcher", null);
             if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase)) RemoteLifecycleEventsLogLevel = "DEBUG";
-            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
-            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
-            TransportNames = config.GetStringList("akka.remote.enabled-transports", new List<string>());
+            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", null);
+            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout", null);
+            TransportNames = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
-            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval");
+            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval", null);
             RetryGateClosedFor = config.GetTimeSpan("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size", 0);
-            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval");
+            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval", null);
             SysResendLimit = config.GetInt("akka.remote.resend-limit", 0);
-            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout");
-            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence");
-            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout");
-            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after");
+            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout", null);
+            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence", null);
+            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout", null);
+            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after", null);
 
-            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout");
-            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout");
+            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout", null);
+            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout", null);
 
             WatchFailureDetectorConfig = config.GetConfig("akka.remote.watch-failure-detector");
             WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class", null);
-            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
-            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
-            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after");
+            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
+            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
+            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after", null);
         }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace Akka.Remote
                     throw ConfigurationException.NullOrEmptyConfig<TransportSettings>();
 
                 TransportClass = config.GetString("transport-class", null);
-                Adapters = config.GetStringList("applied-adapters", new List<string>()).Reverse().ToList();
+                Adapters = config.GetStringList("applied-adapters", new string[] { }).Reverse().ToList();
                 Config = config;
             }
 

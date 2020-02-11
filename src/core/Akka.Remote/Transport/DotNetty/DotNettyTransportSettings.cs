@@ -305,7 +305,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
             else
             {
-                var flagsRaw = config.GetStringList("certificate.flags", new List<string>());
+                var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(

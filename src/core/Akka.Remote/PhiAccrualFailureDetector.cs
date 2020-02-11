@@ -87,9 +87,9 @@ namespace Akka.Remote
 
             _threshold = config.GetDouble("threshold", 0);
             _maxSampleSize = config.GetInt("max-sample-size", 0);
-            _minStdDeviation = config.GetTimeSpan("min-std-deviation");
-            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause");
-            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval");
+            _minStdDeviation = config.GetTimeSpan("min-std-deviation", null);
+            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause", null);
+            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval", null);
             state = new State(FirstHeartBeat, null);
         }
 

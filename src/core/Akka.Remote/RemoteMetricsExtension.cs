@@ -28,7 +28,7 @@ namespace Akka.Remote
         public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
         {
             // TODO: Need to assert that config key exists
-            if (system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding").ToLowerInvariant() == "off")
+            if (system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", null).ToLowerInvariant() == "off")
             {
                 return new RemoteMetricsOff();
             }

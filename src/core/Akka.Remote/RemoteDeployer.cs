@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Collections.Generic;
 using Akka.Actor;
 using Hocon;
 using Akka.Configuration;
@@ -44,7 +45,7 @@ namespace Akka.Remote
             var deploy = base.ParseConfig(key, config);
             if (deploy == null) return null;
 
-            var remote = deploy.Config.GetString("remote");
+            var remote = deploy.Config.GetString("remote", null);
 
             ActorPath actorPath;
             if(ActorPath.TryParse(remote, out actorPath))
@@ -62,7 +63,7 @@ namespace Akka.Remote
 
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {
-            var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse).ToList();
+            var nodes = deploy.Config.GetStringList("target.nodes", new string[] { }).Select(Address.Parse).ToList();
             if (nodes.Any() && deploy.RouterConfig != null)
             {
                 if (deploy.RouterConfig is Pool)
