@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tools.Client
             }
             else
             {
-                var name = _config.GetString("name", null);
+                var name = _config.GetString("name");
                 var dispatcher = _config.GetString("use-dispatcher", null);
                 if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 

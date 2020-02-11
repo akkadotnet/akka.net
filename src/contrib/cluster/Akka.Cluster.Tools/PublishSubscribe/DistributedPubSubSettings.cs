@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Hocon;
-using Akka.Configuration;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -47,7 +46,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 throw ConfigurationException.NullOrEmptyConfig<DistributedPubSubSettings>();
 
             RoutingLogic routingLogic = null;
-            var routingLogicName = config.GetString("routing-logic", null);
+            var routingLogicName = config.GetString("routing-logic");
             switch (routingLogicName)
             {
                 case "random":
@@ -69,9 +68,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return new DistributedPubSubSettings(
                 config.GetString("role", null),
                 routingLogic,
-                config.GetTimeSpan("gossip-interval", null),
-                config.GetTimeSpan("removed-time-to-live", null),
-                config.GetInt("max-delta-elements", 0));
+                config.GetTimeSpan("gossip-interval"),
+                config.GetTimeSpan("removed-time-to-live"),
+                config.GetInt("max-delta-elements"));
         }
 
         /// <summary>

@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 using Akka.Routing;
 

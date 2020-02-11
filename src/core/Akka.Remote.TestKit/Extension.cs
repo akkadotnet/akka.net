@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Hocon;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote.TestKit.Internals;
 using Akka.Util.Internal;

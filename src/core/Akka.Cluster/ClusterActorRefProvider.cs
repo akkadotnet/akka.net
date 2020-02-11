@@ -12,7 +12,6 @@ using Akka.Annotations;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Routing;
 using Hocon;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Remote.Routing;

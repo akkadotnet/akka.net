@@ -16,7 +16,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
@@ -59,7 +58,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Initializes a new instance of the <see cref="ReplayFilterSettings" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the replay filter.</param>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the specified <paramref name="config"/>.
         /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
         /// </exception>
@@ -79,7 +78,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
                 case "fail": mode = ReplayFilterMode.Fail; break;
                 case "warn": mode = ReplayFilterMode.Warn; break;
-                default: throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]");
+                default: throw new ConfigurationException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]");
             }
 
             Mode = mode;
@@ -237,7 +236,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown for a couple of reasons.
         /// <ul>
         /// <li>A connection string for the SQL event journal was not specified.</li>
@@ -266,7 +265,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 #endif
 
             if (string.IsNullOrWhiteSpace(connectionString))
-                throw new Akka.Configuration.ConfigurationException("No connection string for Sql Event Journal was specified");
+                throw new ConfigurationException("No connection string for Sql Event Journal was specified");
 
             IsolationLevel level;
             switch (config.GetString("isolation-level", "unspecified"))
@@ -278,7 +277,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "serializable": level = IsolationLevel.Serializable; break;
                 case "snapshot": level = IsolationLevel.Snapshot; break;
                 case "unspecified": level = IsolationLevel.Unspecified; break;
-                default: throw new Akka.Configuration.ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
+                default: throw new ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
             }
 
             ConnectionString = connectionString;

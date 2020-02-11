@@ -12,7 +12,6 @@ using Hocon;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Configuration;
-using ConfigurationException = Akka.Configuration.ConfigurationException;
 
 namespace Akka.Actor
 {

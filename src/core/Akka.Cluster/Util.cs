@@ -110,8 +110,8 @@ namespace Akka.Cluster
         {
             TimeSpan? ret = null;
             var useTimeSpanOffSwitch = @this.GetString(key, "");
-            if (useTimeSpanOffSwitch.ToLower() != "off" ||
-                useTimeSpanOffSwitch.ToLower() != "false" ||
+            if (useTimeSpanOffSwitch.ToLower() != "off" &&
+                useTimeSpanOffSwitch.ToLower() != "false" &&
                 useTimeSpanOffSwitch.ToLower() != "no")
                 ret = @this.GetTimeSpan(key, null);
             return ret;

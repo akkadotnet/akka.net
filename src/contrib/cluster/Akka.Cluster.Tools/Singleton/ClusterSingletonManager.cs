@@ -13,7 +13,6 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote;

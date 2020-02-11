@@ -9,9 +9,6 @@ using System;
 using Akka.Actor;
 using Hocon;
 using Akka.Dispatch.MessageQueues;
-using Akka.Event;
-using Akka.Configuration;
-using Helios.Concurrency;
 
 namespace Akka.Dispatch
 {

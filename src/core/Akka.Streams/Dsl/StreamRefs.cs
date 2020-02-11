@@ -9,12 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Hocon;
-using Akka.Configuration;
-using Akka.Event;
-using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.StreamRef;
-using Akka.Streams.Stage;
-using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {

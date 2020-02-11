@@ -9,7 +9,6 @@ using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Hocon;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;

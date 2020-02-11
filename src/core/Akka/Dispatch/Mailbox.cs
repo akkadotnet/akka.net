@@ -11,7 +11,6 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;

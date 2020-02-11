@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
+using Hocon;
 
 namespace Akka.Persistence.Journal
 {
@@ -38,7 +39,7 @@ namespace Akka.Persistence.Journal
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> context.
         /// </exception>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
         /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
         /// </exception>
@@ -73,7 +74,7 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
+                    throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
             _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);

@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Cluster.Tools.Client
@@ -49,11 +48,11 @@ namespace Akka.Cluster.Tools.Client
 
             return new ClusterReceptionistSettings(
                 role,
-                config.GetInt("number-of-contacts", 0),
-                config.GetTimeSpan("response-tunnel-receive-timeout", null),
-                config.GetTimeSpan("heartbeat-interval", null),
-                config.GetTimeSpan("acceptable-heartbeat-pause", null),
-                config.GetTimeSpan("failure-detection-interval", null));
+                config.GetInt("number-of-contacts"),
+                config.GetTimeSpan("response-tunnel-receive-timeout"),
+                config.GetTimeSpan("heartbeat-interval"),
+                config.GetTimeSpan("acceptable-heartbeat-pause"),
+                config.GetTimeSpan("failure-detection-interval"));
         }
 
         /// <summary>

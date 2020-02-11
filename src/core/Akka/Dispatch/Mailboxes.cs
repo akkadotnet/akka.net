@@ -15,7 +15,6 @@ using Hocon;
 using Akka.Util.Reflection;
 using Akka.Dispatch.MessageQueues;
 using Akka.Event;
-using ConfigurationException = Akka.Configuration.ConfigurationException;
 
 namespace Akka.Dispatch
 {

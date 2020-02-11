@@ -10,9 +10,9 @@ using Akka.Actor;
 using Akka.Cluster.Metrics.Collectors;
 using Akka.Cluster.Metrics.Configuration;
 using Akka.Cluster.Metrics.Helpers;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
+using Hocon;
 
 namespace Akka.Cluster.Metrics
 {

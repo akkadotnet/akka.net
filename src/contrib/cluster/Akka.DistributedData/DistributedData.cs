@@ -12,7 +12,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 
 namespace Akka.DistributedData

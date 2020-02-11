@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
@@ -1026,7 +1025,7 @@ namespace Akka.IO
                     {
                         context.System.EventStream.Publish(new Debug(child.Path.ToString(), GetType(), "Closed after handler termination"));
                     }
-                    catch (Exception _) { }
+                    catch (Exception) { }
                 }
                 else base.LogFailure(context, child, cause, directive);
             }

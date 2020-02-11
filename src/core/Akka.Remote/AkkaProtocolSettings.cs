@@ -7,7 +7,6 @@
 
 using System;
 using Hocon;
-using Akka.Configuration;
 
 namespace Akka.Remote
 {

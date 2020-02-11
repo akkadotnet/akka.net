@@ -260,8 +260,8 @@ namespace Akka.Cluster.Sharding
 
             _guardian = new Lazy<IActorRef>(() =>
             {
-                var guardianName = system.Settings.Config.GetString("akka.cluster.sharding.guardian-name", null);
-                var dispatcher = system.Settings.Config.GetString("akka.cluster.sharding.use-dispatcher", null);
+                var guardianName = system.Settings.Config.GetString("akka.cluster.sharding.guardian-name");
+                var dispatcher = system.Settings.Config.GetString("akka.cluster.sharding.use-dispatcher");
                 if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
                 return system.SystemActorOf(Props.Create(() => new ClusterShardingGuardian()).WithDispatcher(dispatcher), guardianName);
             });

@@ -6,7 +6,6 @@
 // //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
 using Hocon;
 
 namespace Akka.Cluster.Metrics.Configuration
@@ -27,16 +26,16 @@ namespace Akka.Cluster.Metrics.Configuration
             if (_config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterMetricsSettings>("akka.cluster.metrics");
 
-            MetricsDispatcher = _config.GetString("dispatcher", null);
-            PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay", null);
+            MetricsDispatcher = _config.GetString("dispatcher");
+            PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay");
 
-            SupervisorName = _config.GetString("supervisor.name", null);
-            SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider", null);
+            SupervisorName = _config.GetString("supervisor.name");
+            SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider");
             SupervisorStrategyConfiguration = _config.GetConfig("supervisor.strategy.configuration");
 
-            CollectorEnabled = _config.GetBoolean("collector.enabled", false);
-            CollectorProvider = _config.GetString("collector.provider", null);
-            CollectorFallback = _config.GetBoolean("collector.fallback", false);
+            CollectorEnabled = _config.GetBoolean("collector.enabled");
+            CollectorProvider = _config.GetString("collector.provider");
+            CollectorFallback = _config.GetBoolean("collector.fallback");
             CollectorSampleInterval = 
                 Requiring(_config.GetTimeSpan("collector.sample-interval", null), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
 

@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Hocon;
 using Akka.Remote;
 
@@ -56,14 +55,14 @@ namespace Akka.Cluster.Tools.Client
                 useReconnect.Equals("false") ||
                 useReconnect.Equals("no") ? 
                     null : 
-                    (TimeSpan?)config.GetTimeSpan("reconnect-timeout", null);
+                    (TimeSpan?)config.GetTimeSpan("reconnect-timeout");
 
             return new ClusterClientSettings(initialContacts,
-                config.GetTimeSpan("establishing-get-contacts-interval", null),
-                config.GetTimeSpan("refresh-contacts-interval", null),
-                config.GetTimeSpan("heartbeat-interval", null),
-                config.GetTimeSpan("acceptable-heartbeat-pause", null),
-                config.GetInt("buffer-size", 0),
+                config.GetTimeSpan("establishing-get-contacts-interval"),
+                config.GetTimeSpan("refresh-contacts-interval"),
+                config.GetTimeSpan("heartbeat-interval"),
+                config.GetTimeSpan("acceptable-heartbeat-pause"),
+                config.GetInt("buffer-size"),
                 reconnectTimeout);
         }
 
