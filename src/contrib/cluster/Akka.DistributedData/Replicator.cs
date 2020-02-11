@@ -694,19 +694,26 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
+            _log.Debug("Checking data for [{0}:{1}]", key, writeEnvelope);
             var envelope = GetData(key);
             if (envelope != null)
             {
                 if (envelope.Equals(writeEnvelope))
                 {
+                    _log.Debug("Determined local data {0} and remote data {1} were equal.", envelope, writeEnvelope);
                     return envelope;
                 }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
 
                 try
                 {
+                   
                     // DataEnvelope will mergeDelta when needed
                     var merged = envelope.Merge(writeEnvelope).AddSeen(_selfAddress);
+
+                    _log.Debug("Determined local data {0} and remote data {1} were different.", envelope, writeEnvelope);
+                    _log.Debug("Merged into {0}", merged);
+
                     return SetData(key, merged);
                 }
                 catch (ArgumentException e)
