@@ -185,6 +185,18 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("pruning-done");
 
+            void UpdateAfterPruning(ulong expectedValue)
+            {
+                // inject data from removed node to simulate bad data
+                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
+                ExpectMsg<UpdateSuccess>(msg =>
+                {
+                    _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
+                    var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);
+                    retrieved.Value.Should().Be(expectedValue);
+                });
+            }
+
             RunOn(() => UpdateAfterPruning(expectedValue: 10), First);
             EnterBarrier("update-first-after-pruning");
 
@@ -205,20 +217,6 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
-
-        /// <summary>
-        /// On one of the nodes the data has been updated by the pruning, client can update anyway
-        /// </summary>
-        private void UpdateAfterPruning(ulong expectedValue)
-        {
-            _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
-            ExpectMsg<UpdateSuccess>(msg =>
-            {
-                _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
-                var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);
-                retrieved.Value.Should().Be(expectedValue);
-            });
-        }
 
         private void Join(RoleName from, RoleName to)
         {
