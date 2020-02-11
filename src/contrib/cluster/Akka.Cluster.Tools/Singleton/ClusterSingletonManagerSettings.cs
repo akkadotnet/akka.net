@@ -46,10 +46,10 @@ namespace Akka.Cluster.Tools.Singleton
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonManagerSettings>();
 
             return new ClusterSingletonManagerSettings(
-                singletonName: config.GetString("singleton-name"),
-                role: RoleOption(config.GetString("role")),
+                singletonName: config.GetString("singleton-name", null),
+                role: RoleOption(config.GetString("role", null)),
                 removalMargin: TimeSpan.Zero, // defaults to ClusterSettings.DownRemovalMargin
-                handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
+                handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval", null));
         }
 
         private static string RoleOption(string role)

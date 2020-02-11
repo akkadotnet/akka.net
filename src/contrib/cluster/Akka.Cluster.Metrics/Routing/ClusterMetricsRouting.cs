@@ -317,7 +317,7 @@ namespace Akka.Cluster.Metrics
         /// Creates new instance of <see cref="AdaptiveLoadBalancingGroup"/> from provided configuration
         /// </summary>
         public AdaptiveLoadBalancingGroup(Config config)
-            : this(MetricsSelectorBuilder.BuildFromConfig(config), paths: config.GetStringList("routees.paths"))
+            : this(MetricsSelectorBuilder.BuildFromConfig(config), paths: config.GetStringList("routees.paths", new string[] { }))
         {
         }
         

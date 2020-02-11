@@ -151,7 +151,7 @@ namespace Akka.Cluster.Sharding.Tests
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";

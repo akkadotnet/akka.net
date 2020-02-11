@@ -60,11 +60,11 @@ namespace Akka.DistributedData.LightningDB
 
             _log = Context.GetLogger();
 
-            _writeBehindInterval = config.GetString("write-behind-interval") == "off" 
-                ? TimeSpan.Zero : config.GetTimeSpan("write-behind-interval");
+            _writeBehindInterval = config.GetString("write-behind-interval", null) == "off" 
+                ? TimeSpan.Zero : config.GetTimeSpan("write-behind-interval", null);
 
             var mapSize = config.GetByteSize("map-size");
-            var dirPath = config.GetString("dir");
+            var dirPath = config.GetString("dir", null);
             if (dirPath.EndsWith("ddata"))
             {
                 dirPath = $"path-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}";

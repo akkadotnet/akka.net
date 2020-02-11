@@ -42,7 +42,7 @@ namespace Akka.DistributedData
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 
             var durableConfig = config.GetConfig("durable");
-            var durableKeys = durableConfig.GetStringList("keys", new List<string>());
+            var durableKeys = durableConfig.GetStringList("keys", new string[] { });
             Props durableStoreProps = Props.Empty;
             var durableStoreTypeName = durableConfig.GetString("store-actor-class", null);
             var isDurableStoreConfigured = !string.IsNullOrEmpty(durableStoreTypeName);
@@ -58,16 +58,16 @@ namespace Akka.DistributedData
 
             return new ReplicatorSettings(
                 role: config.GetString("role", null),
-                gossipInterval: config.GetTimeSpan("gossip-interval"),
-                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval"),
+                gossipInterval: config.GetTimeSpan("gossip-interval", null),
+                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval", null),
                 maxDeltaElements: config.GetInt("max-delta-elements", 0),
                 dispatcher: dispatcher,
-                pruningInterval: config.GetTimeSpan("pruning-interval"),
-                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"),
+                pruningInterval: config.GetTimeSpan("pruning-interval", null),
+                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination", null),
                 durableKeys: durableKeys.ToImmutableHashSet(),
                 durableStoreProps: durableStoreProps,
-                pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live"),
-                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"),
+                pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", null),
+                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", null),
                 maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 0));
         }
 

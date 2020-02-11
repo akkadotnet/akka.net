@@ -42,8 +42,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
             Assert.False(config.IsNullOrEmpty());
-            config.GetString("name").ShouldBe("distributedPubSubMediator");
-            config.GetString("use-dispatcher").ShouldBe(string.Empty);
+            config.GetString("name", null).ShouldBe("distributedPubSubMediator");
+            config.GetString("use-dispatcher", null).ShouldBe(string.Empty);
         }
 
         [Fact]

@@ -50,10 +50,10 @@ namespace Akka.Cluster.Tools.Client
             return new ClusterReceptionistSettings(
                 role,
                 config.GetInt("number-of-contacts", 0),
-                config.GetTimeSpan("response-tunnel-receive-timeout"),
-                config.GetTimeSpan("heartbeat-interval"),
-                config.GetTimeSpan("acceptable-heartbeat-pause"),
-                config.GetTimeSpan("failure-detection-interval"));
+                config.GetTimeSpan("response-tunnel-receive-timeout", null),
+                config.GetTimeSpan("heartbeat-interval", null),
+                config.GetTimeSpan("acceptable-heartbeat-pause", null),
+                config.GetTimeSpan("failure-detection-interval", null));
         }
 
         /// <summary>

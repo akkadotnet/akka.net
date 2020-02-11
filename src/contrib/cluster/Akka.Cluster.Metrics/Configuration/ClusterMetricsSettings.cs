@@ -27,23 +27,23 @@ namespace Akka.Cluster.Metrics.Configuration
             if (_config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterMetricsSettings>("akka.cluster.metrics");
 
-            MetricsDispatcher = _config.GetString("dispatcher");
-            PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay");
+            MetricsDispatcher = _config.GetString("dispatcher", null);
+            PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay", null);
 
-            SupervisorName = _config.GetString("supervisor.name");
-            SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider");
+            SupervisorName = _config.GetString("supervisor.name", null);
+            SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider", null);
             SupervisorStrategyConfiguration = _config.GetConfig("supervisor.strategy.configuration");
 
             CollectorEnabled = _config.GetBoolean("collector.enabled");
-            CollectorProvider = _config.GetString("collector.provider");
+            CollectorProvider = _config.GetString("collector.provider", null);
             CollectorFallback = _config.GetBoolean("collector.fallback");
             CollectorSampleInterval = 
-                Requiring(_config.GetTimeSpan("collector.sample-interval"), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
+                Requiring(_config.GetTimeSpan("collector.sample-interval", null), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
 
             CollectorGossipInterval = 
-                Requiring(_config.GetTimeSpan("collector.gossip-interval"), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
+                Requiring(_config.GetTimeSpan("collector.gossip-interval", null), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
             CollectorMovingAverageHalfLife = 
-                Requiring(_config.GetTimeSpan("collector.moving-average-half-life"), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
+                Requiring(_config.GetTimeSpan("collector.moving-average-half-life", null), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
         }
 
         /// <summary>

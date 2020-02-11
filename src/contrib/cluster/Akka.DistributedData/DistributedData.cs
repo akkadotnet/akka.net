@@ -70,7 +70,7 @@ namespace Akka.DistributedData
             }
             else
             {
-                var name = config.GetString("name");
+                var name = config.GetString("name", null);
                 Replicator = system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);
             }
         }

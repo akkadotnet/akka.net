@@ -69,8 +69,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return new DistributedPubSubSettings(
                 config.GetString("role", null),
                 routingLogic,
-                config.GetTimeSpan("gossip-interval"),
-                config.GetTimeSpan("removed-time-to-live"),
+                config.GetTimeSpan("gossip-interval", null),
+                config.GetTimeSpan("removed-time-to-live", null),
                 config.GetInt("max-delta-elements", 0));
         }
 

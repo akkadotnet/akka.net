@@ -131,7 +131,7 @@ namespace Akka.DistributedData.Serialization
 
         public ReplicatorMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
+            var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live", null);
             readCache = new SmallCache<Read, byte[]>(4, cacheTtl, Serialize);
             writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, Serialize);
 

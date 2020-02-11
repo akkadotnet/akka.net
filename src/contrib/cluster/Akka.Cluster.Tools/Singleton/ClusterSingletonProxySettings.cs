@@ -49,7 +49,7 @@ namespace Akka.Cluster.Tools.Singleton
             return new ClusterSingletonProxySettings(
                 singletonName: config.GetString("singleton-name", null),
                 role: role,
-                singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
+                singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval", null),
                 bufferSize: config.GetInt("buffer-size", 0));
         }
 

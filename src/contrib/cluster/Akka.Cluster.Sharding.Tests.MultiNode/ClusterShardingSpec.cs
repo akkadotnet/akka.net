@@ -409,7 +409,7 @@ namespace Akka.Cluster.Sharding.Tests
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";

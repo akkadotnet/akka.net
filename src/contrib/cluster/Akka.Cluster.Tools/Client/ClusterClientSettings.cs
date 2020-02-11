@@ -48,17 +48,17 @@ namespace Akka.Cluster.Tools.Client
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterClientSettings>();
 
-            var initialContacts = config.GetStringList("initial-contacts", new List<string>()).Select(ActorPath.Parse).ToImmutableSortedSet();
+            var initialContacts = config.GetStringList("initial-contacts", new string[] { }).Select(ActorPath.Parse).ToImmutableSortedSet();
 
             TimeSpan? reconnectTimeout = config.GetString("reconnect-timeout", null).Equals("off")
                 ? null
-                : (TimeSpan?)config.GetTimeSpan("reconnect-timeout");
+                : (TimeSpan?)config.GetTimeSpan("reconnect-timeout", null);
 
             return new ClusterClientSettings(initialContacts,
-                config.GetTimeSpan("establishing-get-contacts-interval"),
-                config.GetTimeSpan("refresh-contacts-interval"),
-                config.GetTimeSpan("heartbeat-interval"),
-                config.GetTimeSpan("acceptable-heartbeat-pause"),
+                config.GetTimeSpan("establishing-get-contacts-interval", null),
+                config.GetTimeSpan("refresh-contacts-interval", null),
+                config.GetTimeSpan("heartbeat-interval", null),
+                config.GetTimeSpan("acceptable-heartbeat-pause", null),
                 config.GetInt("buffer-size", 0),
                 reconnectTimeout);
         }

@@ -20,7 +20,7 @@ namespace Akka.Cluster.Metrics
         public ClusterMetricsStrategy(Config config)
             : base(
                 maxNrOfRetries: config.GetInt("maxNrOfRetries", 0), 
-                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange").TotalMilliseconds, 
+                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange", null).TotalMilliseconds, 
                 loggingEnabled: config.GetBoolean("loggingEnabled"),
                 localOnlyDecider: MetricsDecider)
         {

@@ -99,8 +99,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IActorRef CreateMediator()
         {
-            var name = _system.Settings.Config.GetString("akka.cluster.pub-sub.name");
-            var dispatcher = _system.Settings.Config.GetString("akka.cluster.pub-sub.use-dispatcher");
+            var name = _system.Settings.Config.GetString("akka.cluster.pub-sub.name", null);
+            var dispatcher = _system.Settings.Config.GetString("akka.cluster.pub-sub.use-dispatcher", null);
             if (string.IsNullOrEmpty(dispatcher))
                 dispatcher = Dispatchers.DefaultDispatcherId;
 

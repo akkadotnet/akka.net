@@ -98,13 +98,13 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public TimeSpan Hocon_parse_resolve_TimeSpan_value()
         {
-            return fallback1.GetTimeSpan("akka.actor.ask-timeout");
+            return fallback1.GetTimeSpan("akka.actor.ask-timeout", null);
         }
 
         [Benchmark]
         public IEnumerable<string> Hocon_parse_resolve_string_list_value()
         {
-            return fallback1.GetStringList("akka.cluster.seed-nodes", new List<string>());
+            return fallback1.GetStringList("akka.cluster.seed-nodes", new string[] { });
         }
 
         [Benchmark]

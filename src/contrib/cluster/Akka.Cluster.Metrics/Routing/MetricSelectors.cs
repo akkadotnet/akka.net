@@ -38,7 +38,7 @@ namespace Akka.Cluster.Metrics
         /// <returns></returns>
         public static IMetricsSelector BuildFromConfig(Config config)
         {
-            var selectorTypeName = config.GetString("metrics-selector");
+            var selectorTypeName = config.GetString("metrics-selector", null);
             switch (selectorTypeName)
             {
                 case "mix": return MixMetricsSelector.Instance;
