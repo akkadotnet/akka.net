@@ -21,9 +21,14 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public static ReplicatorSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data") ??
-                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>("akka.cluster.distributed-data"));
+        public static ReplicatorSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.cluster.distributed-data");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>("akka.cluster.distributed-data");
+
+            return Create(config);
+        }
 
         /// <summary>
         /// Create settings from a configuration with the same layout as
@@ -35,14 +40,14 @@ namespace Akka.DistributedData
         public static ReplicatorSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>("akka.cluster.distributed-data");
+                throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>();
 
             var dispatcher = config.GetString("use-dispatcher", null);
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 
             var durableConfig = config.GetConfig("durable");
-            var durableKeys = durableConfig.GetStringList("keys", new string[] { });
-            Props durableStoreProps = Props.Empty;
+            var durableKeys = durableConfig.GetStringList("keys");
+            var durableStoreProps = Props.Empty;
             var durableStoreTypeName = durableConfig.GetString("store-actor-class", null);
             var isDurableStoreConfigured = !string.IsNullOrEmpty(durableStoreTypeName);
             if (durableKeys.Count != 0)
@@ -52,22 +57,24 @@ namespace Akka.DistributedData
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
                 }
-                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher", null));
+                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher"));
             }
 
+            // TODO: This constructor call fails when these fields are not populated inside the Config object:
+            // TODO: `pruning-marker-time-to-live` key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
             return new ReplicatorSettings(
-                role: config.GetString("role", null),
-                gossipInterval: config.GetTimeSpan("gossip-interval", null),
-                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval", null),
-                maxDeltaElements: config.GetInt("max-delta-elements", 0),
+                role: config.GetString("role"),
+                gossipInterval: config.GetTimeSpan("gossip-interval"),
+                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval"),
+                maxDeltaElements: config.GetInt("max-delta-elements"),
                 dispatcher: dispatcher,
-                pruningInterval: config.GetTimeSpan("pruning-interval", null),
-                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination", null),
+                pruningInterval: config.GetTimeSpan("pruning-interval"),
+                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"),
                 durableKeys: durableKeys.ToImmutableHashSet(),
                 durableStoreProps: durableStoreProps,
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", null),
-                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", null),
-                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 0));
+                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"),
+                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size"));
         }
 
         /// <summary>
