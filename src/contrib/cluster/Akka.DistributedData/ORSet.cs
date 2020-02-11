@@ -349,7 +349,7 @@ namespace Akka.DistributedData
             if (pruned.IsEmpty) return new ORSet<T>(ElementsMap, _versionVector.Prune(removedNode, collapseInto));
             else
             {
-                var newSet = new ORSet<T>(ElementsMap.AddRange(pruned), _versionVector.Prune(removedNode, collapseInto));
+                var newSet = new ORSet<T>(ElementsMap.SetItems(pruned), _versionVector.Prune(removedNode, collapseInto));
                 return pruned.Keys.Aggregate(newSet, (set, elem) => set.Add(collapseInto, elem));
             }
         }

@@ -35,11 +35,21 @@ namespace Akka.DistributedData.Tests
             d2.Pruning[node1].Should().BeOfType<PruningInitialized>();
             ((PruningInitialized)d2.Pruning[node1]).Owner.Should().Be(node2);
 
+            // bug check for https://github.com/akkadotnet/akka.net/issues/4200
+            var merged = d1.Merge(d2);
+            merged.Data.As<GCounter>().Value.Should().Be(1);
+
             var d3 = d2.AddSeen(node3.Address);
             ((PruningInitialized)d3.Pruning[node1]).Seen.Should().BeEquivalentTo(node3.Address);
 
             var d4 = d3.Prune(node1, new PruningPerformed(obsoleteTimeInFuture));
             ((GCounter)d4.Data).ModifiedByNodes.Should().BeEquivalentTo(node2);
+
+            // bug check for https://github.com/akkadotnet/akka.net/issues/4200
+            var merged2 = d2.Merge(d4);
+            merged2.Data.As<GCounter>().Value.Should().Be(1);
+            merged2.NeedPruningFrom(node1).Should().BeFalse();
+            merged2.Pruning[node1].Should().BeOfType<PruningPerformed>();
         }
 
         [Fact]
