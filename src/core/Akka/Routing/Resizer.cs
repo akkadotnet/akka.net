@@ -57,7 +57,7 @@ namespace Akka.Routing
         {
             var defaultResizerConfig = parentConfig.GetConfig("resizer");
 
-            if (!defaultResizerConfig.IsNullOrEmpty() && defaultResizerConfig.GetBoolean("enabled"))
+            if (!defaultResizerConfig.IsNullOrEmpty() && defaultResizerConfig.GetBoolean("enabled", false))
             {
                 return DefaultResizer.Apply(defaultResizerConfig);
             }
@@ -135,7 +135,7 @@ namespace Akka.Routing
         /// <returns>TBD</returns>
         public new static DefaultResizer FromConfig(Config resizerConfig)
         {
-            return resizerConfig.GetBoolean("resizer.enabled") ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
+            return resizerConfig.GetBoolean("resizer.enabled", false) ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
         }
 
         /// <summary>

@@ -56,7 +56,7 @@ namespace Akka.IO
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
-                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4"),
+                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4", false),
                 writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
 

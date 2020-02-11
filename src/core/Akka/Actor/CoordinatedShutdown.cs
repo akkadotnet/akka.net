@@ -573,7 +573,7 @@ namespace Akka.Actor
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
                  var dependsOn = c.GetStringList("depends-on", new string[] { }).ToImmutableHashSet();
                  var timeout = c.GetTimeSpan("timeout", null, allowInfinite: false);
-                 var recover = c.GetBoolean("recover");
+                 var recover = c.GetBoolean("recover", false);
                  return new Phase(dependsOn, timeout, recover);
              });
         }
@@ -630,8 +630,8 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var terminateActorSystem = conf.GetBoolean("terminate-actor-system");
-            var exitClr = conf.GetBoolean("exit-clr");
+            var terminateActorSystem = conf.GetBoolean("terminate-actor-system", false);
+            var exitClr = conf.GetBoolean("exit-clr", false);
             if (terminateActorSystem || exitClr)
             {
                 coord.AddTask(PhaseActorSystemTerminate, "terminate-system", () =>
@@ -686,7 +686,7 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
+            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook", false);
             if (runByClrShutdownHook)
             {
                 // run all hooks during termination sequence

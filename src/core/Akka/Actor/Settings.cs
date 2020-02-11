@@ -94,10 +94,12 @@ namespace Akka.Actor
             {
                 case "on":
                 case "true":
+                case "yes":
                     LogDeadLetters = int.MaxValue;
                     break;
                 case "off":
                 case "false":
+                case "no":
                     LogDeadLetters = 0;
                     break;
                 default:
@@ -112,7 +114,7 @@ namespace Akka.Actor
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
-            Home = Config.GetString("akka.home", null) ?? "";
+            Home = Config.GetString("akka.home", "");
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation", null);

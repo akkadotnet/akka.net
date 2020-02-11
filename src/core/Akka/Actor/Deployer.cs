@@ -39,8 +39,11 @@ namespace Akka.Actor
             var config = settings.Config.GetConfig("akka.actor.deployment");
             Default = config.GetConfig("default");
 
+            if (config.IsNullOrEmpty())
+                return;
+
             var rootObj = config.Root.GetObject();
-            if (rootObj == null) return;
+            // if (rootObj == null) return;
             var unwrapped = rootObj.Where(d => !d.Key.Equals("default")).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
