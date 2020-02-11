@@ -580,7 +580,7 @@ namespace Akka.DistributedData
                 {
                     var d = modify(localValue.Data);
                     if (d is IDeltaReplicatedData withDelta)
-                    {p
+                    {
                         envelope = localValue.Merge(withDelta.ResetDelta());
                         delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
                     }
