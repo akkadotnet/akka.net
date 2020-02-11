@@ -601,7 +601,6 @@ namespace Akka.DistributedData
                     _deltaPropagationSelector.Update(key.Id, delta);
                 }
 
-                _log.Debug("Updating local value for key {0} to {1}", key, envelope);
                 // note that it's important to do deltaPropagationSelector.update before setData,
                 // so that the latest delta version is used
                 var newEnvelope = SetData(key.Id, envelope);
@@ -695,13 +694,11 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
-            _log.Debug("Checking data for [{0}:{1}]", key, writeEnvelope);
             var envelope = GetData(key);
             if (envelope != null)
             {
                 if (envelope.Equals(writeEnvelope))
                 {
-                    _log.Debug("Determined local data {0} and remote data {1} were equal.", envelope, writeEnvelope);
                     return envelope;
                 }
                 if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
@@ -711,9 +708,6 @@ namespace Akka.DistributedData
                    
                     // DataEnvelope will mergeDelta when needed
                     var merged = envelope.Merge(writeEnvelope).AddSeen(_selfAddress);
-
-                    _log.Debug("Determined local data {0} and remote data {1} were different.", envelope, writeEnvelope);
-                    _log.Debug("Merged into {0}", merged);
 
                     return SetData(key, merged);
                 }
@@ -1274,7 +1268,6 @@ namespace Akka.DistributedData
             {
                 if (IsLeader)
                 {
-                    _log.Debug("Current leader - beginning pruning");
                     CollectRemovedNodes();
                     InitRemovedNodePruning();
                 }
@@ -1369,8 +1362,7 @@ namespace Akka.DistributedData
                             var newEnvelope = envelope.Prune(removed, isDurable ? durablePrunningPerformed : prunningPerformed);
                             _log.Debug("Perform pruning of [{0}] from [{1}] to [{2}]", key, removed, _selfUniqueAddress);
                             SetData(key, newEnvelope);
-                            _log.Debug("Data for pruned key [{0}] - old: [{1}], new: [{2}]", key, envelope, newEnvelope);
-                            if (!ReferenceEquals(newEnvelope.Data, data) && isDurable)
+                            if (!newEnvelope.Data.Equals(data) && isDurable)
                             {
                                 _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope), null));
                             }
@@ -1434,7 +1426,6 @@ namespace Akka.DistributedData
                 get
                 {
                     var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
-                    _replicator._log.Debug("All nodes: [{0}]", string.Join(",", allNodes.Select(x => x.ToString())));
                     return allNodes;
                 }
             }
